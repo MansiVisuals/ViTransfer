@@ -38,11 +38,24 @@ function validateEncryptionKey(): void {
 }
 
 /**
- * Ensure encryption key is exactly 32 bytes
+ * Derive encryption key using scrypt (Key Derivation Function)
+ * This is more secure than simple padding as it:
+ * 1. Creates a consistent 32-byte key from any input length
+ * 2. Uses a deterministic salt for consistent key generation
+ * 3. Applies computational hardening (though minimal for performance)
  */
 function getEncryptionKey(): Buffer {
-  const key = ENCRYPTION_KEY.padEnd(32, '0').slice(0, 32)
-  return Buffer.from(key, 'utf-8')
+  // Use a fixed salt for deterministic key derivation
+  // This ensures the same ENCRYPTION_KEY always produces the same derived key
+  const salt = 'vitransfer-encryption-v1'
+
+  // Use scrypt with minimal cost for fast key derivation
+  // N=1024, r=8, p=1 provides good security with minimal performance impact
+  return crypto.scryptSync(ENCRYPTION_KEY, salt, 32, {
+    N: 1024,  // CPU/memory cost (lower = faster, still secure for deterministic derivation)
+    r: 8,     // Block size
+    p: 1      // Parallelization
+  })
 }
 
 /**

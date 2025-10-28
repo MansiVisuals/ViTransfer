@@ -152,8 +152,12 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     const centerFontSize = isVertical ? Math.round(width * 0.08) : Math.round(width * 0.04)
     const cornerFontSize = isVertical ? Math.round(width * 0.05) : Math.round(width * 0.025)
 
-    // Escape text for ffmpeg
-    const escapedText = watermarkText.replace(/'/g, "\\'").replace(/:/g, "\\:")
+    // Sanitize watermark text to prevent command injection
+    // Only allow alphanumeric, spaces, and safe punctuation
+    const sanitizedText = watermarkText.replace(/[^a-zA-Z0-9\s\-_.()]/g, '')
+
+    // Escape text for ffmpeg (after sanitization)
+    const escapedText = sanitizedText.replace(/'/g, "\\'").replace(/:/g, "\\:")
 
     // Center watermark
     filters.push(

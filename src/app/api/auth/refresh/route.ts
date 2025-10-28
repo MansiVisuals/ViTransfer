@@ -30,7 +30,7 @@ export const dynamic = 'force-dynamic'
  *
  * 4. SHORT-LIVED ACCESS TOKENS
  *    - Access token: 15 minutes
- *    - Refresh token: 7 days
+ *    - Refresh token: 3 days
  *    - Limits exposure window
  *
  * 5. HTTPONLY + SECURE COOKIES
@@ -158,7 +158,7 @@ function hashFingerprint(userAgent: string): string {
 
 /**
  * Store token fingerprint in Redis
- * TTL matches refresh token duration (7 days)
+ * TTL matches refresh token duration (3 days)
  */
 async function storeTokenFingerprint(
   userId: string,
@@ -171,7 +171,7 @@ async function storeTokenFingerprint(
     const redis = getRedis()
 
     const key = `token_fingerprint:${userId}:${hashToken(refreshToken)}`
-    const ttl = 7 * 24 * 60 * 60 // 7 days in seconds
+    const ttl = 3 * 24 * 60 * 60 // 3 days in seconds
 
     await redis.setex(key, ttl, fingerprintHash)
   } catch (error) {

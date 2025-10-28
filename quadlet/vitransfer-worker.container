@@ -1,0 +1,57 @@
+[Unit]
+Description=ViTransfer Video Processing Worker
+After=vitransfer-app.service
+Requires=vitransfer-postgres.service vitransfer-redis.service vitransfer-app.service
+
+[Container]
+Image=docker.io/crypt010/vitransfer:latest
+ContainerName=vitransfer-worker
+AutoUpdate=registry
+
+# Command override
+Exec=npm run worker
+
+# Environment variables - MUST MATCH vitransfer-app.container
+Environment=NODE_ENV=production
+Environment=PUID=1000
+Environment=PGID=1000
+
+# Database connection - CHANGE PASSWORD (must match postgres password)
+Environment=DATABASE_URL=postgresql://vitransfer:CHANGE_POSTGRES_PASSWORD@vitransfer-postgres:5432/vitransfer?schema=public
+
+# Redis connection - CHANGE PASSWORD (must match redis password)
+Environment=REDIS_HOST=vitransfer-redis
+Environment=REDIS_PORT=6379
+Environment=REDIS_PASSWORD=CHANGE_REDIS_PASSWORD
+
+# Storage
+Environment=STORAGE_ROOT=/app/uploads
+
+# Security secrets - MUST MATCH vitransfer-app.container
+Environment=ENCRYPTION_KEY=CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32
+Environment=JWT_SECRET=CHANGE_THIS_SECRET
+Environment=JWT_REFRESH_SECRET=CHANGE_THIS_REFRESH_SECRET
+
+# Volumes - bind mount to /podman/vitransfer
+Volume=/podman/vitransfer/uploads:/app/uploads:Z
+
+# Network
+Network=vitransfer-network.network
+
+# Health check
+HealthCmd=/bin/sh -c 'ps aux | grep -v grep | grep -q "npm run worker"'
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=6m
+
+# Security
+SecurityLabelDisable=true
+NoNewPrivileges=true
+
+[Service]
+Restart=unless-stopped
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target default.target

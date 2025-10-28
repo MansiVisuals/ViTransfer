@@ -1,0 +1,132 @@
+#!/bin/bash
+
+# ViTransfer Quadlet Configuration Script
+# This script helps you configure the Quadlet files with your secrets
+
+set -e
+
+echo "🔧 ViTransfer Quadlet Configuration"
+echo "===================================="
+echo ""
+
+# Check if openssl is available
+if ! command -v openssl &> /dev/null; then
+    echo "❌ Error: openssl is required but not installed."
+    exit 1
+fi
+
+# Generate secrets
+echo "🔑 Generating secure secrets..."
+POSTGRES_PASSWORD=$(openssl rand -base64 32)
+REDIS_PASSWORD=$(openssl rand -base64 32)
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+JWT_SECRET=$(openssl rand -hex 32)
+JWT_REFRESH_SECRET=$(openssl rand -hex 32)
+echo "✅ Secrets generated"
+echo ""
+
+# Ask for domain
+read -p "🌐 Enter your domain (e.g., https://vitransfer.example.com) [http://localhost:4321]: " DOMAIN
+DOMAIN=${DOMAIN:-http://localhost:4321}
+
+# Ask for admin credentials
+read -p "👤 Enter admin email [admin@example.com]: " ADMIN_EMAIL
+ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+
+read -sp "🔒 Enter admin password [changeme123]: " ADMIN_PASSWORD
+echo ""
+ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
+
+# Ask for port
+read -p "🔌 Enter port to expose [4321]: " APP_PORT
+APP_PORT=${APP_PORT:-4321}
+
+echo ""
+echo "📝 Configuration Summary:"
+echo "  Domain: ${DOMAIN}"
+echo "  Admin Email: ${ADMIN_EMAIL}"
+echo "  Port: ${APP_PORT}"
+echo ""
+
+read -p "Continue with configuration? (yes/no) [yes]: " CONFIRM
+CONFIRM=${CONFIRM:-yes}
+
+if [[ "$CONFIRM" != "yes" && "$CONFIRM" != "y" ]]; then
+    echo "❌ Configuration cancelled"
+    exit 0
+fi
+
+echo ""
+echo "🔧 Configuring Quadlet files..."
+
+# Configure postgres
+sed -i.bak "s#CHANGE_THIS_PASSWORD#${POSTGRES_PASSWORD}#g" vitransfer-postgres.container
+echo "✅ Configured vitransfer-postgres.container"
+
+# Configure redis
+sed -i.bak "s#CHANGE_THIS_PASSWORD#${REDIS_PASSWORD}#g" vitransfer-redis.container
+echo "✅ Configured vitransfer-redis.container"
+
+# Configure app
+sed -i.bak \
+    -e "s#CHANGE_POSTGRES_PASSWORD#${POSTGRES_PASSWORD}#g" \
+    -e "s#CHANGE_REDIS_PASSWORD#${REDIS_PASSWORD}#g" \
+    -e "s#CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32#${ENCRYPTION_KEY}#g" \
+    -e "s#CHANGE_THIS_SECRET#${JWT_SECRET}#g" \
+    -e "s#CHANGE_THIS_REFRESH_SECRET#${JWT_REFRESH_SECRET}#g" \
+    -e "s#http://localhost:4321#${DOMAIN}#g" \
+    -e "s#admin@example.com#${ADMIN_EMAIL}#g" \
+    -e "s#changeme123#${ADMIN_PASSWORD}#g" \
+    -e "s#4321:4321#${APP_PORT}:4321#g" \
+    vitransfer-app.container
+echo "✅ Configured vitransfer-app.container"
+
+# Configure worker
+sed -i.bak \
+    -e "s#CHANGE_POSTGRES_PASSWORD#${POSTGRES_PASSWORD}#g" \
+    -e "s#CHANGE_REDIS_PASSWORD#${REDIS_PASSWORD}#g" \
+    -e "s#CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32#${ENCRYPTION_KEY}#g" \
+    -e "s#CHANGE_THIS_SECRET#${JWT_SECRET}#g" \
+    -e "s#CHANGE_THIS_REFRESH_SECRET#${JWT_REFRESH_SECRET}#g" \
+    vitransfer-worker.container
+echo "✅ Configured vitransfer-worker.container"
+
+# Save secrets to file
+cat > .secrets << EOF
+# ViTransfer Secrets - KEEP THIS FILE SECURE!
+# Generated: $(date)
+
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+REDIS_PASSWORD=${REDIS_PASSWORD}
+ENCRYPTION_KEY=${ENCRYPTION_KEY}
+JWT_SECRET=${JWT_SECRET}
+JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+
+DOMAIN=${DOMAIN}
+ADMIN_EMAIL=${ADMIN_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+APP_PORT=${APP_PORT}
+EOF
+
+chmod 600 .secrets
+echo ""
+echo "✅ Configuration complete!"
+echo ""
+echo "📄 Secrets saved to: .secrets"
+echo "⚠️  IMPORTANT: Keep this file secure! It contains all your passwords."
+echo ""
+echo "📦 Next steps:"
+echo "  1. Review the configured *.container files"
+echo "  2. Copy files to systemd directory:"
+echo "     sudo cp *.container *.volume *.network /etc/containers/systemd/"
+echo "  3. Reload systemd:"
+echo "     sudo systemctl daemon-reload"
+echo "  4. Pull the image:"
+echo "     podman pull docker.io/crypt010/vitransfer:latest"
+echo "  5. Start services:"
+echo "     sudo systemctl start vitransfer-postgres.service"
+echo "     sudo systemctl start vitransfer-redis.service"
+echo "     sudo systemctl start vitransfer-app.service"
+echo "     sudo systemctl start vitransfer-worker.service"
+echo ""
+echo "🎉 Done!"

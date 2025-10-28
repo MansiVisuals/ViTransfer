@@ -1,0 +1,5 @@
+# Public Assets
+
+This directory contains static assets that are served directly by Next.js.
+
+Files in this directory are accessible at the root path `/`.

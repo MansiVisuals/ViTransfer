@@ -1,0 +1,42 @@
+[Unit]
+Description=ViTransfer PostgreSQL Database
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/library/postgres:16-alpine
+ContainerName=vitransfer-postgres
+AutoUpdate=registry
+
+# User/Group - runs as hsadmin (1000:1000)
+User=1000:1000
+
+# Environment variables - CHANGE THESE VALUES
+Environment=POSTGRES_USER=vitransfer
+Environment=POSTGRES_PASSWORD=CHANGE_THIS_PASSWORD
+Environment=POSTGRES_DB=vitransfer
+Environment=POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+
+# Volumes - bind mount to /podman/vitransfer
+Volume=/podman/vitransfer/postgres-data:/var/lib/postgresql/data:Z
+
+# Network
+Network=vitransfer-network.network
+
+# Health check
+HealthCmd=pg_isready -U vitransfer
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=5
+HealthStartPeriod=10s
+
+# Security
+SecurityLabelDisable=true
+NoNewPrivileges=true
+
+[Service]
+Restart=unless-stopped
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target default.target

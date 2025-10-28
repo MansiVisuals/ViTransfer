@@ -1,0 +1,69 @@
+[Unit]
+Description=ViTransfer Application Server
+After=vitransfer-postgres.service vitransfer-redis.service
+Requires=vitransfer-postgres.service vitransfer-redis.service
+
+[Container]
+Image=docker.io/crypt010/vitransfer:latest
+ContainerName=vitransfer-app
+AutoUpdate=registry
+
+# Port mapping - Change if needed
+PublishPort=4321:4321
+
+# Environment variables - CHANGE THESE VALUES
+Environment=NODE_ENV=production
+Environment=PUID=1000
+Environment=PGID=1000
+
+# Database connection - CHANGE PASSWORD
+Environment=DATABASE_URL=postgresql://vitransfer:CHANGE_POSTGRES_PASSWORD@vitransfer-postgres:5432/vitransfer?schema=public
+
+# Redis connection - CHANGE PASSWORD
+Environment=REDIS_HOST=vitransfer-redis
+Environment=REDIS_PORT=6379
+Environment=REDIS_PASSWORD=CHANGE_REDIS_PASSWORD
+
+# Storage
+Environment=STORAGE_ROOT=/app/uploads
+
+# Application URLs - CHANGE TO YOUR DOMAIN
+Environment=NEXT_PUBLIC_APP_URL=http://localhost:4321
+Environment=APP_PORT=4321
+
+# Admin credentials - CHANGE THESE
+Environment=ADMIN_EMAIL=admin@example.com
+Environment=ADMIN_PASSWORD=changeme123
+
+# Security secrets - CHANGE ALL OF THESE (use 'openssl rand -hex 32' to generate)
+Environment=ENCRYPTION_KEY=CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32
+Environment=JWT_SECRET=CHANGE_THIS_SECRET
+Environment=JWT_REFRESH_SECRET=CHANGE_THIS_REFRESH_SECRET
+
+# Optional HTTPS
+Environment=HTTPS_KEY=
+Environment=HTTPS_CERT=
+
+# Volumes - bind mount to /podman/vitransfer
+Volume=/podman/vitransfer/uploads:/app/uploads:Z
+
+# Network
+Network=vitransfer-network.network
+
+# Health check
+HealthCmd=/usr/bin/node -e "require('http').get('http://localhost:4321/api/settings/public', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=5m
+
+# Security
+SecurityLabelDisable=true
+NoNewPrivileges=true
+
+[Service]
+Restart=unless-stopped
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target default.target

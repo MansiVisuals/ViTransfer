@@ -1,0 +1,75 @@
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+export function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+  return `${minutes}:${secs.toString().padStart(2, '0')}`
+}
+
+export function formatFileSize(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let size = bytes
+  let unitIndex = 0
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024
+    unitIndex++
+  }
+
+  return `${size.toFixed(2)} ${units[unitIndex]}`
+}
+
+export function formatTimestamp(seconds: number): string {
+  if (!seconds || isNaN(seconds) || !isFinite(seconds)) {
+    return '0:00'
+  }
+  const minutes = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${minutes}:${secs.toString().padStart(2, '0')}`
+}
+
+export function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+}
+
+export async function generateUniqueSlug(
+  title: string,
+  prisma: any,
+  excludeId?: string
+): Promise<string> {
+  let slug = generateSlug(title)
+  let counter = 1
+
+  // Check if slug exists
+  while (true) {
+    const existing = await prisma.project.findUnique({
+      where: { slug },
+    })
+
+    if (!existing || existing.id === excludeId) {
+      break
+    }
+
+    // Append counter to make it unique
+    slug = `${generateSlug(title)}-${counter}`
+    counter++
+  }
+
+  return slug
+}

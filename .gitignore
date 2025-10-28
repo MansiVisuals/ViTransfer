@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Next.js
+.next/
+out/
+build
+dist
+
+# Environment
+.env*
+!.env.example
+!docker-compose.example.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+*.pem
+
+# Debug
+.vscode/*
+!.vscode/extensions.json
+.idea
+.claude
+
+# Local storage
+uploads/
+minio-data/
+postgres-data/
+redis-data/
+
+# Prisma
+prisma/.env
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Settings" ADD COLUMN "maxUploadSizeGB" INTEGER NOT NULL DEFAULT 1;

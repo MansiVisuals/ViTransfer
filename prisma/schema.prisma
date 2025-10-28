@@ -1,0 +1,250 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String?  @unique
+  password  String
+  name      String?
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+  comments Comment[]
+}
+
+enum UserRole {
+  ADMIN
+}
+
+model Project {
+  id            String  @id @default(cuid())
+  title         String
+  slug          String  @unique
+  description   String?
+  clientName    String?
+  clientEmail   String?
+  sharePassword String?
+
+  // Revision tracking (optional)
+  enableRevisions Boolean @default(false)
+  maxRevisions    Int     @default(3)
+  currentRevision Int     @default(0)
+
+  status          ProjectStatus @default(IN_REVIEW)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  approvedAt      DateTime?
+  approvedVideoId String? // ID of the video that was approved (null if not approved)
+
+  // Comment restrictions
+  restrictCommentsToLatestVersion Boolean @default(false)
+  hideFeedback                    Boolean @default(false)
+
+  // Video processing settings
+  previewResolution String  @default("720p") // "720p", "1080p", "2160p"
+  watermarkEnabled  Boolean @default(true) // Enable/disable watermarks for this project
+  watermarkText     String? // Custom watermark text (null = use default format)
+
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  videos         Video[]
+  comments       Comment[]
+  securityEvents SecurityEvent[]
+  analytics      VideoAnalytics[]
+}
+
+enum ProjectStatus {
+  IN_REVIEW
+  APPROVED
+  SHARE_ONLY
+}
+
+model Video {
+  id           String @id @default(cuid())
+  projectId    String
+  name         String // Name to distinguish different videos in a project (required)
+  version      Int // 1, 2, 3 (for revisions)
+  versionLabel String // "v1", "v2", "v3" or custom
+
+  // Original file
+  originalFileName    String
+  originalFileSize    BigInt
+  originalStoragePath String
+
+  // Video metadata
+  duration Float // in seconds
+  width    Int
+  height   Int
+  fps      Float?
+  codec    String?
+
+  // Processing status
+  status             VideoStatus @default(UPLOADING)
+  uploadProgress     Int         @default(0) // 0-100 percentage
+  processingProgress Float       @default(0)
+  processingError    String?
+
+  // Preview versions (watermarked)
+  preview1080Path String?
+  preview720Path  String?
+  thumbnailPath   String?
+
+  // Per-video approval
+  approved   Boolean   @default(false)
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analytics VideoAnalytics[]
+
+  @@index([projectId, version])
+  @@index([projectId, name])
+}
+
+enum VideoStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  ERROR
+}
+
+model Comment {
+  id           String   @id @default(cuid())
+  projectId    String
+  videoId      String? // null = general comment
+  videoVersion Int? // track which version this comment was for
+  timestamp    Float? // in seconds (null for general comments)
+  content      String
+  authorName   String? // made optional to allow anonymous comments
+  authorEmail  String?
+  isInternal   Boolean  @default(false) // true = from studio, false = from client
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Admin user tracking (for internal comments)
+  userId String? // Admin user who created this comment
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Admin reply functionality
+  parentId String? // if this is a reply to another comment
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  // Email notification opt-in (per comment)
+  notifyByEmail     Boolean @default(false) // User opted in for email notifications
+  notificationEmail String? // Email to send notifications to (if different from authorEmail)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([videoId])
+  @@index([parentId])
+  @@index([userId])
+}
+
+model Settings {
+  id String @id @default("default")
+
+  // Company Branding
+  companyName String? @default("Studio") // Displayed in feedback/comments
+
+  // SMTP Email Configuration
+  smtpServer      String?
+  smtpPort        Int?    @default(587)
+  smtpUsername    String?
+  smtpPassword    String?
+  smtpFromAddress String?
+  smtpSecure      String? @default("STARTTLS") // Options: "STARTTLS", "TLS", "NONE"
+
+  // Domain Configuration
+  appDomain String? // e.g., "https://yourdomain.com"
+
+  // Default Video Processing Settings
+  defaultPreviewResolution String? @default("720p")
+  defaultWatermarkText     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SecuritySettings {
+  id String @id @default("default")
+
+  // Hotlink Protection: DISABLED, LOG_ONLY, BLOCK_STRICT
+  hotlinkProtection String @default("LOG_ONLY")
+
+  // Rate Limiting (global only - per minute)
+  ipRateLimit      Int @default(1000) // requests per minute per IP (video streaming requires high limit)
+  sessionRateLimit Int @default(600) // requests per minute per session (10/sec for seeking/buffering)
+  passwordAttempts Int @default(5) // password attempts before lockout
+
+  // Logging toggles
+  trackAnalytics    Boolean @default(true)
+  trackSecurityLogs Boolean @default(true)
+
+  // Security Dashboard Access
+  viewSecurityEvents Boolean @default(false) // Show /admin/security page in navigation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SecurityEvent {
+  id       String @id @default(cuid())
+  type     String // HOTLINK_DETECTED, HOTLINK_BLOCKED, RATE_LIMIT_HIT, TOKEN_SESSION_MISMATCH, SUSPICIOUS_ACTIVITY, BLOCKED_IP_ATTEMPT
+  severity String @default("INFO") // INFO, WARNING, CRITICAL
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  videoId   String?
+  sessionId String?
+  ipAddress String?
+  referer   String?
+
+  // Additional context as JSON
+  details Json?
+
+  // Was this event auto-blocked?
+  wasBlocked Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([type, createdAt])
+  @@index([severity])
+}
+
+model VideoAnalytics {
+  id String @id @default(cuid())
+
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Event types: PAGE_VISIT, DOWNLOAD_COMPLETE
+  eventType String
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([videoId, createdAt])
+  @@index([eventType])
+}

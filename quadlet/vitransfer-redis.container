@@ -1,0 +1,42 @@
+[Unit]
+Description=ViTransfer Redis Cache
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/library/redis:7-alpine
+ContainerName=vitransfer-redis
+AutoUpdate=registry
+
+# User/Group - runs as hsadmin (1000:1000)
+User=1000:1000
+
+# Command with password - CHANGE THIS PASSWORD
+Exec=redis-server --appendonly yes --requirepass CHANGE_THIS_PASSWORD
+
+# Environment - CHANGE THIS PASSWORD
+Environment=REDIS_PASSWORD=CHANGE_THIS_PASSWORD
+
+# Volumes - bind mount to /podman/vitransfer
+Volume=/podman/vitransfer/redis-data:/data:Z
+
+# Network
+Network=vitransfer-network.network
+
+# Health check
+HealthCmd=/bin/sh -c 'redis-cli --no-auth-warning -a $REDIS_PASSWORD ping | grep -q PONG'
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=5
+HealthStartPeriod=10s
+
+# Security
+SecurityLabelDisable=true
+NoNewPrivileges=true
+
+[Service]
+Restart=unless-stopped
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target default.target

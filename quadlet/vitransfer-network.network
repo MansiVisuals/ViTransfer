@@ -1,0 +1,3 @@
+[Network]
+NetworkName=vitransfer-internal
+Driver=bridge

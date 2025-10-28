@@ -1,0 +1,118 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Node modules (installed during build)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files (security - never include in image)
+.env
+.env.*
+!.env.example
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Build output (rebuilt during Docker build)
+.next
+out
+dist
+build
+
+# Database files
+*.sqlite
+*.sqlite3
+data/
+postgres-data/
+redis-data/
+minio-data/
+prisma/dev.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage and testing
+coverage
+.nyc_output
+*.lcov
+.jest
+.vitest
+
+# IDE and Editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Docker files (no need to include in image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD files
+.github
+.gitlab-ci.yml
+.travis.yml
+.circleci
+
+# Documentation (keep production docs)
+CHANGELOG.md
+CONTRIBUTING.md
+docs/
+*.md
+!README.PRODUCTION.md
+
+# Uploads and user data (mounted as volume)
+uploads/
+public/uploads/
+
+# Certificates and secrets (mounted as volume)
+certs/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Scripts that are not needed in production container
+*.sh
+!docker-entrypoint.sh
+*.bak
+*.bak2
+
+# Development dependencies
+.prettierrc
+.eslintrc*
+.editorconfig
+
+# Package manager lock files (we copy these explicitly)
+# Uncomment if you want to exclude them
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

@@ -140,11 +140,15 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
  * Check if all of a user's tokens have been revoked
  *
  * @param userId - The user ID to check
+ * @param tokenIssuedAt - Optional timestamp when token was issued (JWT 'iat' field)
  * @returns true if all user's tokens are revoked, false otherwise
+ *
+ * If tokenIssuedAt is provided, only returns true if token was issued BEFORE revocation time.
+ * This allows new tokens issued after revocation to work (e.g., after password change).
  *
  * Security: Throws error if Redis is unavailable (fail closed)
  */
-export async function isUserTokensRevoked(userId: string): Promise<boolean> {
+export async function isUserTokensRevoked(userId: string, tokenIssuedAt?: number): Promise<boolean> {
   const redis = getRedisConnection()
 
   if (redis.status !== 'ready') {
@@ -152,10 +156,22 @@ export async function isUserTokensRevoked(userId: string): Promise<boolean> {
   }
 
   const key = `blacklist:user:${userId}`
-  const result = await redis.exists(key)
-  const isRevoked = result === 1
+  const revocationTimestamp = await redis.get(key)
 
-  return isRevoked
+  if (!revocationTimestamp) {
+    // No revocation flag set
+    return false
+  }
+
+  // If no token issued time provided, revoke all tokens
+  if (!tokenIssuedAt) {
+    return true
+  }
+
+  // Compare: token was issued BEFORE revocation = revoked
+  // token was issued AFTER revocation = allowed (new session)
+  const revocationTime = parseInt(revocationTimestamp) / 1000 // Convert ms to seconds for JWT comparison
+  return tokenIssuedAt < revocationTime
 }
 
 /**

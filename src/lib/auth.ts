@@ -128,7 +128,8 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload | nul
     }
 
     // Check if all user's tokens have been revoked (e.g., after password change)
-    const userRevoked = await isUserTokensRevoked(decoded.userId)
+    // This checks if token was issued BEFORE the revocation timestamp
+    const userRevoked = await isUserTokensRevoked(decoded.userId, decoded.iat)
     if (userRevoked) {
       return null
     }
@@ -165,7 +166,8 @@ export async function verifyRefreshToken(token: string): Promise<JWTPayload | nu
     }
 
     // Check if all user's tokens have been revoked
-    const userRevoked = await isUserTokensRevoked(decoded.userId)
+    // This checks if token was issued BEFORE the revocation timestamp
+    const userRevoked = await isUserTokensRevoked(decoded.userId, decoded.iat)
     if (userRevoked) {
       return null
     }

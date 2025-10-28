@@ -180,7 +180,6 @@ For these CVEs to be exploited in ViTransfer:
 ### Configuration
 - Change default admin password immediately
 - Use unique passwords for each project
-- Enable email notifications for suspicious activity
 - Review security logs regularly
 - Limit admin user accounts to necessary personnel
 

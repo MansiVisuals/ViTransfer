@@ -10,7 +10,7 @@ import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revoca
 const SESSION_COOKIE_NAME = 'vitransfer_session'
 const REFRESH_COOKIE_NAME = 'vitransfer_refresh'
 const ACCESS_TOKEN_DURATION = 15 * 60 // 15 minutes in seconds
-const REFRESH_TOKEN_DURATION = 15 * 60 // 15 minutes in seconds (matches inactivity timeout)
+const REFRESH_TOKEN_DURATION = 3 * 24 * 60 * 60 // 3 days in seconds (long-lived, rotated on use)
 const SESSION_INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes of inactivity in ms
 
 // JWT secrets - REQUIRED in production (see README for setup instructions)

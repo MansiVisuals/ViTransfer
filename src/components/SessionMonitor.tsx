@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
  *    - Limits damage if token is stolen
  *    - Automatically refreshed while user is active
  *
- * 2. REFRESH TOKEN: 7 days (long-lived)
+ * 2. REFRESH TOKEN: 3 days (long-lived)
  *    - HttpOnly cookie (JavaScript can't access)
  *    - Rotated on each refresh (old token revoked)
  *    - Fingerprinted (detects token theft)

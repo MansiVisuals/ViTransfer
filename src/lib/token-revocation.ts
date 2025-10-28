@@ -132,8 +132,8 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
   // Store a flag that user's session is invalidated
   // This can be checked before validating any token
   const key = `blacklist:user:${userId}`
-  // Set for 7 days (max refresh token lifetime)
-  await redis.setex(key, 7 * 24 * 60 * 60, Date.now().toString())
+  // Set for 3 days (max refresh token lifetime)
+  await redis.setex(key, 3 * 24 * 60 * 60, Date.now().toString())
 }
 
 /**

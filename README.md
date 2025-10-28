@@ -4,6 +4,8 @@
 
 ViTransfer is a self-hosted web application designed for video professionals to share work with clients, collect feedback, and manage approval workflows. Built with modern technologies and designed for easy self-hosting.
 
+*NOTE: Coded with Claude AI, built to achieve security and best practices.*
+
 [![Docker Pulls](https://img.shields.io/docker/pulls/crypt010/vitransfer)](https://hub.docker.com/r/crypt010/vitransfer)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![GitHub](https://img.shields.io/badge/github-MansiVisuals%2FViTransfer-blue)](https://github.com/MansiVisuals/ViTransfer)

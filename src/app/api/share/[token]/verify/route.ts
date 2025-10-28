@@ -96,7 +96,7 @@ export async function POST(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     if (!project.sharePassword) {
@@ -185,7 +185,7 @@ export async function POST(
         )
       }
 
-      return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // SUCCESS - clear any existing rate limit data
@@ -205,6 +205,6 @@ export async function POST(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error verifying share password:', error)
-    return NextResponse.json({ error: 'An error occurred' }, { status: 500 })
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 }

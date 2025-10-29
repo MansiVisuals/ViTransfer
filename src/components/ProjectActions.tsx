@@ -30,9 +30,10 @@ interface Video {
 interface ProjectActionsProps {
   project: Project
   videos: Video[]
+  onRefresh?: () => void
 }
 
-export default function ProjectActions({ project, videos }: ProjectActionsProps) {
+export default function ProjectActions({ project, videos, onRefresh }: ProjectActionsProps) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingApproval, setIsTogglingApproval] = useState(false)
@@ -164,6 +165,8 @@ export default function ProjectActions({ project, videos }: ProjectActionsProps)
 
       const data = await response.json()
 
+      // Refresh project data
+      await onRefresh?.()
       router.refresh()
 
       if (isCurrentlyApproved && data.unapprovedCount) {

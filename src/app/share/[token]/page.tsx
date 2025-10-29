@@ -26,6 +26,21 @@ export default function SharePage() {
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
 
+  // Fetch project data function (for refresh after approval)
+  const fetchProjectData = async () => {
+    try {
+      const projectResponse = await fetch(`/api/share/${token}`, {
+        credentials: 'include'
+      })
+      if (projectResponse.ok) {
+        const projectData = await projectResponse.json()
+        setProject(projectData)
+      }
+    } catch (error) {
+      console.error('Error fetching project data:', error)
+    }
+  }
+
   // Fetch company name and default quality from public settings
   useEffect(() => {
     async function fetchPublicSettings() {
@@ -320,6 +335,7 @@ export default function SharePage() {
                   enableRevisions={project.enableRevisions}
                   isPasswordProtected={isPasswordProtected || false}
                   watermarkEnabled={project.watermarkEnabled}
+                  onApprove={fetchProjectData}
                 />
               </div>
 

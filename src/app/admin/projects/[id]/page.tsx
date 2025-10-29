@@ -206,7 +206,7 @@ export default function ProjectPage() {
           </div>
 
           <div className="space-y-6 min-w-0">
-            <ProjectActions project={project} videos={project.videos} />
+            <ProjectActions project={project} videos={project.videos} onRefresh={fetchProject} />
 
             {!hideFeedback && activeVideoName && (
               <div className="lg:sticky lg:top-6">

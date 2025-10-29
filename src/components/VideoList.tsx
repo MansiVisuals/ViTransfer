@@ -11,9 +11,10 @@ import { Trash2, CheckCircle2, XCircle } from 'lucide-react'
 interface VideoListProps {
   videos: Video[]
   isAdmin?: boolean
+  onRefresh?: () => void
 }
 
-export default function VideoList({ videos: initialVideos, isAdmin = true }: VideoListProps) {
+export default function VideoList({ videos: initialVideos, isAdmin = true, onRefresh }: VideoListProps) {
   const router = useRouter()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
@@ -61,6 +62,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true }: Vid
         throw new Error('Failed to delete video')
       }
 
+      await onRefresh?.()
       router.refresh()
     } catch (error) {
       alert('Failed to delete video')
@@ -87,6 +89,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true }: Vid
         throw new Error(`Failed to ${action} video`)
       }
 
+      await onRefresh?.()
       router.refresh()
     } catch (error) {
       alert(`Failed to ${action} video`)

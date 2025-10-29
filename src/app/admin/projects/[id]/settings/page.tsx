@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
 
 // Generate a secure random password
 function generateSecurePassword(): string {
@@ -66,6 +66,7 @@ export default function ProjectSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [copiedPassword, setCopiedPassword] = useState(false)
 
   // Form state
   const [title, setTitle] = useState('')
@@ -104,6 +105,14 @@ export default function ProjectSettingsPage() {
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
+
+  const copyPassword = async () => {
+    if (sharePassword) {
+      await navigator.clipboard.writeText(sharePassword)
+      setCopiedPassword(true)
+      setTimeout(() => setCopiedPassword(false), 2000)
+    }
+  }
 
   useEffect(() => {
     async function loadProject() {
@@ -700,6 +709,21 @@ export default function ProjectSettingsPage() {
                       placeholder="Enter new password (leave empty to remove)"
                       className="flex-1"
                     />
+                    {sharePassword && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={copyPassword}
+                        title="Copy password"
+                      >
+                        {copiedPassword ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="outline"

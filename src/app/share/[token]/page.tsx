@@ -160,9 +160,21 @@ export default function SharePage() {
     if (project?.videosByName) {
       const videoNames = Object.keys(project.videosByName)
       if (videoNames.length > 0 && !activeVideoName) {
-        const firstVideoName = videoNames[0]
-        setActiveVideoName(firstVideoName)
-        setActiveVideos(project.videosByName[firstVideoName])
+        // Check if there's a saved video name from recent approval
+        const savedVideoName = sessionStorage.getItem('approvedVideoName')
+
+        // Clear the saved name immediately after reading
+        if (savedVideoName) {
+          sessionStorage.removeItem('approvedVideoName')
+        }
+
+        // Use the saved name if it exists in the current videos, otherwise use first
+        const videoNameToUse = savedVideoName && project.videosByName[savedVideoName]
+          ? savedVideoName
+          : videoNames[0]
+
+        setActiveVideoName(videoNameToUse)
+        setActiveVideos(project.videosByName[videoNameToUse])
       }
     }
   }, [project, activeVideoName])
@@ -335,6 +347,7 @@ export default function SharePage() {
                   enableRevisions={project.enableRevisions}
                   isPasswordProtected={isPasswordProtected || false}
                   watermarkEnabled={project.watermarkEnabled}
+                  activeVideoName={activeVideoName}
                   onApprove={fetchProjectData}
                 />
               </div>

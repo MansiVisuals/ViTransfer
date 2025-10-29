@@ -30,6 +30,7 @@ interface VideoPlayerProps {
   isPasswordProtected?: boolean
   watermarkEnabled?: boolean
   isAdmin?: boolean // Admin users can see all versions (default: false for clients)
+  activeVideoName?: string // The video group name (for maintaining selection after reload)
 }
 
 export default function VideoPlayer({
@@ -46,7 +47,8 @@ export default function VideoPlayer({
   enableRevisions,
   isPasswordProtected,
   watermarkEnabled = true,
-  isAdmin = false // Default to false (client view)
+  isAdmin = false, // Default to false (client view)
+  activeVideoName
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(0)
@@ -207,13 +209,18 @@ export default function VideoPlayer({
         throw new Error(errorData.error || 'Failed to approve project')
       }
 
+      // Store the current video group name in sessionStorage to restore after reload
+      if (activeVideoName) {
+        sessionStorage.setItem('approvedVideoName', activeVideoName)
+      }
+
       // Call the optional callback if provided (for parent component updates)
       if (onApprove) {
         await onApprove()
       }
 
-      // Show success message
-      alert('Video approved successfully! Your download link is now available.')
+      // Reload the page to show updated state
+      window.location.reload()
     } catch (error) {
       alert('Failed to approve project')
     } finally {

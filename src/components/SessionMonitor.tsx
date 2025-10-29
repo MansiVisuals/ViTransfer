@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 /**
@@ -33,8 +33,9 @@ import { useRouter } from 'next/navigation'
  * - Server handles all token validation
  */
 
+// Production timeouts
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes
-const WARNING_TIME = 2 * 60 * 1000 // Show warning 2 minutes before
+const WARNING_TIME = 2 * 60 * 1000 // Show warning 2 minutes before logout
 const REFRESH_INTERVAL = 10 * 60 * 1000 // Refresh every 10 minutes if active
 const CHECK_INTERVAL = 30 * 1000 // Check every 30 seconds
 
@@ -103,7 +104,7 @@ export default function SessionMonitor() {
       }
     }
 
-    // Activity events
+    // Activity events that reset the inactivity timer
     const activityEvents = [
       'mousedown',
       'mousemove',
@@ -126,7 +127,13 @@ export default function SessionMonitor() {
       if (timeUntilLogout <= 0) {
         // Inactivity timeout - logout
         console.log('[SESSION] Inactivity timeout - logging out')
-        router.push('/api/auth/logout')
+        // Call logout API to clear cookies, then redirect to login with sessionExpired flag
+        fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+        }).finally(() => {
+          router.push('/login?sessionExpired=true')
+        })
       } else if (timeUntilLogout <= WARNING_TIME) {
         // Show warning
         setShowWarning(true)
@@ -150,7 +157,8 @@ export default function SessionMonitor() {
       clearInterval(checkInterval)
       clearInterval(refreshInterval)
     }
-  }, [router, refreshing, showWarning])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]) // IMPORTANT: Don't include showWarning or refreshing - they would reset the timer!
 
   if (!showWarning) {
     return null

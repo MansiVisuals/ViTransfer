@@ -509,9 +509,12 @@ export default function ProjectSettingsPage() {
                           onChange={(e) => setWatermarkText(e.target.value)}
                           placeholder="e.g., CONFIDENTIAL, DRAFT, REVIEW COPY"
                           className="font-mono"
+                          maxLength={100}
                         />
                         <p className="text-xs text-muted-foreground">
                           Leave empty to use default format: PREVIEW-{project?.title}-[version]
+                          <br />
+                          <span className="text-warning">Only letters, numbers, spaces, and these characters: - _ . ( )</span>
                         </p>
                       </div>
                     )}

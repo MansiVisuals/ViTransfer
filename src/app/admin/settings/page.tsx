@@ -545,9 +545,12 @@ export default function GlobalSettingsPage() {
                   value={defaultWatermarkText}
                   onChange={(e) => setDefaultWatermarkText(e.target.value)}
                   placeholder="e.g., PREVIEW, CONFIDENTIAL"
+                  maxLength={100}
                 />
                 <p className="text-xs text-muted-foreground">
                   Leave empty to use project-specific format. New projects will use this as default.
+                  <br />
+                  <span className="text-warning">Only letters, numbers, spaces, and these characters: - _ . ( )</span>
                 </p>
               </div>
             </CardContent>

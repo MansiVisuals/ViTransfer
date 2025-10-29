@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin, regenerateSession, getCurrentUserFromRequest } from '@/lib/auth'
-import { hashPassword, validatePassword } from '@/lib/encryption'
+import { hashPassword, validatePassword, verifyPassword } from '@/lib/encryption'
 import { revokeAllUserTokens, clearUserRevocation } from '@/lib/token-revocation'
 
 // Prevent static generation for this route
@@ -64,7 +64,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { email, username, name, password, role } = body
+    const { email, username, name, password, oldPassword, role } = body
 
     // Build update data
     const updateData: any = {}
@@ -140,6 +140,37 @@ export async function PATCH(
 
     // Only update password if provided
     if (password && password.trim() !== '') {
+      // SECURITY: Verify old password before allowing password change
+      if (!oldPassword || oldPassword.trim() === '') {
+        return NextResponse.json(
+          { error: 'Current password is required to change password' },
+          { status: 400 }
+        )
+      }
+
+      // Get user's current password hash
+      const userWithPassword = await prisma.user.findUnique({
+        where: { id },
+        select: { password: true },
+      })
+
+      if (!userWithPassword) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
+
+      // Verify old password
+      const isOldPasswordValid = await verifyPassword(oldPassword, userWithPassword.password)
+      if (!isOldPasswordValid) {
+        return NextResponse.json(
+          { error: 'Current password is incorrect' },
+          { status: 401 }
+        )
+      }
+
+      // Validate new password
       const passwordValidation = validatePassword(password)
       if (!passwordValidation.isValid) {
         return NextResponse.json(
@@ -172,23 +203,26 @@ export async function PATCH(
     let securityMessage = ''
 
     if (passwordChanged) {
-      // Revoke ALL sessions for this user (force re-login on all devices)
-      await revokeAllUserTokens(user.id)
-
       if (currentUser && currentUser.id === id) {
         // User is changing their own password
-        // CRITICAL: Clear revocation flag BEFORE regenerating session to prevent race condition
-        // If we regenerate first, the new tokens will be checked against the revocation flag
-        // and immediately fail, causing a revocation loop
-        await clearUserRevocation(user.id)
-
-        // Now regenerate their session with new tokens
+        // Generate new session FIRST before revoking
         await regenerateSession({
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
         })
+
+        // NOW revoke ALL other sessions (after new session is created)
+        // The new tokens were just issued, so they won't be affected by the user-level revocation
+        // because the auth check will see they were issued AFTER the revocation timestamp
+        await revokeAllUserTokens(user.id)
+
+        // DON'T clear the user revocation - let it expire naturally after 7 days
+        // The new tokens will pass auth because their 'iat' (issued at) time is AFTER revocation time
+      } else {
+        // Admin is changing another user's password - just revoke their sessions
+        await revokeAllUserTokens(user.id)
       }
 
       securityMessage = 'All sessions have been invalidated - user will need to log in again on other devices.'

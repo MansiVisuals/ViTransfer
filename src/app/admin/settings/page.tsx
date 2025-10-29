@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Save, Send, Loader2 } from 'lucide-react'
 
 interface Settings {
@@ -449,9 +450,8 @@ export default function GlobalSettingsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="smtpPassword">SMTP Password</Label>
-                <Input
+                <PasswordInput
                   id="smtpPassword"
-                  type="password"
                   value={smtpPassword}
                   onChange={(e) => setSmtpPassword(e.target.value)}
                   placeholder="SMTP password or app password"
@@ -545,9 +545,12 @@ export default function GlobalSettingsPage() {
                   value={defaultWatermarkText}
                   onChange={(e) => setDefaultWatermarkText(e.target.value)}
                   placeholder="e.g., PREVIEW, CONFIDENTIAL"
+                  maxLength={100}
                 />
                 <p className="text-xs text-muted-foreground">
                   Leave empty to use project-specific format. New projects will use this as default.
+                  <br />
+                  <span className="text-warning">Only letters, numbers, spaces, and these characters: - _ . ( )</span>
                 </p>
               </div>
             </CardContent>

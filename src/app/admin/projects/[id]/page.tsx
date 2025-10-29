@@ -26,27 +26,28 @@ export default function ProjectPage() {
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
 
-  // Fetch project data
-  useEffect(() => {
-    async function fetchProject() {
-      try {
-        const response = await fetch(`/api/projects/${id}`)
-        if (!response.ok) {
-          if (response.status === 404) {
-            router.push('/admin')
-            return
-          }
-          throw new Error('Failed to fetch project')
+  // Fetch project data function (extracted so it can be called on upload complete)
+  const fetchProject = async () => {
+    try {
+      const response = await fetch(`/api/projects/${id}`)
+      if (!response.ok) {
+        if (response.status === 404) {
+          router.push('/admin')
+          return
         }
-        const data = await response.json()
-        setProject(data)
-      } catch (error) {
-        console.error('Error fetching project:', error)
-      } finally {
-        setLoading(false)
+        throw new Error('Failed to fetch project')
       }
+      const data = await response.json()
+      setProject(data)
+    } catch (error) {
+      console.error('Error fetching project:', error)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  // Fetch project data on mount
+  useEffect(() => {
     fetchProject()
   }, [id, router])
 
@@ -199,6 +200,7 @@ export default function ProjectPage() {
                 restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                 companyName={companyName}
                 onVideoSelect={handleVideoSelect}
+                onRefresh={fetchProject}
               />
             </div>
           </div>

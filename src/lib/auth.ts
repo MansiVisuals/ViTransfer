@@ -10,7 +10,7 @@ import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revoca
 const SESSION_COOKIE_NAME = 'vitransfer_session'
 const REFRESH_COOKIE_NAME = 'vitransfer_refresh'
 const ACCESS_TOKEN_DURATION = 15 * 60 // 15 minutes in seconds
-const REFRESH_TOKEN_DURATION = 15 * 60 // 15 minutes in seconds (matches inactivity timeout)
+const REFRESH_TOKEN_DURATION = 3 * 24 * 60 * 60 // 3 days in seconds (long-lived, rotated on use)
 const SESSION_INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes of inactivity in ms
 
 // JWT secrets - REQUIRED in production (see README for setup instructions)
@@ -128,7 +128,8 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload | nul
     }
 
     // Check if all user's tokens have been revoked (e.g., after password change)
-    const userRevoked = await isUserTokensRevoked(decoded.userId)
+    // This checks if token was issued BEFORE the revocation timestamp
+    const userRevoked = await isUserTokensRevoked(decoded.userId, decoded.iat)
     if (userRevoked) {
       return null
     }
@@ -165,7 +166,8 @@ export async function verifyRefreshToken(token: string): Promise<JWTPayload | nu
     }
 
     // Check if all user's tokens have been revoked
-    const userRevoked = await isUserTokensRevoked(decoded.userId)
+    // This checks if token was issued BEFORE the revocation timestamp
+    const userRevoked = await isUserTokensRevoked(decoded.userId, decoded.iat)
     if (userRevoked) {
       return null
     }

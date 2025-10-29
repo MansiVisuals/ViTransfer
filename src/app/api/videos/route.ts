@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,14 @@ export async function POST(request: NextRequest) {
     return authResult
   }
   const admin = authResult
+
+  // Rate limiting: Max 50 video uploads per hour
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 60 * 1000, // 1 hour
+    maxRequests: 50,
+    message: 'Too many video uploads. Please try again later.'
+  }, 'upload-video')
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const body = await request.json()

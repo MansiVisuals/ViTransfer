@@ -367,19 +367,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+This project is licensed under the **GNU AFFERO GENERAL PUBLIC LICENSE Version 3 (AGPL-3.0 license)**.
 
 **This means:**
 - ✅ You can use ViTransfer for free
 - ✅ You can modify the source code
 - ✅ You can distribute your modifications
-- ❌ You **cannot** sell the software or modified versions
-- ⚠️ Any derivative work **must** be open-source under GPL-3.0
+- ⚠️ Any derivative work **must** be open-source under AGPL-3.0 license
 - ⚠️ You must include the original license and copyright notice
 
 See the [LICENSE](LICENSE) file for full details.
 
-**Why GPL-3.0?** We believe in keeping video tools accessible to all creators while preventing commercial exploitation. If you use or modify ViTransfer, your version must remain free and open-source.
+**Why AGPL-3.0 license?** We believe in keeping video tools accessible to all creators while preventing commercial exploitation. If you use or modify ViTransfer, your version must remain free and open-source.
 
 ---
 

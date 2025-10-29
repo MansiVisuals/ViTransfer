@@ -43,7 +43,11 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
 
   async function checkAuth() {
     try {
-      const response = await fetch('/api/auth/session')
+      // Use native fetch for session check to avoid circular redirect
+      // The session endpoint returns 401 for unauthenticated, which is expected
+      const response = await fetch('/api/auth/session', {
+        credentials: 'include',
+      })
       const data = await response.json()
 
       if (data.authenticated && data.user) {

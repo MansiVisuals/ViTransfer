@@ -23,6 +23,7 @@ interface AdminVideoManagerProps {
   restrictToLatestVersion?: boolean
   companyName?: string
   onVideoSelect?: (videoName: string, videos: any[]) => void
+  onRefresh?: () => void
 }
 
 export default function AdminVideoManager({
@@ -32,7 +33,8 @@ export default function AdminVideoManager({
   comments = [],
   restrictToLatestVersion = false,
   companyName = 'Studio',
-  onVideoSelect
+  onVideoSelect,
+  onRefresh
 }: AdminVideoManagerProps) {
   // Group videos by name
   const videoGroups = videos.reduce((acc: Record<string, any[]>, video) => {
@@ -88,6 +90,8 @@ export default function AdminVideoManager({
     // Reset the "Add New Video" form when upload completes
     setShowNewVideoForm(false)
     setNewVideoName('')
+    // Refresh the project data to show the new video
+    onRefresh?.()
   }
 
   const sortedGroupNames = Object.keys(videoGroups).sort()

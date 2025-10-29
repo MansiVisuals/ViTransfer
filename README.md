@@ -212,12 +212,18 @@ ViTransfer uses standard Docker Compose and should work on most platforms. Below
          device: /mnt/user/appdata/vitransfer/uploads
    ```
 
-6. **Deploy Stack**
+6. **Create Directories**
+   - Open Unraid terminal and create the required directories:
+   ```bash
+   mkdir -p /mnt/user/appdata/vitransfer/{postgres,redis,uploads}
+   ```
+
+7. **Deploy Stack**
    - Click "Compose Up" to start all services
    - Monitor logs for any errors
    - Wait for database initialization (first start takes 2-3 minutes)
 
-7. **Access ViTransfer**
+8. **Access ViTransfer**
    - Navigate to `http://UNRAID-IP:4321`
    - Login with your admin credentials from the `.env` file
 

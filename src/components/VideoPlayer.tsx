@@ -209,14 +209,11 @@ export default function VideoPlayer({
 
       // Call the optional callback if provided (for parent component updates)
       if (onApprove) {
-        onApprove()
+        await onApprove()
       }
 
-      // Force full page reload to show updated approval state
-      // This ensures all components (video player, comments, etc.) are refreshed
-      window.location.reload()
-
-      // Note: Code after reload won't execute as page is reloading
+      // Show success message
+      alert('Video approved successfully! Your download link is now available.')
     } catch (error) {
       alert('Failed to approve project')
     } finally {

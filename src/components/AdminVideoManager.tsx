@@ -171,7 +171,7 @@ export default function AdminVideoManager({
                 {/* Version list */}
                 <div>
                   <h4 className="text-sm font-medium mb-3">All Versions</h4>
-                  <VideoList videos={groupVideos} />
+                  <VideoList videos={groupVideos} onRefresh={onRefresh} />
                 </div>
               </CardContent>
             )}

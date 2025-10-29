@@ -5,6 +5,7 @@ import { generateVideoAccessToken } from '@/lib/video-access'
 import { isSmtpConfigured } from '@/lib/settings'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import crypto from 'crypto'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -53,6 +54,14 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+
+    // Rate limiting: Max 100 requests per 15 minutes to prevent scraping
+    const rateLimitResult = await rateLimit(request, {
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      maxRequests: 100,
+      message: 'Too many requests. Please try again later.'
+    }, `share-access:${token}`)
+    if (rateLimitResult) return rateLimitResult
 
     // Always show all ready videos, regardless of project approval status
     // Individual videos can be approved independently

@@ -7,6 +7,7 @@ import CommentSection from '@/components/CommentSection'
 import VideoSidebar from '@/components/VideoSidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
 import { Lock, Check } from 'lucide-react'
 
@@ -228,8 +229,7 @@ export default function SharePage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { X, Save } from 'lucide-react'
+import { X, Save, RefreshCw, Eye, EyeOff, Copy, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,10 +16,15 @@ export default function EditUserPage() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     username: '',
     name: '',
+    oldPassword: '',
     password: '',
     confirmPassword: '',
   })
@@ -33,15 +38,60 @@ export default function EditUserPage() {
       const res = await fetch(`/api/users/${userId}`)
       if (!res.ok) throw new Error('Failed to fetch user')
       const data = await res.json()
+      setCurrentUser(data.user)
       setFormData({
         email: data.user.email,
         username: data.user.username || '',
         name: data.user.name || '',
+        oldPassword: '',
         password: '',
         confirmPassword: '',
       })
     } catch (err: any) {
       setError(err.message)
+    }
+  }
+
+  const generateRandomPassword = () => {
+    // Generate a random password with at least 16 characters
+    const length = 16
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz'
+    const numbers = '0123456789'
+    const special = '!@#$%^&*'
+    const all = uppercase + lowercase + numbers + special
+
+    // Ensure at least one of each type
+    let password = ''
+    password += uppercase[Math.floor(Math.random() * uppercase.length)]
+    password += lowercase[Math.floor(Math.random() * lowercase.length)]
+    password += numbers[Math.floor(Math.random() * numbers.length)]
+    password += special[Math.floor(Math.random() * special.length)]
+
+    // Fill the rest randomly
+    for (let i = password.length; i < length; i++) {
+      password += all[Math.floor(Math.random() * all.length)]
+    }
+
+    // Shuffle the password
+    password = password.split('').sort(() => Math.random() - 0.5).join('')
+
+    setFormData({
+      ...formData,
+      password,
+      confirmPassword: password,
+    })
+
+    // Automatically show password when generated so user can see/copy it
+    setShowPassword(true)
+    setShowConfirmPassword(true)
+  }
+
+  const copyPassword = async () => {
+    if (formData.password) {
+      await navigator.clipboard.writeText(formData.password)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
   }
 
@@ -52,6 +102,12 @@ export default function EditUserPage() {
     // Validation
     if (formData.password && formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
+      return
+    }
+
+    // If changing password, old password is required
+    if (formData.password && !formData.oldPassword) {
+      setError('Current password is required to set a new password')
       return
     }
 
@@ -69,6 +125,7 @@ export default function EditUserPage() {
 
       // Only include password if it's being changed
       if (formData.password) {
+        updateData.oldPassword = formData.oldPassword
         updateData.password = formData.password
       }
 
@@ -144,18 +201,78 @@ export default function EditUserPage() {
             </div>
 
             <div className="border-t pt-4 mt-4">
-              <h3 className="text-sm font-medium mb-3">Change Password (optional)</h3>
-              <p className="text-xs text-muted-foreground mb-3">Leave blank to keep current password</p>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-medium">Change Password (optional)</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Leave blank to keep current password</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={generateRandomPassword}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span className="hidden sm:inline">Generate Password</span>
+                </Button>
+              </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
+                <Label htmlFor="oldPassword">Current Password</Label>
                 <Input
-                  id="password"
+                  id="oldPassword"
                   type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Leave blank to keep current"
+                  value={formData.oldPassword}
+                  onChange={(e) => setFormData({ ...formData, oldPassword: e.target.value })}
+                  placeholder="Required to change password"
                 />
+              </div>
+
+              <div className="space-y-2 mt-3">
+                <Label htmlFor="password">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Leave blank to keep current"
+                    className="pr-20"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+                    {formData.password && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyPassword}
+                        className="h-7 w-7 p-0"
+                        title="Copy password"
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="h-7 w-7 p-0"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
                 {formData.password && (
                   <PasswordRequirements password={formData.password} className="mt-3" />
                 )}
@@ -163,13 +280,32 @@ export default function EditUserPage() {
 
               <div className="space-y-2 mt-3">
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  placeholder="Leave blank to keep current"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    placeholder="Leave blank to keep current"
+                    className="pr-10"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="h-7 w-7 p-0"
+                      title={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
                 {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <X className="w-4 h-4" /> Passwords do not match

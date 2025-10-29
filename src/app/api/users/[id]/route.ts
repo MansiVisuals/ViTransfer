@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin, regenerateSession, getCurrentUserFromRequest } from '@/lib/auth'
-import { hashPassword, validatePassword } from '@/lib/encryption'
+import { hashPassword, validatePassword, verifyPassword } from '@/lib/encryption'
 import { revokeAllUserTokens, clearUserRevocation } from '@/lib/token-revocation'
 
 // Prevent static generation for this route
@@ -64,7 +64,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { email, username, name, password, role } = body
+    const { email, username, name, password, oldPassword, role } = body
 
     // Build update data
     const updateData: any = {}
@@ -140,6 +140,37 @@ export async function PATCH(
 
     // Only update password if provided
     if (password && password.trim() !== '') {
+      // SECURITY: Verify old password before allowing password change
+      if (!oldPassword || oldPassword.trim() === '') {
+        return NextResponse.json(
+          { error: 'Current password is required to change password' },
+          { status: 400 }
+        )
+      }
+
+      // Get user's current password hash
+      const userWithPassword = await prisma.user.findUnique({
+        where: { id },
+        select: { password: true },
+      })
+
+      if (!userWithPassword) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
+
+      // Verify old password
+      const isOldPasswordValid = await verifyPassword(oldPassword, userWithPassword.password)
+      if (!isOldPasswordValid) {
+        return NextResponse.json(
+          { error: 'Current password is incorrect' },
+          { status: 401 }
+        )
+      }
+
+      // Validate new password
       const passwordValidation = validatePassword(password)
       if (!passwordValidation.isValid) {
         return NextResponse.json(

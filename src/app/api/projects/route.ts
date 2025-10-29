@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { generateUniqueSlug } from '@/lib/utils'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt } from '@/lib/encryption'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -14,6 +15,14 @@ export async function POST(request: NextRequest) {
     return authResult
   }
   const admin = authResult
+
+  // Rate limiting: Max 20 projects per hour
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 60 * 1000, // 1 hour
+    maxRequests: 20,
+    message: 'Too many projects created. Please try again later.'
+  }, 'create-project')
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const body = await request.json()

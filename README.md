@@ -11,7 +11,7 @@ ViTransfer is a self-hosted web application designed for video professionals to 
 [![GitHub](https://img.shields.io/badge/github-MansiVisuals%2FViTransfer-blue)](https://github.com/MansiVisuals/ViTransfer)
 [![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/E1E215DBM4)
 
-> **⚠️ Development Status:** ViTransfer is currently in active development (v0.1.0). While fully functional and used in production, we are working towards a stable v1.0 release. Features and APIs may change. Contributions and feedback are welcome!
+> **⚠️ Development Status:** ViTransfer is currently in active development. While fully functional and used in production, we are working towards a stable v1.0 release. Features and APIs may change. Contributions and feedback are welcome!
 >
 > **💖 Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development!
 
@@ -121,7 +121,7 @@ Replace each placeholder in `.env`:
 docker-compose up -d
 ```
 
-6. **Access ViTransfer**
+4. **Access ViTransfer**
 - Open http://localhost:4321 (or your configured port)
 - Login with your admin credentials
 - Complete setup in admin settings
@@ -140,12 +140,14 @@ git clone https://github.com/MansiVisuals/ViTransfer.git
 cd ViTransfer
 ```
 
-2. **Follow steps 2-6 from Method 1 above**
+2. **Follow steps 2-3 from Method 1 above** to configure your `.env` file
 
 3. **Build and start**
 ```bash
 docker-compose up -d --build
 ```
+
+4. **Access ViTransfer** at http://localhost:4321 and login with your admin credentials
 
 The source code will be built into Docker images locally instead of pulling from Docker Hub.
 
@@ -153,12 +155,86 @@ The source code will be built into Docker images locally instead of pulling from
 
 ## 🌐 Platform Support
 
-ViTransfer uses standard Docker Compose and should work on most platforms.
+ViTransfer uses standard Docker Compose and should work on most platforms. Below are tested deployment guides for specific platforms.
+
+### Unraid (Docker Compose Manager)
+
+**Tested and verified on Unraid 7.1.4**
+
+1. **Install Docker Compose Manager Plugin**
+   - Go to Unraid WebUI → Apps → Search "Compose Manager"
+   - Install "Docker Compose Manager" by dcflachs
+
+2. **Create Compose Stack**
+   - Open Docker Compose Manager
+   - Click "Add New Stack"
+   - Name it "vitransfer"
+
+3. **Add Configuration Files**
+   - Download `docker-compose.yml` and `.env.example` from the GitHub repository
+   - In the stack editor, paste the contents of `docker-compose.yml`
+   - Click on the `.env` tab and paste the contents of `.env.example`
+
+4. **Configure Environment Variables**
+   - Generate secure passwords using Unraid's terminal:
+   ```bash
+   openssl rand -hex 32      # For POSTGRES_PASSWORD
+   openssl rand -hex 32      # For REDIS_PASSWORD
+   openssl rand -base64 32   # For ENCRYPTION_KEY
+   openssl rand -base64 64   # For JWT_SECRET
+   openssl rand -base64 64   # For JWT_REFRESH_SECRET
+   ```
+   - Update the `.env` tab with your generated values
+   - Set your admin email and password
+   - Change `APP_PORT` if 4321 is already in use
+
+5. **Update Volume Paths (Recommended)**
+   - In the `docker-compose.yml`, change volume mappings to use Unraid paths:
+   ```yaml
+   volumes:
+     postgres-data:
+       driver: local
+       driver_opts:
+         type: none
+         o: bind
+         device: /mnt/user/appdata/vitransfer/postgres
+     redis-data:
+       driver: local
+       driver_opts:
+         type: none
+         o: bind
+         device: /mnt/user/appdata/vitransfer/redis
+     uploads:
+       driver: local
+       driver_opts:
+         type: none
+         o: bind
+         device: /mnt/user/appdata/vitransfer/uploads
+   ```
+
+6. **Create Directories**
+   - Open Unraid terminal and create the required directories:
+   ```bash
+   mkdir -p /mnt/user/appdata/vitransfer/{postgres,redis,uploads}
+   ```
+
+7. **Deploy Stack**
+   - Click "Compose Up" to start all services
+   - Monitor logs for any errors
+   - Wait for database initialization (first start takes 2-3 minutes)
+
+8. **Access ViTransfer**
+   - Navigate to `http://UNRAID-IP:4321`
+   - Login with your admin credentials from the `.env` file
+
+---
+
+### Other Platforms
 
 **Planned Platform Guides:**
-- Unraid (Docker Compose Manager)
 - TrueNAS SCALE
 - Synology NAS
+- Portainer
 
 **Community contributions welcome!** If you've successfully deployed on a specific platform, consider contributing installation guides.
 
@@ -266,8 +342,8 @@ tar -czf vitransfer-backup.tar.gz \
 # Pull latest images from Docker Hub
 docker-compose pull
 
-# Or pull specific version
-docker pull crypt010/vitransfer:0.1.0
+# Or pull specific version tag
+docker pull crypt010/vitransfer:latest
 
 # Restart with new images
 docker-compose up -d

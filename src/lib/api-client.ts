@@ -85,7 +85,7 @@ function handleSessionExpired() {
   // - Full page reload (clears all cached data)
   // - All React state is cleared
   // - Any pending requests are cancelled
-  window.location.href = '/login?reason=session_expired'
+  window.location.href = '/login?sessionExpired=true'
 }
 
 /**

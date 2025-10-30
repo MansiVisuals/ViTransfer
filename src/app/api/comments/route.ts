@@ -6,6 +6,7 @@ import { generateShareUrl } from '@/lib/url'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, createCommentSchema } from '@/lib/validation'
 import { cookies } from 'next/headers'
+import { isSmtpConfigured } from '@/lib/settings'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -108,11 +109,20 @@ export async function GET(request: NextRequest) {
     // If password protected and user is not admin, verify share authentication
     if (project.sharePassword && !isAdmin) {
       const cookieStore = await cookies()
-      const authToken = cookieStore.get(`share_auth_${project.id}`)
+      const authSessionId = cookieStore.get('share_auth')?.value
 
-      if (authToken?.value !== 'true') {
+      if (!authSessionId) {
         // Return empty array instead of 401 to prevent information disclosure
         // This way attackers can't confirm if a project exists or has comments
+        return NextResponse.json([])
+      }
+
+      // Verify auth session maps to this project
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+      if (mappedProjectId !== project.id) {
+        // Return empty array instead of 401 to prevent information disclosure
         return NextResponse.json([])
       }
     }
@@ -201,6 +211,16 @@ export async function POST(request: NextRequest) {
     // Get current user if authenticated (for admin comments)
     const currentUser = await getCurrentUserFromRequest(request)
 
+    // SECURITY: If isInternal flag is set, verify admin session
+    if (isInternal) {
+      if (!currentUser || currentUser.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+    }
+
     // Fetch the project to check password protection
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -220,9 +240,21 @@ export async function POST(request: NextRequest) {
     // If password protected and user is not admin, verify share authentication
     if (project.sharePassword && !currentUser) {
       const cookieStore = await cookies()
-      const authToken = cookieStore.get(`share_auth_${project.id}`)
+      const authSessionId = cookieStore.get('share_auth')?.value
 
-      if (authToken?.value !== 'true') {
+      if (!authSessionId) {
+        // Don't reveal if project exists - return generic error
+        return NextResponse.json(
+          { error: 'Unable to process request' },
+          { status: 400 }
+        )
+      }
+
+      // Verify auth session maps to this project
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+      if (mappedProjectId !== project.id) {
         // Don't reveal if project exists - return generic error
         return NextResponse.json(
           { error: 'Unable to process request' },
@@ -285,9 +317,12 @@ export async function POST(request: NextRequest) {
 
     // Send email notification if this is a reply to a comment
     if (parentId && isInternal) {
-      try {
-        // Get the parent comment to check if notifications are enabled
-        const parentComment = await prisma.comment.findUnique({
+      // Check if SMTP is configured before attempting to send email
+      const smtpConfigured = await isSmtpConfigured()
+      if (smtpConfigured) {
+        try {
+          // Get the parent comment to check if notifications are enabled
+          const parentComment = await prisma.comment.findUnique({
           where: { id: parentId },
           select: {
             notifyByEmail: true,
@@ -329,17 +364,21 @@ export async function POST(request: NextRequest) {
             })
           }
         }
-      } catch (emailError) {
-        console.error('Failed to send reply notification:', emailError)
-        // Don't fail the request if email sending fails
+        } catch (emailError) {
+          console.error('Failed to send reply notification:', emailError)
+          // Don't fail the request if email sending fails
+        }
       }
     }
 
     // Send email notification to admins if this is client feedback (not internal)
     if (!isInternal && !parentId) {
-      try {
-        // Get all admin emails
-        const admins = await prisma.user.findMany({
+      // Check if SMTP is configured before attempting to send email
+      const smtpConfigured = await isSmtpConfigured()
+      if (smtpConfigured) {
+        try {
+          // Get all admin emails
+          const admins = await prisma.user.findMany({
           where: { role: 'ADMIN' },
           select: { email: true }
         })
@@ -372,9 +411,10 @@ export async function POST(request: NextRequest) {
             })
           }
         }
-      } catch (emailError) {
-        console.error('Failed to send admin notification:', emailError)
-        // Don't fail the request if email sending fails
+        } catch (emailError) {
+          console.error('Failed to send admin notification:', emailError)
+          // Don't fail the request if email sending fails
+        }
       }
     }
 

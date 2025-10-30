@@ -13,6 +13,17 @@ const ACCESS_TOKEN_DURATION = 15 * 60 // 15 minutes in seconds
 const REFRESH_TOKEN_DURATION = 3 * 24 * 60 * 60 // 3 days in seconds (long-lived, rotated on use)
 const SESSION_INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes of inactivity in ms
 
+// Cookie configuration
+// Self-hosters access via localhost/LAN (HTTP) or reverse proxy (HTTPS termination)
+// Secure flag breaks Safari on localhost and provides no security benefit
+// When behind reverse proxy, proxy terminates HTTPS and sends HTTP to container
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: false, // Reverse proxy handles HTTPS
+  sameSite: 'strict' as const,
+  path: '/',
+} as const
+
 // JWT secrets - REQUIRED in production (see README for setup instructions)
 // Note: During build time, we allow missing secrets but will validate at runtime
 // SKIP_ENV_VALIDATION is set during Docker builds to skip validation
@@ -236,26 +247,15 @@ export async function createSession(user: AuthUser): Promise<void> {
 
   const cookieStore = await cookies()
 
-  // Cookie security: Disable Secure flag for self-hosted deployments
-  // Self-hosters access via localhost/LAN (HTTP) or reverse proxy (HTTPS termination)
-  // Secure flag breaks Safari on localhost and provides no security benefit
-  // When behind reverse proxy, proxy terminates HTTPS and sends HTTP to container
-  const cookieOptions = {
-    httpOnly: true,
-    secure: false, // Reverse proxy handles HTTPS
-    sameSite: 'strict' as const,
-    path: '/',
-  }
-
   // Set access token cookie (short-lived)
   cookieStore.set(SESSION_COOKIE_NAME, accessToken, {
-    ...cookieOptions,
+    ...COOKIE_OPTIONS,
     maxAge: ACCESS_TOKEN_DURATION,
   })
 
   // Set refresh token cookie (long-lived)
   cookieStore.set(REFRESH_COOKIE_NAME, refreshToken, {
-    ...cookieOptions,
+    ...COOKIE_OPTIONS,
     maxAge: REFRESH_TOKEN_DURATION,
   })
 }
@@ -298,16 +298,9 @@ export async function refreshAccessToken(): Promise<boolean> {
     // Generate new access token
     const newAccessToken = generateAccessToken(user)
 
-    const cookieOptions = {
-      httpOnly: true,
-      secure: false, // Reverse proxy handles HTTPS
-      sameSite: 'strict' as const,
-      path: '/',
-    }
-
     // Update access token cookie
     cookieStore.set(SESSION_COOKIE_NAME, newAccessToken, {
-      ...cookieOptions,
+      ...COOKIE_OPTIONS,
       maxAge: ACCESS_TOKEN_DURATION,
     })
 

@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { NextRequest } from 'next/server'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -33,8 +34,15 @@ export function formatTimestamp(seconds: number): string {
   if (!seconds || isNaN(seconds) || !isFinite(seconds)) {
     return '0:00'
   }
-  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
   const secs = Math.floor(seconds % 60)
+
+  // Show hours format for videos 60+ minutes
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+  // Show minutes format for videos under 60 minutes
   return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
@@ -72,4 +80,12 @@ export async function generateUniqueSlug(
   }
 
   return slug
+}
+
+export function getClientIpAddress(request: NextRequest): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  )
 }

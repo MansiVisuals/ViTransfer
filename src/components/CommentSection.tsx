@@ -41,6 +41,7 @@ interface CommentSectionProps {
   companyName?: string // Company name from settings
   smtpConfigured?: boolean // Whether SMTP is configured
   isPasswordProtected?: boolean // Whether the project is password-protected
+  adminUser?: any // Admin user object if viewing as admin on share page
 }
 
 export default function CommentSection({
@@ -55,6 +56,7 @@ export default function CommentSection({
   companyName = 'Studio',
   smtpConfigured = false,
   isPasswordProtected = false, // Default to false for non-protected shares
+  adminUser = null,
 }: CommentSectionProps) {
   const router = useRouter()
 
@@ -75,17 +77,9 @@ export default function CommentSection({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Merge real comments from parent with optimistic comments
   // Filter out optimistic comments that now exist in initialComments (server confirmed them)
-  const realCommentIds = new Set(initialComments.map(c => {
-    // Extract timestamp from temp ID to match against real comment
-    // Temp ID format: temp-{timestamp}
-    // We'll match by content + timestamp instead
-    return c.content
-  }))
-
   const activeOptimisticComments = optimisticComments.filter(oc => {
     // Keep optimistic comment if no real comment matches it yet
     const hasRealVersion = initialComments.some(rc =>
@@ -141,29 +135,6 @@ export default function CommentSection({
   useEffect(() => {
     scrollToBottom()
   }, [comments])
-
-  // Poll for new comments every 10 seconds
-  // Note: We don't need to update state from polling anymore
-  // The parent component handles fetching and passing fresh initialComments
-  // We only manage optimistic comments locally
-  useEffect(() => {
-    if (commentsDisabled) return
-
-    // Clear any existing interval
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current)
-      pollingIntervalRef.current = null
-    }
-
-    // Parent component handles polling via auto-refresh
-    // We just need to clean up our optimistic comments when server confirms
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current)
-        pollingIntervalRef.current = null
-      }
-    }
-  }, [commentsDisabled])
 
   // Sync current video ID on mount and when user switches videos
   useEffect(() => {
@@ -242,6 +213,7 @@ export default function CommentSection({
     setLoading(true)
 
     // OPTIMISTIC UPDATE: Add comment to UI immediately (like texting)
+    const isInternalComment = !!adminUser
     const optimisticComment: CommentWithReplies = {
       id: `temp-${Date.now()}`, // Temporary ID
       projectId,
@@ -249,9 +221,11 @@ export default function CommentSection({
       videoVersion: selectedVideoId ? videos.find(v => v.id === selectedVideoId)?.version || null : null,
       timestamp: selectedTimestamp,
       content: newComment,
-      authorName: isAdminView ? (authorName || 'Admin') : (isPasswordProtected ? authorName : 'Client'),
-      authorEmail: clientEmail || null,
-      isInternal: isAdminView,
+      authorName: isInternalComment
+        ? (adminUser.name || adminUser.email)
+        : (isPasswordProtected ? authorName : 'Client'),
+      authorEmail: isInternalComment ? adminUser.email : (clientEmail || null),
+      isInternal: isInternalComment,
       createdAt: new Date(),
       updatedAt: new Date(),
       parentId: null,
@@ -277,6 +251,9 @@ export default function CommentSection({
       // Only enable email notifications if clientEmail exists
       const shouldNotify = !!(notifyByEmail && clientEmail)
 
+      // If admin user is present, send as internal comment
+      const isInternalComment = !!adminUser
+
       const response = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -285,10 +262,11 @@ export default function CommentSection({
           videoId: commentVideoId,
           timestamp: commentTimestamp,
           content: commentContent,
-          authorName: authorName || null,
-          authorEmail: clientEmail || null, // Use project's client email
-          notifyByEmail: shouldNotify,
-          notificationEmail: shouldNotify ? clientEmail : null, // Only include if email exists
+          authorName: isInternalComment ? (adminUser.name || adminUser.email) : (authorName || null),
+          authorEmail: isInternalComment ? adminUser.email : (clientEmail || null),
+          notifyByEmail: shouldNotify && !isInternalComment, // Admins don't get email notifications for their own comments
+          notificationEmail: shouldNotify && !isInternalComment ? clientEmail : null,
+          isInternal: isInternalComment,
         }),
       })
 
@@ -526,12 +504,25 @@ export default function CommentSection({
 
                         {/* Timestamp Badge (if present) */}
                         {comment.timestamp !== null && comment.timestamp !== undefined && (
-                          <div className="flex items-center gap-1 mb-1">
+                          <button
+                            onClick={() => {
+                              // Dispatch custom event for video seeking
+                              window.dispatchEvent(new CustomEvent('seekToTime', {
+                                detail: {
+                                  timestamp: comment.timestamp,
+                                  videoId: comment.videoId,
+                                  videoVersion: comment.videoVersion
+                                }
+                              }))
+                            }}
+                            className="flex items-center gap-1 mb-1 cursor-pointer hover:opacity-80 transition-opacity"
+                            title="Seek to this timestamp"
+                          >
                             <Clock className="w-3 h-3 text-warning" />
-                            <span className="text-xs text-warning">
+                            <span className="text-xs text-warning underline decoration-dotted">
                               {formatTimestamp(comment.timestamp)}
                             </span>
-                          </div>
+                          </button>
                         )}
                         
                         {/* Message Content */}
@@ -569,8 +560,8 @@ export default function CommentSection({
               </div>
             )}
 
-            {/* Author Info - Only show for password-protected shares or if admin view */}
-            {!authorName && !currentVideoRestricted && isPasswordProtected && (
+            {/* Author Info - Only show for password-protected shares (not for admin users) */}
+            {!currentVideoRestricted && isPasswordProtected && !adminUser && (
               <div className="mb-3 space-y-2">
                 <Input
                   placeholder="Your name (optional)"

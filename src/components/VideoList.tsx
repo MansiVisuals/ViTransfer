@@ -102,23 +102,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     return <p className="text-sm text-muted-foreground">No videos uploaded yet</p>
   }
 
-  // Check if any videos are processing for the indicator
-  const hasProcessingVideos = videos.some(
-    v => v.status === 'PROCESSING' || v.status === 'UPLOADING'
-  )
-
   return (
     <div className="space-y-4">
-      {hasProcessingVideos && (
-        <div className="bg-primary-visible border-2 border-primary-visible text-primary rounded-lg p-3 flex items-center gap-3">
-          <div className="relative flex items-center justify-center">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">Processing videos...</p>
-          </div>
-        </div>
-      )}
       {videos.map((video) => (
         <div key={video.id} className="border rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
           <div className="flex justify-between items-start gap-2">

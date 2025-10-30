@@ -6,6 +6,8 @@ import fs from 'fs'
 import { getFilePath } from '@/lib/storage'
 import { cookies } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
+import { getClientIpAddress } from '@/lib/utils'
+import { getCurrentUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,7 +49,7 @@ export async function GET(
       await logSecurityEvent({
         type: 'RATE_LIMIT_HIT',
         severity: 'WARNING',
-        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+        ipAddress: getClientIpAddress(request),
         details: { limit: 'IP-based', window: '1 minute' },
         wasBlocked: true
       })
@@ -55,8 +57,13 @@ export async function GET(
       return ipRateLimitResult
     }
     
-    // SECURITY: Get token data from Redis first to extract project ID
-    // We need this to know which session cookie to check
+    // SECURITY: Check authentication - TWO paths:
+    // Path 1: Admin with valid JWT (vitransfer_session)
+    // Path 2: Regular user with share session
+
+    const currentUser = await getCurrentUserFromRequest(request)
+    const isAdmin = currentUser?.role === 'ADMIN'
+
     const redis = getRedis()
     const tokenKey = `video_access:${token}`
     const rawTokenData = await redis.get(tokenKey)
@@ -64,15 +71,49 @@ export async function GET(
     if (!rawTokenData) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
-    
-    const preliminaryTokenData = JSON.parse(rawTokenData)
-    
-    // Get session cookie for this project
-    const cookieStore = await cookies()
-    const sessionId = cookieStore.get(`share_session_${preliminaryTokenData.projectId}`)?.value
 
-    if (!sessionId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 401 })
+    const preliminaryTokenData = JSON.parse(rawTokenData)
+
+    // Get share session cookie
+    const cookieStore = await cookies()
+    let sessionId = cookieStore.get('share_session')?.value
+
+    // ADMIN PATH: Admins authenticated via JWT, no share session needed
+    if (isAdmin) {
+      // Verify token belongs to a real project (security check)
+      const project = await prisma.project.findUnique({
+        where: { id: preliminaryTokenData.projectId },
+        select: { id: true }
+      })
+
+      if (!project) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      }
+
+      // Admin verified - use special admin session marker for logging
+      sessionId = `admin:${currentUser.id}`
+    } else {
+      // REGULAR USER PATH: Verify share session exists and matches project
+      if (!sessionId) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
+      }
+
+      // Verify session → project mapping in Redis
+      const mappedProjectId = await redis.get(`session_project:${sessionId}`)
+
+      if (!mappedProjectId || mappedProjectId !== preliminaryTokenData.projectId) {
+        // Session doesn't map to this project - possible attack
+        await logSecurityEvent({
+          type: 'SESSION_PROJECT_MISMATCH',
+          severity: 'WARNING',
+          projectId: preliminaryTokenData.projectId,
+          sessionId,
+          ipAddress: getClientIpAddress(request),
+          details: { expectedProject: preliminaryTokenData.projectId, mappedProject: mappedProjectId }
+        })
+
+        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
+      }
     }
     
     // TIER 2: Per-Session Rate Limiting (Very generous for video streaming with chunking)
@@ -90,7 +131,7 @@ export async function GET(
         severity: 'INFO',
         projectId: preliminaryTokenData.projectId,
         sessionId,
-        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+        ipAddress: getClientIpAddress(request),
         details: { limit: 'Session-based', window: '1 minute' },
         wasBlocked: true
       })
@@ -124,7 +165,7 @@ export async function GET(
           projectId: verifiedToken.projectId,
           videoId: verifiedToken.videoId,
           sessionId,
-          ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+          ipAddress: getClientIpAddress(request),
           referer: request.headers.get('referer') || undefined,
           details: { reason: hotlinkCheck.reason },
           wasBlocked: true
@@ -148,17 +189,8 @@ export async function GET(
     if (!video || video.projectId !== verifiedToken.projectId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
-    
-    // Check password protection
-    if (video.project.sharePassword) {
-      const authCookie = cookieStore.get(`share_auth_${video.project.id}`)
 
-      if (authCookie?.value !== 'true') {
-        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
-      }
-    }
-    
-    // Determine which file to serve based on video approval status and quality
+    // Determine which file to serve based on video approval status
     let filePath: string | null = null
 
     // Check if THIS SPECIFIC VIDEO is approved (per-video approval)
@@ -166,15 +198,8 @@ export async function GET(
       // Approved videos get original file without watermark
       filePath = video.originalStoragePath
     } else {
-      // Non-approved videos get watermarked preview
-      // Try requested quality first, fallback to available quality
-      if (verifiedToken.quality === '1080p' && video.preview1080Path) {
-        filePath = video.preview1080Path
-      } else if (video.preview720Path) {
-        filePath = video.preview720Path
-      } else {
-        filePath = video.preview1080Path // Last fallback
-      }
+      // Non-approved videos get watermarked preview (whichever resolution was generated)
+      filePath = video.preview1080Path || video.preview720Path
     }
 
     if (!filePath) {
@@ -318,7 +343,7 @@ export async function GET(
     await logSecurityEvent({
       type: 'STREAM_ERROR',
       severity: 'CRITICAL',
-      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+      ipAddress: getClientIpAddress(request),
       details: { error: error instanceof Error ? error.message : 'Unknown error' }
     })
     

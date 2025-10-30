@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import IORedis from 'ioredis'
 import crypto from 'crypto'
 import { logSecurityEvent } from '@/lib/video-access'
+import { getClientIpAddress } from '@/lib/utils'
 
 // Rate limit configuration
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
@@ -25,10 +26,7 @@ function getRedisConnection(): IORedis {
 }
 
 function getIdentifier(request: NextRequest, token: string): string {
-  const ip = 
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
+  const ip = getClientIpAddress(request)
   
   const hash = crypto
     .createHash('sha256')
@@ -58,8 +56,7 @@ export async function POST(
         const retryAfter = Math.ceil((lockoutUntil - now) / 1000)
 
         // Log security event for rate limit hit
-        const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-                          request.headers.get('x-real-ip') || 'unknown'
+        const ipAddress = getClientIpAddress(request)
 
         await logSecurityEvent({
           type: 'PASSWORD_RATE_LIMIT_HIT',
@@ -145,8 +142,7 @@ export async function POST(
       await redis.setex(rateLimitKey, ttlSeconds, JSON.stringify(rateLimitEntry))
 
       // Log security event for failed password attempt
-      const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-                        request.headers.get('x-real-ip') || 'unknown'
+      const ipAddress = getClientIpAddress(request)
 
       await logSecurityEvent({
         type: 'FAILED_PASSWORD_ATTEMPT',
@@ -190,11 +186,21 @@ export async function POST(
 
     // SUCCESS - clear any existing rate limit data
     await redis.del(rateLimitKey)
-    
-    // Set authentication cookie with enhanced security
-    // 15 minute session for security - user needs to re-authenticate after
+
+    // Generate unique auth session ID (no project ID exposure)
+    const authSessionId = crypto.randomBytes(16).toString('base64url')
+
+    // Store auth → project mapping in Redis
+    await redis.set(
+      `auth_project:${authSessionId}`,
+      project.id,
+      'EX',
+      60 * 15 // 15 minutes
+    )
+
+    // Set generic authentication cookie (no project ID exposure)
     const cookieStore = await cookies()
-    cookieStore.set(`share_auth_${project.id}`, 'true', {
+    cookieStore.set('share_auth', authSessionId, {
       httpOnly: true,
       secure: false, // Match auth cookie settings
       sameSite: 'strict',

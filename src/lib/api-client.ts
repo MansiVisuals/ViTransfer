@@ -50,7 +50,6 @@ export async function apiFetch(
                             url.includes('/api/share/')
 
       if (!isAuthEndpoint) {
-        console.log('[API] Session invalid (401/403) - redirecting to login')
         handleSessionExpired()
       }
     }

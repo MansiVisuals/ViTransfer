@@ -368,20 +368,16 @@ export default function CommentSection({
 
   // Filter comments based on currently selected video
   // If a video is selected, show comments for that specific video + general comments (no videoId)
-  // If restrictToLatestVersion is enabled, only show comments for the latest version
+  // If restrictToLatestVersion is enabled, only show comments for the latest version in overview
   const displayComments = selectedVideoId
     ? comments.filter(comment => {
         // Show general comments (no specific video)
         if (!comment.videoId) return true
 
-        // Show comments for currently selected video
+        // Show ONLY comments for currently selected video
         if (comment.videoId === selectedVideoId) return true
 
-        // If restriction is enabled, also check version
-        if (restrictToLatestVersion && latestVideoVersion) {
-          return comment.videoVersion === latestVideoVersion
-        }
-
+        // Don't show comments from other videos
         return false
       })
     : (restrictToLatestVersion && latestVideoVersion

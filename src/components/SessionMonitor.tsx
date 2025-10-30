@@ -71,10 +71,8 @@ export default function SessionMonitor() {
 
           if (response.ok) {
             lastRefresh = Date.now()
-            console.log('[SESSION] Token refreshed successfully')
           } else if (response.status === 401 || response.status === 403) {
             // Refresh token invalid/expired or security violation
-            console.log('[SESSION] Refresh failed - logging out')
             router.push('/api/auth/logout')
           }
         } catch (error) {
@@ -98,7 +96,6 @@ export default function SessionMonitor() {
         const timeSinceRefresh = Date.now() - lastRefresh
         // Only refresh if haven't refreshed very recently (prevent spam)
         if (timeSinceRefresh >= 30 * 1000) { // 30 seconds minimum between refreshes
-          console.log('[SESSION] User activity during warning - refreshing token immediately')
           await refreshToken()
         }
       }
@@ -126,7 +123,6 @@ export default function SessionMonitor() {
 
       if (timeUntilLogout <= 0) {
         // Inactivity timeout - logout
-        console.log('[SESSION] Inactivity timeout - logging out')
         // Call logout API to clear cookies, then redirect to login with sessionExpired flag
         fetch('/api/auth/logout', {
           method: 'POST',

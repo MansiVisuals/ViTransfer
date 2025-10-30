@@ -51,6 +51,25 @@ export default function ProjectPage() {
     fetchProject()
   }, [id, router])
 
+  // Auto-refresh when videos are processing to show real-time progress
+  useEffect(() => {
+    if (!project?.videos) return
+
+    // Check if any videos are currently processing
+    const hasProcessingVideos = project.videos.some(
+      (video: any) => video.status === 'PROCESSING' || video.status === 'UPLOADING'
+    )
+
+    if (hasProcessingVideos) {
+      // Poll every 3 seconds while videos are processing
+      const interval = setInterval(() => {
+        fetchProject()
+      }, 3000)
+
+      return () => clearInterval(interval)
+    }
+  }, [project?.videos])
+
   // Fetch share URL
   useEffect(() => {
     async function fetchShareUrl() {
@@ -217,6 +236,9 @@ export default function ProjectPage() {
                   videos={activeVideos}
                   restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                   companyName={companyName}
+                  onRefresh={fetchProject}
+                  projectSlug={project.slug}
+                  activeVideoName={activeVideoName}
                 />
               </div>
             )}

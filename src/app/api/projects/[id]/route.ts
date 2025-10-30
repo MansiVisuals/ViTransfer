@@ -275,10 +275,22 @@ export async function PATCH(
         updateData.sharePassword = encrypt(body.sharePassword)
       }
 
-      // Clear the authentication cookie when password changes
+      // Clear authentication sessions for this project when password changes
       // This forces users to re-authenticate with the new password
       const cookieStore = await cookies()
-      cookieStore.delete(`share_auth_${id}`)
+      const authSessionId = cookieStore.get('share_auth')?.value
+
+      if (authSessionId) {
+        // Delete the auth session from Redis
+        const redis = await import('@/lib/video-access').then(m => m.getRedis())
+        const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+        // Only delete if this session was for this project
+        if (mappedProjectId === id) {
+          await redis.del(`auth_project:${authSessionId}`)
+          cookieStore.delete('share_auth')
+        }
+      }
     }
 
     const project = await prisma.project.update({

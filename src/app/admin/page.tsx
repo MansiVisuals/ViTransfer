@@ -25,14 +25,7 @@ async function getProjects() {
 
 export default async function AdminPage() {
   const projects = await getProjects()
-  
-  // Safely get company name with fallback
-  let companyName = 'Studio'
-  try {
-    companyName = await getCompanyName()
-  } catch (error) {
-    // Silent fail - use default value
-  }
+  const companyName = await getCompanyName()
 
   return (
     <div className="min-h-screen bg-background">

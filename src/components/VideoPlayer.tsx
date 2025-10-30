@@ -31,6 +31,8 @@ interface VideoPlayerProps {
   watermarkEnabled?: boolean
   isAdmin?: boolean // Admin users can see all versions (default: false for clients)
   activeVideoName?: string // The video group name (for maintaining selection after reload)
+  initialSeekTime?: number | null // Initial timestamp to seek to (from URL params)
+  initialVideoIndex?: number // Initial video index to select (from URL params)
 }
 
 export default function VideoPlayer({
@@ -48,10 +50,12 @@ export default function VideoPlayer({
   isPasswordProtected,
   watermarkEnabled = true,
   isAdmin = false, // Default to false (client view)
-  activeVideoName
+  activeVideoName,
+  initialSeekTime = null,
+  initialVideoIndex = 0
 }: VideoPlayerProps) {
   const router = useRouter()
-  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0)
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
   const [currentTime, setCurrentTime] = useState(0)
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [showInfoDialog, setShowInfoDialog] = useState(false)
@@ -59,6 +63,7 @@ export default function VideoPlayer({
   const [loading, setLoading] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
+  const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
 
   // Filter videos for clients: if ANY video is approved, only show approved videos
   // Admins always see all videos
@@ -109,12 +114,43 @@ export default function VideoPlayer({
           }
         }
       } catch (error) {
-        // Silent error handling
+        console.error('Error loading video:', error)
       }
     }
 
     loadVideoUrl()
   }, [selectedVideo, defaultQuality])
+
+  // Handle initial seek from URL parameters (only once on mount)
+  useEffect(() => {
+    if (initialSeekTime !== null && videoRef.current && videoUrl && !hasInitiallySeenRef.current) {
+      const handleLoadedMetadata = () => {
+        if (videoRef.current && initialSeekTime !== null) {
+          // Ensure timestamp is within video duration
+          const duration = videoRef.current.duration
+          const seekTime = Math.min(initialSeekTime, duration)
+
+          videoRef.current.currentTime = seekTime
+          videoRef.current.play().catch(() => {}) // Auto-play after seeking (ignore errors)
+
+          // Mark that we've done the initial seek
+          hasInitiallySeenRef.current = true
+        }
+      }
+
+      // If metadata already loaded, seek immediately
+      if (videoRef.current.readyState >= 1) {
+        handleLoadedMetadata()
+      } else {
+        // Otherwise wait for metadata to load
+        videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true })
+      }
+
+      return () => {
+        videoRef.current?.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      }
+    }
+  }, [initialSeekTime, videoUrl])
 
   // Optimize video element for smooth playback
   useEffect(() => {
@@ -174,6 +210,40 @@ export default function VideoPlayer({
       window.removeEventListener('getSelectedVideoId' as any, handleGetSelectedVideoId as EventListener)
     }
   }, [selectedVideo.id])
+
+  // Handle seek to timestamp requests from comments
+  useEffect(() => {
+    const handleSeekToTime = (e: CustomEvent) => {
+      const { timestamp, videoId, videoVersion } = e.detail
+
+      // If videoId is specified and different from current, try to switch to it
+      if (videoId && videoId !== selectedVideo.id) {
+        const targetVideoIndex = displayVideos.findIndex(v => v.id === videoId)
+        if (targetVideoIndex !== -1) {
+          setSelectedVideoIndex(targetVideoIndex)
+          // Wait for video to load before seeking
+          setTimeout(() => {
+            if (videoRef.current) {
+              videoRef.current.currentTime = timestamp
+              videoRef.current.play().catch(() => {}) // Auto-play after seeking (ignore errors)
+            }
+          }, 500)
+          return
+        }
+      }
+
+      // Same video - just seek
+      if (videoRef.current) {
+        videoRef.current.currentTime = timestamp
+        videoRef.current.play().catch(() => {}) // Auto-play after seeking (ignore errors)
+      }
+    }
+
+    window.addEventListener('seekToTime' as any, handleSeekToTime as EventListener)
+    return () => {
+      window.removeEventListener('seekToTime' as any, handleSeekToTime as EventListener)
+    }
+  }, [selectedVideo.id, displayVideos])
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {

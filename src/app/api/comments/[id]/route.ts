@@ -111,9 +111,20 @@ export async function PATCH(
 
     if (existingComment.project.sharePassword && !isAdmin) {
       const cookieStore = await cookies()
-      const authToken = cookieStore.get(`share_auth_${existingComment.project.id}`)
+      const authSessionId = cookieStore.get('share_auth')?.value
 
-      if (authToken?.value !== 'true') {
+      if (!authSessionId) {
+        return NextResponse.json(
+          { error: 'Unable to process request' },
+          { status: 400 }
+        )
+      }
+
+      // Verify auth session maps to this project
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+      if (mappedProjectId !== existingComment.project.id) {
         return NextResponse.json(
           { error: 'Unable to process request' },
           { status: 400 }
@@ -217,9 +228,20 @@ export async function DELETE(
 
     if (existingComment.project.sharePassword && !isAdmin) {
       const cookieStore = await cookies()
-      const authToken = cookieStore.get(`share_auth_${existingComment.project.id}`)
+      const authSessionId = cookieStore.get('share_auth')?.value
 
-      if (authToken?.value !== 'true') {
+      if (!authSessionId) {
+        return NextResponse.json(
+          { error: 'Unable to process request' },
+          { status: 400 }
+        )
+      }
+
+      // Verify auth session maps to this project
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+      if (mappedProjectId !== existingComment.project.id) {
         return NextResponse.json(
           { error: 'Unable to process request' },
           { status: 400 }

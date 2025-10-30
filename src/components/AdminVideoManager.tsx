@@ -96,23 +96,8 @@ export default function AdminVideoManager({
 
   const sortedGroupNames = Object.keys(videoGroups).sort()
 
-  // Check if any videos are processing
-  const hasProcessingVideos = videos.some(
-    v => v.status === 'PROCESSING' || v.status === 'UPLOADING'
-  )
-
   return (
     <div className="space-y-4">
-      {hasProcessingVideos && (
-        <div className="bg-primary-visible border-2 border-primary-visible text-primary rounded-lg p-4 flex items-center gap-3 animate-pulse">
-          <div className="relative flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          </div>
-          <div className="flex-1">
-            <p className="font-medium">Video processing in progress</p>
-          </div>
-        </div>
-      )}
       {sortedGroupNames.map((groupName) => {
         const groupVideos = videoGroups[groupName]
         const isExpanded = expandedGroup === groupName

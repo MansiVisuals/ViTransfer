@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import IORedis from 'ioredis'
 import crypto from 'crypto'
 import { prisma } from './db'
+import { getClientIpAddress } from './utils'
 
 /**
  * Production-Ready Redis-based Rate Limiting
@@ -78,10 +79,7 @@ function getIdentifier(request: NextRequest, prefix: string = '', customKey?: st
   }
   
   // Default: Use IP + User Agent for general rate limiting
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
+  const ip = getClientIpAddress(request)
   
   const userAgent = request.headers.get('user-agent') || 'unknown'
   

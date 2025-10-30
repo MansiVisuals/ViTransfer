@@ -26,15 +26,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // SECURITY: Check password authentication for password-protected projects using cookies
     if (project.sharePassword) {
       const cookieStore = await cookies()
-      const authToken = cookieStore.get(`share_auth_${project.id}`)
+      const authSessionId = cookieStore.get('share_auth')?.value
 
-      if (authToken?.value !== 'true') {
+      if (!authSessionId) {
+        return NextResponse.json({
+          error: 'Password required to approve this project'
+        }, { status: 401 })
+      }
+
+      // Verify auth session maps to this project
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+      if (mappedProjectId !== project.id) {
         return NextResponse.json({
           error: 'Password required to approve this project'
         }, { status: 401 })
       }
     }
-    // If no password protection, anyone can approve (as before)
+    // If no password protection, anyone can approve
 
     if (project.status === 'APPROVED') {
       return NextResponse.json({ error: 'Project already approved' }, { status: 400 })

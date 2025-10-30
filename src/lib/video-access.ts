@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import IORedis from 'ioredis'
 import { NextRequest } from 'next/server'
 import { prisma } from './db'
+import { getClientIpAddress } from './utils'
 
 /**
  * Video Access Token System
@@ -70,10 +71,7 @@ export async function generateVideoAccessToken(
   const token = crypto.randomBytes(16).toString('base64url')
 
   // Get IP address
-  const ipAddress =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
+  const ipAddress = getClientIpAddress(request)
 
   const tokenData: VideoAccessToken = {
     videoId,
@@ -108,32 +106,38 @@ export async function verifyVideoAccessToken(
   sessionId: string
 ): Promise<VideoAccessToken | null> {
   const redis = getRedis()
-  
+
   const key = `video_access:${token}`
   const data = await redis.get(key)
 
   if (!data) {
     return null
   }
-  
-  const tokenData: VideoAccessToken = JSON.parse(data)
-  
-  // Verify session matches (prevent token sharing)
-  if (tokenData.sessionId !== sessionId) {
-    // Log security event
-    await logSecurityEvent({
-      type: 'TOKEN_SESSION_MISMATCH',
-      severity: 'WARNING',
-      projectId: tokenData.projectId,
-      videoId: tokenData.videoId,
-      sessionId,
-      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
-      details: { expectedSession: tokenData.sessionId }
-    })
 
-    return null
+  const tokenData: VideoAccessToken = JSON.parse(data)
+
+  // Admin sessions (prefixed with "admin:") skip session matching
+  // Admins are authenticated via JWT, not share sessions
+  const isAdminSession = sessionId.startsWith('admin:')
+
+  if (!isAdminSession) {
+    // Regular users: Verify session matches (prevent token sharing)
+    if (tokenData.sessionId !== sessionId) {
+      // Log security event
+      await logSecurityEvent({
+        type: 'TOKEN_SESSION_MISMATCH',
+        severity: 'WARNING',
+        projectId: tokenData.projectId,
+        videoId: tokenData.videoId,
+        sessionId,
+        ipAddress: getClientIpAddress(request),
+        details: { expectedSession: tokenData.sessionId }
+      })
+
+      return null
+    }
   }
-  
+
   return tokenData
 }
 
@@ -177,7 +181,7 @@ export async function detectHotlinking(
           projectId,
           videoId,
           sessionId,
-          ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+          ipAddress: getClientIpAddress(request),
           referer,
           details: { refererHost }
         })
@@ -211,7 +215,7 @@ export async function detectHotlinking(
         projectId,
         videoId,
         sessionId,
-        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+        ipAddress: getClientIpAddress(request),
         details: { requestCount: count, window: '5min' }
       })
     }
@@ -224,9 +228,7 @@ export async function detectHotlinking(
   }
   
   // Check 3: Blocked IP
-  const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-                   request.headers.get('x-real-ip') ||
-                   'unknown'
+  const ipAddress = getClientIpAddress(request)
   
   const blockedIPs = await getBlockedIPs()
   if (blockedIPs.includes(ipAddress)) {

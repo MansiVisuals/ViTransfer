@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
 import VideoSidebar from '@/components/VideoSidebar'
@@ -13,7 +13,13 @@ import { Lock, Check } from 'lucide-react'
 
 export default function SharePage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const token = params?.token as string
+
+  // Parse URL parameters for video seeking
+  const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!) : null
+  const urlVideoName = searchParams?.get('video') || null
+  const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!) : null
 
   const [isPasswordProtected, setIsPasswordProtected] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -25,6 +31,9 @@ export default function SharePage() {
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
+  const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
+  const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
+  const [adminUser, setAdminUser] = useState<any>(null)
 
   // Fetch project data function (for refresh after approval)
   const fetchProjectData = async () => {
@@ -110,6 +119,23 @@ export default function SharePage() {
         setIsPasswordProtected(data.requiresPassword)
         setIsAuthenticated(data.isAuthenticated)
 
+        // If admin session detected, fetch admin user info
+        if (data.isAdmin) {
+          try {
+            const adminResponse = await fetch('/api/auth/session', {
+              credentials: 'include'
+            })
+            if (adminResponse.ok) {
+              const adminData = await adminResponse.json()
+              if (isMounted) {
+                setAdminUser(adminData.user)
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching admin info:', error)
+          }
+        }
+
         if (!data.requiresPassword || data.isAuthenticated) {
           // Fetch project data
           const projectResponse = await fetch(`/api/share/${token}`, {
@@ -155,29 +181,52 @@ export default function SharePage() {
     }
   }, [token]) // Removed isAuthenticated from dependencies to prevent double-load
 
-  // Set active video when project loads
+  // Set active video when project loads, handling URL parameters
   useEffect(() => {
     if (project?.videosByName) {
       const videoNames = Object.keys(project.videosByName)
       if (videoNames.length > 0 && !activeVideoName) {
-        // Check if there's a saved video name from recent approval
-        const savedVideoName = sessionStorage.getItem('approvedVideoName')
+        let videoNameToUse: string | null = null
 
-        // Clear the saved name immediately after reading
-        if (savedVideoName) {
-          sessionStorage.removeItem('approvedVideoName')
+        // Priority 1: URL parameter for video name
+        if (urlVideoName && project.videosByName[urlVideoName]) {
+          videoNameToUse = urlVideoName
+        }
+        // Priority 2: Saved video name from recent approval
+        else {
+          const savedVideoName = sessionStorage.getItem('approvedVideoName')
+          if (savedVideoName) {
+            sessionStorage.removeItem('approvedVideoName')
+            if (project.videosByName[savedVideoName]) {
+              videoNameToUse = savedVideoName
+            }
+          }
         }
 
-        // Use the saved name if it exists in the current videos, otherwise use first
-        const videoNameToUse = savedVideoName && project.videosByName[savedVideoName]
-          ? savedVideoName
-          : videoNames[0]
+        // Priority 3: First video
+        if (!videoNameToUse) {
+          videoNameToUse = videoNames[0]
+        }
 
         setActiveVideoName(videoNameToUse)
-        setActiveVideos(project.videosByName[videoNameToUse])
+        const videos = project.videosByName[videoNameToUse]
+        setActiveVideos(videos)
+
+        // If URL specifies a version, calculate the index for initial selection
+        if (urlVersion !== null && videos) {
+          const targetIndex = videos.findIndex((v: any) => v.version === urlVersion)
+          if (targetIndex !== -1) {
+            setInitialVideoIndex(targetIndex)
+          }
+        }
+
+        // Set initial seek time if URL parameter exists
+        if (urlTimestamp !== null) {
+          setInitialSeekTime(urlTimestamp)
+        }
       }
     }
-  }, [project, activeVideoName])
+  }, [project, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
 
   // Prevent auto-scroll on page load
   useEffect(() => {
@@ -319,6 +368,17 @@ export default function SharePage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
+        {/* Admin Indicator */}
+        {adminUser && (
+          <div className="bg-primary-visible border-b-2 border-primary-visible">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-3">
+              <p className="text-sm text-primary font-medium">
+                Admin Mode: Viewing as {adminUser.name || adminUser.email} • You can comment as {companyName}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Content Area */}
         <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           {/* Content Area */}
@@ -349,6 +409,8 @@ export default function SharePage() {
                   watermarkEnabled={project.watermarkEnabled}
                   activeVideoName={activeVideoName}
                   onApprove={fetchProjectData}
+                  initialSeekTime={initialSeekTime}
+                  initialVideoIndex={initialVideoIndex}
                 />
               </div>
 
@@ -363,10 +425,11 @@ export default function SharePage() {
                     isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
                     restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                     videos={readyVideos}
-                    isAdminView={false}
+                    isAdminView={!!adminUser}
                     companyName={companyName}
                     smtpConfigured={project.smtpConfigured}
                     isPasswordProtected={isPasswordProtected || false}
+                    adminUser={adminUser}
                   />
                 </div>
               )}

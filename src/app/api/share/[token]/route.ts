@@ -67,65 +67,55 @@ export async function GET(
     // Individual videos can be approved independently
     const videoFilter = { status: 'READY' as const }
 
-    // Try to fetch with replies first, fallback to simple fetch if it fails
-    let project
-    try {
-      project = await prisma.project.findUnique({
-        where: { slug: token },
-        include: {
-          videos: {
-            where: videoFilter,
-            orderBy: { version: 'desc' },
-          },
-          comments: {
-            where: { parentId: null },
-            include: {
-              replies: {
-                orderBy: { createdAt: 'asc' }
-              }
-            },
-            orderBy: { createdAt: 'asc' },
-          },
+    // Fetch project with nested comment replies
+    const project = await prisma.project.findUnique({
+      where: { slug: token },
+      include: {
+        videos: {
+          where: videoFilter,
+          orderBy: { version: 'desc' },
         },
-      })
-    } catch (includeError) {
-      console.error('Error with nested comments, falling back to simple query:', includeError)
-      // Fallback to simple query without nested replies
-      project = await prisma.project.findUnique({
-        where: { slug: token },
-        include: {
-          videos: {
-            where: videoFilter,
-            orderBy: { version: 'desc' },
+        comments: {
+          where: { parentId: null },
+          include: {
+            replies: {
+              orderBy: { createdAt: 'asc' }
+            }
           },
-          comments: {
-            orderBy: { createdAt: 'asc' },
-          },
+          orderBy: { createdAt: 'asc' },
         },
-      })
-    }
+      },
+    })
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // Check authentication if password protected
-    if (project.sharePassword) {
-      const cookieStore = await cookies()
-      const authToken = cookieStore.get(`share_auth_${project.id}`)
+    // Check if user is admin (for both data sanitization and auth bypass)
+    const currentUser = await getCurrentUserFromRequest(request)
+    const isAdmin = currentUser?.role === 'ADMIN'
 
-      if (authToken?.value !== 'true') {
+    // Check authentication if password protected (admins bypass password)
+    if (project.sharePassword && !isAdmin) {
+      const cookieStore = await cookies()
+      const authSessionId = cookieStore.get('share_auth')?.value
+
+      if (!authSessionId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+
+      // Verify auth session maps to this project
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+      if (mappedProjectId !== project.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
     }
 
-    // Check if user is admin for data sanitization
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = !!currentUser
-
     // Get or create session ID for this share access
     const cookieStore = await cookies()
-    let sessionId = cookieStore.get(`share_session_${project.id}`)?.value
+    let sessionId = cookieStore.get('share_session')?.value
     let isNewSession = false
 
     if (!sessionId) {
@@ -133,9 +123,9 @@ export async function GET(
       sessionId = crypto.randomBytes(16).toString('base64url')
       isNewSession = true
 
-      // Set session cookie (15 minutes - same as video tokens)
+      // Set generic session cookie (no project ID exposure)
       cookieStore.set({
-        name: `share_session_${project.id}`,
+        name: 'share_session',
         value: sessionId,
         path: '/',
         httpOnly: true,
@@ -143,6 +133,15 @@ export async function GET(
         sameSite: 'strict',
         maxAge: 15 * 60, // 15 minutes
       })
+
+      // Store session → project mapping in Redis (server-side only)
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      await redis.set(
+        `session_project:${sessionId}`,
+        project.id,
+        'EX',
+        15 * 60 // 15 minutes TTL
+      )
 
       // Track page visit for new sessions only (don't count admins)
       // Create ONE analytics entry per project visit (using the first video as reference)

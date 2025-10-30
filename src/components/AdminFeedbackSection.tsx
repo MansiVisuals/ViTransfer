@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
-import { Send, Reply } from 'lucide-react'
+import { Send, Reply, ExternalLink } from 'lucide-react'
 import { useAuth } from './AuthProvider'
 import { useRouter } from 'next/navigation'
+import { formatTimestamp } from '@/lib/utils'
 
 interface Video {
   id: string
@@ -39,6 +40,9 @@ interface AdminFeedbackSectionProps {
   videos: Video[]
   restrictToLatestVersion: boolean
   companyName: string
+  onRefresh?: () => void
+  projectSlug?: string // Share slug for building timestamp URLs
+  activeVideoName?: string // Current video name for building URLs
 }
 
 export default function AdminFeedbackSection({
@@ -47,9 +51,26 @@ export default function AdminFeedbackSection({
   videos,
   restrictToLatestVersion,
   companyName,
+  onRefresh,
+  projectSlug,
+  activeVideoName,
 }: AdminFeedbackSectionProps) {
   const { user } = useAuth()
   const router = useRouter()
+
+  // Build share URL for timestamp link
+  const buildTimestampUrl = (timestamp: number, videoVersion: number | null) => {
+    if (!projectSlug || !activeVideoName) return null
+
+    const params = new URLSearchParams()
+    params.set('video', activeVideoName)
+    if (videoVersion !== null) {
+      params.set('version', videoVersion.toString())
+    }
+    params.set('t', timestamp.toString())
+
+    return `/share/${projectSlug}?${params.toString()}`
+  }
 
   // Only store optimistic replies in state (like client side)
   const [optimisticReplies, setOptimisticReplies] = useState<Map<string, Comment[]>>(new Map())
@@ -232,7 +253,12 @@ export default function AdminFeedbackSection({
 
       if (!response.ok) throw new Error('Failed to delete comment')
 
-      router.refresh()
+      // Refresh to show updated comments
+      if (onRefresh) {
+        onRefresh()
+      } else {
+        router.refresh()
+      }
     } catch (error) {
       alert('Failed to delete comment')
     } finally {
@@ -362,9 +388,19 @@ export default function AdminFeedbackSection({
                                     </span>
                                   )}
                                   {comment.timestamp !== null && comment.timestamp !== undefined && (
-                                    <span className={`text-xs ${isStudio ? 'text-primary-foreground/90' : 'text-warning'}`}>
-                                      @{Math.floor(comment.timestamp / 60)}:{Math.floor(comment.timestamp % 60).toString().padStart(2, '0')}
-                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        const url = buildTimestampUrl(comment.timestamp!, comment.videoVersion)
+                                        if (url) {
+                                          window.open(url, '_blank')
+                                        }
+                                      }}
+                                      className={`text-xs ${isStudio ? 'text-primary-foreground/90' : 'text-warning'} hover:underline cursor-pointer inline-flex items-center gap-1`}
+                                      title="Open share page at this timestamp"
+                                    >
+                                      @{formatTimestamp(comment.timestamp)}
+                                      <ExternalLink className="w-3 h-3" />
+                                    </button>
                                   )}
                                 </div>
 

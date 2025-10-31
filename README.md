@@ -254,8 +254,8 @@ ViTransfer uses standard Docker Compose and should work on most platforms. Below
 ### Other Platforms
 
 **Planned Platform Guides:**
-- Synology NAS
-- Portainer
+
+Rootless Podman Quadlets are available in the folder quadlet.
 
 **Community contributions welcome!** If you've successfully deployed on a specific platform, consider contributing installation guides.
 

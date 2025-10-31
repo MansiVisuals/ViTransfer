@@ -2,8 +2,11 @@
 
 # ViTransfer Multi-Architecture Build Script
 # Builds for both amd64 and arm64 platforms
-# Usage: ./build-multiarch.sh [version]
-# Example: ./build-multiarch.sh 0.1.0
+# Usage: ./build-multiarch.sh [version|--dev]
+# Examples:
+#   ./build-multiarch.sh 0.1.0    # Tag as 0.1.0 and latest
+#   ./build-multiarch.sh --dev    # Tag as dev only
+#   ./build-multiarch.sh          # Tag as latest
 
 set -e
 
@@ -11,9 +14,12 @@ DOCKERHUB_USERNAME="crypt010"
 IMAGE_NAME="vitransfer"
 VERSION="${1:-latest}"
 
+# Check if we're building dev
+if [ "$VERSION" = "--dev" ] || [ "$VERSION" = "dev" ]; then
+    TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:dev"
+    VERSION="dev"
 # If version is provided, tag as both version and latest
-# If no version, just tag as latest
-if [ "$VERSION" != "latest" ]; then
+elif [ "$VERSION" != "latest" ]; then
     TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
 else
     TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
@@ -63,7 +69,9 @@ echo ""
 echo "🏗️  Building multi-architecture image..."
 echo "   Version: ${VERSION}"
 echo "   Platforms: linux/amd64, linux/arm64"
-if [ "$VERSION" != "latest" ]; then
+if [ "$VERSION" = "dev" ]; then
+    echo "   Tags: dev (testing only, will NOT update latest)"
+elif [ "$VERSION" != "latest" ]; then
     echo "   Tags: ${VERSION}, latest"
 else
     echo "   Tags: latest"

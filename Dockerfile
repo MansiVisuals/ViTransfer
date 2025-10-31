@@ -107,10 +107,10 @@ RUN echo "Building for platform: $TARGETPLATFORM (arch: $TARGETARCH)" && \
     echo "System info:" && \
     uname -a
 
-# Create application user with fixed UID/GID (abc:abc like LinuxServer.io)
-# This user will be remapped at runtime via PUID/PGID environment variables
-RUN addgroup -g 911 abc && \
-    adduser -D -u 911 -G abc -h /app abc
+# Create application user with UID 911 (non-standard to avoid host user conflicts)
+# Can be remapped at runtime via PUID/PGID environment variables
+RUN addgroup -g 911 app && \
+    adduser -D -u 911 -G app -h /app app
 
 # Copy only production dependencies
 COPY --from=deps /tmp/prod_node_modules ./node_modules
@@ -137,16 +137,15 @@ COPY --from=builder /app/worker.mjs ./worker.mjs
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set proper ownership for abc user
-# The entrypoint will remap these to PUID/PGID at runtime
-RUN chown -R abc:abc /app
+# Set proper ownership for app user
+RUN chown -R app:app /app
 
 # Environment variables for PUID/PGID (can be overridden at runtime)
 ENV PUID=1000 \
     PGID=1000
 
-# Note: Container starts as root to handle PUID/PGID remapping
-# Entrypoint script will switch to abc user after remapping
+# Container starts as root to handle PUID/PGID remapping
+# Entrypoint script switches to app user after remapping
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

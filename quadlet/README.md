@@ -164,7 +164,7 @@ sudo journalctl -u vitransfer-app.service -f
 podman ps
 
 # Access application
-curl http://localhost:4321/api/settings/public
+curl http://localhost:4321/api/health
 ```
 
 ## Managing Services

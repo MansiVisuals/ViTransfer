@@ -15,7 +15,9 @@ ARG BUILDPLATFORM
 RUN npm install -g npm@latest
 
 # Security: Update Alpine to latest packages and apply security patches
-# This addresses CVEs in: cjson, libsndfile, giflib, orc
+# This ensures all packages are at their latest available versions
+# Note: Some CVEs remain in Alpine packages (libsndfile, giflib, orc) awaiting upstream fixes
+# See SECURITY.md for full CVE risk assessment
 RUN apk update && apk upgrade --no-cache
 
 # Install OpenSSL 3.x compatibility for Prisma
@@ -24,8 +26,10 @@ RUN apk add --no-cache \
     openssl-dev
 
 # Install FFmpeg for CPU-based video processing with latest security patches
-# Note: crossbeam-channel and paste CVEs are in FFmpeg's Rust dependencies
-# These are low-severity and will be resolved when Alpine updates FFmpeg
+# Note: Some CVEs exist in FFmpeg's dependencies (libsndfile, giflib, orc, crossbeam-channel)
+# All packages are at their latest Alpine versions - awaiting upstream security fixes
+# Risk is minimal as these are internal FFmpeg dependencies, not directly exposed
+# See SECURITY.md for detailed CVE risk assessment
 RUN apk add --no-cache \
     ffmpeg \
     ffmpeg-libs \
@@ -107,10 +111,10 @@ RUN echo "Building for platform: $TARGETPLATFORM (arch: $TARGETARCH)" && \
     echo "System info:" && \
     uname -a
 
-# Create application user with fixed UID/GID (abc:abc like LinuxServer.io)
-# This user will be remapped at runtime via PUID/PGID environment variables
-RUN addgroup -g 911 abc && \
-    adduser -D -u 911 -G abc -h /app abc
+# Create application user with UID 911 (non-standard to avoid host user conflicts)
+# Can be remapped at runtime via PUID/PGID environment variables
+RUN addgroup -g 911 app && \
+    adduser -D -u 911 -G app -h /app app
 
 # Copy only production dependencies
 COPY --from=deps /tmp/prod_node_modules ./node_modules
@@ -137,16 +141,15 @@ COPY --from=builder /app/worker.mjs ./worker.mjs
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set proper ownership for abc user
-# The entrypoint will remap these to PUID/PGID at runtime
-RUN chown -R abc:abc /app
+# Set proper ownership for app user
+RUN chown -R app:app /app
 
 # Environment variables for PUID/PGID (can be overridden at runtime)
 ENV PUID=1000 \
     PGID=1000
 
-# Note: Container starts as root to handle PUID/PGID remapping
-# Entrypoint script will switch to abc user after remapping
+# Container starts as root to handle PUID/PGID remapping
+# Entrypoint script switches to app user after remapping
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

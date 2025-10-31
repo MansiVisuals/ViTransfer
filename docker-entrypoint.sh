@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # ViTransfer Docker Entrypoint Script
-# Handles PUID/PGID remapping, database migrations and initialization before starting the app
+# Universal compatibility: Works on Unraid, TrueNAS, Docker Desktop, Ubuntu, Podman
+# Handles PUID/PGID remapping AND docker-compose user: directive
 # This script runs automatically on container start - no manual intervention required
 
 set -e
@@ -9,45 +10,108 @@ set -e
 echo "ViTransfer starting..."
 echo ""
 
-# Handle PUID/PGID (LinuxServer.io style)
-# This allows the container to run with the same UID/GID as the host user
-PUID=${PUID:-1000}
-PGID=${PGID:-1000}
+# ========================================
+# SMART USER DETECTION
+# ========================================
+# Detects how the container is running and adapts automatically:
+# - Via docker-compose user: directive → Already correct user
+# - Via PUID/PGID env vars → Remap user
+# - Default → Use default UID 911
+
+RUNNING_UID=$(id -u)
+RUNNING_GID=$(id -g)
+PUID=${PUID:-911}
+PGID=${PGID:-911}
 
 echo "[INFO] User Configuration:"
-echo "  PUID: $PUID"
-echo "  PGID: $PGID"
+echo "  Container running as: UID=$RUNNING_UID GID=$RUNNING_GID"
+echo "  Target (PUID/PGID): UID=$PUID GID=$PGID"
 echo ""
 
-# Check if we need to update the user/group IDs
-CURRENT_UID=$(id -u abc 2>/dev/null || echo "911")
-CURRENT_GID=$(id -g abc 2>/dev/null || echo "911")
+# ========================================
+# CASE 1: Already running as target user
+# ========================================
+if [ "$RUNNING_UID" = "$PUID" ] && [ "$RUNNING_GID" = "$PGID" ]; then
+    echo "[OK] Already running as target user UID:$PUID GID:$PGID"
+    echo "     (Detected docker-compose 'user:' directive or matching PUID/PGID)"
+    echo ""
 
-if [ "$CURRENT_UID" != "$PUID" ] || [ "$CURRENT_GID" != "$PGID" ]; then
-    echo "[SETUP] Updating user permissions..."
-
-    # Update group ID if needed
-    if [ "$CURRENT_GID" != "$PGID" ]; then
-        echo "  Changing GID from $CURRENT_GID to $PGID"
-        groupmod -o -g "$PGID" abc 2>/dev/null || true
+    # Fix ownership of app files if needed (from build-time UID 911)
+    if [ "$RUNNING_UID" != "911" ]; then
+        echo "[SETUP] Fixing ownership of app files..."
+        # Only fix files still owned by build-time user (911)
+        # Don't touch mounted volumes!
+        find /app -maxdepth 2 \( -name '.next' -o -name 'public' -o -name 'node_modules' \) -user 911 \
+            -exec chown -R $RUNNING_UID:$RUNNING_GID {} + 2>/dev/null || true
+        echo "[OK] File ownership updated"
+        echo ""
     fi
 
-    # Update user ID if needed
-    if [ "$CURRENT_UID" != "$PUID" ]; then
-        echo "  Changing UID from $CURRENT_UID to $PUID"
-        usermod -o -u "$PUID" abc 2>/dev/null || true
-    fi
+    SKIP_GOSU=true
 
-    # Fix ownership of app files
-    echo "  Updating file ownership..."
-    chown -R abc:abc /app 2>/dev/null || true
+# ========================================
+# CASE 2: Running as non-root, but different UID
+# ========================================
+elif [ "$RUNNING_UID" != "0" ]; then
+    echo "[OK] Running as non-root user UID:$RUNNING_UID GID:$RUNNING_GID"
+    echo "     (Container already secured, using current user)"
+    echo ""
 
-    echo "[OK] User permissions updated"
+    # Fix ownership if possible (may fail without root, that's ok)
+    echo "[SETUP] Attempting to fix app file ownership..."
+    find /app -maxdepth 2 \( -name '.next' -o -name 'public' \) -user 911 \
+        -exec chown -R $RUNNING_UID:$RUNNING_GID {} + 2>/dev/null || true
+    echo "[OK] Ownership fix attempted (errors ignored)"
+    echo ""
+
+    SKIP_GOSU=true
+
+# ========================================
+# CASE 3: Running as root - need to remap
+# ========================================
 else
-    echo "[OK] User permissions already correct"
+    echo "[SETUP] Running as root, remapping to UID:$PUID GID:$PGID..."
+    echo ""
+
+    # Get current app user IDs
+    CURRENT_UID=$(id -u app 2>/dev/null || echo "911")
+    CURRENT_GID=$(id -g app 2>/dev/null || echo "911")
+
+    # Only remap if needed
+    if [ "$CURRENT_UID" != "$PUID" ] || [ "$CURRENT_GID" != "$PGID" ]; then
+        echo "  Updating user IDs..."
+
+        # Update group ID if needed
+        if [ "$CURRENT_GID" != "$PGID" ]; then
+            echo "    Changing GID from $CURRENT_GID to $PGID"
+            groupmod -o -g "$PGID" app 2>/dev/null || true
+        fi
+
+        # Update user ID if needed (with 60 second timeout to prevent hanging)
+        if [ "$CURRENT_UID" != "$PUID" ]; then
+            echo "    Changing UID from $CURRENT_UID to $PUID (max 60s timeout)"
+            timeout 60 usermod -o -u "$PUID" app 2>/dev/null || {
+                echo "    [WARN] usermod timed out or failed - continuing anyway"
+                echo "    This is a known issue on some platforms (TrueNAS Scale 25.10 + Docker 28.x)"
+            }
+        fi
+
+        # Fix ownership of internal app files only (not mounted volumes!)
+        echo "    Updating file ownership..."
+        chown -R app:app /app/.next /app/public /app/node_modules 2>/dev/null || true
+
+        echo "[OK] User permissions updated"
+    else
+        echo "[OK] User permissions already correct"
+    fi
+    echo ""
+
+    SKIP_GOSU=false
 fi
 
-echo ""
+# ========================================
+# SERVICE READINESS CHECKS
+# ========================================
 
 # Function to wait for postgres to be ready
 wait_for_postgres() {
@@ -137,6 +201,10 @@ wait_for_app() {
     return 1
 }
 
+# ========================================
+# DATABASE SETUP (MAIN APP ONLY)
+# ========================================
+
 # Only run migrations and initialization for the main app, not the worker
 if [ "$1" = "npm" ] && [ "$2" = "start" ]; then
     echo "[SETUP] Running database setup..."
@@ -187,8 +255,23 @@ elif [[ "$@" == *"npm run worker"* ]] || [[ "$@" == *"worker"* ]]; then
     echo ""
 fi
 
-echo "[START] Starting application as user abc (UID:$PUID, GID:$PGID)..."
+# ========================================
+# START APPLICATION
+# ========================================
+
+echo "[START] Starting application..."
+if [ "$SKIP_GOSU" = "true" ]; then
+    echo "         Running as: UID:$RUNNING_UID GID:$RUNNING_GID (direct)"
+else
+    echo "         Running as: UID:$PUID GID:$PGID (via gosu abc)"
+fi
 echo ""
 
-# Execute the main command as the abc user
-exec gosu abc "$@"
+# Execute the main command
+if [ "$SKIP_GOSU" = "true" ]; then
+    # Already running as correct user, no need for gosu
+    exec "$@"
+else
+    # Running as root, switch to app user
+    exec gosu app "$@"
+fi

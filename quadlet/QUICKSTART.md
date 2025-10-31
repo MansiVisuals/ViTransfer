@@ -112,7 +112,7 @@ journalctl --user -u vitransfer-app.service -f
 podman ps
 
 # Test application
-curl http://localhost:4321/api/settings/public
+curl http://localhost:4321/api/health
 
 # Check data directories
 ls -la /podman/vitransfer/

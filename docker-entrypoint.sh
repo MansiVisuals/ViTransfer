@@ -263,7 +263,7 @@ echo "[START] Starting application..."
 if [ "$SKIP_GOSU" = "true" ]; then
     echo "         Running as: UID:$RUNNING_UID GID:$RUNNING_GID (direct)"
 else
-    echo "         Running as: UID:$PUID GID:$PGID (via gosu abc)"
+    echo "         Running as: UID:$PUID GID:$PGID (via gosu app)"
 fi
 echo ""
 

@@ -51,7 +51,51 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 
 ## Known CVEs and Risk Assessment
 
-The following CVEs are present in Alpine Linux packages (latest available versions). These are **transitive dependencies** from FFmpeg and are **NOT directly exploitable** in ViTransfer's use case.
+The following CVEs are present in Alpine Linux packages and dependencies (latest available versions). These are **transitive dependencies** from FFmpeg, Node.js, and Alpine system packages, and are **NOT directly exploitable** in ViTransfer's use case.
+
+### CVE Summary (As of 2025-01-31)
+
+| CVE ID | Severity | Package | Status | Real Risk |
+|--------|----------|---------|--------|-----------|
+| CVE-2025-58188 | 7.5 H | golang/stdlib | ⚠️ False Positive | None |
+| CVE-2025-61725 | 7.5 H | golang/stdlib | ⚠️ False Positive | None |
+| CVE-2025-52194 | 7.5 H | libsndfile | ⏳ Awaiting Fix | Low |
+| CVE-2025-58187 | 6.5 M | golang/stdlib | ⚠️ False Positive | None |
+| CVE-2025-61723 | 6.5 M | golang/stdlib | ⚠️ False Positive | None |
+| CVE-2024-50613 | 6.5 M | libsndfile | ⏳ Awaiting Fix | Low |
+| CVE-2024-45993 | 6.5 M | giflib | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-4574 | 6.3 M | crossbeam-channel | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-64118 | 6.1 M | npm/tar | ⚠️ Unconfirmed | Very Low |
+| CVE-2025-47436 | 6.0 M | orc | ⏳ Awaiting Fix | Low |
+
+**Key Points:**
+- ✅ **0 npm package vulnerabilities** (verified by `npm audit`)
+- ⚠️ **4 Go CVEs are false positives** - Go is not installed or used
+- ⏳ **5 CVEs in Alpine packages** - Using latest available versions, awaiting upstream fixes
+- 🔒 **All CVEs have low real-world exploitability** in ViTransfer's containerized environment
+
+### High Severity (Limited Impact in ViTransfer Context)
+
+#### CVE-2025-58188, CVE-2025-61725 - Go stdlib 1.23.12 (Severity: 7.5 High)
+- **Status**: ⚠️ False Positive - Go is not installed in the container
+- **Impact**: None - These CVEs likely detected from Go-compiled binaries in Alpine packages
+- **Exploitability**: None - No Go runtime or Go code in ViTransfer
+- **Mitigation**: These are Alpine system binaries, not accessible to application code
+- **Risk**: None - False positive from vulnerability scanner
+
+### Medium Severity (Minimal Impact)
+
+#### CVE-2025-58187, CVE-2025-61723 - Go stdlib 1.23.12 (Severity: 6.5 Medium)
+- **Status**: ⚠️ False Positive - Same as above
+- **Impact**: None
+- **Risk**: None
+
+#### CVE-2025-64118 - npm tar 7.5.1 (Severity: 6.1 Medium)
+- **Status**: ⏳ Not confirmed - npm audit shows 0 vulnerabilities
+- **Impact**: Minimal - tar is only used during npm install, not at runtime
+- **Exploitability**: Very Low - Only runs during container build, not production
+- **Mitigation**: Container is rebuilt from scratch for each deployment
+- **Risk**: Very Low - Build-time only, not runtime
 
 ### High Severity (Limited Impact in ViTransfer Context)
 

@@ -15,7 +15,9 @@ ARG BUILDPLATFORM
 RUN npm install -g npm@latest
 
 # Security: Update Alpine to latest packages and apply security patches
-# This addresses CVEs in: cjson, libsndfile, giflib, orc
+# This ensures all packages are at their latest available versions
+# Note: Some CVEs remain in Alpine packages (libsndfile, giflib, orc) awaiting upstream fixes
+# See SECURITY.md for full CVE risk assessment
 RUN apk update && apk upgrade --no-cache
 
 # Install OpenSSL 3.x compatibility for Prisma
@@ -24,8 +26,10 @@ RUN apk add --no-cache \
     openssl-dev
 
 # Install FFmpeg for CPU-based video processing with latest security patches
-# Note: crossbeam-channel and paste CVEs are in FFmpeg's Rust dependencies
-# These are low-severity and will be resolved when Alpine updates FFmpeg
+# Note: Some CVEs exist in FFmpeg's dependencies (libsndfile, giflib, orc, crossbeam-channel)
+# All packages are at their latest Alpine versions - awaiting upstream security fixes
+# Risk is minimal as these are internal FFmpeg dependencies, not directly exposed
+# See SECURITY.md for detailed CVE risk assessment
 RUN apk add --no-cache \
     ffmpeg \
     ffmpeg-libs \

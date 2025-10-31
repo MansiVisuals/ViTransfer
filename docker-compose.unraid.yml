@@ -1,0 +1,121 @@
+# ViTransfer for Unraid
+# See README.md for deployment instructions
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vitransfer-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vitransfer
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: vitransfer
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - /mnt/user/appdata/vitransfer/postgres:/var/lib/postgresql/data
+    networks:
+      - vitransfer-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vitransfer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7-alpine
+    container_name: vitransfer-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - /mnt/user/appdata/vitransfer/redis:/data
+    networks:
+      - vitransfer-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    image: crypt010/vitransfer:latest
+    container_name: vitransfer-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PUID: 99
+      PGID: 100
+      DATABASE_URL: postgresql://vitransfer:${POSTGRES_PASSWORD}@vitransfer-postgres:5432/vitransfer?schema=public
+      REDIS_HOST: vitransfer-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      STORAGE_ROOT: /app/uploads
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:4321}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+    ports:
+      - "${APP_PORT:-4321}:4321"
+    volumes:
+      - /mnt/user/appdata/vitransfer/uploads:/app/uploads
+    networks:
+      - vitransfer-internal
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:4321/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5m
+
+  worker:
+    image: crypt010/vitransfer:latest
+    container_name: vitransfer-worker
+    restart: unless-stopped
+    command: npm run worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PUID: 99
+      PGID: 100
+      DATABASE_URL: postgresql://vitransfer:${POSTGRES_PASSWORD}@vitransfer-postgres:5432/vitransfer?schema=public
+      REDIS_HOST: vitransfer-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      STORAGE_ROOT: /app/uploads
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+    volumes:
+      - /mnt/user/appdata/vitransfer/uploads:/app/uploads
+    networks:
+      - vitransfer-internal
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -v grep | grep -q 'npm run worker' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 6m
+
+networks:
+  vitransfer-internal:
+    driver: bridge

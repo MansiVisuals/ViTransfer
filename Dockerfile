@@ -144,6 +144,14 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Set proper ownership for app user
 RUN chown -R app:app /app
 
+# This allows containers starting as any UID to read app code built as UID 911
+# Only affects app code, NOT user uploads (handled by volume mount permissions)
+# Safe: These directories contain application code and public packages, not secrets
+RUN chmod -R a+rX /app/src \
+                  /app/.next \
+                  /app/node_modules \
+                  /app/public
+
 # Environment variables for PUID/PGID (can be overridden at runtime)
 ENV PUID=1000 \
     PGID=1000

@@ -157,7 +157,7 @@ The source code will be built into Docker images locally instead of pulling from
 
 ViTransfer uses standard Docker Compose and should work on most platforms. Below are tested deployment guides for specific platforms.
 
-### Unraid (Docker Compose Manager)
+### Unraid
 
 **Tested and verified on Unraid 7.1.4**
 
@@ -165,18 +165,13 @@ ViTransfer uses standard Docker Compose and should work on most platforms. Below
    - Go to Unraid WebUI → Apps → Search "Compose Manager"
    - Install "Docker Compose Manager" by dcflachs
 
-2. **Create Compose Stack**
-   - Open Docker Compose Manager
-   - Click "Add New Stack"
-   - Name it "vitransfer"
+2. **Download Configuration Files**
+   ```bash
+   curl -O https://raw.githubusercontent.com/MansiVisuals/ViTransfer/main/docker-compose.unraid.yml
+   curl -O https://raw.githubusercontent.com/MansiVisuals/ViTransfer/main/.env.example
+   ```
 
-3. **Add Configuration Files**
-   - Download `docker-compose.yml` and `.env.example` from the GitHub repository
-   - In the stack editor, paste the contents of `docker-compose.yml`
-   - Click on the `.env` tab and paste the contents of `.env.example`
-
-4. **Configure Environment Variables**
-   - Generate secure passwords using Unraid's terminal:
+3. **Generate Secure Values**
    ```bash
    openssl rand -hex 32      # For POSTGRES_PASSWORD
    openssl rand -hex 32      # For REDIS_PASSWORD
@@ -184,55 +179,81 @@ ViTransfer uses standard Docker Compose and should work on most platforms. Below
    openssl rand -base64 64   # For JWT_SECRET
    openssl rand -base64 64   # For JWT_REFRESH_SECRET
    ```
-   - Update the `.env` tab with your generated values
-   - Set your admin email and password
+
+4. **Configure Environment File**
+   - Copy `.env.example` to `.env`
+   - Replace all `<<REPLACE_WITH_...>>` values with your generated secrets
+   - Set `ADMIN_EMAIL` and `ADMIN_PASSWORD`
    - Change `APP_PORT` if 4321 is already in use
 
-5. **Update Volume Paths (Recommended)**
-   - In the `docker-compose.yml`, change volume mappings to use Unraid paths:
-   ```yaml
-   volumes:
-     postgres-data:
-       driver: local
-       driver_opts:
-         type: none
-         o: bind
-         device: /mnt/user/appdata/vitransfer/postgres
-     redis-data:
-       driver: local
-       driver_opts:
-         type: none
-         o: bind
-         device: /mnt/user/appdata/vitransfer/redis
-     uploads:
-       driver: local
-       driver_opts:
-         type: none
-         o: bind
-         device: /mnt/user/appdata/vitransfer/uploads
-   ```
+5. **Check Volume Paths**
+   - Open `docker-compose.unraid.yml`
+   - Verify volume paths match your Unraid setup (default: `/mnt/user/appdata/vitransfer/`)
+   - Update paths if using different locations
 
-6. **Create Directories**
-   - Open Unraid terminal and create the required directories:
-   ```bash
-   mkdir -p /mnt/user/appdata/vitransfer/{postgres,redis,uploads}
-   ```
+6. **Create Stack in Compose Manager**
+   - Open Docker Compose Manager
+   - Click "Add New Stack" → Name it "vitransfer"
+   - In the stack editor, paste contents of `docker-compose.unraid.yml`
+   - Click the `.env` tab and paste your configured `.env` file
 
-7. **Deploy Stack**
+7. **Deploy**
    - Click "Compose Up" to start all services
-   - Monitor logs for any errors
    - Wait for database initialization (first start takes 2-3 minutes)
 
 8. **Access ViTransfer**
    - Navigate to `http://UNRAID-IP:4321`
-   - Login with your admin credentials from the `.env` file
+   - Login with your admin credentials
+
+---
+
+### TrueNAS Scale
+
+**Tested and verified on TrueNAS Scale 25.10**
+
+1. **Create Datasets**
+   - Create three datasets using TrueNAS GUI or your preferred method:
+     - `postgres`
+     - `redis`
+     - `uploads`
+
+   **Note:** The postgres dataset must be owned by the user `netdata` (UID 999) for Postgres to start. Uploads and redis can be owned by root with ACLs for the apps user (UID 568).
+
+2. **Download Configuration**
+   ```bash
+   curl -O https://raw.githubusercontent.com/MansiVisuals/ViTransfer/main/docker-compose.truenas.yml
+   ```
+
+3. **Generate Secure Values**
+   ```bash
+   openssl rand -hex 32      # For POSTGRES_PASSWORD
+   openssl rand -hex 32      # For REDIS_PASSWORD
+   openssl rand -base64 32   # For ENCRYPTION_KEY
+   openssl rand -base64 64   # For JWT_SECRET
+   openssl rand -base64 64   # For JWT_REFRESH_SECRET
+   ```
+
+4. **Edit Configuration**
+   - Open `docker-compose.truenas.yml`
+   - Replace all `${VARIABLE}` values with your generated secrets
+   - Update volume paths to match your dataset paths
+   - Set `NEXT_PUBLIC_APP_URL` to your TrueNAS IP
+   - Set `ADMIN_EMAIL` and `ADMIN_PASSWORD`
+
+5. **Deploy via TrueNAS UI**
+   - Navigate to: **Apps > Discover > 3 dots next to Custom App > Install via YAML**
+   - Paste the contents of your edited `docker-compose.truenas.yml`
+   - Click Deploy
+
+6. **Access ViTransfer**
+   - Navigate to `http://TRUENAS-IP:4321`
+   - Login with your admin credentials
 
 ---
 
 ### Other Platforms
 
 **Planned Platform Guides:**
-- TrueNAS SCALE
 - Synology NAS
 - Portainer
 

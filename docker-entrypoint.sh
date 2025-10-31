@@ -41,7 +41,7 @@ if [ "$RUNNING_UID" = "$PUID" ] && [ "$RUNNING_GID" = "$PGID" ]; then
         echo "[SETUP] Fixing ownership of app files..."
         # Only fix files still owned by build-time user (911)
         # Don't touch mounted volumes!
-        find /app -maxdepth 2 \( -name '.next' -o -name 'public' -o -name 'node_modules' \) -user 911 \
+        find /app -maxdepth 2 \( -name '.next' -o -name 'public' -o -name 'node_modules' -o -name 'src' \) -user 911 \
             -exec chown -R $RUNNING_UID:$RUNNING_GID {} + 2>/dev/null || true
         echo "[OK] File ownership updated"
         echo ""
@@ -59,7 +59,7 @@ elif [ "$RUNNING_UID" != "0" ]; then
 
     # Fix ownership if possible (may fail without root, that's ok)
     echo "[SETUP] Attempting to fix app file ownership..."
-    find /app -maxdepth 2 \( -name '.next' -o -name 'public' \) -user 911 \
+    find /app -maxdepth 2 \( -name '.next' -o -name 'public' -o -name 'src' \) -user 911 \
         -exec chown -R $RUNNING_UID:$RUNNING_GID {} + 2>/dev/null || true
     echo "[OK] Ownership fix attempted (errors ignored)"
     echo ""
@@ -98,7 +98,7 @@ else
 
         # Fix ownership of internal app files only (not mounted volumes!)
         echo "    Updating file ownership..."
-        chown -R app:app /app/.next /app/public /app/node_modules 2>/dev/null || true
+        chown -R app:app /app/.next /app/public /app/node_modules /app/src 2>/dev/null || true
 
         echo "[OK] User permissions updated"
     else

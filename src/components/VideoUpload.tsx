@@ -4,7 +4,6 @@ import { useState, useRef } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { Progress } from './ui/progress'
 import { useRouter } from 'next/navigation'
 import { Upload, Pause, Play, X } from 'lucide-react'
 import * as tus from 'tus-js-client'
@@ -367,7 +366,17 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
             </span>
             <span className="font-medium">{progress}%</span>
           </div>
-          <Progress value={progress} />
+          <div className="relative h-4 w-full overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{
+                width: `${progress}%`,
+                backgroundImage: paused ? 'none' : 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 20px)',
+                backgroundSize: '28px 28px',
+                animation: paused ? 'none' : 'move-stripes 1s linear infinite'
+              }}
+            />
+          </div>
           {uploadSpeed > 0 && (
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Speed: {uploadSpeed} MB/s</span>

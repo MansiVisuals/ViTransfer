@@ -215,4 +215,14 @@
   .shadow-elevation-xl {
     box-shadow: var(--shadow-xl);
   }
+
+  /* Animated stripes for progress bars */
+  @keyframes move-stripes {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 28px 0;
+    }
+  }
 }

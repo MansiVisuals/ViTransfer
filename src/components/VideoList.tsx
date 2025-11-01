@@ -173,9 +173,17 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <span>Processing previews...</span>
-                <span>{video.processingProgress.toFixed(0)}%</span>
               </div>
-              <Progress value={video.processingProgress} />
+              <div className="relative h-4 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full w-full bg-primary animate-striped"
+                  style={{
+                    backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 20px)',
+                    backgroundSize: '28px 28px',
+                    animation: 'move-stripes 1s linear infinite'
+                  }}
+                />
+              </div>
             </div>
           )}
 

@@ -19,6 +19,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadRef = useRef<tus.Upload | null>(null)
+  const videoIdRef = useRef<string | null>(null)
 
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -129,6 +130,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
       }
 
       const { videoId } = await createResponse.json()
+      videoIdRef.current = videoId
 
       // Step 2: Upload with TUS protocol
       const startTime = Date.now()
@@ -184,13 +186,14 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
           setFile(null)
           setVersionLabel('')
           uploadRef.current = null
+          videoIdRef.current = null
           router.refresh()
           // Notify parent component
           onUploadComplete?.()
         },
 
         // Error callback
-        onError: (error) => {
+        onError: async (error) => {
 
           // Extract meaningful error message
           let errorMessage = 'Upload failed'
@@ -214,6 +217,16 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
             errorMessage = 'Server error. Check server logs for details.'
           }
 
+          if (videoIdRef.current) {
+            try {
+              await fetch(`/api/videos/${videoIdRef.current}`, {
+                method: 'DELETE',
+                credentials: 'include'
+              })
+              videoIdRef.current = null
+            } catch {}
+          }
+
           setError(errorMessage)
           setUploading(false)
         },
@@ -231,7 +244,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
       upload.start()
 
     } catch (error) {
-      console.error('Upload error:', error)
       setError(error instanceof Error ? error.message : 'Upload failed')
       setUploading(false)
     }
@@ -251,11 +263,24 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
     }
   }
 
-  function handleCancel() {
+  async function handleCancel() {
     if (uploadRef.current) {
       uploadRef.current.abort(true) // true = permanent abort
       uploadRef.current = null
     }
+
+    // Delete the video record from database if it was created
+    if (videoIdRef.current) {
+      try {
+        await fetch(`/api/videos/${videoIdRef.current}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        })
+        videoIdRef.current = null
+        router.refresh()
+      } catch {}
+    }
+
     setUploading(false)
     setPaused(false)
     setProgress(0)

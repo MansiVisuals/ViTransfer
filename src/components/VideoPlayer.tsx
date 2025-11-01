@@ -64,6 +64,7 @@ export default function VideoPlayer({
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
+  const lastTimeUpdateRef = useRef(0) // Throttle time updates
 
   // Filter videos for clients: if ANY video is approved, only show approved videos
   // Admins always see all videos
@@ -131,7 +132,7 @@ export default function VideoPlayer({
           const seekTime = Math.min(initialSeekTime, duration)
 
           videoRef.current.currentTime = seekTime
-          videoRef.current.play().catch(() => {}) // Auto-play after seeking (ignore errors)
+          // Don't auto-play - mobile browsers block this anyway, let user control playback
 
           // Mark that we've done the initial seek
           hasInitiallySeenRef.current = true
@@ -152,36 +153,6 @@ export default function VideoPlayer({
     }
   }, [initialSeekTime, videoUrl])
 
-  // Optimize video element for smooth playback
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    // Enable hardware acceleration hints
-    video.setAttribute('playsinline', 'true')
-
-    // Optimize buffering for smooth playback and scrubbing
-    const optimizePlayback = () => {
-      // Force browser to buffer more for smoother scrubbing
-      if (video.buffered.length > 0) {
-        const bufferedEnd = video.buffered.end(video.buffered.length - 1)
-        const duration = video.duration
-
-        // If less than 30% buffered, pause briefly to buffer more
-        if (bufferedEnd / duration < 0.3 && !video.paused) {
-          // Browser will auto-buffer ahead
-        }
-      }
-    }
-
-    video.addEventListener('progress', optimizePlayback)
-    video.addEventListener('canplay', optimizePlayback)
-
-    return () => {
-      video.removeEventListener('progress', optimizePlayback)
-      video.removeEventListener('canplay', optimizePlayback)
-    }
-  }, [videoUrl])
 
   // Expose current time for CommentSection
   useEffect(() => {
@@ -225,7 +196,6 @@ export default function VideoPlayer({
           setTimeout(() => {
             if (videoRef.current) {
               videoRef.current.currentTime = timestamp
-              videoRef.current.play().catch(() => {}) // Auto-play after seeking (ignore errors)
             }
           }, 500)
           return
@@ -235,7 +205,6 @@ export default function VideoPlayer({
       // Same video - just seek
       if (videoRef.current) {
         videoRef.current.currentTime = timestamp
-        videoRef.current.play().catch(() => {}) // Auto-play after seeking (ignore errors)
       }
     }
 
@@ -247,7 +216,12 @@ export default function VideoPlayer({
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime)
+      const now = Date.now()
+      // Throttle to update max every 200ms instead of 60 times per second
+      if (now - lastTimeUpdateRef.current > 200) {
+        setCurrentTime(videoRef.current.currentTime)
+        lastTimeUpdateRef.current = now
+      }
     }
   }
 

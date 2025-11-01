@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Play, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Play, ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface VideoGroup {
@@ -24,6 +24,9 @@ export default function VideoSidebar({
   className
 }: VideoSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(256) // Default 256px (w-64)
+  const [isResizing, setIsResizing] = useState(false)
+  const sidebarRef = useRef<HTMLElement>(null)
 
   const videoGroups: VideoGroup[] = Object.entries(videosByName).map(([name, videos]) => ({
     name,
@@ -31,12 +34,66 @@ export default function VideoSidebar({
     versionCount: videos.length
   }))
 
+  // Load saved width from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('share_sidebar_width')
+    if (saved) {
+      const width = parseInt(saved)
+      if (width >= 200 && width <= window.innerWidth * 0.6) {
+        setSidebarWidth(width)
+      }
+    }
+  }, [])
+
+  // Handle mouse move for resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return
+
+      const newWidth = e.clientX
+      const minWidth = 200
+      const maxWidth = window.innerWidth * 0.6
+
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setSidebarWidth(newWidth)
+      }
+    }
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        setIsResizing(false)
+        localStorage.setItem('share_sidebar_width', sidebarWidth.toString())
+      }
+    }
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing, sidebarWidth])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
+
   return (
     <>
       {/* Desktop Sidebar */}
       <aside
+        ref={sidebarRef}
+        style={{ width: `${sidebarWidth}px` }}
         className={cn(
-          'hidden lg:block bg-card border-r border-border transition-all duration-300',
+          'hidden lg:block bg-card border-r border-border relative',
           'sticky top-0 h-screen overflow-y-auto',
           className
         )}
@@ -82,6 +139,20 @@ export default function VideoSidebar({
             </button>
           ))}
         </nav>
+
+        {/* Resize Handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            'absolute right-0 top-0 bottom-0 w-1 cursor-col-resize',
+            'hover:bg-primary transition-colors',
+            'group'
+          )}
+        >
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="w-4 h-4 text-primary" />
+          </div>
+        </div>
       </aside>
 
       {/* Mobile Dropdown */}

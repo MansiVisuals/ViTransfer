@@ -5,6 +5,22 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2025-11-01
+
+### Added
+- Video reprocessing when project settings change
+- Drag and drop for video uploads
+- Resizable sidebar on share page
+
+### Fixed
+- Mobile video playback performance
+- Upload cancellation deletes video records
+- Share page viewport layout and scaling
+
+### Improved
+- Progress bar animations with visual feedback
+- Sidebar sizing (reduced to 30% max width)
+
 ## [0.1.0] - 2025-10-28
 
 ### Initial Release

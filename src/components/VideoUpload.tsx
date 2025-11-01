@@ -28,6 +28,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
   const [uploadSpeed, setUploadSpeed] = useState(0)
   const [versionLabel, setVersionLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   // Validate video file format
   async function validateVideoFile(file: File): Promise<{ valid: boolean; error?: string }> {
@@ -263,8 +264,50 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
     setError(null)
   }
 
+  // Drag and drop handlers
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!uploading) {
+      setIsDragging(true)
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    if (!uploading && e.dataTransfer.files.length > 0) {
+      const droppedFile = e.dataTransfer.files[0]
+      // Only accept video files
+      if (droppedFile.type.startsWith('video/')) {
+        setFile(droppedFile)
+      } else {
+        setError('Please drop a video file')
+      }
+    }
+  }
+
   return (
-    <div className="space-y-4">
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`
+        space-y-4 rounded-lg border-2 border-dashed transition-all
+        ${isDragging
+          ? 'border-primary bg-primary/5 scale-[1.01] p-4'
+          : 'border-transparent'
+        }
+      `}
+    >
       {/* Error Message */}
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive rounded-md">
@@ -305,7 +348,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
             className="w-full"
           >
             <Upload className="w-4 h-4 mr-2" />
-            {file ? 'Change File' : 'Choose Video File'}
+            {file ? 'Change File' : 'Drag & Drop or Click to Choose'}
           </Button>
         </div>
         {file && (

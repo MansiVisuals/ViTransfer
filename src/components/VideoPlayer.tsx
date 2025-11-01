@@ -311,10 +311,10 @@ export default function VideoPlayer({
   const displayLabel = isVideoApproved ? 'Final Version' : selectedVideo.versionLabel
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col max-h-full">
       {/* Version Selector - Only show if there are multiple versions to choose from */}
       {displayVideos.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 flex-shrink-0">
           {displayVideos.map((video, index) => {
             const videoApproved = (video as any).approved === true
             return (
@@ -335,7 +335,7 @@ export default function VideoPlayer({
       )}
 
       {/* Video Player */}
-      <div className="relative bg-background rounded-lg overflow-hidden aspect-video">
+      <div className="relative bg-background rounded-lg overflow-hidden aspect-video flex-shrink min-h-0">
         {videoUrl ? (
           <video
             ref={videoRef}
@@ -359,7 +359,7 @@ export default function VideoPlayer({
       </div>
 
       {/* Video Info */}
-      <div className="bg-card rounded-lg p-4 text-card-foreground">
+      <div className="bg-card rounded-lg p-4 text-card-foreground flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 mb-3">
           <h3 className="font-medium">{displayLabel}</h3>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">

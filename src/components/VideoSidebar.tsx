@@ -39,7 +39,7 @@ export default function VideoSidebar({
     const saved = localStorage.getItem('share_sidebar_width')
     if (saved) {
       const width = parseInt(saved)
-      if (width >= 200 && width <= window.innerWidth * 0.6) {
+      if (width >= 200 && width <= window.innerWidth * 0.3) {
         setSidebarWidth(width)
       }
     }
@@ -52,7 +52,7 @@ export default function VideoSidebar({
 
       const newWidth = e.clientX
       const minWidth = 200
-      const maxWidth = window.innerWidth * 0.6
+      const maxWidth = window.innerWidth * 0.3
 
       if (newWidth >= minWidth && newWidth <= maxWidth) {
         setSidebarWidth(newWidth)

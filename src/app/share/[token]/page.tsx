@@ -355,7 +355,7 @@ export default function SharePage() {
   }) || []
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row overflow-x-hidden">
+    <div className="h-screen bg-background flex flex-col lg:flex-row overflow-hidden">
       {/* Video Sidebar - contains both desktop and mobile versions internally */}
       {project.videosByName && (
         <VideoSidebar
@@ -367,7 +367,7 @@ export default function SharePage() {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-y-auto min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Admin Indicator */}
         {adminUser && (
           <div className="bg-primary-visible border-b-2 border-primary-visible">
@@ -380,7 +380,7 @@ export default function SharePage() {
         )}
 
         {/* Content Area */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 min-h-0 flex flex-col">
           {/* Content Area */}
           {readyVideos.length === 0 ? (
             <Card className="bg-card border-border">
@@ -391,9 +391,9 @@ export default function SharePage() {
               </CardContent>
             </Card>
           ) : (
-            <div className={`grid gap-4 sm:gap-6 ${project.hideFeedback ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
+            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col max-w-7xl mx-auto w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
               {/* Video Player - centered */}
-              <div className={project.hideFeedback ? 'w-full' : 'lg:col-span-2'}>
+              <div className={project.hideFeedback ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}
@@ -416,7 +416,7 @@ export default function SharePage() {
 
               {/* Comments Section */}
               {!project.hideFeedback && (
-                <div className="lg:sticky lg:top-6 lg:self-start">
+                <div className="lg:sticky lg:top-6 lg:self-start lg:max-h-full lg:overflow-y-auto">
                   <CommentSection
                     projectId={project.id}
                     comments={filteredComments}

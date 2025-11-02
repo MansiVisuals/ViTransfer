@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
-import { Lock, Check } from 'lucide-react'
+import { Lock, Check, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SharePage() {
   const params = useParams()
@@ -371,10 +372,16 @@ export default function SharePage() {
         {/* Admin Indicator */}
         {adminUser && (
           <div className="bg-primary-visible border-b-2 border-primary-visible">
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-3">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
               <p className="text-sm text-primary font-medium">
                 Admin Mode: Viewing as {adminUser.name || adminUser.email} • You can comment as {companyName}
               </p>
+              <Link href={`/admin/projects/${project.id}`}>
+                <Button variant="outline" size="sm" className="flex-shrink-0">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Admin
+                </Button>
+              </Link>
             </div>
           </div>
         )}

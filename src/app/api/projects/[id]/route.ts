@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { deleteFile } from '@/lib/storage'
+import { deleteFile, deleteDirectory } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
-import { encrypt } from '@/lib/encryption'
+import { encrypt, decrypt } from '@/lib/encryption'
 import { cookies } from 'next/headers'
 
 export async function GET(
@@ -65,6 +65,8 @@ export async function GET(
         ...video,
         originalFileSize: video.originalFileSize.toString(),
       })),
+      // Decrypt password for admin viewing (only sent to authenticated admins)
+      sharePasswordDecrypted: project.sharePassword ? decrypt(project.sharePassword) : null,
     }
 
     return NextResponse.json(projectData)
@@ -356,6 +358,14 @@ export async function DELETE(
         console.error(`Failed to delete files for video ${video.id}:`, error)
         // Continue deleting other files even if one fails
       }
+    }
+
+    // Delete the entire project directory after all files are removed
+    try {
+      await deleteDirectory(`projects/${id}`)
+    } catch (error) {
+      console.error(`Failed to delete project directory for ${id}:`, error)
+      // Continue even if directory deletion fails
     }
 
     // Delete project and all related data (cascade will handle videos, comments, shares)

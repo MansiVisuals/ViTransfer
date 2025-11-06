@@ -332,17 +332,18 @@ export default function VideoPlayer({
         )}
       </div>
 
-      {/* Video Info */}
-      <div className="bg-card rounded-lg p-4 text-card-foreground flex-shrink-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 mb-3">
-          <h3 className="font-medium">{displayLabel}</h3>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+      {/* Video & Project Information */}
+      <div className={`rounded-lg p-4 text-card-foreground flex-shrink-0 ${!isVideoApproved ? 'bg-accent/50 border-2 border-primary/20' : 'bg-card border border-border'}`}>
+        {/* Header: Video Name + Action Buttons */}
+        <div className="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-border">
+          <h3 className="text-lg font-bold text-foreground truncate">{(selectedVideo as any).name}</h3>
+          <div className="flex gap-2 flex-shrink-0">
             {/* Info Dialog Button */}
             <Dialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
               <DialogTrigger asChild>
-                <Button variant="default" size="sm" className="w-full sm:w-auto">
-                  <Info className="w-4 h-4 mr-2" />
-                  Info
+                <Button variant="outline" size="sm">
+                  <Info className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Info</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
@@ -391,112 +392,124 @@ export default function VideoPlayer({
 
             {/* Download Button - Only show when video is approved */}
             {isVideoApproved && (
-              <Button onClick={handleDownload} variant="default" size="sm" className="w-full sm:w-auto">
-                <Download className="w-4 h-4 mr-2" />
-                Download
+              <Button onClick={handleDownload} variant="default" size="sm">
+                <Download className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Download</span>
               </Button>
             )}
           </div>
         </div>
 
-        {/* Project Info & Approval Box */}
-        <div className={`rounded-lg p-4 space-y-3 ${!isVideoApproved ? 'bg-accent/50 border border-primary/20' : 'bg-accent/50 border border-border'}`}>
-          {/* Project Information */}
-          {projectTitle && (
-            <div className="space-y-2">
-              <h2 className="text-lg font-bold text-foreground">{projectTitle}</h2>
-              {projectDescription && (
-                <p className="text-sm text-muted-foreground">{projectDescription}</p>
-              )}
-              <div className="flex flex-wrap gap-3 text-sm">
-                {clientName && (
-                  <span className="text-muted-foreground">
-                    For: <span className="font-medium text-foreground">
-                      {isPasswordProtected ? clientName : 'Client'}
-                    </span>
-                  </span>
-                )}
-                {!isVideoApproved && enableRevisions && (
-                  <span className="text-muted-foreground">
-                    Revision: <span className="font-medium text-foreground">
-                      {currentRevision}/{maxRevisions}
-                    </span>
-                  </span>
-                )}
-              </div>
+        {/* Information Grid - Compact 2 column layout */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          {/* Version */}
+          <div>
+            <span className="text-xs text-muted-foreground">Version:</span>
+            <span className="ml-2 font-medium text-foreground">{displayLabel}</span>
+          </div>
+
+          {/* Revisions */}
+          {!isVideoApproved && enableRevisions && (
+            <div>
+              <span className="text-xs text-muted-foreground">Revisions:</span>
+              <span className="ml-2 font-medium text-foreground">{currentRevision} of {maxRevisions}</span>
             </div>
           )}
 
-          {/* Note & Approval Section (only if video not approved) */}
-          {!isVideoApproved && (
-            <>
-              <div className="text-sm text-muted-foreground pt-2 border-t border-border">
-                <span className="font-medium text-foreground">Note:</span> This is a preview quality version
-                {watermarkEnabled && ' with watermark'}. The final version will be available in the highest resolution after approval.
-              </div>
-
-              <div className="pt-2 border-t border-border">
-                {!showApprovalConfirm ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      Ready to approve this video?
-                    </p>
-                    <Button
-                      onClick={() => setShowApprovalConfirm(true)}
-                      variant="success"
-                      size="default"
-                      className="w-full"
-                    >
-                      Approve this video as final
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4 bg-primary/10 border-2 border-primary rounded-lg p-4">
-                    <div className="text-center space-y-2">
-                      <p className="text-base text-foreground font-bold">
-                        Approve this video?
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Video: <span className="font-semibold text-foreground">"{(selectedVideo as any).name}"</span>
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Version: <span className="font-semibold text-foreground">{selectedVideo.versionLabel}</span>
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleApprove}
-                        disabled={loading}
-                        variant="success"
-                        size="default"
-                        className="flex-1 font-semibold"
-                      >
-                        {loading ? 'Approving...' : 'Yes, Approve This Video'}
-                      </Button>
-                      <Button
-                        onClick={() => setShowApprovalConfirm(false)}
-                        variant="outline"
-                        disabled={loading}
-                        size="default"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
+          {/* Project */}
+          {projectTitle && (
+            <div className="col-span-2">
+              <span className="text-xs text-muted-foreground">Project:</span>
+              <span className="ml-2 font-medium text-foreground">{projectTitle}</span>
+            </div>
           )}
 
-          {/* Approved Status */}
-          {isVideoApproved && (
-            <div className="flex items-center gap-2 text-sm text-success pt-2 border-t border-border">
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="font-medium">This video is approved - Download available</span>
+          {/* For (Client) */}
+          {clientName && (
+            <div className="col-span-2">
+              <span className="text-xs text-muted-foreground">For:</span>
+              <span className="ml-2 font-medium text-foreground">{isPasswordProtected ? clientName : 'Client'}</span>
+            </div>
+          )}
+
+          {/* Description */}
+          {projectDescription && (
+            <div className="col-span-2">
+              <span className="text-xs text-muted-foreground">Description:</span>
+              <span className="ml-2 text-foreground whitespace-pre-wrap">{projectDescription}</span>
             </div>
           )}
         </div>
+
+        {/* Note & Approval Section (only if video not approved) */}
+        {!isVideoApproved && (
+          <>
+            <div className="text-xs text-muted-foreground pt-3 mt-3 border-t border-border">
+              <span className="font-medium text-foreground">Note:</span> This is a preview quality version
+              {watermarkEnabled && ' with watermark'}. The final version will be available in the highest resolution after approval.
+            </div>
+
+            <div className="pt-2 mt-2">
+              {!showApprovalConfirm ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Ready to approve this video?
+                  </p>
+                  <Button
+                    onClick={() => setShowApprovalConfirm(true)}
+                    variant="success"
+                    size="default"
+                    className="w-full"
+                  >
+                    Approve this video as final
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4 bg-primary/10 border-2 border-primary rounded-lg p-4">
+                  <div className="text-center space-y-2">
+                    <p className="text-base text-foreground font-bold">
+                      Approve this video?
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Video: <span className="font-semibold text-foreground">"{(selectedVideo as any).name}"</span>
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Version: <span className="font-semibold text-foreground">{selectedVideo.versionLabel}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleApprove}
+                      disabled={loading}
+                      variant="success"
+                      size="default"
+                      className="flex-1 font-semibold"
+                    >
+                      {loading ? 'Approving...' : 'Yes, Approve This Video'}
+                    </Button>
+                    <Button
+                      onClick={() => setShowApprovalConfirm(false)}
+                      variant="outline"
+                      disabled={loading}
+                      size="default"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Approved Status */}
+        {isVideoApproved && (
+          <div className="flex items-center gap-2 text-sm text-success pt-3 mt-3 border-t border-border">
+            <CheckCircle2 className="w-4 h-4" />
+            <span className="font-medium">This video is approved - Download available</span>
+          </div>
+        )}
       </div>
     </div>
   )

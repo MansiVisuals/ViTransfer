@@ -179,15 +179,18 @@ wait_for_redis() {
 wait_for_app() {
     echo "[WAIT] Waiting for application to be fully ready..."
 
-    # Respect APP_PORT env var so worker checks the correct container port
+    # Configurable hostname and port for different deployment scenarios
+    # APP_HOST: Container/service name (default: vitransfer-app)
+    # APP_PORT: Application port (default: 4321)
+    APP_HOST=${APP_HOST:-vitransfer-app}
     APP_PORT=${APP_PORT:-4321}
     max_attempts=150  # 5 minutes (150 attempts * 2 seconds)
     attempt=0
 
+    echo "  Checking: http://${APP_HOST}:${APP_PORT}/api/settings/public"
+
     while [ $attempt -lt $max_attempts ]; do
-        # Try both 'app' and 'vitransfer-app' hostnames for compatibility
-        if curl -s -f http://vitransfer-app:${APP_PORT}/api/settings/public > /dev/null 2>&1 || \
-           curl -s -f http://app:${APP_PORT}/api/settings/public > /dev/null 2>&1; then
+        if curl -s -f http://${APP_HOST}:${APP_PORT}/api/settings/public > /dev/null 2>&1; then
             echo "[OK] Application is ready!"
             return 0
         fi
@@ -198,6 +201,7 @@ wait_for_app() {
     done
 
     echo "[ERROR] Application is not ready after $max_attempts attempts"
+    echo "        Tried: http://${APP_HOST}:${APP_PORT}"
     return 1
 }
 

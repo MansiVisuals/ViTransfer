@@ -75,6 +75,13 @@ export async function deleteFile(filePath: string): Promise<void> {
   }
 }
 
+export async function deleteDirectory(dirPath: string): Promise<void> {
+  const fullPath = validatePath(dirPath)
+  if (fs.existsSync(fullPath)) {
+    await fs.promises.rm(fullPath, { recursive: true, force: true })
+  }
+}
+
 export function getFilePath(filePath: string): string {
   return validatePath(filePath)
 }

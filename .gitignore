@@ -34,8 +34,9 @@ pnpm-debug.log*
 .idea
 .claude
 
-# Claude init file (local only)
+# Claude files (local only)
 CLAUDE_INIT.md
+TODO.md
 
 # Local storage
 uploads/

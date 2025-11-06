@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check, Eye, EyeOff } from 'lucide-react'
 
 // Generate a secure random password
 function generateSecurePassword(): string {
@@ -51,6 +51,7 @@ interface Project {
   restrictCommentsToLatestVersion: boolean
   hideFeedback: boolean
   sharePassword: string | null
+  sharePasswordDecrypted: string | null
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
@@ -79,7 +80,7 @@ export default function ProjectSettingsPage() {
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
   const [hideFeedback, setHideFeedback] = useState(false)
   const [sharePassword, setSharePassword] = useState('')
-  const [updatePassword, setUpdatePassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [useCustomSlug, setUseCustomSlug] = useState(false) // Toggle for custom slug
   const [customSlugValue, setCustomSlugValue] = useState('') // Store custom slug value
   const [previewResolution, setPreviewResolution] = useState('720p')
@@ -151,6 +152,7 @@ export default function ProjectSettingsPage() {
         setWatermarkEnabled(data.watermarkEnabled ?? true)
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
+        setSharePassword(data.sharePasswordDecrypted || '')
 
         // Store original processing settings
         setOriginalSettings({
@@ -233,14 +235,7 @@ export default function ProjectSettingsPage() {
         previewResolution,
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
-      }
-
-      // Only include password if user wants to update it
-      if (updatePassword && sharePassword) {
-        updates.sharePassword = sharePassword
-      } else if (updatePassword && !sharePassword) {
-        // Remove password if checkbox is checked but field is empty
-        updates.sharePassword = null
+        sharePassword: sharePassword || null,
       }
 
       // Detect changes to processing settings
@@ -317,12 +312,6 @@ export default function ProjectSettingsPage() {
 
       // Refresh the page
       router.refresh()
-
-      // Reset password fields
-      if (updatePassword) {
-        setSharePassword('')
-        setUpdatePassword(false)
-      }
 
       // Close modal and reset pending updates
       setShowReprocessModal(false)
@@ -768,69 +757,62 @@ export default function ProjectSettingsPage() {
                 Password protection for the share page
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="space-y-0.5 flex-1">
-                  <Label htmlFor="updatePassword">
-                    {project.sharePassword ? 'Update Password' : 'Enable Password Protection'}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {project.sharePassword
-                      ? 'Currently password protected. Check to change or remove password.'
-                      : 'Require a password to access the share page'}
-                  </p>
-                </div>
-                <Switch
-                  id="updatePassword"
-                  checked={updatePassword}
-                  onCheckedChange={setUpdatePassword}
-                />
-              </div>
-
-              {updatePassword && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">New Password</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="password"
-                      type="text"
-                      value={sharePassword}
-                      onChange={(e) => setSharePassword(e.target.value)}
-                      placeholder="Enter new password (leave empty to remove)"
-                      className="flex-1"
-                    />
-                    {sharePassword && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={copyPassword}
-                        title="Copy password"
-                      >
-                        {copiedPassword ? (
-                          <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </Button>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Share Page Password</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={sharePassword}
+                    onChange={(e) => setSharePassword(e.target.value)}
+                    placeholder="Leave empty to disable password protection"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
                     )}
+                  </Button>
+                  {sharePassword && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setSharePassword(generateSecurePassword())}
-                      title="Generate random password"
+                      onClick={copyPassword}
+                      title="Copy password"
                     >
-                      <RefreshCw className="w-4 h-4" />
+                      {copiedPassword ? (
+                        <Check className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
                     </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {sharePassword
-                      ? 'Password will be updated when you save changes'
-                      : 'Leave empty to remove password protection'}
-                  </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSharePassword(generateSecurePassword())}
+                    title="Generate random password"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
                 </div>
-              )}
+                <p className="text-xs text-muted-foreground">
+                  {sharePassword
+                    ? 'Password will be required to access the share page'
+                    : 'Leave empty to allow anyone with the link to access'}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

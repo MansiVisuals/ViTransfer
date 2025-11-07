@@ -233,17 +233,8 @@ if [ "$1" = "npm" ] && [ "$2" = "start" ]; then
     fi
 
     echo ""
-    echo "[INIT] Initializing default admin and settings..."
-
-    # Call the initialization API endpoint to create admin user
-    # We do this async in the background and don't wait for it
-    # The app will handle this on first request if needed
-    (
-        sleep 5
-        curl -s http://localhost:4321/api/init > /dev/null 2>&1 || true
-    ) &
-
-    echo "[OK] Initialization triggered"
+    echo "[INIT] Database setup complete"
+    echo "      Admin initialization will run automatically via instrumentation.ts"
     echo ""
 elif [[ "$@" == *"npm run worker"* ]] || [[ "$@" == *"worker"* ]]; then
     echo "[SETUP] Worker initialization..."

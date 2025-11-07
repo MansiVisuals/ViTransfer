@@ -160,9 +160,9 @@ ENV PUID=1000 \
 # Container starts as root to handle PUID/PGID remapping
 # Entrypoint script switches to app user after remapping
 
-# Health check
+# Health check - uses auth/session endpoint (401 or 200 means app is responding)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4321/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+  CMD node -e "require('http').get('http://localhost:4321/api/auth/session', (r) => {process.exit(r.statusCode === 401 || r.statusCode === 200 ? 0 : 1)})" || exit 1
 
 EXPOSE 4321
 

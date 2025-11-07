@@ -760,13 +760,14 @@ export default function ProjectSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Share Page Password</Label>
-                <PasswordInput
-                  id="password"
-                  value={sharePassword}
-                  onChange={(e) => setSharePassword(e.target.value)}
-                  placeholder="Leave empty to disable password protection"
-                />
                 <div className="flex gap-2">
+                  <PasswordInput
+                    id="password"
+                    value={sharePassword}
+                    onChange={(e) => setSharePassword(e.target.value)}
+                    placeholder="Leave empty to disable password protection"
+                    className="max-w-md"
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -775,7 +776,7 @@ export default function ProjectSettingsPage() {
                     title="Generate random password"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Generate Password
+                    Generate
                   </Button>
                   {sharePassword && (
                     <Button

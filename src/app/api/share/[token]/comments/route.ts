@@ -147,7 +147,7 @@ export async function GET(
     })
 
     // Sanitize comments - never expose PII to non-admins
-    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName))
+    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName ?? undefined))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Sanitize the response data
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName))
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName ?? undefined))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

@@ -182,7 +182,7 @@ export async function PATCH(
     })
 
     // Sanitize response - never expose PII
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, existingComment.project.clientName))
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, existingComment.project.clientName ?? undefined))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
@@ -302,7 +302,7 @@ export async function DELETE(
     })
 
     // Sanitize response - never expose PII
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, existingComment.project.clientName))
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, existingComment.project.clientName ?? undefined))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

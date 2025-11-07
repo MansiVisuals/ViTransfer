@@ -766,7 +766,6 @@ export default function ProjectSettingsPage() {
                     value={sharePassword}
                     onChange={(e) => setSharePassword(e.target.value)}
                     placeholder="Leave empty to disable password protection"
-                    className="max-w-md"
                   />
                   <Button
                     type="button"
@@ -774,9 +773,9 @@ export default function ProjectSettingsPage() {
                     size="sm"
                     onClick={() => setSharePassword(generateSecurePassword())}
                     title="Generate random password"
+                    className="h-10 w-10 p-0"
                   >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Generate
+                    <RefreshCw className="w-4 h-4" />
                   </Button>
                   {sharePassword && (
                     <Button
@@ -784,18 +783,13 @@ export default function ProjectSettingsPage() {
                       variant="outline"
                       size="sm"
                       onClick={copyPassword}
-                      title="Copy password"
+                      title={copiedPassword ? 'Copied!' : 'Copy password'}
+                      className="h-10 w-10 p-0"
                     >
                       {copiedPassword ? (
-                        <>
-                          <Check className="w-4 h-4 mr-2 text-green-500" />
-                          Copied
-                        </>
+                        <Check className="w-4 h-4 text-green-500" />
                       ) : (
-                        <>
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy
-                        </>
+                        <Copy className="w-4 h-4" />
                       )}
                     </Button>
                   )}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
-import { Save, Send, Loader2 } from 'lucide-react'
+import { Save, Send, Loader2, Clock, AlertTriangle, CheckCircle } from 'lucide-react'
 
 interface Settings {
   id: string
@@ -29,6 +29,8 @@ interface SecuritySettings {
   ipRateLimit: number
   sessionRateLimit: number
   passwordAttempts: number
+  sessionTimeoutValue: number
+  sessionTimeoutUnit: string
   trackAnalytics: boolean
   trackSecurityLogs: boolean
   viewSecurityEvents: boolean
@@ -65,6 +67,8 @@ export default function GlobalSettingsPage() {
   const [ipRateLimit, setIpRateLimit] = useState('1000')
   const [sessionRateLimit, setSessionRateLimit] = useState('600')
   const [passwordAttempts, setPasswordAttempts] = useState('5')
+  const [sessionTimeoutValue, setSessionTimeoutValue] = useState('15')
+  const [sessionTimeoutUnit, setSessionTimeoutUnit] = useState('MINUTES')
   const [trackAnalytics, setTrackAnalytics] = useState(true)
   const [trackSecurityLogs, setTrackSecurityLogs] = useState(true)
   const [viewSecurityEvents, setViewSecurityEvents] = useState(false)
@@ -103,6 +107,8 @@ export default function GlobalSettingsPage() {
           setIpRateLimit(securityData.ipRateLimit?.toString() || '1000')
           setSessionRateLimit(securityData.sessionRateLimit?.toString() || '600')
           setPasswordAttempts(securityData.passwordAttempts?.toString() || '5')
+          setSessionTimeoutValue(securityData.sessionTimeoutValue?.toString() || '15')
+          setSessionTimeoutUnit(securityData.sessionTimeoutUnit || 'MINUTES')
           setTrackAnalytics(securityData.trackAnalytics ?? true)
           setTrackSecurityLogs(securityData.trackSecurityLogs ?? true)
           setViewSecurityEvents(securityData.viewSecurityEvents ?? false)
@@ -153,6 +159,8 @@ export default function GlobalSettingsPage() {
         ipRateLimit: parseInt(ipRateLimit) || 1000,
         sessionRateLimit: parseInt(sessionRateLimit) || 600,
         passwordAttempts: parseInt(passwordAttempts) || 5,
+        sessionTimeoutValue: parseInt(sessionTimeoutValue) || 15,
+        sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
         trackAnalytics,
         trackSecurityLogs,
         viewSecurityEvents,
@@ -646,6 +654,78 @@ export default function GlobalSettingsPage() {
                     />
                     <p className="text-xs text-muted-foreground">
                       Attempts before lockout
+                    </p>
+                  </div>
+                </div>
+
+                {/* Client Session Timeout */}
+                <div className="space-y-3 border-t pt-4">
+                  <div>
+                    <Label className="text-base flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Client Session Timeout
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Configure how long client share sessions stay active. Admin sessions always use 15 minutes with auto-refresh.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="sessionTimeoutValue">Timeout Value</Label>
+                      <Input
+                        id="sessionTimeoutValue"
+                        type="number"
+                        min="1"
+                        max="52"
+                        value={sessionTimeoutValue}
+                        onChange={(e) => setSessionTimeoutValue(e.target.value)}
+                        placeholder="15"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="sessionTimeoutUnit">Timeout Unit</Label>
+                      <select
+                        id="sessionTimeoutUnit"
+                        value={sessionTimeoutUnit}
+                        onChange={(e) => setSessionTimeoutUnit(e.target.value)}
+                        className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
+                      >
+                        <option value="MINUTES">Minutes</option>
+                        <option value="HOURS">Hours</option>
+                        <option value="DAYS">Days</option>
+                        <option value="WEEKS">Weeks</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-muted rounded-md">
+                    <p className="text-sm font-medium">
+                      Current Setting: {sessionTimeoutValue} {sessionTimeoutUnit.toLowerCase()}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
+                      {(() => {
+                        const val = parseInt(sessionTimeoutValue) || 15
+                        const unit = sessionTimeoutUnit
+                        if (unit === 'MINUTES') {
+                          if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very short - users may be logged out while actively viewing</>
+                          if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Good for security - sessions expire quickly</>
+                          return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Longer timeout - convenient but less secure</>
+                        }
+                        if (unit === 'HOURS') {
+                          if (val <= 2) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Balanced - good for longer review sessions</>
+                          if (val <= 8) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long timeout - convenient for all-day access</>
+                          return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very long - consider security implications</>
+                        }
+                        if (unit === 'DAYS') {
+                          return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Extended timeout - only use for trusted environments</>
+                        }
+                        if (unit === 'WEEKS') {
+                          return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Maximum timeout - use with caution</>
+                        }
+                        return ''
+                      })()}
                     </p>
                   </div>
                 </div>

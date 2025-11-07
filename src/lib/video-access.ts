@@ -3,6 +3,7 @@ import IORedis from 'ioredis'
 import { NextRequest } from 'next/server'
 import { prisma } from './db'
 import { getClientIpAddress } from './utils'
+import { getClientSessionTimeoutSeconds } from './settings'
 
 /**
  * Video Access Token System
@@ -82,8 +83,10 @@ export async function generateVideoAccessToken(
     createdAt: Date.now(),
   }
 
-  // Store token in Redis with 15 minute TTL
-  const ttlSeconds = 15 * 60
+  // Get configurable client session timeout
+  const ttlSeconds = await getClientSessionTimeoutSeconds()
+
+  // Store token in Redis with configurable TTL
   await redis.setex(
     `video_access:${token}`,
     ttlSeconds,

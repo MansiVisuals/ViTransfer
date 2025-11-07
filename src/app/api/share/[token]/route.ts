@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { generateVideoAccessToken } from '@/lib/video-access'
-import { isSmtpConfigured } from '@/lib/settings'
+import { isSmtpConfigured, getClientSessionTimeoutSeconds } from '@/lib/settings'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
@@ -88,6 +88,9 @@ export async function GET(
       sessionId = crypto.randomBytes(16).toString('base64url')
       isNewSession = true
 
+      // Get configurable client session timeout
+      const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
+
       // Set generic session cookie (no project ID exposure)
       cookieStore.set({
         name: 'share_session',
@@ -96,7 +99,7 @@ export async function GET(
         httpOnly: true,
         secure: false, // Match auth cookie settings
         sameSite: 'strict',
-        maxAge: 15 * 60, // 15 minutes
+        maxAge: sessionTimeoutSeconds,
       })
 
       // Store session → project mapping in Redis (server-side only)
@@ -105,7 +108,7 @@ export async function GET(
         `session_project:${sessionId}`,
         project.id,
         'EX',
-        15 * 60 // 15 minutes TTL
+        sessionTimeoutSeconds
       )
 
       // Track page visit for new sessions only (don't count admins)

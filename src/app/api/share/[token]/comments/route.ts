@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
  * Sanitize comment data before sending to client
  * SECURITY: Zero PII exposure policy
  */
-function sanitizeComment(comment: any, isAdmin: boolean) {
+function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolean, clientName?: string) {
   const sanitized: any = {
     id: comment.id,
     projectId: comment.projectId,
@@ -32,15 +32,19 @@ function sanitizeComment(comment: any, isAdmin: boolean) {
     sanitized.notifyByEmail = comment.notifyByEmail
     sanitized.notificationEmail = comment.notificationEmail
     sanitized.userId = comment.userId
+  } else if (isAuthenticated && clientName) {
+    // Authenticated users see client name (not PII like emails)
+    sanitized.authorName = comment.isInternal ? 'Admin' : clientName
+    // NO email fields at all for non-admins
   } else {
-    // Clients ONLY see generic labels - zero PII
+    // Non-authenticated users see generic labels only
     sanitized.authorName = comment.isInternal ? 'Admin' : 'Client'
     // NO email fields at all for non-admins
   }
 
   // Recursively sanitize replies
   if (comment.replies && Array.isArray(comment.replies)) {
-    sanitized.replies = comment.replies.map((reply: any) => sanitizeComment(reply, isAdmin))
+    sanitized.replies = comment.replies.map((reply: any) => sanitizeComment(reply, isAdmin, isAuthenticated, clientName))
   }
 
   return sanitized
@@ -74,6 +78,7 @@ export async function GET(
       select: {
         id: true,
         sharePassword: true,
+        clientName: true,
       }
     })
 
@@ -84,6 +89,9 @@ export async function GET(
     // Check if user is admin
     const currentUser = await getCurrentUserFromRequest(request)
     const isAdmin = currentUser?.role === 'ADMIN'
+
+    // Track if user is authenticated (admin or has password access)
+    let isAuthenticated = isAdmin
 
     // Check authentication if password protected (admins bypass password)
     if (project.sharePassword && !isAdmin) {
@@ -101,6 +109,9 @@ export async function GET(
       if (mappedProjectId !== project.id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 401 })
       }
+
+      // User has valid password authentication
+      isAuthenticated = true
     }
 
     // Fetch comments with nested replies
@@ -136,7 +147,7 @@ export async function GET(
     })
 
     // Sanitize comments - never expose PII to non-admins
-    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin))
+    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

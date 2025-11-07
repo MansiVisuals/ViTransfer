@@ -420,6 +420,7 @@ export default function SharePage() {
                   onApprove={fetchProjectData}
                   initialSeekTime={initialSeekTime}
                   initialVideoIndex={initialVideoIndex}
+                  isAdmin={!!adminUser}
                 />
               </div>
 

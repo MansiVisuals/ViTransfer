@@ -760,7 +760,7 @@ export default function ProjectSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Share Page Password</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full">
                   <PasswordInput
                     id="password"
                     value={sharePassword}
@@ -774,7 +774,7 @@ export default function ProjectSettingsPage() {
                     size="sm"
                     onClick={() => setSharePassword(generateSecurePassword())}
                     title="Generate random password"
-                    className="h-10 w-10 p-0"
+                    className="h-10 w-10 p-0 flex-shrink-0"
                   >
                     <RefreshCw className="w-4 h-4" />
                   </Button>
@@ -785,7 +785,7 @@ export default function ProjectSettingsPage() {
                       size="sm"
                       onClick={copyPassword}
                       title={copiedPassword ? 'Copied!' : 'Copy password'}
-                      className="h-10 w-10 p-0"
+                      className="h-10 w-10 p-0 flex-shrink-0"
                     >
                       {copiedPassword ? (
                         <Check className="w-4 h-4 text-green-500" />

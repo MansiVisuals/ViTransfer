@@ -11,43 +11,11 @@ import { rateLimit } from '@/lib/rate-limit'
 export const dynamic = 'force-dynamic'
 
 /**
- * Sanitize comment data - Zero PII exposure
- * Clients never see real names or emails
+ * GET /api/share/[token]
+ *
+ * Main share page data endpoint
+ * Comments are loaded separately via /api/share/[token]/comments for security
  */
-function sanitizeComment(comment: any, isAdmin: boolean) {
-  const sanitized: any = {
-    id: comment.id,
-    projectId: comment.projectId,
-    videoId: comment.videoId,
-    videoVersion: comment.videoVersion,
-    timestamp: comment.timestamp,
-    content: comment.content,
-    isInternal: comment.isInternal,
-    createdAt: comment.createdAt,
-    updatedAt: comment.updatedAt,
-    parentId: comment.parentId,
-  }
-
-  if (isAdmin) {
-    // Admins get real data
-    sanitized.authorName = comment.authorName
-    sanitized.authorEmail = comment.authorEmail
-    sanitized.notifyByEmail = comment.notifyByEmail
-    sanitized.notificationEmail = comment.notificationEmail
-    sanitized.userId = comment.userId
-  } else {
-    // Clients ONLY see generic labels
-    sanitized.authorName = comment.isInternal ? 'Admin' : 'Client'
-  }
-
-  // Recursively sanitize replies
-  if (comment.replies && Array.isArray(comment.replies)) {
-    sanitized.replies = comment.replies.map((reply: any) => sanitizeComment(reply, isAdmin))
-  }
-
-  return sanitized
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -67,7 +35,7 @@ export async function GET(
     // Individual videos can be approved independently
     const videoFilter = { status: 'READY' as const }
 
-    // Fetch project with nested comment replies
+    // Fetch project with videos (comments loaded separately for security)
     const project = await prisma.project.findUnique({
       where: { slug: token },
       include: {
@@ -75,20 +43,11 @@ export async function GET(
           where: videoFilter,
           orderBy: { version: 'desc' },
         },
-        comments: {
-          where: { parentId: null },
-          include: {
-            replies: {
-              orderBy: { createdAt: 'asc' }
-            }
-          },
-          orderBy: { createdAt: 'asc' },
-        },
       },
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // Check if user is admin (for both data sanitization and auth bypass)
@@ -101,7 +60,10 @@ export async function GET(
       const authSessionId = cookieStore.get('share_auth')?.value
 
       if (!authSessionId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        return NextResponse.json({
+          error: 'Password required',
+          requiresPassword: true
+        }, { status: 401 })
       }
 
       // Verify auth session maps to this project
@@ -109,7 +71,10 @@ export async function GET(
       const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
 
       if (mappedProjectId !== project.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        return NextResponse.json({
+          error: 'Password required',
+          requiresPassword: true
+        }, { status: 401 })
       }
     }
 
@@ -243,17 +208,37 @@ export async function GET(
     // Convert BigInt fields to strings for JSON serialization
     const smtpConfigured = await isSmtpConfigured()
 
-    // Sanitize comments - never expose PII to non-admins
-    const sanitizedComments = project.comments
-      ? project.comments.map((comment: any) => sanitizeComment(comment, isAdmin))
-      : []
-
+    // SECURITY: Sanitize project data - only send required fields
+    // Never expose: sharePassword, createdById, watermarkText, internal IDs
     const projectData = {
-      ...project,
-      videos: videosWithTokens, // Keep for backward compatibility
-      videosByName, // New grouped structure for multi-video support
-      comments: sanitizedComments,
-      smtpConfigured, // Include SMTP status for frontend
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      status: project.status,
+
+      // SECURITY: Only include clientName/clientEmail for password-protected shares OR admins
+      // Rationale: Password protection implies client expects privacy
+      // Non-protected shares remain anonymous for client safety
+      ...(project.sharePassword || isAdmin ? {
+        clientName: project.clientName,
+        clientEmail: project.clientEmail,
+      } : {}),
+
+      enableRevisions: project.enableRevisions,
+      maxRevisions: project.maxRevisions,
+      currentRevision: project.currentRevision,
+      restrictCommentsToLatestVersion: project.restrictCommentsToLatestVersion,
+      hideFeedback: project.hideFeedback,
+      previewResolution: project.previewResolution,
+      watermarkEnabled: project.watermarkEnabled,
+
+      // Processed data
+      videos: videosWithTokens,
+      videosByName,
+      smtpConfigured,
+
+      // REMOVED: comments (now loaded separately via /api/share/[token]/comments)
+      // NEVER send: sharePassword, createdById, watermarkText, approvedVideoId, approvedAt
     }
 
     return NextResponse.json(projectData)

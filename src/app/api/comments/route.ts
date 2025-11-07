@@ -62,112 +62,6 @@ function sanitizeComment(comment: any, isAdmin: boolean) {
   return sanitized
 }
 
-export async function GET(request: NextRequest) {
-  // Rate limiting for GET requests to prevent data scraping
-  const rateLimitResult = await rateLimit(request, {
-    windowMs: 60 * 1000,
-    maxRequests: 30,
-    message: 'Too many requests. Please slow down.'
-  }, 'comments-read')
-  
-  if (rateLimitResult) {
-    return rateLimitResult
-  }
-
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const projectId = searchParams.get('projectId')
-
-    if (!projectId) {
-      return NextResponse.json(
-        { error: 'projectId is required' },
-        { status: 400 }
-      )
-    }
-
-    // Fetch the project to check password protection and get slug
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: {
-        id: true,
-        sharePassword: true,
-        slug: true,
-      }
-    })
-
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      )
-    }
-
-    // Check if user is admin
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = !!currentUser
-
-    // If password protected and user is not admin, verify share authentication
-    if (project.sharePassword && !isAdmin) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (!authSessionId) {
-        // Return empty array instead of 401 to prevent information disclosure
-        // This way attackers can't confirm if a project exists or has comments
-        return NextResponse.json([])
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== project.id) {
-        // Return empty array instead of 401 to prevent information disclosure
-        return NextResponse.json([])
-      }
-    }
-
-    const comments = await prisma.comment.findMany({
-      where: {
-        projectId,
-        parentId: null, // Only get top-level comments
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            email: true,
-          }
-        },
-        replies: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                email: true,
-              }
-            }
-          },
-          orderBy: { createdAt: 'asc' }
-        }
-      },
-      orderBy: { createdAt: 'asc' }
-    })
-
-    // Sanitize comments before returning - remove sensitive data
-    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin))
-
-    return NextResponse.json(sanitizedComments)
-  } catch (error) {
-    console.error('Error fetching comments:', error)
-    return NextResponse.json({ error: 'Unable to process request' }, { status: 500 })
-  }
-}
-
 export async function POST(request: NextRequest) {
   // Rate limiting to prevent comment spam
   const rateLimitResult = await rateLimit(request, {
@@ -232,8 +126,8 @@ export async function POST(request: NextRequest) {
 
     if (!project) {
       return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
+        { error: 'Access denied' },
+        { status: 403 }
       )
     }
 

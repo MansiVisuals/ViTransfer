@@ -28,6 +28,8 @@ export default function SharePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [project, setProject] = useState<any>(null)
+  const [comments, setComments] = useState<any[]>([])
+  const [commentsLoading, setCommentsLoading] = useState(false)
   const [companyName, setCompanyName] = useState('Studio')
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
@@ -35,6 +37,26 @@ export default function SharePage() {
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [adminUser, setAdminUser] = useState<any>(null)
+
+  // Fetch comments separately for security
+  const fetchComments = async () => {
+    if (!token) return
+
+    setCommentsLoading(true)
+    try {
+      const response = await fetch(`/api/share/${token}/comments`, {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const commentsData = await response.json()
+        setComments(commentsData)
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error)
+    } finally {
+      setCommentsLoading(false)
+    }
+  }
 
   // Fetch project data function (for refresh after approval)
   const fetchProjectData = async () => {
@@ -45,6 +67,11 @@ export default function SharePage() {
       if (projectResponse.ok) {
         const projectData = await projectResponse.json()
         setProject(projectData)
+
+        // Fetch comments after project loads (if not hidden)
+        if (!projectData.hideFeedback) {
+          fetchComments()
+        }
       }
     } catch (error) {
       console.error('Error fetching project data:', error)
@@ -69,110 +96,80 @@ export default function SharePage() {
     fetchPublicSettings()
   }, [])
 
-  // Check if project requires password
+  // Load project data (handles auth check implicitly via API response)
   useEffect(() => {
     let isMounted = true // Prevent state updates after unmount
     let hasInitiallyLoaded = false // Prevent duplicate initial load
 
-    async function checkAuth() {
+    async function loadProject() {
       try {
-        const response = await fetch(`/api/share/${token}/check`, {
+        const response = await fetch(`/api/share/${token}`, {
           credentials: 'include'
         })
 
         if (!isMounted) return // Component unmounted, abort
 
-        if (!response.ok) {
-          // If 404, redirect to home page (invalid share link)
-          if (response.status === 404) {
-            window.location.href = '/'
-            return
-          }
-
-          // If check fails, try to fetch project directly (no password protection)
-          const directResponse = await fetch(`/api/share/${token}`, {
-            credentials: 'include'
-          })
-
-          if (!isMounted) return // Component unmounted, abort
-
-          if (directResponse.status === 404) {
-            // Invalid share link - redirect to home
-            window.location.href = '/'
-            return
-          }
-
-          if (directResponse.ok) {
-            const projectData = await directResponse.json()
-            if (isMounted) {
-              setProject(projectData)
-              setIsPasswordProtected(false)
-              setIsAuthenticated(true)
-            }
+        // Handle different response statuses
+        if (response.status === 401) {
+          // Password required
+          const data = await response.json()
+          if (isMounted) {
+            setIsPasswordProtected(true)
+            setIsAuthenticated(false)
           }
           return
         }
 
-        const data = await response.json()
-
-        if (!isMounted) return // Component unmounted, abort
-
-        setIsPasswordProtected(data.requiresPassword)
-        setIsAuthenticated(data.isAuthenticated)
-
-        // If admin session detected, fetch admin user info
-        if (data.isAdmin) {
-          try {
-            const adminResponse = await fetch('/api/auth/session', {
-              credentials: 'include'
-            })
-            if (adminResponse.ok) {
-              const adminData = await adminResponse.json()
-              if (isMounted) {
-                setAdminUser(adminData.user)
-              }
-            }
-          } catch (error) {
-            console.error('Error fetching admin info:', error)
-          }
+        if (response.status === 403 || response.status === 404) {
+          // Invalid token or access denied - redirect to home
+          window.location.href = '/'
+          return
         }
 
-        if (!data.requiresPassword || data.isAuthenticated) {
-          // Fetch project data
-          const projectResponse = await fetch(`/api/share/${token}`, {
-            credentials: 'include'
-          })
+        if (response.ok) {
+          // Success - show project
+          const projectData = await response.json()
+          if (isMounted) {
+            setProject(projectData)
+            setIsPasswordProtected(false)
+            setIsAuthenticated(true)
 
-          if (!isMounted) return // Component unmounted, abort
+            // Fetch comments separately (if not hidden)
+            if (!projectData.hideFeedback) {
+              fetchComments()
+            }
 
-          if (projectResponse.status === 404) {
-            // Invalid share link - redirect to home
-            window.location.href = '/'
-            return
-          }
-
-          if (projectResponse.ok) {
-            const projectData = await projectResponse.json()
-            if (isMounted) {
-              setProject(projectData)
+            // Check if admin session exists (always check, doesn't expose anything)
+            try {
+              const adminResponse = await fetch('/api/auth/session', {
+                credentials: 'include'
+              })
+              if (adminResponse.ok) {
+                const adminData = await adminResponse.json()
+                if (adminData.authenticated && adminData.user?.role === 'ADMIN') {
+                  setAdminUser(adminData.user)
+                }
+              }
+            } catch (error) {
+              // Silent fail - not an admin
             }
           }
         }
       } catch (error) {
-        // Silent fail - auth errors handled by UI state
+        // Silent fail - errors handled by UI state
       }
     }
 
     // Only run initial check once
     if (!hasInitiallyLoaded) {
       hasInitiallyLoaded = true
-      checkAuth()
+      loadProject()
     }
 
     // Auto-refresh every 30 seconds to get latest data (new videos, approval status)
     const intervalId = setInterval(() => {
       if (isMounted && isAuthenticated) {
-        checkAuth()
+        loadProject()
       }
     }, 30000)
 
@@ -270,6 +267,11 @@ export default function SharePage() {
         if (projectResponse.ok) {
           const projectData = await projectResponse.json()
           setProject(projectData)
+
+          // Fetch comments after successful auth (if not hidden)
+          if (!projectData.hideFeedback) {
+            fetchComments()
+          }
         }
       } else {
         setError('Incorrect password')
@@ -350,10 +352,10 @@ export default function SharePage() {
 
   // Filter comments to only show comments for active videos
   const activeVideoIds = new Set(activeVideos.map((v: any) => v.id))
-  const filteredComments = project?.comments?.filter((comment: any) => {
+  const filteredComments = comments.filter((comment: any) => {
     // Show general comments (no videoId) or comments for active videos
     return !comment.videoId || activeVideoIds.has(comment.videoId)
-  }) || []
+  })
 
   return (
     <div className="h-screen bg-background flex flex-col lg:flex-row overflow-hidden">

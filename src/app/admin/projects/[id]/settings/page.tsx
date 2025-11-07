@@ -760,14 +760,23 @@ export default function ProjectSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Share Page Password</Label>
+                <PasswordInput
+                  id="password"
+                  value={sharePassword}
+                  onChange={(e) => setSharePassword(e.target.value)}
+                  placeholder="Leave empty to disable password protection"
+                />
                 <div className="flex gap-2">
-                  <PasswordInput
-                    id="password"
-                    value={sharePassword}
-                    onChange={(e) => setSharePassword(e.target.value)}
-                    placeholder="Leave empty to disable password protection"
-                    className="flex-1"
-                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSharePassword(generateSecurePassword())}
+                    title="Generate random password"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Generate Password
+                  </Button>
                   {sharePassword && (
                     <Button
                       type="button"
@@ -777,21 +786,18 @@ export default function ProjectSettingsPage() {
                       title="Copy password"
                     >
                       {copiedPassword ? (
-                        <Check className="w-4 h-4 text-green-500" />
+                        <>
+                          <Check className="w-4 h-4 mr-2 text-green-500" />
+                          Copied
+                        </>
                       ) : (
-                        <Copy className="w-4 h-4" />
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copy
+                        </>
                       )}
                     </Button>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSharePassword(generateSecurePassword())}
-                    title="Generate random password"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {sharePassword

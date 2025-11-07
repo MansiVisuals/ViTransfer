@@ -766,6 +766,7 @@ export default function ProjectSettingsPage() {
                     value={sharePassword}
                     onChange={(e) => setSharePassword(e.target.value)}
                     placeholder="Leave empty to disable password protection"
+                    className="flex-1"
                   />
                   <Button
                     type="button"

@@ -47,7 +47,7 @@ if [ "$RUNNING_UID" = "$PUID" ] && [ "$RUNNING_GID" = "$PGID" ]; then
         echo ""
     fi
 
-    SKIP_GOSU=true
+    SKIP_SU_EXEC=true
 
 # ========================================
 # CASE 2: Running as non-root, but different UID
@@ -64,7 +64,7 @@ elif [ "$RUNNING_UID" != "0" ]; then
     echo "[OK] Ownership fix attempted (errors ignored)"
     echo ""
 
-    SKIP_GOSU=true
+    SKIP_SU_EXEC=true
 
 # ========================================
 # CASE 3: Running as root - need to remap
@@ -106,7 +106,7 @@ else
     fi
     echo ""
 
-    SKIP_GOSU=false
+    SKIP_SU_EXEC=false
 fi
 
 # ========================================
@@ -264,18 +264,18 @@ fi
 # ========================================
 
 echo "[START] Starting application..."
-if [ "$SKIP_GOSU" = "true" ]; then
+if [ "$SKIP_SU_EXEC" = "true" ]; then
     echo "         Running as: UID:$RUNNING_UID GID:$RUNNING_GID (direct)"
 else
-    echo "         Running as: UID:$PUID GID:$PGID (via gosu app)"
+    echo "         Running as: UID:$PUID GID:$PGID (via su-exec app)"
 fi
 echo ""
 
 # Execute the main command
-if [ "$SKIP_GOSU" = "true" ]; then
-    # Already running as correct user, no need for gosu
+if [ "$SKIP_SU_EXEC" = "true" ]; then
+    # Already running as correct user, no need for su-exec
     exec "$@"
 else
     # Running as root, switch to app user
-    exec gosu app "$@"
+    exec su-exec app "$@"
 fi

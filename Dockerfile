@@ -4,7 +4,7 @@
 # Security: Runs as configurable non-root user via PUID/PGID
 # Database: Automatic migrations on startup, no manual intervention required
 
-FROM node:20-alpine AS base
+FROM node:25.1.0-alpine3.22 AS base
 
 # Build arguments for architecture detection
 ARG TARGETPLATFORM
@@ -42,13 +42,14 @@ RUN apk add --no-cache \
         orc \
     && echo "FFmpeg version:" && ffmpeg -version
 
-# Install common utilities and gosu for user switching
+# Install common utilities and su-exec for user switching
+# Using su-exec instead of gosu to avoid Golang CVEs (native Alpine C implementation)
 RUN apk add --no-cache \
     bash \
     curl \
     ca-certificates \
     shadow \
-    gosu
+    su-exec
 
 # ========================================
 # Dependencies stage

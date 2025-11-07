@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic'
  * - Only admins in admin panel get full data for management
  * - All email/notification handling is server-side only
  */
-function sanitizeComment(comment: any, isAdmin: boolean) {
+function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolean, clientName?: string) {
   const sanitized: any = {
     id: comment.id,
     projectId: comment.projectId,
@@ -48,6 +48,10 @@ function sanitizeComment(comment: any, isAdmin: boolean) {
         email: comment.user.email
       }
     }
+  } else if (isAuthenticated && clientName) {
+    // Authenticated users see client name (not PII like emails)
+    sanitized.authorName = comment.isInternal ? 'Admin' : clientName
+    // NO email fields at all for non-admins
   } else {
     // Clients/public users ONLY see generic labels - zero PII
     sanitized.authorName = comment.isInternal ? 'Admin' : 'Client'
@@ -56,7 +60,7 @@ function sanitizeComment(comment: any, isAdmin: boolean) {
 
   // Recursively sanitize replies
   if (comment.replies && Array.isArray(comment.replies)) {
-    sanitized.replies = comment.replies.map((reply: any) => sanitizeComment(reply, isAdmin))
+    sanitized.replies = comment.replies.map((reply: any) => sanitizeComment(reply, isAdmin, isAuthenticated, clientName))
   }
 
   return sanitized
@@ -121,6 +125,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         sharePassword: true,
+        clientName: true,
       }
     })
 
@@ -130,6 +135,10 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    // Track if user is authenticated (admin or has password access)
+    const isAdmin = currentUser?.role === 'ADMIN'
+    let isAuthenticated = isAdmin
 
     // If password protected and user is not admin, verify share authentication
     if (project.sharePassword && !currentUser) {
@@ -155,6 +164,9 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+
+      // User has valid password authentication
+      isAuthenticated = true
     }
 
     // Get video version if videoId is provided but version isn't
@@ -345,7 +357,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Sanitize the response data
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, !!currentUser))
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName ?? undefined))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

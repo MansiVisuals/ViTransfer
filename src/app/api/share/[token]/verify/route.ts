@@ -6,6 +6,7 @@ import IORedis from 'ioredis'
 import crypto from 'crypto'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
+import { getClientSessionTimeoutSeconds } from '@/lib/settings'
 
 // Rate limit configuration
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
@@ -190,12 +191,15 @@ export async function POST(
     // Generate unique auth session ID (no project ID exposure)
     const authSessionId = crypto.randomBytes(16).toString('base64url')
 
+    // Get configurable client session timeout
+    const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
+
     // Store auth → project mapping in Redis
     await redis.set(
       `auth_project:${authSessionId}`,
       project.id,
       'EX',
-      60 * 15 // 15 minutes
+      sessionTimeoutSeconds
     )
 
     // Set generic authentication cookie (no project ID exposure)
@@ -205,7 +209,7 @@ export async function POST(
       secure: false, // Match auth cookie settings
       sameSite: 'strict',
       path: '/',
-      maxAge: 60 * 15, // 15 minutes
+      maxAge: sessionTimeoutSeconds,
     })
 
     return NextResponse.json({ success: true })

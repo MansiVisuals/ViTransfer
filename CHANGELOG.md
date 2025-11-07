@@ -5,6 +5,26 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2025-11-07
+
+### Added
+- Configurable session timeout for client share sessions (Security Settings)
+- Password visibility toggle in project settings (show/hide share password)
+- Configurable APP_HOST environment variable for Docker deployments
+- Right-click download prevention on video player for non-admin users
+
+### Fixed
+- Project deletion now properly removes all folders and files
+- Client names now persist correctly after page refresh
+- Docker health check endpoint for K8s/TrueNAS compatibility
+- TypeScript null handling for client names in comment routes
+- Password field UI consistency across the application
+
+### Improved
+- Password input fields now use consistent PasswordInput component with eye icon
+- Share page password field layout matches SMTP password field
+- Security settings with real-time feedback for timeout values
+
 ## [0.1.6] - 2025-11-01
 
 ### Added

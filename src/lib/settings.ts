@@ -66,3 +66,51 @@ export async function isSmtpConfigured(): Promise<boolean> {
   }
 }
 
+/**
+ * Get client session timeout in seconds from security settings
+ * Used for:
+ * - Client share sessions (share_session, share_auth cookies)
+ * - Video access tokens
+ * - Redis session mappings
+ *
+ * NOT used for admin JWT sessions (those stay fixed at 15 min with auto-refresh)
+ */
+export async function getClientSessionTimeoutSeconds(): Promise<number> {
+  try {
+    const settings = await prisma.securitySettings.findUnique({
+      where: { id: 'default' },
+      select: {
+        sessionTimeoutValue: true,
+        sessionTimeoutUnit: true,
+      },
+    })
+
+    if (!settings) {
+      // Default to 15 minutes if settings don't exist
+      return 15 * 60
+    }
+
+    const value = settings.sessionTimeoutValue
+    const unit = settings.sessionTimeoutUnit
+
+    // Convert to seconds based on unit
+    switch (unit) {
+      case 'MINUTES':
+        return value * 60
+      case 'HOURS':
+        return value * 60 * 60
+      case 'DAYS':
+        return value * 24 * 60 * 60
+      case 'WEEKS':
+        return value * 7 * 24 * 60 * 60
+      default:
+        // Fallback to 15 minutes if unit is invalid
+        return 15 * 60
+    }
+  } catch (error) {
+    console.error('Error fetching client session timeout:', error)
+    // Fallback to 15 minutes on error
+    return 15 * 60
+  }
+}
+

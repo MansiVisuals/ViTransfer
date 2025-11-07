@@ -316,8 +316,10 @@ export default function VideoPlayer({
             src={videoUrl}
             className="w-full h-full"
             onTimeUpdate={handleTimeUpdate}
+            onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}
             crossOrigin="anonymous"
             controls
+            controlsList={!isAdmin ? "nodownload" : undefined}
             playsInline
             preload="auto"
             style={{

@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { PasswordInput } from '@/components/ui/password-input'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw, Copy, Check, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
 
 // Generate a secure random password
 function generateSecurePassword(): string {
@@ -80,7 +81,6 @@ export default function ProjectSettingsPage() {
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
   const [hideFeedback, setHideFeedback] = useState(false)
   const [sharePassword, setSharePassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [useCustomSlug, setUseCustomSlug] = useState(false) // Toggle for custom slug
   const [customSlugValue, setCustomSlugValue] = useState('') // Store custom slug value
   const [previewResolution, setPreviewResolution] = useState('720p')
@@ -760,10 +760,9 @@ export default function ProjectSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Share Page Password</Label>
-                <div className="flex gap-2">
-                  <Input
+                <div className="flex gap-2 w-full">
+                  <PasswordInput
                     id="password"
-                    type={showPassword ? "text" : "password"}
                     value={sharePassword}
                     onChange={(e) => setSharePassword(e.target.value)}
                     placeholder="Leave empty to disable password protection"
@@ -773,14 +772,11 @@ export default function ProjectSettingsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setSharePassword(generateSecurePassword())}
+                    title="Generate random password"
+                    className="h-10 w-10 p-0 flex-shrink-0"
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
+                    <RefreshCw className="w-4 h-4" />
                   </Button>
                   {sharePassword && (
                     <Button
@@ -788,7 +784,8 @@ export default function ProjectSettingsPage() {
                       variant="outline"
                       size="sm"
                       onClick={copyPassword}
-                      title="Copy password"
+                      title={copiedPassword ? 'Copied!' : 'Copy password'}
+                      className="h-10 w-10 p-0 flex-shrink-0"
                     >
                       {copiedPassword ? (
                         <Check className="w-4 h-4 text-green-500" />
@@ -797,15 +794,6 @@ export default function ProjectSettingsPage() {
                       )}
                     </Button>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSharePassword(generateSecurePassword())}
-                    title="Generate random password"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {sharePassword

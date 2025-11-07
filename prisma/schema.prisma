@@ -193,6 +193,10 @@ model SecuritySettings {
   sessionRateLimit Int @default(600) // requests per minute per session (10/sec for seeking/buffering)
   passwordAttempts Int @default(5) // password attempts before lockout
 
+  // Session Timeout (for client share sessions, not admin JWT)
+  sessionTimeoutValue Int    @default(15) // Numeric value (15, 30, 1, 2, etc.)
+  sessionTimeoutUnit  String @default("MINUTES") // MINUTES, HOURS, DAYS, WEEKS
+
   // Logging toggles
   trackAnalytics    Boolean @default(true)
   trackSecurityLogs Boolean @default(true)

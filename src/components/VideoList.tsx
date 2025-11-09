@@ -6,7 +6,9 @@ import { Video } from '@prisma/client'
 import { formatDuration, formatFileSize } from '@/lib/utils'
 import { Progress } from './ui/progress'
 import { Button } from './ui/button'
-import { Trash2, CheckCircle2, XCircle } from 'lucide-react'
+import { ReprocessModal } from './ReprocessModal'
+import { InlineEdit } from './InlineEdit'
+import { Trash2, CheckCircle2, XCircle, Pencil } from 'lucide-react'
 
 interface VideoListProps {
   videos: Video[]
@@ -19,6 +21,12 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [videos, setVideos] = useState<Video[]>(initialVideos)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [showReprocessModal, setShowReprocessModal] = useState(false)
+  const [pendingVideoUpdate, setPendingVideoUpdate] = useState<{ videoId: string; newLabel: string } | null>(null)
+  const [reprocessing, setReprocessing] = useState(false)
 
   // Poll for updates when there are processing videos
   useEffect(() => {
@@ -98,6 +106,86 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     }
   }
 
+  const handleStartEdit = (videoId: string, currentLabel: string) => {
+    setEditingId(videoId)
+    setEditValue(currentLabel)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditValue('')
+  }
+
+  const handleSaveEdit = async (videoId: string) => {
+    if (!editValue.trim()) {
+      alert('Version label cannot be empty')
+      return
+    }
+
+    // Show reprocessing modal since version label affects watermark
+    setPendingVideoUpdate({ videoId, newLabel: editValue.trim() })
+    setShowReprocessModal(true)
+  }
+
+  const saveVersionLabel = async (shouldReprocess: boolean) => {
+    if (!pendingVideoUpdate) return
+
+    setSavingId(pendingVideoUpdate.videoId)
+    try {
+      const response = await fetch(`/api/videos/${pendingVideoUpdate.videoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ versionLabel: pendingVideoUpdate.newLabel })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update version label')
+      }
+
+      // Reprocess if requested
+      if (shouldReprocess) {
+        await reprocessVideo(pendingVideoUpdate.videoId)
+      }
+
+      setEditingId(null)
+      setEditValue('')
+      setPendingVideoUpdate(null)
+      setShowReprocessModal(false)
+      await onRefresh?.()
+      router.refresh()
+    } catch (error) {
+      alert('Failed to update version label')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const reprocessVideo = async (videoId: string) => {
+    setReprocessing(true)
+    try {
+      const video = videos.find(v => v.id === videoId)
+      if (!video) return
+
+      const response = await fetch(`/api/projects/${video.projectId}/reprocess`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoIds: [videoId] })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to reprocess video')
+      }
+
+      console.log(`Reprocessing video ${videoId}`)
+    } catch (err) {
+      console.error('Error reprocessing video:', err)
+      // Don't throw - we still want to save the label
+    } finally {
+      setReprocessing(false)
+    }
+  }
+
   if (videos.length === 0) {
     return <p className="text-sm text-muted-foreground">No videos uploaded yet</p>
   }
@@ -109,7 +197,30 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
           <div className="flex justify-between items-start gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-medium break-words">{video.versionLabel}</h4>
+                {editingId === video.id ? (
+                  <InlineEdit
+                    value={editValue}
+                    onChange={setEditValue}
+                    onSave={() => handleSaveEdit(video.id)}
+                    onCancel={handleCancelEdit}
+                    disabled={savingId === video.id}
+                  />
+                ) : (
+                  <>
+                    <h4 className="font-medium break-words">{video.versionLabel}</h4>
+                    {isAdmin && video.status === 'READY' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible"
+                        onClick={() => handleStartEdit(video.id, video.versionLabel)}
+                        title="Edit version label"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </>
+                )}
                 {(video as any).approved && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible whitespace-nowrap">
                     <CheckCircle2 className="w-3 h-3" />
@@ -211,6 +322,22 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
           )}
         </div>
       ))}
+
+      <ReprocessModal
+        show={showReprocessModal}
+        onCancel={() => {
+          setShowReprocessModal(false)
+          setPendingVideoUpdate(null)
+          setSavingId(null)
+        }}
+        onSaveWithoutReprocess={() => saveVersionLabel(false)}
+        onSaveAndReprocess={() => saveVersionLabel(true)}
+        saving={savingId !== null}
+        reprocessing={reprocessing}
+        title="Version Label Changed"
+        description="Version labels appear in watermarks. The change will only apply to newly uploaded videos."
+        isSingleVideo={true}
+      />
     </div>
   )
 }

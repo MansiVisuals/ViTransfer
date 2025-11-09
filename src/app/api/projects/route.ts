@@ -4,6 +4,7 @@ import { generateUniqueSlug } from '@/lib/utils'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
+import { createProjectSchema, validateRequest } from '@/lib/validation'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
+
+    // Validate request body
+    const validation = validateRequest(createProjectSchema, body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error, details: validation.details },
+        { status: 400 }
+      )
+    }
+
     const {
       title,
       description,
@@ -36,7 +47,7 @@ export async function POST(request: NextRequest) {
       maxRevisions,
       restrictCommentsToLatestVersion,
       isShareOnly
-    } = body
+    } = validation.data
 
     // Fetch default settings for watermark and preview resolution
     const settings = await prisma.settings.findUnique({
@@ -55,38 +66,40 @@ export async function POST(request: NextRequest) {
       ? encrypt(sharePassword)
       : null
 
-    const project = await prisma.project.create({
-      data: {
-        title,
-        slug,
-        description,
-        sharePassword: encryptedSharePassword,
-        enableRevisions: isShareOnly ? false : (enableRevisions || false),
-        maxRevisions: isShareOnly ? 0 : (enableRevisions ? (maxRevisions || 3) : 0),
-        restrictCommentsToLatestVersion: isShareOnly ? false : (restrictCommentsToLatestVersion || false),
-        status: isShareOnly ? 'SHARE_ONLY' : 'IN_REVIEW',
-        hideFeedback: isShareOnly ? true : false,
-        approvedAt: isShareOnly ? new Date() : null,
-        previewResolution: settings?.defaultPreviewResolution || '720p',
-        watermarkText: settings?.defaultWatermarkText || null,
-        createdById: admin.id,
-      },
-    })
-
-    // Create initial recipient if email provided (optional)
-    if (recipientEmail) {
-      await prisma.projectRecipient.create({
+    // Use transaction to ensure atomicity: if recipient creation fails, project creation is rolled back
+    const project = await prisma.$transaction(async (tx) => {
+      const newProject = await tx.project.create({
         data: {
-          projectId: project.id,
-          email: recipientEmail,
-          name: recipientName || null,
-          isPrimary: true,
+          title,
+          slug,
+          description,
+          sharePassword: encryptedSharePassword,
+          enableRevisions: isShareOnly ? false : (enableRevisions || false),
+          maxRevisions: isShareOnly ? 0 : (enableRevisions ? (maxRevisions || 3) : 0),
+          restrictCommentsToLatestVersion: isShareOnly ? false : (restrictCommentsToLatestVersion || false),
+          status: isShareOnly ? 'SHARE_ONLY' : 'IN_REVIEW',
+          hideFeedback: isShareOnly ? true : false,
+          approvedAt: isShareOnly ? new Date() : null,
+          previewResolution: settings?.defaultPreviewResolution || '720p',
+          watermarkText: settings?.defaultWatermarkText || null,
+          createdById: admin.id,
         },
-      }).catch(error => {
-        // Don't fail project creation if recipient creation fails
-        console.error('Failed to create initial recipient:', error)
       })
-    }
+
+      // Create recipient if email provided (validated by schema)
+      if (recipientEmail) {
+        await tx.projectRecipient.create({
+          data: {
+            projectId: newProject.id,
+            email: recipientEmail,
+            name: recipientName || null,
+            isPrimary: true,
+          },
+        })
+      }
+
+      return newProject
+    })
 
     return NextResponse.json(project)
   } catch (error) {

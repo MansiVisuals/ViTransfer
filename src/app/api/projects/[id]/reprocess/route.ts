@@ -16,6 +16,8 @@ export async function POST(
 
   try {
     const { id: projectId } = await params
+    const body = await request.json().catch(() => ({}))
+    const { videoIds } = body
 
     // Get project with videos
     const project = await prisma.project.findUnique({
@@ -29,11 +31,15 @@ export async function POST(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // Only reprocess videos that are READY or ERROR
-    // Skip UPLOADING and PROCESSING videos
-    const videosToReprocess = project.videos.filter(
+    // Filter videos: only READY or ERROR status
+    let videosToReprocess = project.videos.filter(
       video => video.status === 'READY' || video.status === 'ERROR'
     )
+
+    // If videoIds array provided, filter to only those specific videos
+    if (videoIds && Array.isArray(videoIds) && videoIds.length > 0) {
+      videosToReprocess = videosToReprocess.filter(video => videoIds.includes(video.id))
+    }
 
     if (videosToReprocess.length === 0) {
       return NextResponse.json({

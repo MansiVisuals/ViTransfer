@@ -3,6 +3,35 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateAllSessions, clearAllRateLimits } from '@/lib/session-invalidation'
 
+// Helper functions for change detection
+function hasSessionTimeoutChanged(
+  current: any,
+  newValue?: string,
+  newUnit?: string
+): boolean {
+  if (!current || (newValue === undefined && newUnit === undefined)) return false
+
+  const value = newValue !== undefined ? parseInt(newValue) : current.sessionTimeoutValue
+  const unit = newUnit !== undefined ? newUnit : current.sessionTimeoutUnit
+
+  return current.sessionTimeoutValue !== value || current.sessionTimeoutUnit !== unit
+}
+
+function hasHotlinkProtectionChanged(current: any, newProtection?: string): boolean {
+  if (!current || newProtection === undefined) return false
+
+  const levels: Record<string, number> = { 'DISABLED': 0, 'LOG_ONLY': 1, 'BLOCK_STRICT': 2 }
+  const currentLevel = levels[current.hotlinkProtection] || 0
+  const newLevel = levels[newProtection] || 0
+
+  return newLevel > currentLevel
+}
+
+function hasPasswordAttemptsChanged(current: any, newAttempts?: string): boolean {
+  if (!current || newAttempts === undefined) return false
+  return current.passwordAttempts !== parseInt(newAttempts)
+}
+
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
@@ -81,40 +110,10 @@ export async function PATCH(request: NextRequest) {
       where: { id: 'default' },
     })
 
-    // Track which security-sensitive changes occurred
-    let sessionTimeoutChanged = false
-    let hotlinkProtectionChanged = false
-    let passwordAttemptsChanged = false
-
-    if (currentSettings) {
-      // Check if session timeout changed (check both value and unit)
-      // Handle partial updates: if only one is provided, use current value for the other
-      if (sessionTimeoutValue !== undefined || sessionTimeoutUnit !== undefined) {
-        const newValue = sessionTimeoutValue !== undefined
-          ? parseInt(sessionTimeoutValue)
-          : currentSettings.sessionTimeoutValue
-        const newUnit = sessionTimeoutUnit !== undefined
-          ? sessionTimeoutUnit
-          : currentSettings.sessionTimeoutUnit
-
-        sessionTimeoutChanged =
-          currentSettings.sessionTimeoutValue !== newValue ||
-          currentSettings.sessionTimeoutUnit !== newUnit
-      }
-
-      // Check if hotlink protection became more restrictive (only if provided)
-      if (hotlinkProtection !== undefined) {
-        const restrictionLevels = { 'DISABLED': 0, 'LOG_ONLY': 1, 'BLOCK_STRICT': 2 }
-        const currentLevel = restrictionLevels[currentSettings.hotlinkProtection as keyof typeof restrictionLevels] || 0
-        const newLevel = restrictionLevels[hotlinkProtection as keyof typeof restrictionLevels] || 0
-        hotlinkProtectionChanged = newLevel > currentLevel
-      }
-
-      // Check if password attempts changed (only if provided)
-      if (passwordAttempts !== undefined) {
-        passwordAttemptsChanged = currentSettings.passwordAttempts !== parseInt(passwordAttempts)
-      }
-    }
+    // Detect security-sensitive changes
+    const sessionTimeoutChanged = hasSessionTimeoutChanged(currentSettings, sessionTimeoutValue, sessionTimeoutUnit)
+    const hotlinkProtectionChanged = hasHotlinkProtectionChanged(currentSettings, hotlinkProtection)
+    const passwordAttemptsChanged = hasPasswordAttemptsChanged(currentSettings, passwordAttempts)
 
     const settings = await prisma.securitySettings.upsert({
       where: { id: 'default' },

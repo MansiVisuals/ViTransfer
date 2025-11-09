@@ -35,6 +35,43 @@ function getRedisConnection(): IORedis {
 }
 
 /**
+ * Scan and delete Redis keys matching a pattern with optional filtering
+ * @private
+ */
+async function scanAndDeleteKeys(
+  pattern: string,
+  filter?: (key: string, value: string | null) => boolean
+): Promise<number> {
+  const redis = getRedisConnection()
+  const stream = redis.scanStream({ match: pattern, count: 100 })
+  const keysToDelete: string[] = []
+
+  for await (const keys of stream) {
+    if (filter) {
+      // Apply filter - check each key's value
+      for (const key of keys) {
+        const value = await redis.get(key)
+        if (filter(key, value)) {
+          keysToDelete.push(key)
+        }
+      }
+    } else {
+      // No filter - collect all keys
+      keysToDelete.push(...keys)
+    }
+  }
+
+  // Delete all collected keys in pipeline
+  if (keysToDelete.length > 0) {
+    const pipeline = redis.pipeline()
+    keysToDelete.forEach(key => pipeline.del(key))
+    await pipeline.exec()
+  }
+
+  return keysToDelete.length
+}
+
+/**
  * Invalidate all client sessions for a specific project
  *
  * Use when:
@@ -47,34 +84,10 @@ function getRedisConnection(): IORedis {
  */
 export async function invalidateProjectSessions(projectId: string): Promise<number> {
   try {
-    const redis = getRedisConnection()
-    let invalidatedCount = 0
-
-    // Scan for all auth_project:* keys
-    const stream = redis.scanStream({
-      match: 'auth_project:*',
-      count: 100
-    })
-
-    const keysToDelete: string[] = []
-
-    // Collect all keys that map to this project
-    for await (const keys of stream) {
-      for (const key of keys) {
-        const mappedProjectId = await redis.get(key)
-        if (mappedProjectId === projectId) {
-          keysToDelete.push(key)
-        }
-      }
-    }
-
-    // Delete all collected keys in a single pipeline for performance
-    if (keysToDelete.length > 0) {
-      const pipeline = redis.pipeline()
-      keysToDelete.forEach(key => pipeline.del(key))
-      await pipeline.exec()
-      invalidatedCount = keysToDelete.length
-    }
+    const invalidatedCount = await scanAndDeleteKeys(
+      'auth_project:*',
+      (_key, value) => value === projectId
+    )
 
     console.log(`[SESSION_INVALIDATION] Invalidated ${invalidatedCount} sessions for project ${projectId}`)
     return invalidatedCount
@@ -98,29 +111,7 @@ export async function invalidateProjectSessions(projectId: string): Promise<numb
  */
 export async function invalidateAllSessions(): Promise<number> {
   try {
-    const redis = getRedisConnection()
-    let invalidatedCount = 0
-
-    // Scan for all auth_project:* keys
-    const stream = redis.scanStream({
-      match: 'auth_project:*',
-      count: 100
-    })
-
-    const keysToDelete: string[] = []
-
-    // Collect all session keys
-    for await (const keys of stream) {
-      keysToDelete.push(...keys)
-    }
-
-    // Delete all collected keys in a single pipeline for performance
-    if (keysToDelete.length > 0) {
-      const pipeline = redis.pipeline()
-      keysToDelete.forEach(key => pipeline.del(key))
-      await pipeline.exec()
-      invalidatedCount = keysToDelete.length
-    }
+    const invalidatedCount = await scanAndDeleteKeys('auth_project:*')
 
     console.log(`[SESSION_INVALIDATION] Invalidated ALL ${invalidatedCount} client sessions globally`)
     return invalidatedCount
@@ -142,29 +133,7 @@ export async function invalidateAllSessions(): Promise<number> {
  */
 export async function clearAllRateLimits(): Promise<number> {
   try {
-    const redis = getRedisConnection()
-    let clearedCount = 0
-
-    // Scan for all ratelimit:* keys
-    const stream = redis.scanStream({
-      match: 'ratelimit:*',
-      count: 100
-    })
-
-    const keysToDelete: string[] = []
-
-    // Collect all rate limit keys
-    for await (const keys of stream) {
-      keysToDelete.push(...keys)
-    }
-
-    // Delete all collected keys
-    if (keysToDelete.length > 0) {
-      const pipeline = redis.pipeline()
-      keysToDelete.forEach(key => pipeline.del(key))
-      await pipeline.exec()
-      clearedCount = keysToDelete.length
-    }
+    const clearedCount = await scanAndDeleteKeys('ratelimit:*')
 
     console.log(`[SESSION_INVALIDATION] Cleared ${clearedCount} rate limit counters`)
     return clearedCount

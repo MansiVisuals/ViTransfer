@@ -7,6 +7,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, createCommentSchema } from '@/lib/validation'
 import { cookies } from 'next/headers'
 import { isSmtpConfigured } from '@/lib/settings'
+import { getPrimaryRecipient } from '@/lib/recipients'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -48,9 +49,9 @@ function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolea
         email: comment.user.email
       }
     }
-  } else if (isAuthenticated && clientName) {
-    // Authenticated users see client name (not PII like emails)
-    sanitized.authorName = comment.isInternal ? 'Admin' : clientName
+  } else if (isAuthenticated) {
+    // Authenticated users see the actual author name (custom or recipient name)
+    sanitized.authorName = comment.isInternal ? 'Admin' : (comment.authorName || clientName || 'Client')
     // NO email fields at all for non-admins
   } else {
     // Clients/public users ONLY see generic labels - zero PII
@@ -125,7 +126,6 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         sharePassword: true,
-        clientName: true,
       }
     })
 
@@ -135,6 +135,10 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    // Get primary recipient for author name
+    const primaryRecipient = await getPrimaryRecipient(projectId)
+    const fallbackName = primaryRecipient?.name || 'Client'
 
     // Track if user is authenticated (admin or has password access)
     const isAdmin = currentUser?.role === 'ADMIN'
@@ -357,7 +361,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Sanitize the response data
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName ?? undefined))
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, fallbackName))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

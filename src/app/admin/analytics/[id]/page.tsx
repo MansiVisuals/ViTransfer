@@ -18,6 +18,10 @@ async function getProjectAnalytics(id: string) {
           { version: 'desc' },
         ],
       },
+      recipients: {
+        where: { isPrimary: true },
+        take: 1,
+      },
       analytics: {
         orderBy: { createdAt: 'desc' },
         include: {
@@ -91,7 +95,8 @@ async function getProjectAnalytics(id: string) {
     project: {
       id: project.id,
       title: project.title,
-      clientName: project.clientName,
+      recipientName: project.recipients[0]?.name || null,
+      recipientEmail: project.recipients[0]?.email || null,
       status: project.status,
     },
     stats: {
@@ -142,8 +147,8 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
               </Button>
             </Link>
             <h1 className="text-2xl sm:text-3xl font-bold">{project.title}</h1>
-            {project.clientName && (
-              <p className="text-muted-foreground mt-1">Client: {project.clientName}</p>
+            {project.recipientName && (
+              <p className="text-muted-foreground mt-1">Client: {project.recipientName}</p>
             )}
           </div>
         </div>

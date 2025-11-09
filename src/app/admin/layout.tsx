@@ -34,9 +34,14 @@ export default function AdminLayout({
 
   return (
     <AuthProvider requireAuth={true}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <AdminHeader />
-        {children}
+        <div className="flex-1">{children}</div>
+        <footer className="border-t bg-muted/50 py-4 px-6 mt-8">
+          <div className="max-w-7xl mx-auto text-center text-xs text-muted-foreground">
+            ViTransfer{process.env.NEXT_PUBLIC_APP_VERSION && ` v${process.env.NEXT_PUBLIC_APP_VERSION}`}
+          </div>
+        </footer>
         <SessionMonitor />
       </div>
     </AuthProvider>

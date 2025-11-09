@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
 import { sendProjectApprovedEmail, sendAdminProjectApprovedEmail } from '@/lib/email'
 import { generateShareUrl } from '@/lib/url'
+import { getProjectRecipients, getPrimaryRecipient } from '@/lib/recipients'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -112,6 +113,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
     }
 
+    // Get primary recipient for comment author
+    const primaryRecipient = await getPrimaryRecipient(projectId)
+
     // Create client approval comment
     await prisma.comment.create({
       data: {
@@ -119,7 +123,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         content: allApproved
           ? `All videos approved! Project is now complete.`
           : `Video "${selectedVideo.name}" (${selectedVideo.versionLabel}) approved.`,
-        authorName: project.clientName || 'Client',
+        authorName: primaryRecipient?.name || 'Client',
         authorEmail: null,
         isInternal: false,
       },
@@ -138,29 +142,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
 
-    // Send email notification to client (only if email is provided)
-    if (project.clientEmail) {
-      try {
-        const shareUrl = await generateShareUrl(project.slug)
+    // Send email notification to all recipients
+    try {
+      const recipients = await getProjectRecipients(projectId)
+      const shareUrl = await generateShareUrl(project.slug)
 
-        // Get all approved videos for multi-video support
-        const approvedVideos = allVideos.filter(v => v.approved)
-        const approvedVideosList = approvedVideos.map(v => ({
-          name: v.name,
-          id: v.id
-        }))
+      // Get all approved videos for multi-video support
+      const approvedVideos = allVideos.filter(v => v.approved)
+      const approvedVideosList = approvedVideos.map(v => ({
+        name: v.name,
+        id: v.id
+      }))
 
-        await sendProjectApprovedEmail({
-          clientEmail: project.clientEmail,
-          clientName: project.clientName || 'Client',
-          projectTitle: project.title,
-          shareUrl,
-          approvedVideos: approvedVideosList,
-          isComplete: allApproved,
-        })
-      } catch (emailError) {
-        // Don't fail the request if email sending fails
-      }
+      // Only send emails to recipients with email addresses
+      const emailPromises = recipients
+        .filter(recipient => recipient.email)
+        .map(recipient =>
+          sendProjectApprovedEmail({
+            clientEmail: recipient.email!,
+            clientName: recipient.name || 'Client',
+            projectTitle: project.title,
+            shareUrl,
+            approvedVideos: approvedVideosList,
+            isComplete: allApproved,
+          })
+        )
+
+      await Promise.allSettled(emailPromises)
+    } catch (emailError) {
+      // Don't fail the request if email sending fails
     }
 
     // Send email notification to admins
@@ -180,7 +190,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         await sendAdminProjectApprovedEmail({
           adminEmails: admins.map((a: { email: string }) => a.email),
-          clientName: project.clientName || 'Client',
+          clientName: primaryRecipient?.name || 'Client',
           projectTitle: project.title,
           approvedVideos: approvedVideosList,
           isComplete: allApproved,

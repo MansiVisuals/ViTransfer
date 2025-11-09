@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { getCurrentUserFromRequest } from '@/lib/auth'
+import { getPrimaryRecipient } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
@@ -32,9 +33,9 @@ function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolea
     sanitized.notifyByEmail = comment.notifyByEmail
     sanitized.notificationEmail = comment.notificationEmail
     sanitized.userId = comment.userId
-  } else if (isAuthenticated && clientName) {
-    // Authenticated users see client name (not PII like emails)
-    sanitized.authorName = comment.isInternal ? 'Admin' : clientName
+  } else if (isAuthenticated) {
+    // Authenticated users see the actual author name (custom or recipient name)
+    sanitized.authorName = comment.isInternal ? 'Admin' : (comment.authorName || clientName || 'Client')
     // NO email fields at all for non-admins
   } else {
     // Non-authenticated users see generic labels only
@@ -78,13 +79,16 @@ export async function GET(
       select: {
         id: true,
         sharePassword: true,
-        clientName: true,
       }
     })
 
     if (!project) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
+
+    // Get primary recipient for author name
+    const primaryRecipient = await getPrimaryRecipient(project.id)
+    const fallbackName = primaryRecipient?.name || 'Client'
 
     // Check if user is admin
     const currentUser = await getCurrentUserFromRequest(request)
@@ -147,7 +151,7 @@ export async function GET(
     })
 
     // Sanitize comments - never expose PII to non-admins
-    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, project.clientName ?? undefined))
+    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, fallbackName))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

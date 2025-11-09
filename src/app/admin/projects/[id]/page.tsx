@@ -188,11 +188,13 @@ export default function ProjectPage() {
                     <div className="min-w-0">
                       <p className="text-muted-foreground">Client</p>
                       <p className="font-medium break-words">
-                        {project.clientName}
+                        {project.recipients?.[0]?.name || project.recipients?.[0]?.email || 'No recipient'}
                       </p>
-                      <p className="text-xs text-muted-foreground break-all">
-                        {project.clientEmail}
-                      </p>
+                      {project.recipients?.[0]?.name && project.recipients?.[0]?.email && (
+                        <p className="text-xs text-muted-foreground break-all">
+                          {project.recipients[0].email}
+                        </p>
+                      )}
                     </div>
                     {project.enableRevisions && (
                       <div>

@@ -42,6 +42,7 @@ interface CommentSectionProps {
   smtpConfigured?: boolean // Whether SMTP is configured
   isPasswordProtected?: boolean // Whether the project is password-protected
   adminUser?: any // Admin user object if viewing as admin on share page
+  recipients?: Array<{email: string | null, name: string | null, isPrimary: boolean}> // Recipients for name selection (password-protected shares only)
 }
 
 export default function CommentSection({
@@ -57,6 +58,7 @@ export default function CommentSection({
   smtpConfigured = false,
   isPasswordProtected = false, // Default to false for non-protected shares
   adminUser = null,
+  recipients = [],
 }: CommentSectionProps) {
   const router = useRouter()
 
@@ -67,7 +69,18 @@ export default function CommentSection({
 
   // SECURITY: For non-password-protected shares, always show "Client" instead of real name
   const displayClientName = isPasswordProtected ? clientName : 'Client'
-  const [authorName, setAuthorName] = useState(displayClientName || '')
+
+  // Filter recipients to only those with names AND emails (email needed for identification in dropdown)
+  const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '' && r.email && r.email.trim() !== '')
+
+  // Initialize author name with primary recipient or default
+  const primaryRecipient = namedRecipients.find(r => r.isPrimary) || namedRecipients[0]
+  const initialAuthorName = primaryRecipient?.name || displayClientName || ''
+  const [authorName, setAuthorName] = useState(initialAuthorName)
+
+  // Recipient selection
+  const [nameSource, setNameSource] = useState<'recipient' | 'custom'>('recipient')
+  const [selectedRecipientEmail, setSelectedRecipientEmail] = useState(primaryRecipient?.email || '')
 
   const [notifyByEmail, setNotifyByEmail] = useState(false)
   const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null)
@@ -135,6 +148,17 @@ export default function CommentSection({
   useEffect(() => {
     scrollToBottom()
   }, [comments])
+
+  // Update author name when recipient selection changes
+  useEffect(() => {
+    if (nameSource === 'recipient' && selectedRecipientEmail && recipients.length > 0) {
+      const recipient = recipients.find(r => r.email === selectedRecipientEmail)
+      if (recipient) {
+        setAuthorName(recipient.name || recipient.email || 'Client')
+      }
+    }
+    // For custom, keep the manually entered name
+  }, [nameSource, selectedRecipientEmail, recipients])
 
   // Sync current video ID on mount and when user switches videos
   useEffect(() => {
@@ -559,12 +583,51 @@ export default function CommentSection({
             {/* Author Info - Only show for password-protected shares (not for admin users) */}
             {!currentVideoRestricted && isPasswordProtected && !adminUser && (
               <div className="mb-3 space-y-2">
-                <Input
-                  placeholder="Your name (optional)"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  className="text-sm"
-                />
+                {namedRecipients.length > 0 ? (
+                  <>
+                    <select
+                      value={nameSource === 'recipient' ? selectedRecipientEmail : 'custom'}
+                      onChange={(e) => {
+                        if (e.target.value === 'custom') {
+                          setNameSource('custom')
+                          setAuthorName('')
+                        } else {
+                          setNameSource('recipient')
+                          setSelectedRecipientEmail(e.target.value)
+                          // Update authorName with the selected recipient's name
+                          const selected = namedRecipients.find(r => r.email === e.target.value)
+                          setAuthorName(selected?.name || '')
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md"
+                    >
+                      {namedRecipients.map((recipient) => (
+                        <option key={recipient.email!} value={recipient.email!}>
+                          {recipient.name}
+                          {recipient.isPrimary ? ' (Primary)' : ''}
+                        </option>
+                      ))}
+                      <option value="custom">Custom Name...</option>
+                    </select>
+
+                    {nameSource === 'custom' && (
+                      <Input
+                        placeholder="Enter your name"
+                        value={authorName}
+                        onChange={(e) => setAuthorName(e.target.value)}
+                        className="text-sm"
+                        autoFocus
+                      />
+                    )}
+                  </>
+                ) : (
+                  <Input
+                    placeholder="Your name (optional)"
+                    value={authorName}
+                    onChange={(e) => setAuthorName(e.target.value)}
+                    className="text-sm"
+                  />
+                )}
               </div>
             )}
 

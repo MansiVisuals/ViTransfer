@@ -5,6 +5,29 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-11-09
+
+### Added
+- Multiple recipient support for projects (ProjectRecipient model)
+- Recipient management UI in project settings (add, edit, remove)
+- Primary recipient designation for each project
+- Projects sorted by status on admin dashboard (In Review → Share Only → Approved)
+
+### Changed
+- Migrated from single clientEmail/clientName to multi-recipient system
+- All notifications sent to all recipients
+- Improved notification messages with recipient names
+
+### Removed
+- Legacy clientEmail and clientName fields from Project model
+
+### Improvements
+- Code refactoring for better maintainability and reusability
+- Security enhancements
+
+### Note
+Future v0.2.x releases will include notification system changes (configurable email schedules and summary notifications)
+
 ## [0.1.9] - 2025-11-07
 
 ### Added

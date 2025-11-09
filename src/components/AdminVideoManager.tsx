@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { ChevronDown, ChevronUp, Plus, Video, CheckCircle2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plus, Video, CheckCircle2, Pencil } from 'lucide-react'
 import VideoUpload from './VideoUpload'
 import VideoList from './VideoList'
+import { InlineEdit } from './InlineEdit'
 import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 interface VideoGroup {
   name: string
@@ -36,6 +38,8 @@ export default function AdminVideoManager({
   onVideoSelect,
   onRefresh
 }: AdminVideoManagerProps) {
+  const router = useRouter()
+
   // Group videos by name
   const videoGroups = videos.reduce((acc: Record<string, any[]>, video) => {
     const name = video.name
@@ -53,6 +57,9 @@ export default function AdminVideoManager({
   )
   const [showNewVideoForm, setShowNewVideoForm] = useState(!hasVideos) // Auto-show if no videos
   const [newVideoName, setNewVideoName] = useState('')
+  const [editingGroupName, setEditingGroupName] = useState<string | null>(null)
+  const [editGroupValue, setEditGroupValue] = useState('')
+  const [savingGroupName, setSavingGroupName] = useState<string | null>(null)
 
   // Notify parent when component mounts with first video
   useEffect(() => {
@@ -94,6 +101,50 @@ export default function AdminVideoManager({
     onRefresh?.()
   }
 
+  const handleStartEditGroupName = (oldName: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingGroupName(oldName)
+    setEditGroupValue(oldName)
+  }
+
+  const handleCancelEditGroupName = () => {
+    setEditingGroupName(null)
+    setEditGroupValue('')
+  }
+
+  const handleSaveGroupName = async (oldName: string) => {
+    if (!editGroupValue.trim()) {
+      alert('Video name cannot be empty')
+      return
+    }
+
+    setSavingGroupName(oldName)
+    try {
+      const videosInGroup = videoGroups[oldName]
+      const videoIds = videosInGroup.map(v => v.id)
+
+      // Single batch update for all videos
+      const response = await fetch('/api/videos/batch', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoIds, name: editGroupValue.trim() })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update video name')
+      }
+
+      setEditingGroupName(null)
+      setEditGroupValue('')
+      await onRefresh?.()
+      router.refresh()
+    } catch (error) {
+      alert('Failed to update video name')
+    } finally {
+      setSavingGroupName(null)
+    }
+  }
+
   const sortedGroupNames = Object.keys(videoGroups).sort()
 
   return (
@@ -117,8 +168,33 @@ export default function AdminVideoManager({
               <div className="flex items-center gap-3 flex-1">
                 <Video className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg">{groupName}</CardTitle>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {editingGroupName === groupName ? (
+                      <InlineEdit
+                        value={editGroupValue}
+                        onChange={setEditGroupValue}
+                        onSave={() => handleSaveGroupName(groupName)}
+                        onCancel={handleCancelEditGroupName}
+                        disabled={savingGroupName === groupName}
+                        inputClassName="h-8 w-64"
+                        stopPropagation={true}
+                      />
+                    ) : (
+                      <>
+                        <CardTitle className="text-lg">{groupName}</CardTitle>
+                        {projectStatus !== 'APPROVED' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible"
+                            onClick={(e) => handleStartEditGroupName(groupName, e)}
+                            title="Edit video name"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </>
+                    )}
                     {hasApprovedVideos && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible">
                         <CheckCircle2 className="w-3 h-3" />

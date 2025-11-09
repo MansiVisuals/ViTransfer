@@ -33,8 +33,6 @@ model Project {
   title         String
   slug          String  @unique
   description   String?
-  clientName    String?
-  clientEmail   String?
   sharePassword String?
 
   // Revision tracking (optional)
@@ -64,12 +62,26 @@ model Project {
   comments       Comment[]
   securityEvents SecurityEvent[]
   analytics      VideoAnalytics[]
+  recipients     ProjectRecipient[] // Multiple email recipients
 }
 
 enum ProjectStatus {
   IN_REVIEW
   APPROVED
   SHARE_ONLY
+}
+
+model ProjectRecipient {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  email     String?
+  name      String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([projectId, email])
 }
 
 model Video {

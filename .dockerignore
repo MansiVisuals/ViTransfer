@@ -94,6 +94,7 @@ SECURITY_BUGS_*.md
 TODO.md
 SESSION_NOTES.md
 CLAUDE_INIT.md
+email-summary.md
 
 # Uploads and user data (mounted as volume)
 uploads/

@@ -38,6 +38,7 @@ pnpm-debug.log*
 CLAUDE_INIT.md
 TODO.md
 SESSION_NOTES.md
+email-summary.md
 
 # Security audit reports (local only - do not commit)
 SECURITY_FIXES_*.md

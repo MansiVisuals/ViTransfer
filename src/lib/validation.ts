@@ -107,9 +107,9 @@ export const loginSchema = z.object({
 export const createProjectSchema = z.object({
   title: safeStringSchema(1, 255),
   description: safeStringSchema(0, 5000).optional(),
-  recipientEmail: emailSchema.optional(), // Optional recipient email (will create ProjectRecipient if provided)
+  recipientEmail: emailSchema.optional().or(z.literal('')), // Optional recipient email (will create ProjectRecipient if provided)
   recipientName: safeStringSchema(0, 255).optional(), // Optional recipient name
-  sharePassword: z.string().min(8).max(255).optional(),
+  sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),
   restrictCommentsToLatestVersion: z.boolean().optional(),
@@ -121,7 +121,7 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = z.object({
   title: safeStringSchema(1, 255).optional(),
   description: safeStringSchema(0, 5000).optional(),
-  sharePassword: z.string().min(8).max(255).optional(),
+  sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),
   restrictCommentsToLatestVersion: z.boolean().optional(),

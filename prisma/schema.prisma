@@ -75,13 +75,13 @@ model ProjectRecipient {
   id        String   @id @default(cuid())
   projectId String
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  email     String
+  email     String?
   name      String?
   isPrimary Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@unique([projectId, email])
   @@index([projectId])
+  @@index([projectId, email])
 }
 
 model Video {

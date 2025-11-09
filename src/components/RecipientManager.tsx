@@ -48,7 +48,12 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
   }
 
   const addRecipient = async () => {
-    if (!newEmail || !newEmail.includes('@')) {
+    if (!newEmail && !newName) {
+      onError('Please enter at least a name or email address')
+      return
+    }
+
+    if (newEmail && !newEmail.includes('@')) {
       onError('Please enter a valid email address')
       return
     }
@@ -58,7 +63,7 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: newEmail,
+          email: newEmail || null,
           name: newName || null,
           isPrimary: recipients.length === 0,
         }),
@@ -190,7 +195,18 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
               {editingId === recipient.id ? (
                 <div className="p-4 space-y-3">
                   <div className="space-y-2">
-                    <Label htmlFor={`edit-email-${recipient.id}`}>Email Address *</Label>
+                    <Label htmlFor={`edit-name-${recipient.id}`}>Client Name</Label>
+                    <Input
+                      id={`edit-name-${recipient.id}`}
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="John Doe or Company Name"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`edit-email-${recipient.id}`}>Client Email</Label>
                     <Input
                       id={`edit-email-${recipient.id}`}
                       type="email"
@@ -201,17 +217,6 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
                       className="opacity-60"
                     />
                     <p className="text-xs text-muted-foreground">Email cannot be changed (delete and re-add to change)</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`edit-name-${recipient.id}`}>Name (Optional)</Label>
-                    <Input
-                      id={`edit-name-${recipient.id}`}
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder="John Doe or Company Name"
-                      autoFocus
-                    />
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" onClick={saveEdit} size="sm">
@@ -282,24 +287,24 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
           {showAddForm && (
             <div className="p-4 border-2 border-dashed rounded-lg space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="newRecipientEmail">Email Address *</Label>
-                <Input
-                  id="newRecipientEmail"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newRecipientName">Name (Optional)</Label>
+                <Label htmlFor="newRecipientName">Client Name</Label>
                 <Input
                   id="newRecipientName"
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="John Doe or Company Name"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newRecipientEmail">Client Email</Label>
+                <Input
+                  id="newRecipientEmail"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="email@example.com"
                 />
               </div>
               <div className="flex gap-2">
@@ -307,7 +312,7 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
                   type="button"
                   onClick={addRecipient}
                   size="sm"
-                  disabled={!newEmail}
+                  disabled={!newEmail && !newName}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add

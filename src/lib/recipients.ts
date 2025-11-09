@@ -2,7 +2,7 @@ import { prisma } from './db'
 
 export interface Recipient {
   id?: string
-  email: string
+  email: string | null
   name: string | null
   isPrimary: boolean
 }
@@ -46,7 +46,7 @@ export async function getPrimaryRecipient(projectId: string): Promise<Recipient 
  */
 export async function addRecipient(
   projectId: string,
-  email: string,
+  email: string | null = null,
   name: string | null = null,
   isPrimary: boolean = false
 ): Promise<Recipient> {
@@ -115,7 +115,7 @@ export async function updateRecipient(
 }
 
 /**
- * Delete a recipient (prevents deleting the last recipient)
+ * Delete a recipient
  */
 export async function deleteRecipient(recipientId: string): Promise<void> {
   // Fetch recipient with isPrimary status BEFORE deleting
@@ -126,15 +126,6 @@ export async function deleteRecipient(recipientId: string): Promise<void> {
 
   if (!recipient) {
     throw new Error('Recipient not found')
-  }
-
-  // Check if this is the last recipient
-  const count = await prisma.projectRecipient.count({
-    where: { projectId: recipient.projectId }
-  })
-
-  if (count <= 1) {
-    throw new Error('Cannot delete the last recipient')
   }
 
   // Delete the recipient

@@ -4,9 +4,11 @@ import { getProjectRecipients, addRecipient } from '@/lib/recipients'
 import { z } from 'zod'
 
 const addRecipientSchema = z.object({
-  email: z.string().email('Invalid email format'),
+  email: z.string().email('Invalid email format').nullable().optional(),
   name: z.string().nullable().optional(),
   isPrimary: z.boolean().optional().default(false)
+}).refine(data => data.email || data.name, {
+  message: 'At least one of email or name must be provided'
 })
 
 export async function GET(

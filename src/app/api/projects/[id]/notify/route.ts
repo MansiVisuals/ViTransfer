@@ -93,30 +93,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    // Send emails to all recipients
-    const emailPromises = recipients.map(async (recipient) => {
-      if (notifyEntireProject) {
-        return sendProjectGeneralNotificationEmail({
-          clientEmail: recipient.email,
-          clientName: recipient.name || 'Client',
-          projectTitle: project.title,
-          projectDescription: project.description || '',
-          shareUrl,
-          readyVideos: project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
-          isPasswordProtected,
-        })
-      } else {
-        return sendNewVersionEmail({
-          clientEmail: recipient.email,
-          clientName: recipient.name || 'Client',
-          projectTitle: project.title,
-          videoName: video!.name,
-          versionLabel: video!.versionLabel,
-          shareUrl,
-          isPasswordProtected,
-        })
-      }
-    })
+    // Send emails to all recipients with email addresses
+    const emailPromises = recipients
+      .filter(recipient => recipient.email)
+      .map(async (recipient) => {
+        if (notifyEntireProject) {
+          return sendProjectGeneralNotificationEmail({
+            clientEmail: recipient.email!,
+            clientName: recipient.name || 'Client',
+            projectTitle: project.title,
+            projectDescription: project.description || '',
+            shareUrl,
+            readyVideos: project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
+            isPasswordProtected,
+          })
+        } else {
+          return sendNewVersionEmail({
+            clientEmail: recipient.email!,
+            clientName: recipient.name || 'Client',
+            projectTitle: project.title,
+            videoName: video!.name,
+            versionLabel: video!.versionLabel,
+            shareUrl,
+            isPasswordProtected,
+          })
+        }
+      })
 
     const results = await Promise.allSettled(emailPromises)
     const successCount = results.filter(r => r.status === 'fulfilled' && (r.value as any).success).length
@@ -130,14 +132,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const decryptedPassword = decrypt(project.sharePassword)
 
-        const passwordPromises = recipients.map(recipient =>
-          sendPasswordEmail({
-            clientEmail: recipient.email,
-            clientName: recipient.name || 'Client',
-            projectTitle: project.title,
-            password: decryptedPassword,
-          })
-        )
+        const passwordPromises = recipients
+          .filter(recipient => recipient.email)
+          .map(recipient =>
+            sendPasswordEmail({
+              clientEmail: recipient.email!,
+              clientName: recipient.name || 'Client',
+              projectTitle: project.title,
+              password: decryptedPassword,
+            })
+          )
 
         const passwordResults = await Promise.allSettled(passwordPromises)
         passwordSuccessCount = passwordResults.filter(r => r.status === 'fulfilled' && (r.value as any).success).length

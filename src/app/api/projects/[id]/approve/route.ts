@@ -154,16 +154,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         id: v.id
       }))
 
-      const emailPromises = recipients.map(recipient =>
-        sendProjectApprovedEmail({
-          clientEmail: recipient.email,
-          clientName: recipient.name || 'Client',
-          projectTitle: project.title,
-          shareUrl,
-          approvedVideos: approvedVideosList,
-          isComplete: allApproved,
-        })
-      )
+      // Only send emails to recipients with email addresses
+      const emailPromises = recipients
+        .filter(recipient => recipient.email)
+        .map(recipient =>
+          sendProjectApprovedEmail({
+            clientEmail: recipient.email!,
+            clientName: recipient.name || 'Client',
+            projectTitle: project.title,
+            shareUrl,
+            approvedVideos: approvedVideosList,
+            isComplete: allApproved,
+          })
+        )
 
       await Promise.allSettled(emailPromises)
     } catch (emailError) {

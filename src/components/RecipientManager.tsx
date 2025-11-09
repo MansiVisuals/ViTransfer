@@ -8,7 +8,7 @@ import { Mail, Edit, Trash2, Plus, Star, Check } from 'lucide-react'
 
 interface Recipient {
   id?: string
-  email: string
+  email: string | null
   name: string | null
   isPrimary: boolean
 }
@@ -124,7 +124,7 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
 
   const startEdit = (recipient: Recipient) => {
     setEditingId(recipient.id!)
-    setEditEmail(recipient.email)
+    setEditEmail(recipient.email || '')
     setEditName(recipient.name || '')
   }
 
@@ -233,7 +233,9 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
                   <div className="flex-1 space-y-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-sm font-medium truncate">{recipient.email}</span>
+                      <span className="text-sm font-medium truncate">
+                        {recipient.name || recipient.email || 'No contact info'}
+                      </span>
                       {recipient.isPrimary && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
                           <Star className="w-3 h-3 mr-1" />
@@ -241,9 +243,9 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
                         </span>
                       )}
                     </div>
-                    {recipient.name && (
+                    {recipient.name && recipient.email && (
                       <div className="flex items-center gap-2 pl-6">
-                        <span className="text-xs text-muted-foreground truncate">{recipient.name}</span>
+                        <span className="text-xs text-muted-foreground truncate">{recipient.email}</span>
                       </div>
                     )}
                   </div>

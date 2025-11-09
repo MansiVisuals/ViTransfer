@@ -87,6 +87,7 @@ done
 # Build and push for both architectures
 docker buildx build \
     --platform linux/amd64,linux/arm64 \
+    --build-arg APP_VERSION="${VERSION}" \
     $TAG_ARGS \
     --push \
     .

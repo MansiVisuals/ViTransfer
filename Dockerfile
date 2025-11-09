@@ -91,6 +91,9 @@ COPY . .
 RUN npx prisma generate
 
 # Build Next.js (skip static optimization for pages that need runtime data)
+# Accept APP_VERSION from build arg and set as env var for Next.js build
+ARG APP_VERSION
+ENV NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
 ENV SKIP_ENV_VALIDATION=1
 ENV NEXT_PHASE=phase-production-build
 RUN npm run build

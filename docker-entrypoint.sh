@@ -79,25 +79,18 @@ else
 
     # Only remap if needed
     if [ "$CURRENT_UID" != "$PUID" ] || [ "$CURRENT_GID" != "$PGID" ]; then
-        echo "  Updating user IDs..."
-
         # Update group ID if needed
         if [ "$CURRENT_GID" != "$PGID" ]; then
-            echo "    Changing GID from $CURRENT_GID to $PGID"
             groupmod -o -g "$PGID" app 2>/dev/null || true
         fi
 
-        # Update user ID if needed (with 60 second timeout to prevent hanging)
+        # Update user ID if needed
         if [ "$CURRENT_UID" != "$PUID" ]; then
-            echo "    Changing UID from $CURRENT_UID to $PUID (max 60s timeout)"
-            timeout 60 usermod -o -u "$PUID" app 2>/dev/null || {
-                echo "    [WARN] usermod timed out or failed - continuing anyway"
-                echo "    This is a known issue on some platforms (TrueNAS Scale 25.10 + Docker 28.x)"
-            }
+            echo "  Updating user permissions (this may take a moment...)"
+            usermod -o -u "$PUID" app 2>/dev/null || true
         fi
 
         # Fix ownership of internal app files only (not mounted volumes!)
-        echo "    Updating file ownership..."
         chown -R app:app /app/.next /app/public /app/node_modules /app/src 2>/dev/null || true
 
         echo "[OK] User permissions updated"

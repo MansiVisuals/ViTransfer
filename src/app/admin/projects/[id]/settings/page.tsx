@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { PasswordInput } from '@/components/ui/password-input'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check, Mail, Edit, Trash2, Plus, Star } from 'lucide-react'
 
 // Generate a secure random password
 function generateSecurePassword(): string {
@@ -39,13 +39,18 @@ function generateRandomSlug(): string {
   return slug.replace(/-+/g, '-')
 }
 
+interface Recipient {
+  id?: string
+  email: string
+  name: string | null
+  isPrimary: boolean
+}
+
 interface Project {
   id: string
   title: string
   slug: string
   description: string | null
-  clientName: string
-  clientEmail: string
   enableRevisions: boolean
   maxRevisions: number
   currentRevision: number
@@ -73,8 +78,6 @@ export default function ProjectSettingsPage() {
   // Form state
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [clientName, setClientName] = useState('')
-  const [clientEmail, setClientEmail] = useState('')
   const [enableRevisions, setEnableRevisions] = useState(false)
   const [maxRevisions, setMaxRevisions] = useState<number | ''>('')
   const [currentRevision, setCurrentRevision] = useState<number | ''>('')
@@ -87,6 +90,16 @@ export default function ProjectSettingsPage() {
   const [watermarkEnabled, setWatermarkEnabled] = useState(true)
   const [watermarkText, setWatermarkText] = useState('')
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
+
+  // Recipients state
+  const [recipients, setRecipients] = useState<Recipient[]>([])
+  const [recipientsLoading, setRecipientsLoading] = useState(false)
+  const [newRecipientEmail, setNewRecipientEmail] = useState('')
+  const [newRecipientName, setNewRecipientName] = useState('')
+  const [showAddRecipient, setShowAddRecipient] = useState(false)
+  const [editingRecipientId, setEditingRecipientId] = useState<string | null>(null)
+  const [editRecipientEmail, setEditRecipientEmail] = useState('')
+  const [editRecipientName, setEditRecipientName] = useState('')
 
   // Track original processing settings for change detection
   const [originalSettings, setOriginalSettings] = useState({
@@ -128,6 +141,135 @@ export default function ProjectSettingsPage() {
     }
   }
 
+  // Load recipients
+  const loadRecipients = async () => {
+    setRecipientsLoading(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/recipients`)
+      if (response.ok) {
+        const data = await response.json()
+        setRecipients(data.recipients || [])
+      }
+    } catch (error) {
+      console.error('Failed to load recipients:', error)
+    } finally {
+      setRecipientsLoading(false)
+    }
+  }
+
+  // Add recipient
+  const addRecipient = async () => {
+    if (!newRecipientEmail || !newRecipientEmail.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/recipients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newRecipientEmail,
+          name: newRecipientName || null,
+          isPrimary: recipients.length === 0, // First recipient is primary
+        }),
+      })
+
+      if (response.ok) {
+        setNewRecipientEmail('')
+        setNewRecipientName('')
+        setShowAddRecipient(false)
+        await loadRecipients()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to add recipient')
+      }
+    } catch (error) {
+      setError('Failed to add recipient')
+    }
+  }
+
+  // Delete recipient
+  const deleteRecipient = async (recipientId: string) => {
+    if (!confirm('Are you sure you want to remove this recipient?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/recipients/${recipientId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        await loadRecipients()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to delete recipient')
+      }
+    } catch (error) {
+      setError('Failed to delete recipient')
+    }
+  }
+
+  // Set primary recipient
+  const setPrimaryRecipient = async (recipientId: string) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/recipients/${recipientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPrimary: true }),
+      })
+
+      if (response.ok) {
+        await loadRecipients()
+      } else {
+        setError('Failed to set primary recipient')
+      }
+    } catch (error) {
+      setError('Failed to set primary recipient')
+    }
+  }
+
+  // Start editing recipient
+  const startEditRecipient = (recipient: Recipient) => {
+    setEditingRecipientId(recipient.id!)
+    setEditRecipientEmail(recipient.email)
+    setEditRecipientName(recipient.name || '')
+  }
+
+  // Cancel editing
+  const cancelEditRecipient = () => {
+    setEditingRecipientId(null)
+    setEditRecipientEmail('')
+    setEditRecipientName('')
+  }
+
+  // Save edited recipient
+  const saveEditRecipient = async () => {
+    if (!editRecipientEmail || !editRecipientEmail.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/recipients/${editingRecipientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editRecipientName || null }),
+      })
+
+      if (response.ok) {
+        await loadRecipients()
+        cancelEditRecipient()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to update recipient')
+      }
+    } catch (error) {
+      setError('Failed to update recipient')
+    }
+  }
+
   useEffect(() => {
     async function loadProject() {
       try {
@@ -141,8 +283,6 @@ export default function ProjectSettingsPage() {
         // Set form values
         setTitle(data.title)
         setDescription(data.description || '')
-        setClientName(data.clientName)
-        setClientEmail(data.clientEmail)
         setEnableRevisions(data.enableRevisions)
         setMaxRevisions(data.maxRevisions)
         setCurrentRevision(data.currentRevision)
@@ -182,6 +322,7 @@ export default function ProjectSettingsPage() {
     }
 
     loadProject()
+    loadRecipients()
   }, [projectId])
 
   async function handleSave() {
@@ -225,8 +366,6 @@ export default function ProjectSettingsPage() {
         title,
         slug: sanitizedSlug,
         description: description || null,
-        clientName,
-        clientEmail,
         enableRevisions,
         maxRevisions: enableRevisions ? finalMaxRevisions : 0,
         currentRevision: enableRevisions ? finalCurrentRevision : 0,
@@ -494,39 +633,213 @@ export default function ProjectSettingsPage() {
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {useCustomSlug 
+                    {useCustomSlug
                       ? 'Custom share link. Only lowercase letters, numbers, and hyphens allowed.'
                       : 'Auto-generated from project title. Enable "Custom Link" to set your own.'}
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="clientName">Client Name</Label>
-                <Input
-                  id="clientName"
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="e.g., John Doe or Company Name"
-                />
-                <p className="text-xs text-muted-foreground">
-                  The client's name or company name for this project
-                </p>
-              </div>
+          {/* Email & Notifications */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Email & Notifications</CardTitle>
+              <CardDescription>
+                Manage recipients and email notification settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Email Recipients */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Recipients</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Manage who receives project notifications and updates
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => setShowAddRecipient(true)}
+                    disabled={showAddRecipient}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Recipient
+                  </Button>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="clientEmail">Client Email</Label>
-                <Input
-                  id="clientEmail"
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  placeholder="e.g., client@example.com"
-                />
-                <p className="text-xs text-muted-foreground">
-                  The email address where notifications will be sent
-                </p>
+                {recipientsLoading ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center">
+                    Loading recipients...
+                  </div>
+                ) : recipients.length === 0 && !showAddRecipient ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
+                    No recipients added yet. Click "Add Recipient" to add one.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {recipients.map((recipient) => (
+                      <div
+                        key={recipient.id}
+                        className="border rounded-lg bg-card"
+                      >
+                        {editingRecipientId === recipient.id ? (
+                          // Edit mode
+                          <div className="p-4 space-y-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`edit-email-${recipient.id}`}>Email Address *</Label>
+                              <Input
+                                id={`edit-email-${recipient.id}`}
+                                type="email"
+                                value={editRecipientEmail}
+                                onChange={(e) => setEditRecipientEmail(e.target.value)}
+                                placeholder="email@example.com"
+                                disabled
+                                className="opacity-60"
+                              />
+                              <p className="text-xs text-muted-foreground">Email cannot be changed (delete and re-add to change)</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`edit-name-${recipient.id}`}>Name (Optional)</Label>
+                              <Input
+                                id={`edit-name-${recipient.id}`}
+                                type="text"
+                                value={editRecipientName}
+                                onChange={(e) => setEditRecipientName(e.target.value)}
+                                placeholder="John Doe or Company Name"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                onClick={saveEditRecipient}
+                                size="sm"
+                              >
+                                <Check className="w-4 h-4 mr-2" />
+                                Save
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={cancelEditRecipient}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          // Display mode
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3">
+                            <div className="flex-1 space-y-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-sm font-medium truncate">{recipient.email}</span>
+                                {recipient.isPrimary && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                    <Star className="w-3 h-3 mr-1" />
+                                    Primary
+                                  </span>
+                                )}
+                              </div>
+                              {recipient.name && (
+                                <div className="flex items-center gap-2 pl-6">
+                                  <span className="text-xs text-muted-foreground truncate">{recipient.name}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 sm:ml-auto">
+                              {!recipient.isPrimary && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setPrimaryRecipient(recipient.id!)}
+                                  title="Set as primary"
+                                >
+                                  <Star className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEditRecipient(recipient)}
+                                title="Edit recipient"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteRecipient(recipient.id!)}
+                                title="Remove recipient"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {showAddRecipient && (
+                      <div className="p-4 border-2 border-dashed rounded-lg space-y-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="newRecipientEmail">Email Address *</Label>
+                          <Input
+                            id="newRecipientEmail"
+                            type="email"
+                            value={newRecipientEmail}
+                            onChange={(e) => setNewRecipientEmail(e.target.value)}
+                            placeholder="email@example.com"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="newRecipientName">Name (Optional)</Label>
+                          <Input
+                            id="newRecipientName"
+                            type="text"
+                            value={newRecipientName}
+                            onChange={(e) => setNewRecipientName(e.target.value)}
+                            placeholder="John Doe or Company Name"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            onClick={addRecipient}
+                            size="sm"
+                            disabled={!newRecipientEmail}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setShowAddRecipient(false)
+                              setNewRecipientEmail('')
+                              setNewRecipientName('')
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

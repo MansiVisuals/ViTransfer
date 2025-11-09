@@ -96,7 +96,13 @@ export async function PATCH(
           select: {
             id: true,
             sharePassword: true,
-            clientName: true
+            recipients: {
+              where: { isPrimary: true },
+              take: 1,
+              select: {
+                name: true,
+              }
+            }
           }
         }
       }
@@ -182,7 +188,8 @@ export async function PATCH(
     })
 
     // Sanitize response - never expose PII
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, existingComment.project.clientName ?? undefined))
+    const primaryRecipientName = existingComment.project.recipients[0]?.name || undefined
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, primaryRecipientName))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
@@ -218,7 +225,13 @@ export async function DELETE(
           select: {
             id: true,
             sharePassword: true,
-            clientName: true
+            recipients: {
+              where: { isPrimary: true },
+              take: 1,
+              select: {
+                name: true,
+              }
+            }
           }
         }
       }
@@ -302,7 +315,8 @@ export async function DELETE(
     })
 
     // Sanitize response - never expose PII
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, existingComment.project.clientName ?? undefined))
+    const primaryRecipientName = existingComment.project.recipients[0]?.name || undefined
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, primaryRecipientName))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

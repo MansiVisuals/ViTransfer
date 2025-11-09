@@ -13,6 +13,10 @@ async function getProjects() {
   return await prisma.project.findMany({
     include: {
       videos: true,
+      recipients: {
+        where: { isPrimary: true },
+        take: 1,
+      },
       _count: {
         select: { comments: true },
       },
@@ -69,8 +73,14 @@ export default async function AdminPage() {
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg sm:text-xl">{project.title}</CardTitle>
                           <CardDescription className="mt-2 text-sm break-words">
-                            Client: {project.clientName} <span className="hidden sm:inline">({project.clientEmail})</span>
-                            <span className="block sm:hidden text-xs mt-1">{project.clientEmail}</span>
+                            {project.recipients && project.recipients.length > 0 ? (
+                              <>
+                                Client: {project.recipients[0].name || project.recipients[0].email} <span className="hidden sm:inline">({project.recipients[0].email})</span>
+                                <span className="block sm:hidden text-xs mt-1">{project.recipients[0].email}</span>
+                              </>
+                            ) : (
+                              'No recipient'
+                            )}
                           </CardDescription>
                         </div>
                         <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">

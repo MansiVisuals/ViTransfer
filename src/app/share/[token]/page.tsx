@@ -131,7 +131,9 @@ export default function SharePage() {
           const projectData = await response.json()
           if (isMounted) {
             setProject(projectData)
-            setIsPasswordProtected(false)
+            // Check if project is password-protected based on presence of recipients
+            // (recipients are only included for password-protected projects)
+            setIsPasswordProtected(!!projectData.recipients && projectData.recipients.length > 0)
             setIsAuthenticated(true)
 
             // Fetch comments separately (if not hidden)
@@ -440,6 +442,7 @@ export default function SharePage() {
                     smtpConfigured={project.smtpConfigured}
                     isPasswordProtected={isPasswordProtected || false}
                     adminUser={adminUser}
+                    recipients={project.recipients || []}
                   />
                 </div>
               )}

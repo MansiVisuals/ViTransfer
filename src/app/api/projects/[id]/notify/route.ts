@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail } from '@/lib/email'
+import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail, isSmtpConfigured } from '@/lib/email'
 import { generateShareUrl } from '@/lib/url'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
+import { getProjectRecipients } from '@/lib/recipients'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const user = await getCurrentUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if SMTP is configured
+    const smtpConfigured = await isSmtpConfigured()
+    if (!smtpConfigured) {
+      return NextResponse.json(
+        { error: 'Email notifications are not available. Please configure SMTP settings in the admin panel.' },
+        { status: 400 }
+      )
     }
 
     const { id: projectId } = await params
@@ -25,8 +35,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: {
         title: true,
         description: true,
-        clientName: true,
-        clientEmail: true,
         slug: true,
         sharePassword: true,
         videos: {
@@ -46,35 +54,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    if (!project.clientEmail) {
-      return NextResponse.json({ error: 'No client email configured for this project' }, { status: 400 })
+    // Get recipients
+    const recipients = await getProjectRecipients(projectId)
+
+    if (recipients.length === 0) {
+      return NextResponse.json({ error: 'No recipients configured for this project' }, { status: 400 })
     }
 
     // Generate share URL
     const shareUrl = await generateShareUrl(project.slug)
     const isPasswordProtected = !!project.sharePassword
 
-    let result
-
-    if (notifyEntireProject) {
-      // Send general project notification with all ready videos
-      result = await sendProjectGeneralNotificationEmail({
-        clientEmail: project.clientEmail,
-        clientName: project.clientName || 'Client',
-        projectTitle: project.title,
-        projectDescription: project.description || '',
-        shareUrl,
-        readyVideos: project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
-        isPasswordProtected,
-      })
-    } else {
-      // Specific video notification
+    // Prepare video data if specific video notification
+    let video = null
+    if (!notifyEntireProject) {
       if (!videoId) {
         return NextResponse.json({ error: 'videoId is required for specific video notification' }, { status: 400 })
       }
 
-      // Get video details
-      const video = await prisma.video.findUnique({
+      video = await prisma.video.findUnique({
         where: { id: videoId },
         select: {
           name: true,
@@ -93,59 +91,70 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           { status: 400 }
         )
       }
-
-      // Send specific video notification
-      result = await sendNewVersionEmail({
-        clientEmail: project.clientEmail,
-        clientName: project.clientName || 'Client',
-        projectTitle: project.title,
-        videoName: video.name,
-        versionLabel: video.versionLabel,
-        shareUrl,
-        isPasswordProtected,
-      })
     }
 
-    // Send password in separate email if requested and project is password protected
-    let passwordEmailResult = { success: true }
+    // Send emails to all recipients
+    const emailPromises = recipients.map(async (recipient) => {
+      if (notifyEntireProject) {
+        return sendProjectGeneralNotificationEmail({
+          clientEmail: recipient.email,
+          clientName: recipient.name || 'Client',
+          projectTitle: project.title,
+          projectDescription: project.description || '',
+          shareUrl,
+          readyVideos: project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
+          isPasswordProtected,
+        })
+      } else {
+        return sendNewVersionEmail({
+          clientEmail: recipient.email,
+          clientName: recipient.name || 'Client',
+          projectTitle: project.title,
+          videoName: video!.name,
+          versionLabel: video!.versionLabel,
+          shareUrl,
+          isPasswordProtected,
+        })
+      }
+    })
+
+    const results = await Promise.allSettled(emailPromises)
+    const successCount = results.filter(r => r.status === 'fulfilled' && (r.value as any).success).length
+
+    // Send password emails if requested
+    let passwordSuccessCount = 0
     if (sendPasswordSeparately && isPasswordProtected && project.sharePassword) {
       try {
-        // Wait 10 seconds before sending password email to ensure it arrives after the main email
+        // Wait 10 seconds before sending password emails
         await new Promise(resolve => setTimeout(resolve, 10000))
 
-        // Decrypt the password before sending
         const decryptedPassword = decrypt(project.sharePassword)
 
-        passwordEmailResult = await sendPasswordEmail({
-          clientEmail: project.clientEmail,
-          clientName: project.clientName || 'Client',
-          projectTitle: project.title,
-          password: decryptedPassword,
-        })
+        const passwordPromises = recipients.map(recipient =>
+          sendPasswordEmail({
+            clientEmail: recipient.email,
+            clientName: recipient.name || 'Client',
+            projectTitle: project.title,
+            password: decryptedPassword,
+          })
+        )
+
+        const passwordResults = await Promise.allSettled(passwordPromises)
+        passwordSuccessCount = passwordResults.filter(r => r.status === 'fulfilled' && (r.value as any).success).length
       } catch (error) {
-        console.error('Error sending password email:', error)
-        console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
-        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-        passwordEmailResult = { success: false }
+        console.error('Error sending password emails:', error)
       }
     }
 
-    if (result.success) {
-      let passwordMsg = ''
+    if (successCount > 0) {
+      let message = `Notification sent to ${successCount}/${recipients.length} recipient(s).`
       if (sendPasswordSeparately && isPasswordProtected) {
-        if (passwordEmailResult.success) {
-          passwordMsg = ' Password sent in separate email.'
-        } else {
-          passwordMsg = ' Warning: Main email sent but password email failed.'
-        }
+        message += ` Password sent to ${passwordSuccessCount}/${recipients.length} recipient(s).`
       }
-      return NextResponse.json({
-        success: true,
-        message: `Notification sent to ${project.clientEmail}.${passwordMsg}`
-      })
+      return NextResponse.json({ success: true, message })
     } else {
       return NextResponse.json(
-        { error: `Failed to send email: ${result.error}` },
+        { error: 'Failed to send emails to any recipients' },
         { status: 500 }
       )
     }

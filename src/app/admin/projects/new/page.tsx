@@ -53,8 +53,8 @@ export default function NewProjectPage() {
     const data = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
-      clientName: formData.get('clientName') as string,
-      clientEmail: formData.get('clientEmail') as string,
+      recipientName: formData.get('recipientName') as string,
+      recipientEmail: formData.get('recipientEmail') as string,
       sharePassword: passwordProtected ? sharePassword : '', // Only send password if enabled
       isShareOnly: isShareOnlyValue,
     }
@@ -110,22 +110,22 @@ export default function NewProjectPage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="clientName">Client Name (Optional)</Label>
-                    <Input id="clientName" name="clientName" placeholder="e.g., Client Name" />
+                    <Label htmlFor="recipientName">Recipient Name (Optional)</Label>
+                    <Input id="recipientName" name="recipientName" placeholder="e.g., Client Name" />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="clientEmail">Client Email (Optional)</Label>
+                    <Label htmlFor="recipientEmail">Recipient Email (Optional)</Label>
                     <Input
-                      id="clientEmail"
-                      name="clientEmail"
+                      id="recipientEmail"
+                      name="recipientEmail"
                       type="email"
                       placeholder="e.g., client@example.com"
                     />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Client email is required to send notifications
+                  Recipient email is required to send notifications. You can add more recipients later in project settings.
                 </p>
               </div>
 

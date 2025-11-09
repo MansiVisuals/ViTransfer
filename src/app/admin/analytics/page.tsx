@@ -11,6 +11,10 @@ async function getProjectsWithAnalytics() {
       videos: {
         where: { status: 'READY' },
       },
+      recipients: {
+        where: { isPrimary: true },
+        take: 1,
+      },
       analytics: {
         select: {
           eventType: true,
@@ -29,7 +33,8 @@ async function getProjectsWithAnalytics() {
     return {
       id: project.id,
       title: project.title,
-      clientName: project.clientName,
+      recipientName: project.recipients[0]?.name || null,
+      recipientEmail: project.recipients[0]?.email || null,
       status: project.status,
       videoCount: project.videos.length,
       totalDownloads,
@@ -100,9 +105,9 @@ export default async function AnalyticsDashboard() {
                       <div className="flex items-center justify-between p-4 rounded-lg border-2 border-border bg-card hover:bg-muted hover:shadow-xl shadow-md dark:shadow-[0_4px_16px_rgba(255,255,255,0.08)] dark:hover:shadow-[0_8px_24px_rgba(255,255,255,0.12)] hover:-translate-y-1 hover:border-primary/50 transition-all duration-200 cursor-pointer">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium truncate">{project.title}</h3>
-                          {project.clientName && (
+                          {(project.recipientName || project.recipientEmail) && (
                             <p className="text-sm text-muted-foreground">
-                              Client: {project.clientName}
+                              Client: {project.recipientName || project.recipientEmail}
                             </p>
                           )}
                         </div>

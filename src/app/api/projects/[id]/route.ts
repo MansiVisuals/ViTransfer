@@ -4,6 +4,8 @@ import { deleteFile, deleteDirectory } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { cookies } from 'next/headers'
+import { isSmtpConfigured } from '@/lib/email'
+import { invalidateProjectSessions } from '@/lib/session-invalidation'
 
 export async function GET(
   request: NextRequest,
@@ -51,12 +53,21 @@ export async function GET(
           },
           orderBy: { createdAt: 'desc' },
         },
+        recipients: {
+          orderBy: [
+            { isPrimary: 'desc' },
+            { createdAt: 'asc' },
+          ],
+        },
       },
     })
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
+
+    // Check SMTP configuration status
+    const smtpConfigured = await isSmtpConfigured()
 
     // Convert BigInt fields to strings for JSON serialization
     const projectData = {
@@ -67,6 +78,8 @@ export async function GET(
       })),
       // Decrypt password for admin viewing (only sent to authenticated admins)
       sharePasswordDecrypted: project.sharePassword ? decrypt(project.sharePassword) : null,
+      // Include SMTP status for frontend to disable/enable notification features
+      smtpConfigured,
     }
 
     return NextResponse.json(projectData)
@@ -120,12 +133,6 @@ export async function PATCH(
     }
     if (body.description !== undefined) {
       updateData.description = body.description || null
-    }
-    if (body.clientName !== undefined) {
-      updateData.clientName = body.clientName
-    }
-    if (body.clientEmail !== undefined) {
-      updateData.clientEmail = body.clientEmail
     }
 
     // Handle status update (for approval)
@@ -268,6 +275,7 @@ export async function PATCH(
     }
 
     // Handle password update
+    let passwordWasChanged = false
     if (body.sharePassword !== undefined) {
       if (body.sharePassword === null || body.sharePassword === '') {
         // Remove password
@@ -276,29 +284,34 @@ export async function PATCH(
         // Encrypt password (so we can decrypt it later for email notifications)
         updateData.sharePassword = encrypt(body.sharePassword)
       }
-
-      // Clear authentication sessions for this project when password changes
-      // This forces users to re-authenticate with the new password
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (authSessionId) {
-        // Delete the auth session from Redis
-        const redis = await import('@/lib/video-access').then(m => m.getRedis())
-        const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-        // Only delete if this session was for this project
-        if (mappedProjectId === id) {
-          await redis.del(`auth_project:${authSessionId}`)
-          cookieStore.delete('share_auth')
-        }
-      }
+      passwordWasChanged = true
     }
 
+    // Update the project in database FIRST (before invalidating sessions)
     const project = await prisma.project.update({
       where: { id },
       data: updateData,
     })
+
+    // SECURITY: After password is updated in DB, invalidate ALL sessions for this project
+    // This prevents race condition where client could authenticate with old password
+    // after sessions are invalidated but before DB is updated
+    if (passwordWasChanged) {
+      try {
+        const invalidatedCount = await invalidateProjectSessions(id)
+        console.log(`[SECURITY] Project password changed - invalidated ${invalidatedCount} sessions for project ${id}`)
+      } catch (error) {
+        console.error('[SECURITY] Failed to invalidate project sessions after password change:', error)
+        // Don't fail the request if session invalidation fails
+      }
+
+      // Also clear current admin's cookie if they have one
+      const cookieStore = await cookies()
+      const authSessionId = cookieStore.get('share_auth')?.value
+      if (authSessionId) {
+        cookieStore.delete('share_auth')
+      }
+    }
 
     return NextResponse.json(project)
   } catch (error) {
@@ -368,14 +381,23 @@ export async function DELETE(
       // Continue even if directory deletion fails
     }
 
+    // SECURITY: Invalidate all sessions for this project before deletion
+    try {
+      const invalidatedCount = await invalidateProjectSessions(id)
+      console.log(`[SECURITY] Project deleted - invalidated ${invalidatedCount} sessions`)
+    } catch (error) {
+      console.error('[SECURITY] Failed to invalidate sessions during project deletion:', error)
+      // Continue with deletion even if session invalidation fails
+    }
+
     // Delete project and all related data (cascade will handle videos, comments, shares)
     await prisma.project.delete({
       where: { id: id },
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Project and all related files deleted successfully' 
+      message: 'Project and all related files deleted successfully'
     })
   } catch (error) {
     console.error('Error deleting project:', error)

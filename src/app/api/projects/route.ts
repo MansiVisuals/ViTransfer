@@ -26,16 +26,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { 
-      title, 
-      description, 
-      clientName, 
-      clientEmail, 
-      sharePassword, 
-      enableRevisions, 
-      maxRevisions, 
+    const {
+      title,
+      description,
+      recipientEmail,
+      recipientName,
+      sharePassword,
+      enableRevisions,
+      maxRevisions,
       restrictCommentsToLatestVersion,
-      isShareOnly 
+      isShareOnly
     } = body
 
     // Fetch default settings for watermark and preview resolution
@@ -60,8 +60,6 @@ export async function POST(request: NextRequest) {
         title,
         slug,
         description,
-        clientName,
-        clientEmail,
         sharePassword: encryptedSharePassword,
         enableRevisions: isShareOnly ? false : (enableRevisions || false),
         maxRevisions: isShareOnly ? 0 : (enableRevisions ? (maxRevisions || 3) : 0),
@@ -74,6 +72,21 @@ export async function POST(request: NextRequest) {
         createdById: admin.id,
       },
     })
+
+    // Create initial recipient if email provided (optional)
+    if (recipientEmail) {
+      await prisma.projectRecipient.create({
+        data: {
+          projectId: project.id,
+          email: recipientEmail,
+          name: recipientName || null,
+          isPrimary: true,
+        },
+      }).catch(error => {
+        // Don't fail project creation if recipient creation fails
+        console.error('Failed to create initial recipient:', error)
+      })
+    }
 
     return NextResponse.json(project)
   } catch (error) {

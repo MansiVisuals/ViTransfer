@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { generateVideoAccessToken } from '@/lib/video-access'
 import { isSmtpConfigured, getClientSessionTimeoutSeconds } from '@/lib/settings'
 import { getCurrentUserFromRequest } from '@/lib/auth'
+import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
 
@@ -211,6 +212,20 @@ export async function GET(
     // Convert BigInt fields to strings for JSON serialization
     const smtpConfigured = await isSmtpConfigured()
 
+    // Get primary recipient for display
+    const primaryRecipient = await getPrimaryRecipient(project.id)
+
+    // Get ALL recipients if password-protected (for comment author selection)
+    let allRecipients: Array<{email: string, name: string | null, isPrimary: boolean}> = []
+    if (project.sharePassword || isAdmin) {
+      const recipients = await getProjectRecipients(project.id)
+      allRecipients = recipients.map(r => ({
+        email: r.email,
+        name: r.name,
+        isPrimary: r.isPrimary
+      }))
+    }
+
     // SECURITY: Sanitize project data - only send required fields
     // Never expose: sharePassword, createdById, watermarkText, internal IDs
     const projectData = {
@@ -223,8 +238,9 @@ export async function GET(
       // Rationale: Password protection implies client expects privacy
       // Non-protected shares remain anonymous for client safety
       ...(project.sharePassword || isAdmin ? {
-        clientName: project.clientName,
-        clientEmail: project.clientEmail,
+        clientName: primaryRecipient?.name || null,
+        clientEmail: primaryRecipient?.email || null,
+        recipients: allRecipients, // All recipients for comment author selection
       } : {}),
 
       enableRevisions: project.enableRevisions,

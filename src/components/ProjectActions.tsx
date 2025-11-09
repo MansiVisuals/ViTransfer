@@ -47,6 +47,9 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  // Read SMTP configuration status from project data
+  const smtpConfigured = (project as any).smtpConfigured !== false
+
   // Check if project is password protected
   const isPasswordProtected = (project as any).sharePassword !== null &&
                                (project as any).sharePassword !== undefined &&
@@ -221,15 +224,24 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
         <CardContent className="space-y-3">
           {/* Send Notification Button - only show if there are ready videos */}
           {readyVideos.length > 0 && (
-            <Button
-              variant="outline"
-              size="default"
-              className="w-full"
-              onClick={() => setShowNotificationModal(true)}
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Send Notification
-            </Button>
+            <div>
+              <Button
+                variant="outline"
+                size="default"
+                className="w-full"
+                onClick={() => setShowNotificationModal(true)}
+                disabled={smtpConfigured === false}
+                title={smtpConfigured === false ? 'SMTP not configured. Please configure email settings in Settings.' : ''}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Send Notification
+              </Button>
+              {smtpConfigured === false && (
+                <p className="text-xs text-muted-foreground mt-1 px-1">
+                  Configure SMTP in Settings to enable email notifications
+                </p>
+              )}
+            </div>
           )}
 
           <Button

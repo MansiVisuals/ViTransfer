@@ -76,6 +76,19 @@ async function getEmailSettings(): Promise<EmailSettings> {
 }
 
 /**
+ * Check if SMTP is properly configured
+ */
+export async function isSmtpConfigured(): Promise<boolean> {
+  try {
+    const settings = await getEmailSettings()
+    return !!(settings.smtpServer && settings.smtpPort && settings.smtpUsername && settings.smtpPassword)
+  } catch (error) {
+    console.error('Error checking SMTP configuration:', error)
+    return false
+  }
+}
+
+/**
  * Create a nodemailer transporter with current SMTP settings or provided config
  */
 async function createTransporter(customConfig?: any) {

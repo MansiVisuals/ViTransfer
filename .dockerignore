@@ -88,6 +88,13 @@ docs/
 *.md
 !README.PRODUCTION.md
 
+# Security audit reports and development notes (never include in Docker)
+SECURITY_FIXES_*.md
+SECURITY_BUGS_*.md
+TODO.md
+SESSION_NOTES.md
+CLAUDE_INIT.md
+
 # Uploads and user data (mounted as volume)
 uploads/
 public/uploads/

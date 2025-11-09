@@ -89,8 +89,13 @@ export default async function AdminPage() {
                           <CardDescription className="mt-2 text-sm break-words">
                             {project.recipients && project.recipients.length > 0 ? (
                               <>
-                                Client: {project.recipients[0].name || project.recipients[0].email} <span className="hidden sm:inline">({project.recipients[0].email})</span>
-                                <span className="block sm:hidden text-xs mt-1">{project.recipients[0].email}</span>
+                                Client: {project.recipients[0].name || project.recipients[0].email || 'No contact info'}
+                                {project.recipients[0].name && project.recipients[0].email && (
+                                  <>
+                                    <span className="hidden sm:inline"> ({project.recipients[0].email})</span>
+                                    <span className="block sm:hidden text-xs mt-1">{project.recipients[0].email}</span>
+                                  </>
+                                )}
                               </>
                             ) : (
                               'No recipient'

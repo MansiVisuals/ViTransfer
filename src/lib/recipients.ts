@@ -80,7 +80,7 @@ export async function addRecipient(
  */
 export async function updateRecipient(
   recipientId: string,
-  data: { name?: string | null; isPrimary?: boolean }
+  data: { name?: string | null; email?: string | null; isPrimary?: boolean }
 ): Promise<Recipient> {
   // If setting as primary, get projectId and unset other primaries
   if (data.isPrimary) {

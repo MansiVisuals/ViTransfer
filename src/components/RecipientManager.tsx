@@ -137,11 +137,24 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
   const saveEdit = async () => {
     if (!editingId) return
 
+    if (!editEmail && !editName) {
+      onError('Please enter at least a name or email address')
+      return
+    }
+
+    if (editEmail && !editEmail.includes('@')) {
+      onError('Please enter a valid email address')
+      return
+    }
+
     try {
       const response = await fetch(`/api/projects/${projectId}/recipients/${editingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editName || null }),
+        body: JSON.stringify({
+          name: editName || null,
+          email: editEmail || null
+        }),
       })
 
       if (response.ok) {
@@ -213,10 +226,7 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
                       placeholder="email@example.com"
-                      disabled
-                      className="opacity-60"
                     />
-                    <p className="text-xs text-muted-foreground">Email cannot be changed (delete and re-add to change)</p>
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" onClick={saveEdit} size="sm">

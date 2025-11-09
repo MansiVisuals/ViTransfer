@@ -50,6 +50,9 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   // Read SMTP configuration status from project data
   const smtpConfigured = (project as any).smtpConfigured !== false
 
+  // Check if at least one recipient has an email address
+  const hasRecipientWithEmail = (project as any).recipients?.some((r: any) => r.email && r.email.trim() !== '') || false
+
   // Check if project is password protected
   const isPasswordProtected = (project as any).sharePassword !== null &&
                                (project as any).sharePassword !== undefined &&
@@ -230,8 +233,14 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
                 size="default"
                 className="w-full"
                 onClick={() => setShowNotificationModal(true)}
-                disabled={smtpConfigured === false}
-                title={smtpConfigured === false ? 'SMTP not configured. Please configure email settings in Settings.' : ''}
+                disabled={smtpConfigured === false || !hasRecipientWithEmail}
+                title={
+                  smtpConfigured === false
+                    ? 'SMTP not configured. Please configure email settings in Settings.'
+                    : !hasRecipientWithEmail
+                    ? 'No recipients with email addresses configured. Please add at least one recipient with an email in Settings.'
+                    : ''
+                }
               >
                 <Send className="w-4 h-4 mr-2" />
                 Send Notification
@@ -239,6 +248,11 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
               {smtpConfigured === false && (
                 <p className="text-xs text-muted-foreground mt-1 px-1">
                   Configure SMTP in Settings to enable email notifications
+                </p>
+              )}
+              {smtpConfigured && !hasRecipientWithEmail && (
+                <p className="text-xs text-muted-foreground mt-1 px-1">
+                  Add at least one recipient with an email address in Settings
                 </p>
               )}
             </div>

@@ -123,8 +123,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const results = await Promise.allSettled(emailPromises)
     const successCount = results.filter(r => r.status === 'fulfilled' && (r.value as any).success).length
 
+    // Get recipients with emails who were actually sent
+    const recipientsWithEmails = recipients.filter(r => r.email)
+    const successfulRecipients = recipientsWithEmails.slice(0, successCount)
+
     // Send password emails if requested
     let passwordSuccessCount = 0
+    let successfulPasswordRecipients: any[] = []
     if (sendPasswordSeparately && isPasswordProtected && project.sharePassword) {
       try {
         // Wait 10 seconds before sending password emails
@@ -145,15 +150,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const passwordResults = await Promise.allSettled(passwordPromises)
         passwordSuccessCount = passwordResults.filter(r => r.status === 'fulfilled' && (r.value as any).success).length
+        successfulPasswordRecipients = recipientsWithEmails.slice(0, passwordSuccessCount)
       } catch (error) {
         console.error('Error sending password emails:', error)
       }
     }
 
     if (successCount > 0) {
-      let message = `Notification sent to ${successCount}/${recipients.length} recipient(s).`
-      if (sendPasswordSeparately && isPasswordProtected) {
-        message += ` Password sent to ${passwordSuccessCount}/${recipients.length} recipient(s).`
+      // Format recipient names
+      const formatRecipientList = (recipients: any[]) => {
+        const names = recipients.map(r => r.name || r.email)
+        if (names.length === 1) return names[0]
+        if (names.length === 2) return `${names[0]} & ${names[1]}`
+        return names.slice(0, -1).join(', ') + ' & ' + names[names.length - 1]
+      }
+
+      let message = `Sent email to ${formatRecipientList(successfulRecipients)}.`
+      if (sendPasswordSeparately && isPasswordProtected && passwordSuccessCount > 0) {
+        message += ` Password sent to ${formatRecipientList(successfulPasswordRecipients)}.`
       }
       return NextResponse.json({ success: true, message })
     } else {

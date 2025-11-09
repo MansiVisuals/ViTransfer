@@ -602,7 +602,7 @@ export default function CommentSection({
                       className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md"
                     >
                       {namedRecipients.map((recipient) => (
-                        <option key={recipient.email} value={recipient.email}>
+                        <option key={recipient.email!} value={recipient.email!}>
                           {recipient.name}
                           {recipient.isPrimary ? ' (Primary)' : ''}
                         </option>

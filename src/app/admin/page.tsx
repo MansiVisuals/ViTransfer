@@ -10,7 +10,7 @@ import { Plus } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 async function getProjects() {
-  return await prisma.project.findMany({
+  const projects = await prisma.project.findMany({
     include: {
       videos: true,
       recipients: {
@@ -21,9 +21,23 @@ async function getProjects() {
         select: { comments: true },
       },
     },
-    orderBy: {
-      updatedAt: 'desc',
-    },
+  })
+
+  // Custom sorting: IN_REVIEW > SHARE_ONLY > APPROVED
+  // Within each status group: newest first (updatedAt desc)
+  const statusPriority = {
+    IN_REVIEW: 1,
+    SHARE_ONLY: 2,
+    APPROVED: 3,
+  }
+
+  return projects.sort((a, b) => {
+    // Sort by status priority first
+    const priorityDiff = statusPriority[a.status] - statusPriority[b.status]
+    if (priorityDiff !== 0) return priorityDiff
+
+    // Within same status, sort by updatedAt (newest first)
+    return b.updatedAt.getTime() - a.updatedAt.getTime()
   })
 }
 

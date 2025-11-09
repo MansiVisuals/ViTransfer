@@ -110,12 +110,12 @@ export default function NewProjectPage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="recipientName">Recipient Name (Optional)</Label>
+                    <Label htmlFor="recipientName">Client Name (Optional)</Label>
                     <Input id="recipientName" name="recipientName" placeholder="e.g., Client Name" />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="recipientEmail">Recipient Email (Optional)</Label>
+                    <Label htmlFor="recipientEmail">Client Email (Optional)</Label>
                     <Input
                       id="recipientEmail"
                       name="recipientEmail"
@@ -125,7 +125,7 @@ export default function NewProjectPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Recipient email is required to send notifications. You can add more recipients later in project settings.
+                  Add client name and email if you want to send notifications. You can add more recipients later in project settings.
                 </p>
               </div>
 

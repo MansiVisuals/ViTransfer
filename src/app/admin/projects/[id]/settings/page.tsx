@@ -450,12 +450,12 @@ export default function ProjectSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Email & Notifications */}
+          {/* Client Information & Notifications */}
           <Card>
             <CardHeader>
-              <CardTitle>Email & Notifications</CardTitle>
+              <CardTitle>Client Information & Notifications</CardTitle>
               <CardDescription>
-                Manage recipients and email notification settings
+                Manage client recipients and notification settings
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

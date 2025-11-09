@@ -9,21 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Multiple recipient support for projects (ProjectRecipient model)
-- Recipient management UI in project settings
+- Recipient management UI in project settings (add, edit, remove)
 - Primary recipient designation for each project
-- Optional client name and email fields (both fully optional)
+- Projects sorted by status on admin dashboard (In Review → Share Only → Approved)
 
 ### Changed
 - Migrated from single clientEmail/clientName to multi-recipient system
-- Client information section renamed to "Client Information & Notifications"
-- All client fields now optional on project creation
+- All notifications sent to all recipients
+- Improved notification messages with recipient names
 
 ### Removed
 - Legacy clientEmail and clientName fields from Project model
 
-### Migration Notes
-- Existing projects with clientEmail/clientName automatically migrated to ProjectRecipient table
-- All recipient fields (name and email) are now optional
+### Improvements
+- Code refactoring for better maintainability and reusability
+- Security enhancements
+
+### Note
+Future v0.2.x releases will include notification system changes (configurable email schedules and summary notifications)
 
 ## [0.1.9] - 2025-11-07
 

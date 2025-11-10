@@ -737,8 +737,22 @@ export default function ProjectSettingsPage() {
           </Card>
         </div>
 
+        {/* Error notification at bottom */}
+        {error && (
+          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-destructive-visible border-2 border-destructive-visible rounded-lg">
+            <p className="text-xs sm:text-sm text-destructive font-medium">{error}</p>
+          </div>
+        )}
+
+        {/* Success notification at bottom */}
+        {success && (
+          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-success-visible border-2 border-success-visible rounded-lg">
+            <p className="text-xs sm:text-sm text-success font-medium">Settings saved successfully!</p>
+          </div>
+        )}
+
         {/* Save button at bottom */}
-        <div className="mt-6 sm:mt-8 flex justify-end">
+        <div className="mt-6 sm:mt-8 pb-20 lg:pb-24 flex justify-end">
           <Button onClick={handleSave} variant="default" disabled={saving} size="lg" className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
             {saving ? 'Saving...' : 'Save All Changes'}

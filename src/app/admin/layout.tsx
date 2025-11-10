@@ -36,10 +36,18 @@ export default function AdminLayout({
     <AuthProvider requireAuth={true}>
       <div className="min-h-screen bg-background flex flex-col">
         <AdminHeader />
-        <div className="flex-1">{children}</div>
-        <footer className="border-t bg-muted/50 py-4 px-6 mt-8">
+        <div className="flex-1 lg:pb-16">{children}</div>
+        <footer className="border-t bg-card py-4 px-6 mt-8 lg:fixed lg:bottom-0 lg:left-0 lg:right-0 lg:z-10 lg:mt-0">
           <div className="max-w-7xl mx-auto text-center text-xs text-muted-foreground">
-            ViTransfer{process.env.NEXT_PUBLIC_APP_VERSION && ` v${process.env.NEXT_PUBLIC_APP_VERSION}`}
+            <a
+              href="https://github.com/MansiVisuals/ViTransfer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              ViTransfer
+            </a>
+            {process.env.NEXT_PUBLIC_APP_VERSION && ` v${process.env.NEXT_PUBLIC_APP_VERSION}`}
           </div>
         </footer>
         <SessionMonitor />

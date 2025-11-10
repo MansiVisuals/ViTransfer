@@ -89,7 +89,6 @@ export default function CommentSection({
   const [hasAutoFilledTimestamp, setHasAutoFilledTimestamp] = useState(false)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Merge real comments from parent with optimistic comments
   // Filter out optimistic comments that now exist in initialComments (server confirmed them)
@@ -139,19 +138,6 @@ export default function CommentSection({
       document.cookie = `${cookieName}=false; path=/; max-age=0`
     }
   }, [notifyByEmail, projectId])
-
-  // Auto-scroll to bottom when new comments arrive
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'nearest'
-    })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [comments])
 
   // Sync current video ID on mount and when user switches videos
   useEffect(() => {
@@ -429,7 +415,7 @@ export default function CommentSection({
   }
 
   return (
-    <Card className="bg-card border-border flex flex-col max-h-[600px] sm:max-h-[700px] lg:max-h-[800px]">
+    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[600px] lg:max-h-[calc(100vh-8rem)]">
       <CardHeader className="border-b border-border flex-shrink-0">
         <CardTitle className="text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
@@ -553,7 +539,6 @@ export default function CommentSection({
                   </div>
                 )
               })}
-              <div ref={messagesEndRef} />
             </>
           )}
         </div>

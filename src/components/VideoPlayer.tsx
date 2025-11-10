@@ -281,8 +281,8 @@ export default function VideoPlayer({
     )
   }
 
-  // Get display label - if video approved, show "Final Version"
-  const displayLabel = isVideoApproved ? 'Final Version' : selectedVideo.versionLabel
+  // Get display label - if video approved, show "Approved Version"
+  const displayLabel = isVideoApproved ? 'Approved Version' : selectedVideo.versionLabel
 
   return (
     <div className="space-y-4 flex flex-col max-h-full">
@@ -301,7 +301,7 @@ export default function VideoPlayer({
                 {videoApproved && (
                   <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
                 )}
-                {videoApproved ? 'Final Version' : video.versionLabel}
+                {videoApproved ? 'Approved Version' : video.versionLabel}
               </Button>
             )
           })}
@@ -352,7 +352,7 @@ export default function VideoPlayer({
                 <DialogHeader>
                   <DialogTitle>Video Information</DialogTitle>
                   <DialogDescription className="text-muted-foreground">
-                    Detailed metadata for this video
+                    Detailed metadata for the original video
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 text-xs sm:text-sm">
@@ -386,7 +386,12 @@ export default function VideoPlayer({
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span className="text-muted-foreground">Status:</span>
-                    <span className="font-medium break-words">{isVideoApproved ? 'Approved - Original Quality' : 'Preview - Watermarked'}</span>
+                    <span className="font-medium break-words">
+                      {isVideoApproved
+                        ? 'Approved - Original Quality'
+                        : `Downscaled Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
+                      }
+                    </span>
                   </div>
                 </div>
               </DialogContent>
@@ -447,25 +452,19 @@ export default function VideoPlayer({
         {!isVideoApproved && (
           <>
             <div className="text-xs text-muted-foreground pt-3 mt-3 border-t border-border">
-              <span className="font-medium text-foreground">Note:</span> This is a preview quality version
-              {watermarkEnabled && ' with watermark'}. The final version will be available in the highest resolution after approval.
+              <span className="font-medium text-foreground">Note:</span> This is a downscaled preview{watermarkEnabled && ' with watermark'}. Original quality will be available for download once approved.
             </div>
 
             <div className="pt-2 mt-2">
               {!showApprovalConfirm ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Ready to approve this video?
-                  </p>
-                  <Button
-                    onClick={() => setShowApprovalConfirm(true)}
-                    variant="success"
-                    size="default"
-                    className="w-full"
-                  >
-                    Approve this video as final
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => setShowApprovalConfirm(true)}
+                  variant="success"
+                  size="default"
+                  className="w-full"
+                >
+                  Approve this video as final
+                </Button>
               ) : (
                 <div className="space-y-4 bg-primary/10 border-2 border-primary rounded-lg p-4">
                   <div className="text-center space-y-2">

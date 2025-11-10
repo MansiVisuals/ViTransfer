@@ -416,7 +416,7 @@ export default function SharePage() {
 
               {/* Comments Section */}
               {!project.hideFeedback && (
-                <div className="lg:sticky lg:top-6 lg:self-start lg:max-h-full lg:overflow-y-auto">
+                <div className="lg:sticky lg:top-6 lg:self-start">
                   <CommentSection
                     projectId={project.id}
                     comments={filteredComments}

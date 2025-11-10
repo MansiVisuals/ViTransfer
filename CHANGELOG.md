@@ -5,6 +5,28 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2025-11-10
+
+### Added
+- Auto-approve project setting with toggle in global settings
+
+### Changed
+- "Final Version" renamed to "Approved Version"
+- Admin footer solid background, fixed at bottom on desktop
+- Video information dialog clarifies it shows original video metadata
+- Videos sorted by approval status (unapproved first)
+- Mobile video selector now starts collapsed
+
+### Improved
+- Settings pages show save/error notifications at bottom for better mobile/long page UX
+- Simplified video preview note text
+- Comment section height and scrolling behavior
+
+### Fixed
+- Recipient name selector jumping to first option
+- Mobile sidebar collapsing when selecting videos
+- Share page auto-scrolling issues
+
 ## [0.2.3] - 2025-11-09
 
 ### Fixed

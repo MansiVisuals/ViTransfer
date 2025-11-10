@@ -149,16 +149,16 @@ export default function CommentSection({
     scrollToBottom()
   }, [comments])
 
-  // Update author name when recipient selection changes
+  // Initialize author name when recipients first load (mount only)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (nameSource === 'recipient' && selectedRecipientEmail && recipients.length > 0) {
+    if (nameSource === 'recipient' && !authorName && recipients.length > 0 && selectedRecipientEmail) {
       const recipient = recipients.find(r => r.email === selectedRecipientEmail)
       if (recipient) {
         setAuthorName(recipient.name || recipient.email || 'Client')
       }
     }
-    // For custom, keep the manually entered name
-  }, [nameSource, selectedRecipientEmail, recipients])
+  }, []) // Run only once on mount - onChange handles manual selection
 
   // Sync current video ID on mount and when user switches videos
   useEffect(() => {

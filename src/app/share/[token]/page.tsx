@@ -228,18 +228,6 @@ export default function SharePage() {
     }
   }, [project, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
 
-  // Prevent auto-scroll on page load
-  useEffect(() => {
-    // Scroll to top when component mounts
-    window.scrollTo(0, 0)
-
-    // Also scroll the main content div to top
-    const mainContent = document.querySelector('.flex-1.flex.flex-col.overflow-y-auto')
-    if (mainContent) {
-      mainContent.scrollTop = 0
-    }
-  }, [])
-
   // Handle video selection
   const handleVideoSelect = (videoName: string) => {
     setActiveVideoName(videoName)

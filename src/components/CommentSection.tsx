@@ -142,23 +142,16 @@ export default function CommentSection({
 
   // Auto-scroll to bottom when new comments arrive
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'nearest'
+    })
   }
 
   useEffect(() => {
     scrollToBottom()
   }, [comments])
-
-  // Initialize author name when recipients first load (mount only)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (nameSource === 'recipient' && !authorName && recipients.length > 0 && selectedRecipientEmail) {
-      const recipient = recipients.find(r => r.email === selectedRecipientEmail)
-      if (recipient) {
-        setAuthorName(recipient.name || recipient.email || 'Client')
-      }
-    }
-  }, []) // Run only once on mount - onChange handles manual selection
 
   // Sync current video ID on mount and when user switches videos
   useEffect(() => {

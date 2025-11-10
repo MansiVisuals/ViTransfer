@@ -21,6 +21,7 @@ interface Settings {
   appDomain: string | null
   defaultPreviewResolution: string | null
   defaultWatermarkText: string | null
+  autoApproveProject: boolean | null
 }
 
 interface SecuritySettings {
@@ -60,6 +61,7 @@ export default function GlobalSettingsPage() {
   const [appDomain, setAppDomain] = useState('')
   const [defaultPreviewResolution, setDefaultPreviewResolution] = useState('720p')
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
+  const [autoApproveProject, setAutoApproveProject] = useState(true)
 
   // Form state for security settings
   const [showSecuritySettings, setShowSecuritySettings] = useState(false)
@@ -94,6 +96,7 @@ export default function GlobalSettingsPage() {
         setAppDomain(data.appDomain || '')
         setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
         setDefaultWatermarkText(data.defaultWatermarkText || '')
+        setAutoApproveProject(data.autoApproveProject ?? true)
         setTestEmailAddress(data.smtpFromAddress || '')
 
         // Load security settings
@@ -140,6 +143,7 @@ export default function GlobalSettingsPage() {
         appDomain: appDomain || null,
         defaultPreviewResolution: defaultPreviewResolution || '720p',
         defaultWatermarkText: defaultWatermarkText || null,
+        autoApproveProject: autoApproveProject,
       }
 
       const response = await fetch('/api/settings', {
@@ -559,6 +563,35 @@ export default function GlobalSettingsPage() {
                   Leave empty to use project-specific format. New projects will use this as default.
                   <br />
                   <span className="text-warning">Only letters, numbers, spaces, and these characters: - _ . ( )</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Project Behavior Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Behavior</CardTitle>
+              <CardDescription>
+                Configure how projects behave when videos are approved
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="autoApproveProject" className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    id="autoApproveProject"
+                    type="checkbox"
+                    checked={autoApproveProject}
+                    onChange={(e) => setAutoApproveProject(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  Auto-approve project when all videos are approved
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, the project will automatically be marked as APPROVED when all unique videos have at least one approved version.
+                  <br />
+                  <span className="text-warning">Disable this if you upload videos one-by-one and don&apos;t want the project to auto-approve until you&apos;re ready.</span>
                 </p>
               </div>
             </CardContent>

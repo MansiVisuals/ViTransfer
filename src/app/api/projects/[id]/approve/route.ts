@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { sendProjectApprovedEmail, sendAdminProjectApprovedEmail } from '@/lib/email'
 import { generateShareUrl } from '@/lib/url'
 import { getProjectRecipients, getPrimaryRecipient } from '@/lib/recipients'
+import { getAutoApproveProject } from '@/lib/settings'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -101,8 +102,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       versions.some(v => v.approved)
     )
 
-    // If all unique videos are approved, approve the project
-    if (allApproved) {
+    // Check if auto-approve is enabled
+    const autoApprove = await getAutoApproveProject()
+
+    // If all unique videos are approved AND auto-approve enabled, approve the project
+    if (allApproved && autoApprove) {
       await prisma.project.update({
         where: { id: projectId },
         data: {

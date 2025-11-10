@@ -209,6 +209,26 @@ export async function GET(
       videosByName[name].sort((a: any, b: any) => b.version - a.version)
     })
 
+    // Sort video groups by approval status (unapproved first, approved last)
+    // This helps clients see which videos still need approval at the top
+    const sortedVideosByName: Record<string, any[]> = {}
+    const sortedKeys = Object.keys(videosByName).sort((nameA, nameB) => {
+      const latestA = videosByName[nameA][0] // Already sorted by version desc
+      const latestB = videosByName[nameB][0]
+
+      // Unapproved (false) videos come before approved (true) videos
+      if (latestA.approved !== latestB.approved) {
+        return latestA.approved ? 1 : -1
+      }
+      // If both have same approval status, maintain original order
+      return 0
+    })
+
+    // Rebuild videosByName with sorted keys
+    sortedKeys.forEach(key => {
+      sortedVideosByName[key] = videosByName[key]
+    })
+
     // Convert BigInt fields to strings for JSON serialization
     const smtpConfigured = await isSmtpConfigured()
 
@@ -253,7 +273,7 @@ export async function GET(
 
       // Processed data
       videos: videosWithTokens,
-      videosByName,
+      videosByName: sortedVideosByName,
       smtpConfigured,
 
       // REMOVED: comments (now loaded separately via /api/share/[token]/comments)

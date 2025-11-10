@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { deleteFile } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
+import { getAutoApproveProject } from '@/lib/settings'
 
 // Helper: Check if all videos have at least one approved version
 async function checkAllVideosApproved(projectId: string): Promise<boolean> {
@@ -32,8 +33,11 @@ async function updateProjectStatus(
 ): Promise<void> {
   const allApproved = await checkAllVideosApproved(projectId)
 
-  if (allApproved && approved) {
-    // All videos approved → mark project as approved
+  // Check if auto-approve is enabled
+  const autoApprove = await getAutoApproveProject()
+
+  if (allApproved && approved && autoApprove) {
+    // All videos approved AND auto-approve enabled → mark project as approved
     await prisma.project.update({
       where: { id: projectId },
       data: {

@@ -181,7 +181,7 @@ export default function VideoSidebar({
                 key={group.name}
                 onClick={() => {
                   onVideoSelect(group.name)
-                  setIsCollapsed(true)
+                  // Don't collapse - keep dropdown open for easy video switching
                 }}
                 className={cn(
                   'w-full text-left p-4 transition-colors',

@@ -190,6 +190,9 @@ model Settings {
   defaultPreviewResolution String? @default("720p")
   defaultWatermarkText     String?
 
+  // Project Behavior
+  autoApproveProject Boolean @default(true) // Auto-approve project when all videos approved
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

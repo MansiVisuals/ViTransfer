@@ -67,6 +67,24 @@ export async function isSmtpConfigured(): Promise<boolean> {
 }
 
 /**
+ * Check if auto-approve project when all videos approved is enabled
+ * Returns true as default if not set
+ */
+export async function getAutoApproveProject(): Promise<boolean> {
+  try {
+    const settings = await prisma.settings.findUnique({
+      where: { id: 'default' },
+      select: { autoApproveProject: true },
+    })
+
+    return settings?.autoApproveProject ?? true
+  } catch (error) {
+    console.error('Error fetching auto-approve setting:', error)
+    return true // Default to enabled on error
+  }
+}
+
+/**
  * Get client session timeout in seconds from security settings
  * Used for:
  * - Client share sessions (share_session, share_auth cookies)

@@ -42,7 +42,7 @@ interface CommentSectionProps {
   smtpConfigured?: boolean // Whether SMTP is configured
   isPasswordProtected?: boolean // Whether the project is password-protected
   adminUser?: any // Admin user object if viewing as admin on share page
-  recipients?: Array<{email: string | null, name: string | null, isPrimary: boolean}> // Recipients for name selection (password-protected shares only)
+  recipients?: Array<{id: string, name: string | null}>
 }
 
 export default function CommentSection({
@@ -70,17 +70,13 @@ export default function CommentSection({
   // SECURITY: For non-password-protected shares, always show "Client" instead of real name
   const displayClientName = isPasswordProtected ? clientName : 'Client'
 
-  // Filter recipients to only those with names AND emails (email needed for identification in dropdown)
-  const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '' && r.email && r.email.trim() !== '')
+  const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
 
-  // Initialize author name with primary recipient or default
-  const primaryRecipient = namedRecipients.find(r => r.isPrimary) || namedRecipients[0]
-  const initialAuthorName = primaryRecipient?.name || displayClientName || ''
+  const initialAuthorName = namedRecipients[0]?.name || displayClientName || ''
   const [authorName, setAuthorName] = useState(initialAuthorName)
 
-  // Recipient selection
   const [nameSource, setNameSource] = useState<'recipient' | 'custom'>('recipient')
-  const [selectedRecipientEmail, setSelectedRecipientEmail] = useState(primaryRecipient?.email || '')
+  const [selectedRecipientId, setSelectedRecipientId] = useState(namedRecipients[0]?.id || '')
 
   const [notifyByEmail, setNotifyByEmail] = useState(false)
   const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null)
@@ -267,7 +263,8 @@ export default function CommentSection({
           content: commentContent,
           authorName: isInternalComment ? (adminUser.name || adminUser.email) : (authorName || null),
           authorEmail: isInternalComment ? adminUser.email : (clientEmail || null),
-          notifyByEmail: shouldNotify && !isInternalComment, // Admins don't get email notifications for their own comments
+          recipientId: !isInternalComment && nameSource === 'recipient' && selectedRecipientId ? selectedRecipientId : null,
+          notifyByEmail: shouldNotify && !isInternalComment,
           notificationEmail: shouldNotify && !isInternalComment ? clientEmail : null,
           isInternal: isInternalComment,
         }),
@@ -564,25 +561,23 @@ export default function CommentSection({
                 {namedRecipients.length > 0 ? (
                   <>
                     <select
-                      value={nameSource === 'recipient' ? selectedRecipientEmail : 'custom'}
+                      value={nameSource === 'recipient' ? selectedRecipientId : 'custom'}
                       onChange={(e) => {
                         if (e.target.value === 'custom') {
                           setNameSource('custom')
                           setAuthorName('')
                         } else {
                           setNameSource('recipient')
-                          setSelectedRecipientEmail(e.target.value)
-                          // Update authorName with the selected recipient's name
-                          const selected = namedRecipients.find(r => r.email === e.target.value)
+                          setSelectedRecipientId(e.target.value)
+                          const selected = namedRecipients.find(r => r.id === e.target.value)
                           setAuthorName(selected?.name || '')
                         }
                       }}
                       className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md"
                     >
                       {namedRecipients.map((recipient) => (
-                        <option key={recipient.email!} value={recipient.email!}>
+                        <option key={recipient.id} value={recipient.id}>
                           {recipient.name}
-                          {recipient.isPrimary ? ' (Primary)' : ''}
                         </option>
                       ))}
                       <option value="custom">Custom Name...</option>

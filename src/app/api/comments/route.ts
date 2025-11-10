@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       content,
       authorName,
       authorEmail,
+      recipientId,
       parentId,
       isInternal,
       notifyByEmail,
@@ -185,6 +186,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let finalAuthorEmail = authorEmail
+    let finalNotificationEmail = notificationEmail
+
+    if (recipientId) {
+      const recipient = await prisma.projectRecipient.findUnique({
+        where: { id: recipientId },
+        select: { email: true, projectId: true }
+      })
+
+      if (recipient && recipient.projectId === projectId) {
+        finalAuthorEmail = recipient.email
+        finalNotificationEmail = recipient.email
+      }
+    }
+
     const comment = await prisma.comment.create({
       data: {
         projectId,
@@ -193,12 +209,12 @@ export async function POST(request: NextRequest) {
         timestamp: timestamp !== null && timestamp !== undefined ? timestamp : null,
         content,
         authorName: authorName || null,
-        authorEmail: authorEmail || null,
+        authorEmail: finalAuthorEmail || null,
         isInternal: isInternal || false,
         parentId: parentId || null,
         notifyByEmail: notifyByEmail || false,
-        notificationEmail: notificationEmail || null,
-        userId: currentUser?.id || null, // Store user ID if authenticated
+        notificationEmail: finalNotificationEmail || null,
+        userId: currentUser?.id || null,
       },
       include: {
         user: {

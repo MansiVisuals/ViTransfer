@@ -70,6 +70,11 @@ export const cuidSchema = z
   .string()
   .regex(/^c[a-z0-9]{24}$/, 'Invalid ID format')
 
+// Flexible ID validation (accepts both CUID and UUID for migrated data)
+export const flexibleIdSchema = z
+  .string()
+  .regex(/^(c[a-z0-9]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i, 'Invalid ID format')
+
 // URL validation
 export const urlSchema = z
   .string()
@@ -154,6 +159,7 @@ export const createCommentSchema = z.object({
   content: contentSchema,
   authorName: safeStringSchema(1, 255).optional().nullable(),
   authorEmail: emailSchema.optional().nullable(),
+  recipientId: flexibleIdSchema.optional().nullable(),
   parentId: cuidSchema.optional(),
   isInternal: z.boolean().optional(),
   notifyByEmail: z.boolean().optional(),

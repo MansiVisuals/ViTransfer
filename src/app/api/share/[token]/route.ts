@@ -235,15 +235,15 @@ export async function GET(
     // Get primary recipient for display
     const primaryRecipient = await getPrimaryRecipient(project.id)
 
-    // Get ALL recipients if password-protected (for comment author selection)
-    let allRecipients: Array<{email: string | null, name: string | null, isPrimary: boolean}> = []
+    let allRecipients: Array<{id: string, name: string | null}> = []
     if (project.sharePassword || isAdmin) {
       const recipients = await getProjectRecipients(project.id)
-      allRecipients = recipients.map(r => ({
-        email: r.email,
-        name: r.name,
-        isPrimary: r.isPrimary
-      }))
+      allRecipients = recipients
+        .filter(r => r.id)
+        .map(r => ({
+          id: r.id!,
+          name: r.name
+        }))
     }
 
     // SECURITY: Sanitize project data - only send required fields

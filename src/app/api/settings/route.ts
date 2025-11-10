@@ -82,6 +82,7 @@ export async function PATCH(request: NextRequest) {
       appDomain,
       defaultPreviewResolution,
       defaultWatermarkText,
+      autoApproveProject,
     } = body
 
     // SECURITY: Validate watermark text (same rules as FFmpeg sanitization)
@@ -128,6 +129,7 @@ export async function PATCH(request: NextRequest) {
         appDomain,
         defaultPreviewResolution,
         defaultWatermarkText,
+        autoApproveProject,
       },
       create: {
         id: 'default',
@@ -141,6 +143,7 @@ export async function PATCH(request: NextRequest) {
         appDomain,
         defaultPreviewResolution,
         defaultWatermarkText,
+        autoApproveProject,
       },
     })
 

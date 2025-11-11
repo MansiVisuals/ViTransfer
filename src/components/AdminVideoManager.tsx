@@ -26,6 +26,7 @@ interface AdminVideoManagerProps {
   companyName?: string
   onVideoSelect?: (videoName: string, videos: any[]) => void
   onRefresh?: () => void
+  sortMode?: 'status' | 'alphabetical'
 }
 
 export default function AdminVideoManager({
@@ -36,7 +37,8 @@ export default function AdminVideoManager({
   restrictToLatestVersion = false,
   companyName = 'Studio',
   onVideoSelect,
-  onRefresh
+  onRefresh,
+  sortMode = 'status'
 }: AdminVideoManagerProps) {
   const router = useRouter()
 
@@ -145,7 +147,23 @@ export default function AdminVideoManager({
     }
   }
 
-  const sortedGroupNames = Object.keys(videoGroups).sort()
+  const sortedGroupNames = Object.keys(videoGroups).sort((nameA, nameB) => {
+    if (sortMode === 'alphabetical') {
+      return nameA.localeCompare(nameB)
+    } else {
+      // Status sorting
+      // Check if ANY version is approved in each group
+      const hasApprovedA = videoGroups[nameA].some(v => v.approved)
+      const hasApprovedB = videoGroups[nameB].some(v => v.approved)
+
+      // Groups with no approved versions come first, groups with any approved versions come last
+      if (hasApprovedA !== hasApprovedB) {
+        return hasApprovedA ? 1 : -1
+      }
+      // If both have same approval status, sort alphabetically
+      return nameA.localeCompare(nameB)
+    }
+  })
 
   return (
     <div className="space-y-4">
@@ -165,9 +183,9 @@ export default function AdminVideoManager({
               )}
               onClick={() => toggleGroup(groupName)}
             >
-              <div className="flex items-center gap-3 flex-1">
-                <Video className="w-5 h-5 text-muted-foreground" />
-                <div className="flex-1">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <Video className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {editingGroupName === groupName ? (
                       <InlineEdit
@@ -176,7 +194,7 @@ export default function AdminVideoManager({
                         onSave={() => handleSaveGroupName(groupName)}
                         onCancel={handleCancelEditGroupName}
                         disabled={savingGroupName === groupName}
-                        inputClassName="h-8 w-64"
+                        inputClassName="h-8 w-full sm:w-64"
                         stopPropagation={true}
                       />
                     ) : (
@@ -186,31 +204,35 @@ export default function AdminVideoManager({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible"
+                            className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
                             onClick={(e) => handleStartEditGroupName(groupName, e)}
                             title="Edit video name"
                           >
                             <Pencil className="w-3 h-3" />
                           </Button>
                         )}
+                        {hasApprovedVideos && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 ml-2 rounded text-xs font-medium bg-success-visible text-success border border-success-visible flex-shrink-0">
+                            <CheckCircle2 className="w-3 h-3" />
+                            {approvedCount} Approved
+                          </span>
+                        )}
                       </>
                     )}
-                    {hasApprovedVideos && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible">
-                        <CheckCircle2 className="w-3 h-3" />
-                        {approvedCount} Approved
-                      </span>
-                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {groupVideos.length} {groupVideos.length === 1 ? 'version' : 'versions'} •
-                    Latest: v{latestVideo.version}
-                  </p>
+                  {editingGroupName !== groupName && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {groupVideos.length} {groupVideos.length === 1 ? 'version' : 'versions'} •
+                      Latest: v{latestVideo.version}
+                    </p>
+                  )}
                 </div>
-                {isExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                {editingGroupName !== groupName && (
+                  isExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  )
                 )}
               </div>
             </CardHeader>
@@ -230,9 +252,23 @@ export default function AdminVideoManager({
                 )}
 
                 {/* Version list */}
-                <div>
+                <div className="mt-6">
                   <h4 className="text-sm font-medium mb-3">All Versions</h4>
-                  <VideoList videos={groupVideos} onRefresh={onRefresh} />
+                  <VideoList
+                    videos={groupVideos.sort((a, b) => {
+                      if (sortMode === 'alphabetical') {
+                        // Alphabetical by version label
+                        return a.versionLabel.localeCompare(b.versionLabel)
+                      } else {
+                        // Status sorting: approved first, then by version descending
+                        if (a.approved !== b.approved) {
+                          return a.approved ? -1 : 1
+                        }
+                        return b.version - a.version
+                      }
+                    })}
+                    onRefresh={onRefresh}
+                  />
                 </div>
               </CardContent>
             )}

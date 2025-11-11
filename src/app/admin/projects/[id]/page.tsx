@@ -9,7 +9,7 @@ import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import ShareLink from '@/components/ShareLink'
 import AdminFeedbackSection from '@/components/AdminFeedbackSection'
-import { ArrowLeft, Settings } from 'lucide-react'
+import { ArrowLeft, Settings, ArrowUpDown } from 'lucide-react'
 
 // Force dynamic rendering (no static pre-rendering)
 export const dynamic = 'force-dynamic'
@@ -25,6 +25,7 @@ export default function ProjectPage() {
   const [companyName, setCompanyName] = useState('Studio')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
+  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('status')
 
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = async () => {
@@ -212,7 +213,20 @@ export default function ProjectPage() {
             </Card>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">Videos</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Videos</h2>
+                {project.videos.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
+                    className="text-muted-foreground hover:text-foreground"
+                    title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
+                  >
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
               <AdminVideoManager
                 projectId={project.id}
                 videos={project.videos}
@@ -222,6 +236,7 @@ export default function ProjectPage() {
                 companyName={companyName}
                 onVideoSelect={handleVideoSelect}
                 onRefresh={fetchProject}
+                sortMode={sortMode}
               />
             </div>
           </div>

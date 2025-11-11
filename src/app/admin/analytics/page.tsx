@@ -99,10 +99,10 @@ export default async function AnalyticsDashboard() {
                   No analytics data available yet
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-8">
                   {projects.map((project) => (
                     <Link key={project.id} href={`/admin/analytics/${project.id}`}>
-                      <div className="flex items-center justify-between p-4 rounded-lg border-2 border-border bg-card hover:bg-muted hover:shadow-xl shadow-md dark:shadow-[0_4px_16px_rgba(255,255,255,0.08)] dark:hover:shadow-[0_8px_24px_rgba(255,255,255,0.12)] hover:-translate-y-1 hover:border-primary/50 transition-all duration-200 cursor-pointer">
+                      <div className="flex items-center justify-between p-4 rounded-lg border-2 border-border bg-card hover:bg-muted hover:shadow-xl shadow-md dark:shadow-[0_4px_16px_rgba(255,255,255,0.08)] dark:hover:shadow-[0_8px_24px_rgba(255,255,255,0.12)] hover:-translate-y-1 hover:border-primary/50 transition-all duration-200 cursor-pointer mb-2">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium truncate">{project.title}</h3>
                           {(project.recipientName || project.recipientEmail) && (

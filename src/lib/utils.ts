@@ -46,6 +46,15 @@ export function formatTimestamp(seconds: number): string {
   return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
+export function formatDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const day = d.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const month = months[d.getMonth()]
+  const year = d.getFullYear()
+  return `${day}-${month}-${year}`
+}
+
 export function generateSlug(title: string): string {
   return title
     .toLowerCase()

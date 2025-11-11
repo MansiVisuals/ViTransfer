@@ -204,6 +204,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                     onSave={() => handleSaveEdit(video.id)}
                     onCancel={handleCancelEdit}
                     disabled={savingId === video.id}
+                    inputClassName="h-8 w-full sm:w-48"
                   />
                 ) : (
                   <>
@@ -212,72 +213,76 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible"
+                        className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
                         onClick={() => handleStartEdit(video.id, video.versionLabel)}
                         title="Edit version label"
                       >
                         <Pencil className="w-3 h-3" />
                       </Button>
                     )}
+                    {(video as any).approved && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible whitespace-nowrap flex-shrink-0">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Approved
+                      </span>
+                    )}
                   </>
                 )}
-                {(video as any).approved && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible whitespace-nowrap">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Approved
+              </div>
+              {editingId !== video.id && (
+                <p className="text-sm text-muted-foreground break-all">{video.originalFileName}</p>
+              )}
+            </div>
+            {editingId !== video.id && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Only show status badge for PROCESSING and ERROR states */}
+                {(video.status === 'PROCESSING' || video.status === 'ERROR') && (
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+                      video.status === 'PROCESSING'
+                        ? 'bg-primary-visible text-primary border-2 border-primary-visible'
+                        : 'bg-destructive-visible text-destructive border-2 border-destructive-visible'
+                    }`}
+                  >
+                    {video.status === 'PROCESSING' && (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                    )}
+                    {video.status}
                   </span>
                 )}
+                {isAdmin && video.status === 'READY' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleToggleApproval(video.id, (video as any).approved || false)}
+                    disabled={approvingId === video.id}
+                    className={(video as any).approved
+                      ? "text-warning hover:text-warning hover:bg-warning-visible"
+                      : "text-success hover:text-success hover:bg-success-visible"
+                    }
+                    title={(video as any).approved ? "Unapprove video" : "Approve video"}
+                  >
+                    {(video as any).approved ? (
+                      <XCircle className="w-4 h-4" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                  </Button>
+                )}
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(video.id)}
+                    disabled={deletingId === video.id}
+                    className="text-destructive hover:text-destructive hover:bg-destructive-visible"
+                    title="Delete video"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
-              <p className="text-sm text-muted-foreground break-all">{video.originalFileName}</p>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Only show status badge for PROCESSING and ERROR states */}
-              {(video.status === 'PROCESSING' || video.status === 'ERROR') && (
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
-                    video.status === 'PROCESSING'
-                      ? 'bg-primary-visible text-primary border-2 border-primary-visible'
-                      : 'bg-destructive-visible text-destructive border-2 border-destructive-visible'
-                  }`}
-                >
-                  {video.status === 'PROCESSING' && (
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
-                  )}
-                  {video.status}
-                </span>
-              )}
-              {isAdmin && video.status === 'READY' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleToggleApproval(video.id, (video as any).approved || false)}
-                  disabled={approvingId === video.id}
-                  className={(video as any).approved
-                    ? "text-warning hover:text-warning hover:bg-warning-visible"
-                    : "text-success hover:text-success hover:bg-success-visible"
-                  }
-                  title={(video as any).approved ? "Unapprove video" : "Approve video"}
-                >
-                  {(video as any).approved ? (
-                    <XCircle className="w-4 h-4" />
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4" />
-                  )}
-                </Button>
-              )}
-              {isAdmin && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(video.id)}
-                  disabled={deletingId === video.id}
-                  className="text-destructive hover:text-destructive hover:bg-destructive-visible"
-                  title="Delete video"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
+            )}
           </div>
 
           {video.status === 'PROCESSING' && (

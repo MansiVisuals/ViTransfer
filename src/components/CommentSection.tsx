@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
-import { formatTimestamp } from '@/lib/utils'
+import { formatTimestamp, formatDate } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, MessageSquare, Clock, Send, User, Mail } from 'lucide-react'
 import DOMPurify from 'dompurify'
@@ -78,7 +78,6 @@ export default function CommentSection({
   const [nameSource, setNameSource] = useState<'recipient' | 'custom'>('recipient')
   const [selectedRecipientId, setSelectedRecipientId] = useState(namedRecipients[0]?.id || '')
 
-  const [notifyByEmail, setNotifyByEmail] = useState(false)
   const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null)
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -111,29 +110,6 @@ export default function CommentSection({
 
   // Determine if comments should be disabled (either project approved OR current video approved)
   const commentsDisabled = isApproved || isCurrentVideoApproved
-
-  // Load notifyByEmail preference from cookies on mount
-  useEffect(() => {
-    const cookieName = `notifyByEmail_${projectId}`
-    const cookies = document.cookie.split(';')
-    const savedCookie = cookies.find(c => c.trim().startsWith(`${cookieName}=`))
-    if (savedCookie) {
-      const value = savedCookie.split('=')[1]
-      setNotifyByEmail(value === 'true')
-    }
-  }, [projectId])
-
-  // Save notifyByEmail preference to cookies when it changes (expires in 1 year)
-  useEffect(() => {
-    const cookieName = `notifyByEmail_${projectId}`
-    const maxAge = 365 * 24 * 60 * 60 // 1 year in seconds
-    if (notifyByEmail) {
-      document.cookie = `${cookieName}=true; path=/; max-age=${maxAge}; SameSite=Lax`
-    } else {
-      // Remove cookie by setting max-age to 0
-      document.cookie = `${cookieName}=false; path=/; max-age=0`
-    }
-  }, [notifyByEmail, projectId])
 
   // Sync current video ID on mount and when user switches videos
   useEffect(() => {
@@ -200,9 +176,18 @@ export default function CommentSection({
   async function handleSubmitComment() {
     if (!newComment.trim()) return
 
+    // All comments must be video-specific
+    if (!selectedVideoId) {
+      alert('Please select a video before commenting.')
+      return
+    }
+
+    // Capture validated videoId for TypeScript
+    const validatedVideoId: string = selectedVideoId
+
     // Check if commenting on latest version only
-    if (restrictToLatestVersion && selectedVideoId) {
-      const selectedVideo = videos.find(v => v.id === selectedVideoId)
+    if (restrictToLatestVersion) {
+      const selectedVideo = videos.find(v => v.id === validatedVideoId)
       if (selectedVideo && selectedVideo.version !== latestVideoVersion) {
         alert('Comments are only allowed on the latest version of this project.')
         return
@@ -216,8 +201,8 @@ export default function CommentSection({
     const optimisticComment: CommentWithReplies = {
       id: `temp-${Date.now()}`, // Temporary ID
       projectId,
-      videoId: selectedVideoId,
-      videoVersion: selectedVideoId ? videos.find(v => v.id === selectedVideoId)?.version || null : null,
+      videoId: validatedVideoId,
+      videoVersion: videos.find(v => v.id === validatedVideoId)?.version || null,
       timestamp: selectedTimestamp,
       content: newComment,
       authorName: isInternalComment
@@ -229,8 +214,6 @@ export default function CommentSection({
       updatedAt: new Date(),
       parentId: null,
       userId: null,
-      notifyByEmail: false,
-      notificationEmail: null,
       replies: [],
     }
 
@@ -240,16 +223,13 @@ export default function CommentSection({
     // Clear form immediately for instant feedback
     const commentContent = newComment
     const commentTimestamp = selectedTimestamp
-    const commentVideoId = selectedVideoId
+    const commentVideoId = validatedVideoId
     setNewComment('')
     setSelectedTimestamp(null)
     setSelectedVideoId(null)
     setHasAutoFilledTimestamp(false)
 
     try {
-      // Only enable email notifications if clientEmail exists
-      const shouldNotify = !!(notifyByEmail && clientEmail)
-
       // If admin user is present, send as internal comment
       const isInternalComment = !!adminUser
 
@@ -264,8 +244,6 @@ export default function CommentSection({
           authorName: isInternalComment ? (adminUser.name || adminUser.email) : (authorName || null),
           authorEmail: isInternalComment ? adminUser.email : (clientEmail || null),
           recipientId: !isInternalComment && nameSource === 'recipient' && selectedRecipientId ? selectedRecipientId : null,
-          notifyByEmail: shouldNotify && !isInternalComment,
-          notificationEmail: shouldNotify && !isInternalComment ? clientEmail : null,
           isInternal: isInternalComment,
         }),
       })
@@ -408,7 +386,7 @@ export default function CommentSection({
     if (diffMins < 60) return `${diffMins}m ago`
     if (diffHours < 24) return `${diffHours}h ago`
     if (diffDays < 7) return `${diffDays}d ago`
-    return new Date(date).toLocaleDateString()
+    return formatDate(date)
   }
 
   return (
@@ -623,22 +601,6 @@ export default function CommentSection({
                 >
                   Clear
                 </Button>
-              </div>
-            )}
-
-            {/* Email notification opt-in - only show if SMTP is configured and NOT in admin view (client view only) */}
-            {!currentVideoRestricted && clientEmail && smtpConfigured && !isAdminView && (
-              <div className="mb-3">
-                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notifyByEmail}
-                    onChange={(e) => setNotifyByEmail(e.target.checked)}
-                    className="rounded border-border bg-background text-primary focus:ring-primary"
-                  />
-                  <Mail className="w-4 h-4" />
-                  Notify me by email when there's a reply
-                </label>
               </div>
             )}
 

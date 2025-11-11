@@ -70,11 +70,6 @@ export const cuidSchema = z
   .string()
   .regex(/^c[a-z0-9]{24}$/, 'Invalid ID format')
 
-// Flexible ID validation (accepts both CUID and UUID for migrated data)
-export const flexibleIdSchema = z
-  .string()
-  .regex(/^(c[a-z0-9]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i, 'Invalid ID format')
-
 // URL validation
 export const urlSchema = z
   .string()
@@ -153,17 +148,15 @@ export const createVideoSchema = z.object({
 
 export const createCommentSchema = z.object({
   projectId: cuidSchema,
-  videoId: cuidSchema.optional(),
+  videoId: cuidSchema, // Required - all comments must be video-specific
   videoVersion: z.number().int().positive().optional(),
   timestamp: z.number().min(0).optional().nullable(),
   content: contentSchema,
   authorName: safeStringSchema(1, 255).optional().nullable(),
   authorEmail: emailSchema.optional().nullable(),
-  recipientId: flexibleIdSchema.optional().nullable(),
+  recipientId: cuidSchema.optional().nullable(),
   parentId: cuidSchema.optional(),
-  isInternal: z.boolean().optional(),
-  notifyByEmail: z.boolean().optional(),
-  notificationEmail: emailSchema.optional().nullable()
+  isInternal: z.boolean().optional()
 })
 
 export const updateCommentSchema = z.object({

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Play, ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
+import { Play, ChevronDown, ChevronUp, GripVertical, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface VideoGroup {
@@ -106,38 +106,81 @@ export default function VideoSidebar({
         </div>
 
         <nav className="p-3">
-          {videoGroups.map((group) => (
-            <button
-              key={group.name}
-              onClick={() => onVideoSelect(group.name)}
-              className={cn(
-                'w-full text-left p-3 rounded-lg transition-all duration-200',
-                'hover:bg-accent hover:text-accent-foreground',
-                'flex items-center justify-between gap-3',
-                activeVideoName === group.name
-                  ? 'bg-primary/10 text-primary font-medium border border-primary/20'
-                  : 'text-foreground'
-              )}
-            >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div
+          {(() => {
+            // Split videos into For Review and Approved groups
+            const forReview = videoGroups.filter(g => !g.videos.some((v: any) => v.approved === true))
+            const approved = videoGroups.filter(g => g.videos.some((v: any) => v.approved === true))
+
+            const renderVideoButton = (group: VideoGroup) => {
+              const hasApprovedVideo = group.videos.some((v: any) => v.approved === true)
+              return (
+                <button
+                  key={group.name}
+                  onClick={() => onVideoSelect(group.name)}
                   className={cn(
-                    'w-2 h-2 rounded-full shrink-0',
-                    activeVideoName === group.name ? 'bg-primary' : 'bg-muted-foreground'
+                    'w-full text-left p-3 rounded-lg transition-all duration-200',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    'flex items-center justify-between gap-3',
+                    activeVideoName === group.name
+                      ? 'bg-primary/10 text-primary font-medium border border-primary/20'
+                      : 'text-foreground'
                   )}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{group.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {group.versionCount} {group.versionCount === 1 ? 'version' : 'versions'}
-                  </p>
-                </div>
-              </div>
-              {activeVideoName === group.name && (
-                <Play className="w-4 h-4 shrink-0 text-primary" fill="currentColor" />
-              )}
-            </button>
-          ))}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div
+                      className={cn(
+                        'w-2 h-2 rounded-full shrink-0',
+                        activeVideoName === group.name ? 'bg-primary' : 'bg-muted-foreground'
+                      )}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{group.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {group.versionCount} {group.versionCount === 1 ? 'version' : 'versions'}
+                      </p>
+                    </div>
+                  </div>
+                  {activeVideoName === group.name && (
+                    hasApprovedVideo ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-success" />
+                    ) : (
+                      <Play className="w-4 h-4 shrink-0 text-primary" fill="currentColor" />
+                    )
+                  )}
+                </button>
+              )
+            }
+
+            return (
+              <>
+                {forReview.length > 0 && (
+                  <>
+                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      For Review
+                    </div>
+                    <div className="space-y-1 mb-4">
+                      {forReview.map(renderVideoButton)}
+                    </div>
+                  </>
+                )}
+
+                {approved.length > 0 && (
+                  <>
+                    {forReview.length > 0 && (
+                      <div className="border-t border-border my-3" />
+                    )}
+                    <div className="px-3 py-2 text-xs font-semibold text-success uppercase tracking-wider flex items-center gap-2">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Approved
+                    </div>
+                    <div className="space-y-1">
+                      {approved.map(renderVideoButton)}
+                    </div>
+                  </>
+                )}
+              </>
+            )
+          })()}
         </nav>
 
         {/* Resize Handle */}
@@ -176,42 +219,114 @@ export default function VideoSidebar({
 
         {!isCollapsed && (
           <div className="border-t border-border">
-            {videoGroups.map((group) => (
-              <button
-                key={group.name}
-                onClick={() => {
-                  onVideoSelect(group.name)
-                  // Don't collapse - keep dropdown open for easy video switching
-                }}
-                className={cn(
-                  'w-full text-left p-4 transition-colors',
-                  'hover:bg-accent',
-                  'flex items-center justify-between gap-3',
-                  'border-b border-border last:border-b-0',
-                  activeVideoName === group.name
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-foreground'
-                )}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div
+            {(() => {
+              // Split videos into For Review and Approved groups
+              const forReview = videoGroups.filter(g => !g.videos.some((v: any) => v.approved === true))
+              const approved = videoGroups.filter(g => g.videos.some((v: any) => v.approved === true))
+
+              const renderVideoButton = (group: VideoGroup, isLast: boolean) => {
+                const hasApprovedVideo = group.videos.some((v: any) => v.approved === true)
+                return (
+                  <button
+                    key={group.name}
+                    onClick={() => {
+                      onVideoSelect(group.name)
+                      // Don't collapse - keep dropdown open for easy video switching
+                    }}
                     className={cn(
-                      'w-2 h-2 rounded-full shrink-0',
-                      activeVideoName === group.name ? 'bg-primary' : 'bg-muted-foreground'
+                      'w-full text-left p-4 transition-colors',
+                      'hover:bg-accent',
+                      'flex items-center justify-between gap-3',
+                      'border-b border-border',
+                      isLast && approved.length === 0 && 'last:border-b-0',
+                      activeVideoName === group.name
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-foreground'
                     )}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm">{group.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {group.versionCount} {group.versionCount === 1 ? 'version' : 'versions'}
-                    </p>
-                  </div>
-                </div>
-                {activeVideoName === group.name && (
-                  <Play className="w-4 h-4 shrink-0 text-primary" fill="currentColor" />
-                )}
-              </button>
-            ))}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div
+                        className={cn(
+                          'w-2 h-2 rounded-full shrink-0',
+                          activeVideoName === group.name ? 'bg-primary' : 'bg-muted-foreground'
+                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm">{group.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {group.versionCount} {group.versionCount === 1 ? 'version' : 'versions'}
+                        </p>
+                      </div>
+                    </div>
+                    {activeVideoName === group.name && (
+                      hasApprovedVideo ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-success" />
+                      ) : (
+                        <Play className="w-4 h-4 shrink-0 text-primary" fill="currentColor" />
+                      )
+                    )}
+                  </button>
+                )
+              }
+
+              return (
+                <>
+                  {forReview.length > 0 && (
+                    <>
+                      <div className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-accent/30">
+                        For Review
+                      </div>
+                      {forReview.map((group, index) => renderVideoButton(group, index === forReview.length - 1))}
+                    </>
+                  )}
+
+                  {approved.length > 0 && (
+                    <>
+                      <div className="px-4 py-3 text-xs font-semibold text-success uppercase tracking-wider bg-success-visible flex items-center gap-2">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Approved
+                      </div>
+                      {approved.map((group, index) => (
+                        <button
+                          key={group.name}
+                          onClick={() => {
+                            onVideoSelect(group.name)
+                          }}
+                          className={cn(
+                            'w-full text-left p-4 transition-colors',
+                            'hover:bg-accent',
+                            'flex items-center justify-between gap-3',
+                            'border-b border-border',
+                            index === approved.length - 1 && 'last:border-b-0',
+                            activeVideoName === group.name
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'text-foreground'
+                          )}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div
+                              className={cn(
+                                'w-2 h-2 rounded-full shrink-0',
+                                activeVideoName === group.name ? 'bg-primary' : 'bg-muted-foreground'
+                              )}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm">{group.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {group.versionCount} {group.versionCount === 1 ? 'version' : 'versions'}
+                              </p>
+                            </div>
+                          </div>
+                          {activeVideoName === group.name && (
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-success" />
+                          )}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </>
+              )
+            })()}
           </div>
         )}
       </div>

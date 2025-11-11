@@ -156,20 +156,6 @@ export async function PATCH(
       await updateProjectStatus(video.projectId, id, approved, video.project.status)
     }
 
-    // Create audit comment only for approval status changes
-    if (approved !== undefined) {
-      await prisma.comment.create({
-        data: {
-          projectId: video.projectId,
-          content: approved
-            ? `Admin approved video "${video.name}" (${video.versionLabel}).`
-            : `Admin unapproved video "${video.name}" (${video.versionLabel}).`,
-          authorName: 'Admin',
-          isInternal: true
-        }
-      })
-    }
-
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error updating video approval:', error)

@@ -30,8 +30,6 @@ function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolea
     // Admins get real data for management
     sanitized.authorName = comment.authorName
     sanitized.authorEmail = comment.authorEmail
-    sanitized.notifyByEmail = comment.notifyByEmail
-    sanitized.notificationEmail = comment.notificationEmail
     sanitized.userId = comment.userId
     if (comment.user) {
       sanitized.user = {

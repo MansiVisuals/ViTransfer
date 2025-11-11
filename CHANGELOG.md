@@ -5,6 +5,68 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2025-11-11
+
+> **⚠️ TRANSITIONAL RELEASE:** This version removes the old notification system to prepare for the new configurable notification summary system coming in v0.3.0. Client reply notifications are temporarily disabled - clients must check the share page manually for admin responses. This is intentional and temporary as we build towards a better notification experience.
+
+### Added
+- Sort toggle for projects dashboard (status/alphabetical sorting)
+- Sort toggle for project videos and versions (status/alphabetical sorting)
+- Section dividers in share page sidebar (For Review / Approved sections)
+- Green check mark icon for approved videos in sidebar (replaces play icon)
+- New `formatDate()` utility for consistent date formatting (11-Nov-2025 format)
+
+### Changed
+- **BREAKING**: All comments must now be video-specific (general comments removed)
+- **BREAKING**: Client reply notifications temporarily disabled (preparing for v0.3.0 summary notifications)
+- **BREAKING**: Removed per-comment email notification opt-in checkbox
+- Admin new comment notifications still working (unchanged)
+- Share page sorting now checks if ANY version is approved (not just latest)
+- Video groups in admin panel sorted by approval status (unapproved first)
+- Versions within groups sorted by approval status (approved first)
+- Projects list extracted to client component for better performance
+- README development warning now includes 3-2-1 backup principle
+- All recipient IDs migrated from UUID to CUID format for consistency
+- All dates now display in consistent "11-Nov-2025" format
+
+### Removed
+- General/system comments (all comments must be attached to a video)
+- Email notification checkbox from comment form
+- `notifyByEmail` and `notificationEmail` fields from Comment model
+- `flexibleIdSchema` workaround from validation (now using cuidSchema only)
+- System audit comments for approval/unapproval actions (status tracked in database)
+
+### Improved
+- Approved badge spacing in admin panel
+- "All Versions" section spacing from content above
+- Analytics projects card spacing to prevent overlap
+- Version labels padding to prevent hover animation cutoff
+- Mobile inline editing no longer overflows with action buttons
+- Simplified comment filtering logic (no more null videoId checks)
+
+### Fixed
+- Projects dashboard now loads correctly after refactoring
+- Mobile overflow when editing video/group names
+- Version label hover animation cutoff at top of container
+
+### Database Migration
+- **IRREVERSIBLE**: Deleted all existing general comments (where videoId IS NULL)
+- Made Comment.videoId field required (NOT NULL constraint)
+- **IRREVERSIBLE**: Migrated all UUID format recipient IDs to CUID format
+- Dropped Comment.notifyByEmail and Comment.notificationEmail columns
+
+### Known Limitations
+- ⚠️ **Client reply notifications temporarily disabled** - Clients must manually check share page for admin responses
+- ⚠️ **General comments permanently deleted** - Project-level messages and audit trails removed
+- ⚠️ **System audit comments removed** - Approval actions only tracked in database timestamps
+- ✅ **Admin notifications still work** - Admins receive emails when clients comment
+
+### Coming in v0.3.0
+- Configurable notification schedules (Immediate/Hourly/Daily/Weekly)
+- Email notification summaries (reduces email spam)
+- Per-recipient notification preferences
+- Improved notification templates with opt-out support
+
 ## [0.2.4] - 2025-11-10
 
 ### Added

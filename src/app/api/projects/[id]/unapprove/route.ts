@@ -48,16 +48,7 @@ export async function POST(
       }
     })
 
-    // Create audit comment
     const approvedCount = project.videos.filter(v => v.approved).length
-    await prisma.comment.create({
-      data: {
-        projectId,
-        content: `Admin unapproved entire project. ${approvedCount} ${approvedCount === 1 ? 'video was' : 'videos were'} unapproved.`,
-        authorName: 'Admin',
-        isInternal: true
-      }
-    })
 
     return NextResponse.json({
       success: true,

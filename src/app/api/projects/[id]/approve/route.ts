@@ -117,35 +117,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
     }
 
-    // Get primary recipient for comment author
-    const primaryRecipient = await getPrimaryRecipient(projectId)
-
-    // Create client approval comment
-    await prisma.comment.create({
-      data: {
-        projectId,
-        content: allApproved
-          ? `All videos approved! Project is now complete.`
-          : `Video "${selectedVideo.name}" (${selectedVideo.versionLabel}) approved.`,
-        authorName: primaryRecipient?.name || 'Client',
-        authorEmail: null,
-        isInternal: false,
-      },
-    })
-
-    // Create system confirmation comment (as internal/admin reply)
-    await prisma.comment.create({
-      data: {
-        projectId,
-        content: allApproved
-          ? `All videos approved. Final versions are now available to download.`
-          : `Video "${selectedVideo.name}" (${selectedVideo.versionLabel}) approved and ready for download.`,
-        authorName: 'System',
-        authorEmail: null,
-        isInternal: true,
-      },
-    })
-
     // Send email notification to all recipients
     try {
       const recipients = await getProjectRecipients(projectId)
@@ -179,6 +150,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Send email notification to admins
     try {
+      const primaryRecipient = await getPrimaryRecipient(projectId)
       const admins = await prisma.user.findMany({
         where: { role: 'ADMIN' },
         select: { email: true }

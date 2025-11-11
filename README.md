@@ -11,7 +11,7 @@ ViTransfer is a self-hosted web application designed for video professionals to 
 [![GitHub](https://img.shields.io/badge/github-MansiVisuals%2FViTransfer-blue)](https://github.com/MansiVisuals/ViTransfer)
 [![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/E1E215DBM4)
 
-> **⚠️ Development Status:** ViTransfer is currently in active development. While fully functional and used in production, we are working towards a stable v1.0 release. Features and APIs may change. Contributions and feedback are welcome!
+> **⚠️ ACTIVE DEVELOPMENT:** ViTransfer is under active development with frequent updates and changes. While fully functional and used in production, features may be replaced, modified, or removed as we work towards v1.0. We strive to avoid breaking changes, but **always maintain backups following the 3-2-1 principle** (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome!
 >
 > **💖 Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development!
 

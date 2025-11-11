@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Video, ProjectStatus } from '@prisma/client'
 import { Button } from './ui/button'
 import { Download, Info, CheckCircle2 } from 'lucide-react'
-import { formatTimestamp, formatFileSize } from '@/lib/utils'
+import { formatTimestamp, formatFileSize, formatDate } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import {
   Dialog,
@@ -288,7 +288,7 @@ export default function VideoPlayer({
     <div className="space-y-4 flex flex-col max-h-full">
       {/* Version Selector - Only show if there are multiple versions to choose from */}
       {displayVideos.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto pb-2 flex-shrink-0">
+        <div className="flex gap-3 overflow-x-auto py-4 flex-shrink-0">
           {displayVideos.map((video, index) => {
             const videoApproved = (video as any).approved === true
             return (
@@ -382,7 +382,7 @@ export default function VideoPlayer({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Upload Date:</span>
-                    <span className="font-medium">{new Date(selectedVideo.createdAt).toLocaleDateString()}</span>
+                    <span className="font-medium">{formatDate(selectedVideo.createdAt)}</span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span className="text-muted-foreground">Status:</span>

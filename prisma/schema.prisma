@@ -138,9 +138,9 @@ enum VideoStatus {
 model Comment {
   id           String   @id @default(cuid())
   projectId    String
-  videoId      String? // null = general comment
+  videoId      String // All comments must be video-specific
   videoVersion Int? // track which version this comment was for
-  timestamp    Float? // in seconds (null for general comments)
+  timestamp    Float? // in seconds
   content      String
   authorName   String? // made optional to allow anonymous comments
   authorEmail  String?
@@ -156,10 +156,6 @@ model Comment {
   parentId String? // if this is a reply to another comment
   parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies  Comment[] @relation("CommentReplies")
-
-  // Email notification opt-in (per comment)
-  notifyByEmail     Boolean @default(false) // User opted in for email notifications
-  notificationEmail String? // Email to send notifications to (if different from authorEmail)
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 

@@ -39,8 +39,6 @@ function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolea
     // Admins get real data for management purposes only
     sanitized.authorName = comment.authorName
     sanitized.authorEmail = comment.authorEmail
-    sanitized.notifyByEmail = comment.notifyByEmail
-    sanitized.notificationEmail = comment.notificationEmail
     sanitized.userId = comment.userId
     if (comment.user) {
       sanitized.user = {
@@ -103,9 +101,7 @@ export async function POST(request: NextRequest) {
       authorEmail,
       recipientId,
       parentId,
-      isInternal,
-      notifyByEmail,
-      notificationEmail
+      isInternal
     } = validation.data
 
     // Get current user if authenticated (for admin comments)
@@ -187,7 +183,6 @@ export async function POST(request: NextRequest) {
     }
 
     let finalAuthorEmail = authorEmail
-    let finalNotificationEmail = notificationEmail
 
     if (recipientId) {
       const recipient = await prisma.projectRecipient.findUnique({
@@ -197,14 +192,13 @@ export async function POST(request: NextRequest) {
 
       if (recipient && recipient.projectId === projectId) {
         finalAuthorEmail = recipient.email
-        finalNotificationEmail = recipient.email
       }
     }
 
     const comment = await prisma.comment.create({
       data: {
         projectId,
-        videoId: videoId || null,
+        videoId,
         videoVersion: finalVideoVersion || null,
         timestamp: timestamp !== null && timestamp !== undefined ? timestamp : null,
         content,
@@ -212,8 +206,6 @@ export async function POST(request: NextRequest) {
         authorEmail: finalAuthorEmail || null,
         isInternal: isInternal || false,
         parentId: parentId || null,
-        notifyByEmail: notifyByEmail || false,
-        notificationEmail: finalNotificationEmail || null,
         userId: currentUser?.id || null,
       },
       include: {
@@ -240,62 +232,6 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
-    // Send email notification if this is a reply to a comment
-    if (parentId && isInternal) {
-      // Check if SMTP is configured before attempting to send email
-      const smtpConfigured = await isSmtpConfigured()
-      if (smtpConfigured) {
-        try {
-          // Get the parent comment to check if notifications are enabled
-          const parentComment = await prisma.comment.findUnique({
-          where: { id: parentId },
-          select: {
-            notifyByEmail: true,
-            notificationEmail: true,
-            authorEmail: true,
-            authorName: true,
-            content: true,
-          }
-        })
-
-        // Get project details
-        const project = await prisma.project.findUnique({
-          where: { id: projectId },
-          select: {
-            title: true,
-            slug: true,
-          }
-        })
-
-        // Send email if parent comment has notifications enabled
-        if (parentComment?.notifyByEmail && project) {
-          const recipientEmail = parentComment.notificationEmail || parentComment.authorEmail
-          
-          if (recipientEmail) {
-            const shareUrl = await generateShareUrl(project.slug)
-            
-            // Fire and forget - don't wait for email to send
-            sendReplyNotificationEmail({
-              clientEmail: recipientEmail,
-              clientName: parentComment.authorName || 'Client',
-              projectTitle: project.title,
-              commentContent: parentComment.content,
-              replyContent: content,
-              shareUrl,
-            }).then(() => {
-              // Email sent successfully
-            }).catch((err) => {
-              console.error('Email send error:', err)
-            })
-          }
-        }
-        } catch (emailError) {
-          console.error('Failed to send reply notification:', emailError)
-          // Don't fail the request if email sending fails
-        }
-      }
-    }
 
     // Send email notification to admins if this is client feedback (not internal)
     if (!isInternal && !parentId) {

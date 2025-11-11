@@ -213,12 +213,13 @@ export async function GET(
     // This helps clients see which videos still need approval at the top
     const sortedVideosByName: Record<string, any[]> = {}
     const sortedKeys = Object.keys(videosByName).sort((nameA, nameB) => {
-      const latestA = videosByName[nameA][0] // Already sorted by version desc
-      const latestB = videosByName[nameB][0]
+      // Check if ANY version is approved in each group
+      const hasApprovedA = videosByName[nameA].some((v: any) => v.approved)
+      const hasApprovedB = videosByName[nameB].some((v: any) => v.approved)
 
-      // Unapproved (false) videos come before approved (true) videos
-      if (latestA.approved !== latestB.approved) {
-        return latestA.approved ? 1 : -1
+      // Groups with no approved versions come first, groups with any approved versions come last
+      if (hasApprovedA !== hasApprovedB) {
+        return hasApprovedA ? 1 : -1
       }
       // If both have same approval status, maintain original order
       return 0

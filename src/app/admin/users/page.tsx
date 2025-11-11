@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { UserPlus, Edit, Trash2 } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
 
 interface User {
   id: string
@@ -112,7 +113,7 @@ export default function UsersPage() {
                       {user.username && <p>@{user.username}</p>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Created {new Date(user.createdAt).toLocaleDateString()}
+                      Created {formatDate(user.createdAt)}
                     </p>
                   </div>
 

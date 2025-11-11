@@ -84,7 +84,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         error: 'File does not appear to be a valid MP4/MOV video. Please ensure you are uploading an unencrypted, standard MP4 video file.'
       }
     } catch (err) {
-      console.error('Error validating file:', err)
       return { valid: false, error: 'Failed to read file. Please try again.' }
     }
   }

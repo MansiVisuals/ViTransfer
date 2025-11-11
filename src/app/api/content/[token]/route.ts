@@ -157,8 +157,6 @@ export async function GET(
     if (hotlinkCheck.isHotlinking) {
       // Check protection mode
       if (securitySettings.hotlinkProtection === 'BLOCK_STRICT') {
-        console.error(`[HOTLINK_BLOCKED] ${hotlinkCheck.reason}`)
-        
         await logSecurityEvent({
           type: 'HOTLINK_BLOCKED',
           severity: hotlinkCheck.severity || 'WARNING',
@@ -203,14 +201,12 @@ export async function GET(
     }
 
     if (!filePath) {
-      console.error(`[VIDEO_ACCESS] No preview file available for video ${video.id}`)
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
     
     const fullPath = getFilePath(filePath)
     
     if (!existsSync(fullPath)) {
-      console.error(`[VIDEO_ACCESS] File not found`)
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
     
@@ -337,16 +333,13 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error('[VIDEO_ACCESS] Error streaming video:', error)
-    
-    // Log error
     await logSecurityEvent({
       type: 'STREAM_ERROR',
       severity: 'CRITICAL',
       ipAddress: getClientIpAddress(request),
       details: { error: error instanceof Error ? error.message : 'Unknown error' }
     })
-    
+
     return NextResponse.json({ error: 'Failed to stream video' }, { status: 500 })
   }
 }

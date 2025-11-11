@@ -6,7 +6,8 @@ import { z } from 'zod'
 const updateRecipientSchema = z.object({
   name: z.string().nullable().optional(),
   email: z.string().email('Invalid email format').nullable().optional(),
-  isPrimary: z.boolean().optional()
+  isPrimary: z.boolean().optional(),
+  receiveNotifications: z.boolean().optional()
 }).refine(data => {
   // If email is provided (not null or undefined), validate it
   if (data.email !== null && data.email !== undefined && data.email !== '') {

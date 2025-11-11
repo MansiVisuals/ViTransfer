@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
+import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { Save, Send, Loader2, Clock, AlertTriangle, CheckCircle } from 'lucide-react'
 
 interface Settings {
@@ -22,6 +23,9 @@ interface Settings {
   defaultPreviewResolution: string | null
   defaultWatermarkText: string | null
   autoApproveProject: boolean | null
+  adminNotificationSchedule: string | null
+  adminNotificationTime: string | null
+  adminNotificationDay: number | null
 }
 
 interface SecuritySettings {
@@ -63,6 +67,11 @@ export default function GlobalSettingsPage() {
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
 
+  // Form state for admin notification settings
+  const [adminNotificationSchedule, setAdminNotificationSchedule] = useState('HOURLY')
+  const [adminNotificationTime, setAdminNotificationTime] = useState('09:00')
+  const [adminNotificationDay, setAdminNotificationDay] = useState(1)
+
   // Form state for security settings
   const [showSecuritySettings, setShowSecuritySettings] = useState(false)
   const [hotlinkProtection, setHotlinkProtection] = useState('LOG_ONLY')
@@ -98,6 +107,11 @@ export default function GlobalSettingsPage() {
         setDefaultWatermarkText(data.defaultWatermarkText || '')
         setAutoApproveProject(data.autoApproveProject ?? true)
         setTestEmailAddress(data.smtpFromAddress || '')
+
+        // Set notification settings
+        setAdminNotificationSchedule(data.adminNotificationSchedule || 'HOURLY')
+        setAdminNotificationTime(data.adminNotificationTime || '09:00')
+        setAdminNotificationDay(data.adminNotificationDay ?? 1)
 
         // Load security settings
         const securityResponse = await fetch('/api/settings/security')
@@ -144,6 +158,9 @@ export default function GlobalSettingsPage() {
         defaultPreviewResolution: defaultPreviewResolution || '720p',
         defaultWatermarkText: defaultWatermarkText || null,
         autoApproveProject: autoApproveProject,
+        adminNotificationSchedule: adminNotificationSchedule,
+        adminNotificationTime: (adminNotificationSchedule === 'DAILY' || adminNotificationSchedule === 'WEEKLY') ? adminNotificationTime : null,
+        adminNotificationDay: adminNotificationSchedule === 'WEEKLY' ? adminNotificationDay : null,
       }
 
       const response = await fetch('/api/settings', {
@@ -347,9 +364,9 @@ export default function GlobalSettingsPage() {
           {/* Email Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle>Email / SMTP Configuration</CardTitle>
+              <CardTitle>Email / SMTP & Notifications</CardTitle>
               <CardDescription>
-                Configure SMTP settings for email notifications
+                Configure SMTP settings and notification schedules
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -521,6 +538,20 @@ export default function GlobalSettingsPage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Admin Notification Schedule Section */}
+              <div className="border-t pt-4 mt-4">
+                <ScheduleSelector
+                  schedule={adminNotificationSchedule}
+                  time={adminNotificationTime}
+                  day={adminNotificationDay}
+                  onScheduleChange={setAdminNotificationSchedule}
+                  onTimeChange={setAdminNotificationTime}
+                  onDayChange={setAdminNotificationDay}
+                  label="Admin Notification Schedule"
+                  description="Configure when you receive summaries of client comments across all projects. Note: Approval emails are always sent immediately."
+                />
               </div>
             </CardContent>
           </Card>

@@ -8,7 +8,7 @@ import Link from 'next/link'
 import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import ShareLink from '@/components/ShareLink'
-import AdminFeedbackSection from '@/components/AdminFeedbackSection'
+import CommentSection from '@/components/CommentSection'
 import { ArrowLeft, Settings, ArrowUpDown } from 'lucide-react'
 
 // Force dynamic rendering (no static pre-rendering)
@@ -26,6 +26,7 @@ export default function ProjectPage() {
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('status')
+  const [adminUser, setAdminUser] = useState<any>(null)
 
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = async () => {
@@ -51,6 +52,21 @@ export default function ProjectPage() {
   useEffect(() => {
     fetchProject()
   }, [id, router])
+
+  // Listen for immediate updates (approval changes, comment deletes, etc.)
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchProject()
+    }
+
+    window.addEventListener('videoApprovalChanged', handleUpdate)
+    window.addEventListener('commentDeleted', handleUpdate)
+
+    return () => {
+      window.removeEventListener('videoApprovalChanged', handleUpdate)
+      window.removeEventListener('commentDeleted', handleUpdate)
+    }
+  }, [id])
 
   // Auto-refresh when videos are processing to show real-time progress
   useEffect(() => {
@@ -89,7 +105,7 @@ export default function ProjectPage() {
     fetchShareUrl()
   }, [project?.slug])
 
-  // Fetch company name
+  // Fetch company name and admin user
   useEffect(() => {
     async function fetchCompanyName() {
       try {
@@ -103,7 +119,20 @@ export default function ProjectPage() {
       }
     }
 
+    async function fetchAdminUser() {
+      try {
+        const response = await fetch('/api/auth/session')
+        if (response.ok) {
+          const data = await response.json()
+          setAdminUser(data.user)
+        }
+      } catch (error) {
+        console.error('Error fetching admin user:', error)
+      }
+    }
+
     fetchCompanyName()
+    fetchAdminUser()
   }, [])
 
   // Handle video selection
@@ -244,18 +273,24 @@ export default function ProjectPage() {
           <div className="space-y-6 min-w-0">
             <ProjectActions project={project} videos={project.videos} onRefresh={fetchProject} />
 
-            {!hideFeedback && activeVideoName && (
+            {!hideFeedback && activeVideos.length > 0 && (
               <div className="lg:sticky lg:top-6">
-                <AdminFeedbackSection
+                <CommentSection
                   key={activeVideoName} // Force fresh component per video
                   projectId={project.id}
-                  initialComments={filteredComments}
-                  videos={activeVideos}
-                  restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                  companyName={companyName}
-                  onRefresh={fetchProject}
                   projectSlug={project.slug}
-                  activeVideoName={activeVideoName}
+                  comments={filteredComments}
+                  clientName={project.recipients?.[0]?.name || project.recipients?.[0]?.email || 'Client'}
+                  clientEmail={project.recipients?.[0]?.email}
+                  isApproved={project.status === 'APPROVED'}
+                  restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+                  videos={activeVideos}
+                  isAdminView={true}
+                  companyName={companyName}
+                  smtpConfigured={true}
+                  isPasswordProtected={!!project.sharePassword}
+                  adminUser={adminUser}
+                  recipients={project.recipients || []}
                 />
               </div>
             )}

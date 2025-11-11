@@ -56,6 +56,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      TZ: ${TZ:-UTC}
       DATABASE_URL: postgresql://vitransfer:${POSTGRES_PASSWORD}@vitransfer-postgres:5432/vitransfer?schema=public
       REDIS_HOST: vitransfer-redis
       REDIS_PORT: 6379
@@ -97,6 +98,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      TZ: ${TZ:-UTC}
       DATABASE_URL: postgresql://vitransfer:${POSTGRES_PASSWORD}@vitransfer-postgres:5432/vitransfer?schema=public
       REDIS_HOST: vitransfer-redis
       REDIS_PORT: 6379

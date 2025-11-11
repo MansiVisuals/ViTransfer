@@ -59,6 +59,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      TZ: ${TZ:-UTC}
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-vitransfer}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vitransfer}?schema=public
@@ -101,6 +102,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      TZ: ${TZ:-UTC}
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-vitransfer}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vitransfer}?schema=public

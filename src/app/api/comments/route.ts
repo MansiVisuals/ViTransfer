@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUserFromRequest } from '@/lib/auth'
-import { sendReplyNotificationEmail, sendAdminNewFeedbackEmail } from '@/lib/email'
-import { generateShareUrl } from '@/lib/url'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, createCommentSchema } from '@/lib/validation'
 import { cookies } from 'next/headers'
@@ -63,6 +61,118 @@ function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolea
   }
 
   return sanitized
+}
+
+/**
+ * GET /api/comments?projectId=xxx
+ * Fetch all comments for a project
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const projectId = searchParams.get('projectId')
+
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Get current user if authenticated (for admin view)
+    const currentUser = await getCurrentUserFromRequest(request)
+    const isAdmin = currentUser?.role === 'ADMIN'
+
+    // Fetch the project to check password protection
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        sharePassword: true,
+      }
+    })
+
+    if (!project) {
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403 }
+      )
+    }
+
+    // Track if user is authenticated (admin or has password access)
+    let isAuthenticated = isAdmin
+
+    // If password protected and user is not admin, verify share authentication
+    if (project.sharePassword && !currentUser) {
+      const cookieStore = await cookies()
+      const authSessionId = cookieStore.get('share_auth')?.value
+
+      if (!authSessionId) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      // Verify auth session maps to this project
+      const redis = await import('@/lib/video-access').then(m => m.getRedis())
+      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+
+      if (mappedProjectId !== project.id) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      isAuthenticated = true
+    }
+
+    // Get primary recipient for author name fallback
+    const primaryRecipient = await getPrimaryRecipient(projectId)
+    const fallbackName = primaryRecipient?.name || 'Client'
+
+    // Fetch all comments for the project
+    const allComments = await prisma.comment.findMany({
+      where: {
+        projectId,
+        parentId: null, // Only get top-level comments
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            email: true,
+          }
+        },
+        replies: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                email: true,
+              }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    })
+
+    // Sanitize the response data
+    const sanitizedComments = allComments.map((comment: any) =>
+      sanitizeComment(comment, isAdmin, isAuthenticated, fallbackName)
+    )
+
+    return NextResponse.json(sanitizedComments)
+  } catch (error) {
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -195,6 +305,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Sanitize authorName (same rules as watermark text)
+    let sanitizedAuthorName = authorName || null
+    if (sanitizedAuthorName) {
+      // Remove invalid characters
+      const invalidChars = sanitizedAuthorName.match(/[^a-zA-Z0-9\s\-_.()]/g)
+      if (invalidChars) {
+        return NextResponse.json(
+          {
+            error: 'Invalid characters in name',
+            details: `Name can only contain letters, numbers, spaces, and these characters: - _ . ( )`
+          },
+          { status: 400 }
+        )
+      }
+
+      // Length check
+      if (sanitizedAuthorName.length > 50) {
+        return NextResponse.json(
+          { error: 'Name is too long (max 50 characters)' },
+          { status: 400 }
+        )
+      }
+
+      // Trim whitespace
+      sanitizedAuthorName = sanitizedAuthorName.trim()
+    }
+
     const comment = await prisma.comment.create({
       data: {
         projectId,
@@ -202,7 +339,7 @@ export async function POST(request: NextRequest) {
         videoVersion: finalVideoVersion || null,
         timestamp: timestamp !== null && timestamp !== undefined ? timestamp : null,
         content,
-        authorName: authorName || null,
+        authorName: sanitizedAuthorName,
         authorEmail: finalAuthorEmail || null,
         isInternal: isInternal || false,
         parentId: parentId || null,
@@ -233,51 +370,73 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Send email notification to admins if this is client feedback (not internal)
-    if (!isInternal && !parentId) {
-      // Check if SMTP is configured before attempting to send email
+    // Unified notification system (Phase 3)
+    try {
+      // Check if SMTP is configured
       const smtpConfigured = await isSmtpConfigured()
+      console.log('[COMMENT-NOTIFICATION] SMTP configured:', smtpConfigured)
+
       if (smtpConfigured) {
-        try {
-          // Get all admin emails
-          const admins = await prisma.user.findMany({
-          where: { role: 'ADMIN' },
-          select: { email: true }
+        // Get project with notification schedule
+        const project = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            clientNotificationSchedule: true,
+          }
         })
 
-        if (admins.length > 0) {
-          // Get project and video details
-          const project = await prisma.project.findUnique({
-            where: { id: projectId },
-            select: { title: true }
-          })
-
+        if (project) {
+          // Get video info
           const video = videoId ? await prisma.video.findUnique({
             where: { id: videoId },
-            select: { versionLabel: true }
+            select: { name: true, versionLabel: true }
           }) : null
 
-          if (project) {
-            // Fire and forget - don't wait for email to send
-            sendAdminNewFeedbackEmail({
-              adminEmails: admins.map((a: { email: string }) => a.email),
-              clientName: authorName || 'Client',
-              projectTitle: project.title,
-              commentContent: content,
-              timestamp: timestamp !== null && timestamp !== undefined ? timestamp : undefined,
-              versionLabel: video?.versionLabel,
-            }).then(() => {
-              // Email sent successfully
-            }).catch((err) => {
-              console.error('Admin email send error:', err)
-            })
+          console.log('[COMMENT-NOTIFICATION] Video:', video?.name || 'None')
+
+          // Get settings for admin schedule
+          const settings = await prisma.settings.findUnique({
+            where: { id: 'default' },
+            select: { adminNotificationSchedule: true }
+          })
+
+          // Determine which schedule to use
+          const isAdminComment = comment.isInternal
+          const schedule = isAdminComment
+            ? project.clientNotificationSchedule // Admin replies use client schedule
+            : (settings?.adminNotificationSchedule || 'IMMEDIATE') // Client comments use admin schedule
+
+          console.log(`[COMMENT-NOTIFICATION] Comment type: ${isAdminComment ? 'ADMIN' : 'CLIENT'}, Schedule: ${schedule}`)
+
+          const context = {
+            comment,
+            project: { id: project.id, title: project.title, slug: project.slug },
+            video,
+            isReply: !!parentId
           }
+
+          // Handle notification based on schedule
+          if (schedule === 'IMMEDIATE') {
+            console.log('[COMMENT-NOTIFICATION] Sending immediately...')
+            const { sendImmediateNotification } = await import('@/lib/notifications')
+            await sendImmediateNotification(context)
+          } else {
+            console.log(`[COMMENT-NOTIFICATION] Queuing for later (${schedule})...`)
+            const { queueNotification } = await import('@/lib/notifications')
+            await queueNotification(context)
+          }
+        } else {
+          console.log('[COMMENT-NOTIFICATION] Project not found')
         }
-        } catch (emailError) {
-          console.error('Failed to send admin notification:', emailError)
-          // Don't fail the request if email sending fails
-        }
+      } else {
+        console.log('[COMMENT-NOTIFICATION] Skipping - SMTP not configured')
       }
+    } catch (emailError) {
+      // Don't fail the request if notification processing fails
+      console.error('[COMMENT-NOTIFICATION] Error processing notification:', emailError)
     }
 
     // Return all comments for the project (to keep UI in sync)
@@ -317,7 +476,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
-    console.error('Error creating comment:', error)
     return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
   }
 }

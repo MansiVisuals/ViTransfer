@@ -83,7 +83,42 @@ export async function PATCH(request: NextRequest) {
       defaultPreviewResolution,
       defaultWatermarkText,
       autoApproveProject,
+      adminNotificationSchedule,
+      adminNotificationTime,
+      adminNotificationDay,
     } = body
+
+    // SECURITY: Validate notification schedule
+    if (adminNotificationSchedule !== undefined) {
+      const validSchedules = ['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']
+      if (!validSchedules.includes(adminNotificationSchedule)) {
+        return NextResponse.json(
+          { error: 'Invalid notification schedule. Must be IMMEDIATE, HOURLY, DAILY, or WEEKLY.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // SECURITY: Validate time format (HH:MM)
+    if (adminNotificationTime !== undefined && adminNotificationTime !== null) {
+      const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
+      if (!timeRegex.test(adminNotificationTime)) {
+        return NextResponse.json(
+          { error: 'Invalid time format. Must be HH:MM (24-hour format).' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // SECURITY: Validate day (0-6)
+    if (adminNotificationDay !== undefined && adminNotificationDay !== null) {
+      if (!Number.isInteger(adminNotificationDay) || adminNotificationDay < 0 || adminNotificationDay > 6) {
+        return NextResponse.json(
+          { error: 'Invalid day. Must be 0-6 (Sunday-Saturday).' },
+          { status: 400 }
+        )
+      }
+    }
 
     // SECURITY: Validate watermark text (same rules as FFmpeg sanitization)
     // Only allow alphanumeric, spaces, and safe punctuation: - _ . ( )
@@ -130,6 +165,9 @@ export async function PATCH(request: NextRequest) {
         defaultPreviewResolution,
         defaultWatermarkText,
         autoApproveProject,
+        adminNotificationSchedule,
+        adminNotificationTime,
+        adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
       },
       create: {
         id: 'default',
@@ -144,6 +182,9 @@ export async function PATCH(request: NextRequest) {
         defaultPreviewResolution,
         defaultWatermarkText,
         autoApproveProject,
+        adminNotificationSchedule: adminNotificationSchedule || 'IMMEDIATE',
+        adminNotificationTime,
+        adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
       },
     })
 

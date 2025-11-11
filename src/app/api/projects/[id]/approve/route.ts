@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
-import { sendProjectApprovedEmail, sendAdminProjectApprovedEmail } from '@/lib/email'
-import { generateShareUrl } from '@/lib/url'
+import { isSmtpConfigured, sendProjectApprovedEmail, sendAdminProjectApprovedEmail } from '@/lib/email'
+import { handleApprovalNotification } from '@/lib/notifications'
 import { getProjectRecipients, getPrimaryRecipient } from '@/lib/recipients'
+import { generateShareUrl } from '@/lib/url'
 import { getAutoApproveProject } from '@/lib/settings'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +12,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id: projectId } = await params
     const body = await request.json()
     const { authorName, authorEmail, selectedVideoId } = body
+
+    console.log('[APPROVAL] Starting approval process for project:', projectId)
+    console.log('[APPROVAL] Selected video:', selectedVideoId)
 
     // SECURITY: Validate share password if project is password-protected
     // This allows clients to approve their own projects via the share link
@@ -115,48 +119,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           approvedVideoId: selectedVideoId, // Keep for backward compatibility
         },
       })
+
+      // NOTE: Approval notifications are always sent immediately (see email sending code below)
+      // They are NOT queued because approvals should notify clients right away
     }
 
-    // Send email notification to all recipients
+    console.log('[APPROVAL] Video approval complete, preparing notifications')
+
+    // Handle approval notifications (will queue and/or send immediately based on schedule)
     try {
-      const recipients = await getProjectRecipients(projectId)
-      const shareUrl = await generateShareUrl(project.slug)
+      const smtpConfigured = await isSmtpConfigured()
+      console.log('[APPROVAL] SMTP configured:', smtpConfigured)
 
-      // Get all approved videos for multi-video support
-      const approvedVideos = allVideos.filter(v => v.approved)
-      const approvedVideosList = approvedVideos.map(v => ({
-        name: v.name,
-        id: v.id
-      }))
-
-      // Only send emails to recipients with email addresses
-      const emailPromises = recipients
-        .filter(recipient => recipient.email)
-        .map(recipient =>
-          sendProjectApprovedEmail({
-            clientEmail: recipient.email!,
-            clientName: recipient.name || 'Client',
-            projectTitle: project.title,
-            shareUrl,
-            approvedVideos: approvedVideosList,
-            isComplete: allApproved,
-          })
-        )
-
-      await Promise.allSettled(emailPromises)
-    } catch (emailError) {
-      // Don't fail the request if email sending fails
-    }
-
-    // Send email notification to admins
-    try {
-      const primaryRecipient = await getPrimaryRecipient(projectId)
-      const admins = await prisma.user.findMany({
-        where: { role: 'ADMIN' },
-        select: { email: true }
-      })
-
-      if (admins.length > 0) {
+      if (!smtpConfigured) {
+        console.log('[APPROVAL] SMTP not configured, skipping notifications')
+      } else {
         // Get all approved videos for multi-video support
         const approvedVideos = allVideos.filter(v => v.approved)
         const approvedVideosList = approvedVideos.map(v => ({
@@ -164,21 +141,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           id: v.id
         }))
 
-        await sendAdminProjectApprovedEmail({
-          adminEmails: admins.map((a: { email: string }) => a.email),
-          clientName: primaryRecipient?.name || 'Client',
-          projectTitle: project.title,
+        // Determine if this is a complete project approval or partial
+        // Complete = ALL unique videos have at least one approved version
+        const isCompleteProjectApproval = allApproved && autoApprove
+
+        // Use new unified notification system
+        await handleApprovalNotification({
+          project: {
+            id: project.id,
+            title: project.title,
+            slug: project.slug,
+            clientNotificationSchedule: project.clientNotificationSchedule
+          },
           approvedVideos: approvedVideosList,
-          isComplete: allApproved,
+          approved: true,
+          authorName,
+          authorEmail,
+          isComplete: isCompleteProjectApproval, // Pass whether ALL videos are approved
         })
       }
-    } catch (emailError) {
-      // Don't fail the request if email sending fails
+    } catch (error) {
+      console.error('[APPROVAL] Error handling approval notifications:', error)
     }
 
+    console.log('[APPROVAL] Approval process complete, returning success')
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error approving project:', error)
+    console.error('[APPROVAL] ERROR in approval route:', error)
     return NextResponse.json({ error: 'Failed to approve project' }, { status: 500 })
   }
 }

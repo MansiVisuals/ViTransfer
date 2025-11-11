@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Video } from '@prisma/client'
 import { formatDuration, formatFileSize } from '@/lib/utils'
 import { Progress } from './ui/progress'
@@ -17,7 +16,6 @@ interface VideoListProps {
 }
 
 export default function VideoList({ videos: initialVideos, isAdmin = true, onRefresh }: VideoListProps) {
-  const router = useRouter()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [videos, setVideos] = useState<Video[]>(initialVideos)
@@ -40,15 +38,12 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
     // Refresh page data every 2 seconds when videos are processing
     const interval = setInterval(() => {
-      // Fetch updated video data
-      const videoIds = videos.map(v => v.id)
-      fetch(`/api/videos/${videoIds[0]}`)
-        .then(res => res.ok ? router.refresh() : null)
-        .catch(() => router.refresh())
+      // Use callback instead of router.refresh for better performance
+      onRefresh?.()
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [videos, router])
+  }, [videos, onRefresh])
 
   // Update local state when props change
   useEffect(() => {
@@ -71,7 +66,6 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       }
 
       await onRefresh?.()
-      router.refresh()
     } catch (error) {
       alert('Failed to delete video')
     } finally {
@@ -97,8 +91,10 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         throw new Error(`Failed to ${action} video`)
       }
 
+      // Trigger immediate UI update for comment section approval banner
+      window.dispatchEvent(new CustomEvent('videoApprovalChanged'))
+
       await onRefresh?.()
-      router.refresh()
     } catch (error) {
       alert(`Failed to ${action} video`)
     } finally {
@@ -152,7 +148,6 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       setPendingVideoUpdate(null)
       setShowReprocessModal(false)
       await onRefresh?.()
-      router.refresh()
     } catch (error) {
       alert('Failed to update version label')
     } finally {
@@ -177,9 +172,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         throw new Error(data.error || 'Failed to reprocess video')
       }
 
-      console.log(`Reprocessing video ${videoId}`)
     } catch (err) {
-      console.error('Error reprocessing video:', err)
       // Don't throw - we still want to save the label
     } finally {
       setReprocessing(false)

@@ -23,7 +23,7 @@ export default function AdminHeader() {
           setShowSecurityDashboard(data.security?.viewSecurityEvents ?? false)
         }
       } catch (error) {
-        console.error('Failed to fetch security settings:', error)
+        // Security settings fetch failed - using defaults
       }
     }
 

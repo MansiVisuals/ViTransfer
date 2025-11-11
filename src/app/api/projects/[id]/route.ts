@@ -84,7 +84,6 @@ export async function GET(
 
     return NextResponse.json(projectData)
   } catch (error) {
-    console.error('Failed to fetch project:', error)
     return NextResponse.json(
       { error: 'Unable to process request' },
       { status: 500 }
@@ -287,6 +286,41 @@ export async function PATCH(
       passwordWasChanged = true
     }
 
+    // Handle client notification schedule
+    if (body.clientNotificationSchedule !== undefined) {
+      const validSchedules = ['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']
+      if (!validSchedules.includes(body.clientNotificationSchedule)) {
+        return NextResponse.json(
+          { error: 'Invalid notification schedule. Must be IMMEDIATE, HOURLY, DAILY, or WEEKLY.' },
+          { status: 400 }
+        )
+      }
+      updateData.clientNotificationSchedule = body.clientNotificationSchedule
+    }
+    if (body.clientNotificationTime !== undefined) {
+      if (body.clientNotificationTime !== null) {
+        const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
+        if (!timeRegex.test(body.clientNotificationTime)) {
+          return NextResponse.json(
+            { error: 'Invalid time format. Must be HH:MM (24-hour format).' },
+            { status: 400 }
+          )
+        }
+      }
+      updateData.clientNotificationTime = body.clientNotificationTime
+    }
+    if (body.clientNotificationDay !== undefined) {
+      if (body.clientNotificationDay !== null) {
+        if (!Number.isInteger(body.clientNotificationDay) || body.clientNotificationDay < 0 || body.clientNotificationDay > 6) {
+          return NextResponse.json(
+            { error: 'Invalid day. Must be 0-6 (Sunday-Saturday).' },
+            { status: 400 }
+          )
+        }
+      }
+      updateData.clientNotificationDay = body.clientNotificationDay
+    }
+
     // Update the project in database FIRST (before invalidating sessions)
     const project = await prisma.project.update({
       where: { id },
@@ -315,7 +349,6 @@ export async function PATCH(
 
     return NextResponse.json(project)
   } catch (error) {
-    console.error('Failed to update project:', error)
     return NextResponse.json(
       { error: 'Operation failed' },
       { status: 500 }
@@ -400,7 +433,6 @@ export async function DELETE(
       message: 'Project and all related files deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting project:', error)
     return NextResponse.json(
       { error: 'Operation failed' },
       { status: 500 }

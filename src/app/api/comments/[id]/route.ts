@@ -191,12 +191,11 @@ export async function PATCH(
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
-    console.error('Error updating comment:', error)
     return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
   }
 }
 
-// DELETE /api/comments/[id] - Delete a comment
+// DELETE /api/comments/[id] - Delete a comment (admin only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -214,15 +213,26 @@ export async function DELETE(
 
   try {
     const { id } = await params
-    // Get the comment to find its project and check if it has replies
+
+    // SECURITY: Only admins can delete comments
+    const currentUser = await getCurrentUserFromRequest(request)
+    const isAdmin = currentUser?.role === 'ADMIN'
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Only admins can delete comments.' },
+        { status: 401 }
+      )
+    }
+
+    // Get the comment to find its project
     const existingComment = await prisma.comment.findUnique({
       where: { id },
-      include: {
-        replies: true,
+      select: {
+        projectId: true,
         project: {
           select: {
             id: true,
-            sharePassword: true,
             recipients: {
               where: { isPrimary: true },
               take: 1,
@@ -242,37 +252,6 @@ export async function DELETE(
       )
     }
 
-    // Check authentication for password-protected projects
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
-    let isAuthenticated = isAdmin
-
-    if (existingComment.project.sharePassword && !isAdmin) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (!authSessionId) {
-        return NextResponse.json(
-          { error: 'Unable to process request' },
-          { status: 400 }
-        )
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== existingComment.project.id) {
-        return NextResponse.json(
-          { error: 'Unable to process request' },
-          { status: 400 }
-        )
-      }
-
-      // User has valid password authentication
-      isAuthenticated = true
-    }
-
     const projectId = existingComment.projectId
 
     // Delete the comment and its replies (cascade)
@@ -280,45 +259,9 @@ export async function DELETE(
       where: { id },
     })
 
-    // Return all comments for the project (to keep UI in sync)
-    const allComments = await prisma.comment.findMany({
-      where: {
-        projectId,
-        parentId: null, // Only get top-level comments
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            email: true,
-          }
-        },
-        replies: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                email: true,
-              }
-            }
-          },
-          orderBy: { createdAt: 'asc' }
-        }
-      },
-      orderBy: { createdAt: 'asc' }
-    })
-
-    // Sanitize response - never expose PII
-    const primaryRecipientName = existingComment.project.recipients[0]?.name || undefined
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, primaryRecipientName))
-
-    return NextResponse.json(sanitizedComments)
+    // Return success - client will refresh to get updated comments
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting comment:', error)
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to delete comment' }, { status: 500 })
   }
 }

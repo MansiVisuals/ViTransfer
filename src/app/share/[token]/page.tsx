@@ -52,7 +52,7 @@ export default function SharePage() {
         setComments(commentsData)
       }
     } catch (error) {
-      console.error('Error fetching comments:', error)
+      // Failed to load comments
     } finally {
       setCommentsLoading(false)
     }
@@ -74,7 +74,7 @@ export default function SharePage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching project data:', error)
+      // Failed to load project data
     }
   }
 

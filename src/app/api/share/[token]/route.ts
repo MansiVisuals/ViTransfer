@@ -283,11 +283,7 @@ export async function GET(
 
     return NextResponse.json(projectData)
   } catch (error) {
-    console.error('Error fetching project:', error)
-    if (error instanceof Error) {
-      console.error('Error details:', error.message, error.stack)
-    }
-    // SECURITY: Generic message - don't reveal what failed or system architecture
+    // Generic error response - no details exposed
     return NextResponse.json({
       error: 'Unable to process request'
     }, { status: 500 })

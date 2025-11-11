@@ -55,14 +55,22 @@ model Project {
   watermarkEnabled  Boolean @default(true) // Enable/disable watermarks for this project
   watermarkText     String? // Custom watermark text (null = use default format)
 
+  // Client notification settings (per-project)
+  // Note: Approval emails are always IMMEDIATE regardless of this setting
+  clientNotificationSchedule String    @default("HOURLY") // IMMEDIATE, HOURLY, DAILY, WEEKLY
+  clientNotificationTime     String? // "09:00" for daily, "Monday 09:00" for weekly
+  clientNotificationDay      Int? // 0-6 for weekly (0 = Sunday)
+  lastClientNotificationSent DateTime?
+
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
 
-  videos         Video[]
-  comments       Comment[]
-  securityEvents SecurityEvent[]
-  analytics      VideoAnalytics[]
-  recipients     ProjectRecipient[] // Multiple email recipients
+  videos            Video[]
+  comments          Comment[]
+  securityEvents    SecurityEvent[]
+  analytics         VideoAnalytics[]
+  recipients        ProjectRecipient[] // Multiple email recipients
+  notificationQueue NotificationQueue[] // Pending notifications
 }
 
 enum ProjectStatus {
@@ -72,13 +80,14 @@ enum ProjectStatus {
 }
 
 model ProjectRecipient {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  email     String?
-  name      String?
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id                   String   @id @default(cuid())
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  email                String?
+  name                 String?
+  isPrimary            Boolean  @default(false)
+  receiveNotifications Boolean  @default(true) // Per-recipient notification toggle
+  createdAt            DateTime @default(now())
 
   @@index([projectId])
   @@index([projectId, email])
@@ -165,6 +174,35 @@ model Comment {
   @@index([userId])
 }
 
+model NotificationQueue {
+  id        String   @id @default(cuid())
+  projectId String
+  type      String // CLIENT_COMMENT, ADMIN_REPLY
+
+  // Dual tracking for admin vs client notifications
+  sentToClients Boolean  @default(false)
+  sentToAdmins  Boolean  @default(false)
+  clientSentAt  DateTime?
+  adminSentAt   DateTime?
+
+  // Retry and failure tracking
+  clientAttempts Int     @default(0) // Number of send attempts to clients
+  adminAttempts  Int     @default(0) // Number of send attempts to admins
+  clientFailed   Boolean @default(false) // Permanently failed to send to clients
+  adminFailed    Boolean @default(false) // Permanently failed to send to admins
+  lastError      String? // Last error message for debugging
+
+  data      Json // Stores: commentId, videoId, videoName, authorName, content, timestamp, isReply, etc.
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sentToClients])
+  @@index([projectId, sentToAdmins])
+  @@index([sentToAdmins, createdAt])
+  @@index([clientFailed, adminFailed])
+}
+
 model Settings {
   id String @id @default("default")
 
@@ -188,6 +226,13 @@ model Settings {
 
   // Project Behavior
   autoApproveProject Boolean @default(true) // Auto-approve project when all videos approved
+
+  // Admin notification settings (global)
+  // Note: Approval emails and manual admin notifications are always IMMEDIATE regardless of this setting
+  adminNotificationSchedule String    @default("HOURLY") // IMMEDIATE, HOURLY, DAILY, WEEKLY
+  adminNotificationTime     String? // "09:00" for daily, "Monday 09:00" for weekly
+  adminNotificationDay      Int? // 0-6 for weekly (0 = Sunday)
+  lastAdminNotificationSent DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

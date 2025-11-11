@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { Mail, Edit, Trash2, Plus, Star, Check } from 'lucide-react'
+import { Mail, Edit, Trash2, Plus, Star, Check, Bell, BellOff } from 'lucide-react'
 
 interface Recipient {
   id?: string
   email: string | null
   name: string | null
   isPrimary: boolean
+  receiveNotifications: boolean
 }
 
 interface RecipientManagerProps {
@@ -41,7 +42,7 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
         setRecipients(data.recipients || [])
       }
     } catch (error) {
-      console.error('Failed to load recipients:', error)
+      // Failed to load recipients - will show empty state
     } finally {
       setLoading(false)
     }
@@ -119,6 +120,24 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
       }
     } catch (error) {
       onError('Failed to set primary recipient')
+    }
+  }
+
+  const toggleNotifications = async (recipientId: string, currentValue: boolean) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/recipients/${recipientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiveNotifications: !currentValue }),
+      })
+
+      if (response.ok) {
+        await loadRecipients()
+      } else {
+        onError('Failed to update notification settings')
+      }
+    } catch (error) {
+      onError('Failed to update notification settings')
     }
   }
 
@@ -269,6 +288,22 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
                         title="Set as primary"
                       >
                         <Star className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {recipient.email && (
+                      <Button
+                        type="button"
+                        variant={recipient.receiveNotifications ? "ghost" : "outline"}
+                        size="sm"
+                        onClick={() => toggleNotifications(recipient.id!, recipient.receiveNotifications)}
+                        title={recipient.receiveNotifications ? "Notifications enabled" : "Notifications disabled"}
+                        className={!recipient.receiveNotifications ? "text-muted-foreground" : ""}
+                      >
+                        {recipient.receiveNotifications ? (
+                          <Bell className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <BellOff className="w-4 h-4" />
+                        )}
                       </Button>
                     )}
                     <Button

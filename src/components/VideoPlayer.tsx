@@ -115,7 +115,7 @@ export default function VideoPlayer({
           }
         }
       } catch (error) {
-        console.error('Error loading video:', error)
+        // Video load error - player will show error state
       }
     }
 

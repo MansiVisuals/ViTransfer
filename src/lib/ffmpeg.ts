@@ -83,7 +83,7 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
           codec: videoStream.codec_name,
         })
       } catch (error) {
-        reject(new Error(`Failed to parse ffprobe output: ${error}. Output was: ${stdout.substring(0, 200)}`))
+        reject(new Error('Failed to parse video metadata. The file may be corrupted or in an unsupported format.'))
       }
     })
 
@@ -222,18 +222,13 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
           onProgress(progress)
         }
       }
-
-      // Log errors and warnings
-      if (text.includes('error') || text.includes('Error') || text.includes('failed')) {
-        console.error('FFmpeg stderr:', text)
-      }
     })
 
     ffmpeg.on('close', (code) => {
       if (code === 0) {
         resolve()
       } else {
-        reject(new Error(`FFmpeg exited with code ${code}: ${stderr}`))
+        reject(new Error('Video transcoding failed. The file may be corrupted or in an unsupported format.'))
       }
     })
 
@@ -273,7 +268,7 @@ export async function generateThumbnail(
       if (code === 0) {
         resolve()
       } else {
-        reject(new Error(`FFmpeg thumbnail generation failed: ${stderr}`))
+        reject(new Error('Thumbnail generation failed. The file may be corrupted.'))
       }
     })
 

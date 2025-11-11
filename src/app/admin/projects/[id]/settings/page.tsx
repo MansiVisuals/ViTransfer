@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { PasswordInput } from '@/components/ui/password-input'
 import { ReprocessModal } from '@/components/ReprocessModal'
 import { RecipientManager } from '@/components/RecipientManager'
+import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { generateSecurePassword, generateRandomSlug, sanitizeSlug } from '@/lib/password-utils'
 import Link from 'next/link'
 import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
@@ -30,6 +31,9 @@ interface Project {
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
+  clientNotificationSchedule: string
+  clientNotificationTime: string | null
+  clientNotificationDay: number | null
 }
 
 export default function ProjectSettingsPage() {
@@ -59,6 +63,11 @@ export default function ProjectSettingsPage() {
   const [watermarkEnabled, setWatermarkEnabled] = useState(true)
   const [watermarkText, setWatermarkText] = useState('')
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
+
+  // Notification settings state
+  const [clientNotificationSchedule, setClientNotificationSchedule] = useState('HOURLY')
+  const [clientNotificationTime, setClientNotificationTime] = useState('09:00')
+  const [clientNotificationDay, setClientNotificationDay] = useState(1)
 
 
   // Track original processing settings for change detection
@@ -129,6 +138,11 @@ export default function ProjectSettingsPage() {
           setUseCustomSlug(true)
           setCustomSlugValue(data.slug)
         }
+
+        // Set notification settings
+        setClientNotificationSchedule(data.clientNotificationSchedule || 'HOURLY')
+        setClientNotificationTime(data.clientNotificationTime || '09:00')
+        setClientNotificationDay(data.clientNotificationDay ?? 1)
       } catch (err) {
         setError('Failed to load project settings')
       } finally {
@@ -183,6 +197,9 @@ export default function ProjectSettingsPage() {
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
         sharePassword: sharePassword || null,
+        clientNotificationSchedule,
+        clientNotificationTime: (clientNotificationSchedule === 'DAILY' || clientNotificationSchedule === 'WEEKLY') ? clientNotificationTime : null,
+        clientNotificationDay: clientNotificationSchedule === 'WEEKLY' ? clientNotificationDay : null,
       }
 
       // Detect changes to processing settings
@@ -460,6 +477,20 @@ export default function ProjectSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <RecipientManager projectId={projectId} onError={setError} />
+
+              {/* Client Notification Schedule Section */}
+              <div className="border-t pt-6 mt-6">
+                <ScheduleSelector
+                  schedule={clientNotificationSchedule}
+                  time={clientNotificationTime}
+                  day={clientNotificationDay}
+                  onScheduleChange={setClientNotificationSchedule}
+                  onTimeChange={setClientNotificationTime}
+                  onDayChange={setClientNotificationDay}
+                  label="Client Notification Schedule"
+                  description="Configure when clients receive summaries of your replies for this project. Note: Approval emails are always sent immediately."
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -735,6 +766,7 @@ export default function ProjectSettingsPage() {
               </div>
             </CardContent>
           </Card>
+
         </div>
 
         {/* Error notification at bottom */}

@@ -5,7 +5,7 @@ import { decrypt } from './encryption'
 /**
  * Escape HTML to prevent XSS and email injection
  */
-function escapeHtml(unsafe: string): string {
+export function escapeHtml(unsafe: string): string {
   if (!unsafe) return ''
   return unsafe
     .replace(/&/g, "&amp;")
@@ -185,13 +185,7 @@ export async function sendNewVersionEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'Studio'
 
-  const subject = `New Version Available: ${escapeHtml(projectTitle)} - ${escapeHtml(videoName)} ${escapeHtml(versionLabel)}`
-
-  const passwordNotice = isPasswordProtected
-    ? `<p style="font-size: 14px; color: #d97706; background: #fef3c7; padding: 12px; border-radius: 4px; margin: 15px 0;">
-        <strong>Note:</strong> This project is password protected. ${isPasswordProtected ? 'Check your email for the access password.' : ''}
-      </p>`
-    : ''
+  const subject = `New Version Available: ${projectTitle}`
 
   const html = `
 <!DOCTYPE html>
@@ -200,106 +194,61 @@ export async function sendNewVersionEmail({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="padding: 30px; background: #f9fafb; border-radius: 8px;">
-    <h1 style="margin: 0 0 10px 0; font-size: 24px; color: #111;">${escapeHtml(companyName)}</h1>
-    <p style="margin: 0 0 25px 0; font-size: 14px; color: #666;">New Version Available</p>
+<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 
-    <p style="margin: 0 0 20px 0;">Hi ${escapeHtml(clientName)},</p>
-
-    <p style="margin: 0 0 20px 0;">A new version is ready for review:</p>
-
-    <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0; border-radius: 6px;">
-      <p style="margin: 0 0 10px 0; font-size: 18px; font-weight: 600; color: #111;">${escapeHtml(projectTitle)}</p>
-      <p style="margin: 5px 0; color: #666;">Video: ${escapeHtml(videoName)}</p>
-      <p style="margin: 5px 0; color: #666;">Version: ${escapeHtml(versionLabel)}</p>
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 32px 24px; text-align: center;">
+      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">New Version Available</div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">Ready for your review</div>
     </div>
 
-    ${passwordNotice}
+    <!-- Content -->
+    <div style="padding: 32px 24px;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: #111827; line-height: 1.5;">
+        Hi <strong>${escapeHtml(clientName)}</strong>,
+      </p>
 
-    <div style="margin: 25px 0;">
-      <a href="${escapeHtml(shareUrl)}" style="display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 500;">
-        View Project
-      </a>
-    </div>
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: #374151; line-height: 1.6;">
+        A new version of your project is ready for review. Please take a moment to watch it and let us know what you think.
+      </p>
 
-    <p style="font-size: 14px; color: #666; margin: 25px 0 0 0;">
-      Questions? Reply to this email.
-    </p>
-  </div>
-</body>
-</html>
-  `
+      <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Project Details</div>
+        <div style="font-size: 15px; color: #1e3a8a; padding: 4px 0;">
+          <strong>${escapeHtml(projectTitle)}</strong>
+        </div>
+        <div style="font-size: 14px; color: #3b82f6; padding: 4px 0;">
+          ${escapeHtml(videoName)} <span style="color: #60a5fa;">${escapeHtml(versionLabel)}</span>
+        </div>
+      </div>
 
-  return sendEmail({
-    to: clientEmail,
-    subject,
-    html,
-  })
-}
+      ${isPasswordProtected ? `
+        <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 14px; margin-bottom: 24px;">
+          <div style="font-size: 14px; color: #92400e; line-height: 1.5;">
+            <strong>Password Protected:</strong> Use the password previously sent to you to access this project.
+          </div>
+        </div>
+      ` : ''}
 
-/**
- * Email template: Reply to comment
- */
-export async function sendReplyNotificationEmail({
-  clientEmail,
-  clientName,
-  projectTitle,
-  commentContent,
-  replyContent,
-  shareUrl,
-}: {
-  clientEmail: string
-  clientName: string
-  projectTitle: string
-  commentContent: string
-  replyContent: string
-  shareUrl: string
-}) {
-  const settings = await getEmailSettings()
-  const companyName = settings.companyName || 'Studio'
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${escapeHtml(shareUrl)}" style="display: inline-block; background: #3b82f6; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 15px; font-weight: 600; box-shadow: 0 2px 4px rgba(59,130,246,0.2);">
+          View Project
+        </a>
+      </div>
 
-  const subject = `New Reply: ${escapeHtml(projectTitle)}`
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="padding: 30px; background: #f9fafb; border-radius: 8px;">
-    <h1 style="margin: 0 0 10px 0; font-size: 24px; color: #111;">${escapeHtml(companyName)}</h1>
-    <p style="margin: 0 0 25px 0; font-size: 14px; color: #666;">New Reply to Your Comment</p>
-
-    <p style="margin: 0 0 20px 0;">Hi ${escapeHtml(clientName)},</p>
-
-    <p style="margin: 0 0 20px 0;">We replied to your comment on <strong>${escapeHtml(projectTitle)}</strong>:</p>
-
-    <div style="background: white; border: 1px solid #e5e7eb; padding: 15px; margin: 15px 0; border-radius: 6px;">
-      <p style="margin: 0 0 8px 0; font-size: 12px; color: #999;">Your comment:</p>
-      <p style="margin: 0; font-size: 14px; color: #666; font-style: italic;">
-        ${escapeHtml(commentContent).replace(/\n/g, '<br>')}
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: #6b7280; line-height: 1.5;">
+        Questions or feedback? Simply reply to this email and we'll get back to you.
       </p>
     </div>
 
-    <div style="background: #eff6ff; border-left: 3px solid #667eea; padding: 15px; margin: 15px 0; border-radius: 6px;">
-      <p style="margin: 0 0 8px 0; font-size: 12px; color: #667eea; font-weight: 600;">Our reply:</p>
-      <p style="margin: 0; font-size: 14px; color: #111;">
-        ${escapeHtml(replyContent).replace(/\n/g, '<br>')}
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+        ${escapeHtml(companyName)}
       </p>
     </div>
 
-    <div style="margin: 25px 0;">
-      <a href="${escapeHtml(shareUrl)}" style="display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 500;">
-        View Conversation
-      </a>
-    </div>
-
-    <p style="font-size: 12px; color: #999; margin: 25px 0 0 0;">
-      You received this because you opted in to email notifications.
-    </p>
   </div>
 </body>
 </html>
@@ -334,72 +283,69 @@ export async function sendProjectApprovedEmail({
   const companyName = settings.companyName || 'Studio'
 
   const subject = isComplete
-    ? `Project Approved: ${projectTitle} - Final Version Ready`
-    : `Video Approved: ${projectTitle} - ${approvedVideos[0]?.name || 'New Video'}`
-  
+    ? `${projectTitle} - Project Approved and Ready for Download`
+    : `${projectTitle} - Video Approved`
+
+  const statusTitle = isComplete ? 'Project Approved' : 'Video Approved'
+  const statusMessage = isComplete
+    ? 'All videos have been approved and are ready for download'
+    : `${approvedVideos[0]?.name || 'Your video'} has been approved`
+
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
-    <h1 style="margin: 0; font-size: 28px;">${companyName}</h1>
-    <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Project Approved!</p>
-  </div>
-  
-  <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-    <p style="font-size: 18px; margin-top: 0;">Hi ${clientName},</p>
-    
-    <p style="font-size: 16px;">Congratulations! Your project has been marked as approved:</p>
-    
-    <div style="background: white; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px;">
-      <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px;">${projectTitle}</h2>
-      <p style="margin: 0; font-size: 16px; color: #666;">
-        Status: <strong style="color: #10b981;">Approved ✓</strong>
-      </p>
-      ${approvedVideos.length > 0 ? `
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-          <p style="margin: 0 0 8px 0; font-size: 14px; color: #666; font-weight: 600;">Approved Videos:</p>
-          <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #666;">
-            ${approvedVideos.map(v => `<li style="margin: 3px 0;">${escapeHtml(v.name)}</li>`).join('')}
-          </ul>
-        </div>
-      ` : ''}
+<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px 24px; text-align: center;">
+      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">${statusTitle}</div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">${statusMessage}</div>
     </div>
 
-    <p style="font-size: 16px;">${isComplete ? 'All videos are now approved and' : 'The approved video is'} ready to download without watermarks!</p>
-    
-    <div style="background: #d1fae5; border: 2px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px; text-align: center;">
-      <p style="margin: 0 0 10px 0; font-size: 14px; color: #065f46; font-weight: 600;">
-        ✨ Final Version Features:
+    <!-- Content -->
+    <div style="padding: 32px 24px;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: #111827; line-height: 1.5;">
+        Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
-      <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px; color: #065f46;">
-        <li style="margin: 5px 0;">✓ No watermarks</li>
-        <li style="margin: 5px 0;">✓ Full resolution</li>
-        <li style="margin: 5px 0;">✓ Ready for production</li>
-      </ul>
+
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: #374151; line-height: 1.6;">
+        Great news! Your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.
+      </p>
+
+      ${approvedVideos.length > 0 ? `
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+          <div style="font-size: 13px; font-weight: 600; color: #065f46; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Approved Videos</div>
+          ${approvedVideos.map(v => `
+            <div style="font-size: 15px; color: #166534; padding: 4px 0;">
+              <span style="display: inline-block; width: 6px; height: 6px; background: #10b981; border-radius: 50%; margin-right: 8px;"></span>${escapeHtml(v.name)}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${escapeHtml(shareUrl)}" style="display: inline-block; background: #10b981; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 15px; font-weight: 600; box-shadow: 0 2px 4px rgba(16,185,129,0.2);">
+          Download Now
+        </a>
+      </div>
+
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: #6b7280; line-height: 1.5;">
+        Questions or need changes? Simply reply to this email and we'll be happy to help.
+      </p>
     </div>
-    
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${shareUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 5px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
-        Download Final Version
-      </a>
+
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+        ${escapeHtml(companyName)}
+      </p>
     </div>
-    
-    <p style="font-size: 14px; color: #666; text-align: center; margin-top: 30px;">
-      Thank you for working with us! We hope you're happy with the final result.
-    </p>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="font-size: 12px; color: #999; margin-bottom: 0;">
-      This is an automated message from ${companyName}. If you have any questions, please reply to this email.
-    </p>
+
   </div>
 </body>
 </html>
@@ -413,96 +359,208 @@ export async function sendProjectApprovedEmail({
 }
 
 /**
- * Email template: New client feedback (to admin)
+ * Email template: Single comment notification (to clients)
  */
-export async function sendAdminNewFeedbackEmail({
-  adminEmails,
+export async function sendCommentNotificationEmail({
+  clientEmail,
   clientName,
   projectTitle,
+  videoName,
+  versionLabel,
+  authorName,
   commentContent,
   timestamp,
-  versionLabel,
+  shareUrl,
 }: {
-  adminEmails: string[]
+  clientEmail: string
   clientName: string
   projectTitle: string
+  videoName: string
+  versionLabel: string
+  authorName: string
   commentContent: string
-  timestamp?: number
-  versionLabel?: string
+  timestamp?: number | null
+  shareUrl: string
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'Studio'
-  const appDomain = settings.appDomain
 
-  if (!appDomain) {
-    throw new Error('App domain not configured. Please configure domain in Settings to enable email notifications.')
-  }
+  const subject = `New Comment: ${projectTitle}`
 
-  const subject = `New Client Feedback: ${escapeHtml(projectTitle)}`
-  
   const timestampText = timestamp !== null && timestamp !== undefined
-    ? `<p style="margin: 5px 0; font-size: 14px; color: #f59e0b;">
-        <strong>⏱ Timestamp:</strong> ${escapeHtml(Math.floor(timestamp / 60) + ':' + Math.floor(timestamp % 60).toString().padStart(2, '0'))}
-       </p>`
+    ? `at ${Math.floor(timestamp / 60)}:${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
     : ''
 
-  const versionText = versionLabel 
-    ? `<p style="margin: 5px 0; font-size: 14px; color: #666;">
-        <strong>Version:</strong> ${escapeHtml(versionLabel)}
-       </p>`
-    : ''
-  
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(subject)}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <h1 style="margin: 0; font-size: 28px;">${escapeHtml(companyName)}</h1>
-    <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">💬 New Client Feedback</p>
+<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 32px 24px; text-align: center;">
+      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">New Comment</div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">${escapeHtml(companyName)} left feedback on your video</div>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 32px 24px;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: #111827; line-height: 1.5;">
+        Hi <strong>${escapeHtml(clientName)}</strong>,
+      </p>
+
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: #374151; line-height: 1.6;">
+        We've reviewed your video and left some feedback for you.
+      </p>
+
+      <div style="background: #f9fafb; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Project</div>
+        <div style="font-size: 15px; color: #111827; margin-bottom: 8px;">
+          <strong>${escapeHtml(projectTitle)}</strong>
+        </div>
+        <div style="font-size: 14px; color: #6b7280;">
+          ${escapeHtml(videoName)} <span style="color: #9ca3af;">${escapeHtml(versionLabel)}</span>${timestampText ? ` <span style="color: #9ca3af;">• ${timestampText}</span>` : ''}
+        </div>
+      </div>
+
+      <div style="background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 8px;">${escapeHtml(authorName)}</div>
+        <div style="font-size: 15px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
+      </div>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${escapeHtml(shareUrl)}" style="display: inline-block; background: #3b82f6; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 15px; font-weight: 600; box-shadow: 0 2px 4px rgba(59,130,246,0.2);">
+          View and Reply
+        </a>
+      </div>
+
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: #6b7280; line-height: 1.5;">
+        Questions? Simply reply to this email.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+        ${escapeHtml(companyName)}
+      </p>
+    </div>
+
   </div>
-  
-  <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-    <p style="font-size: 18px; margin-top: 0;">New feedback received!</p>
-    
-    <div style="background: white; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 5px;">
-      <h2 style="margin: 0 0 10px 0; color: #f59e0b; font-size: 20px;">${escapeHtml(projectTitle)}</h2>
-      <p style="margin: 5px 0; font-size: 14px; color: #666;">
-        <strong>From:</strong> ${escapeHtml(clientName)}
+</body>
+</html>
+  `
+
+  return sendEmail({
+    to: clientEmail,
+    subject,
+    html,
+  })
+}
+
+/**
+ * Email template: Single comment notification (to admins)
+ */
+export async function sendAdminCommentNotificationEmail({
+  adminEmails,
+  clientName,
+  clientEmail,
+  projectTitle,
+  videoName,
+  versionLabel,
+  commentContent,
+  timestamp,
+  shareUrl,
+}: {
+  adminEmails: string[]
+  clientName: string
+  clientEmail?: string | null
+  projectTitle: string
+  videoName: string
+  versionLabel: string
+  commentContent: string
+  timestamp?: number | null
+  shareUrl: string
+}) {
+  const settings = await getEmailSettings()
+  const companyName = settings.companyName || 'Studio'
+
+  const subject = `Client Feedback: ${projectTitle}`
+
+  const timestampText = timestamp !== null && timestamp !== undefined
+    ? `at ${Math.floor(timestamp / 60)}:${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
+    : ''
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 32px 24px; text-align: center;">
+      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">New Client Feedback</div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">Your client left a comment</div>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 32px 24px;">
+      <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Client</div>
+        <div style="font-size: 16px; color: #78350f; margin-bottom: 4px;">
+          <strong>${escapeHtml(clientName)}</strong>
+        </div>
+        ${clientEmail ? `
+          <div style="font-size: 14px; color: #b45309;">
+            ${escapeHtml(clientEmail)}
+          </div>
+        ` : ''}
+      </div>
+
+      <div style="background: #f9fafb; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Project</div>
+        <div style="font-size: 15px; color: #111827; margin-bottom: 8px;">
+          <strong>${escapeHtml(projectTitle)}</strong>
+        </div>
+        <div style="font-size: 14px; color: #6b7280;">
+          ${escapeHtml(videoName)} <span style="color: #9ca3af;">${escapeHtml(versionLabel)}</span>${timestampText ? ` <span style="color: #9ca3af;">• ${timestampText}</span>` : ''}
+        </div>
+      </div>
+
+      <div style="background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 600; color: #b45309; margin-bottom: 8px;">Comment</div>
+        <div style="font-size: 15px; color: #78350f; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
+      </div>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${escapeHtml(shareUrl)}" style="display: inline-block; background: #f59e0b; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 15px; font-weight: 600; box-shadow: 0 2px 4px rgba(245,158,11,0.2);">
+          View in Admin Panel
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+        Automated notification from ${escapeHtml(companyName)}
       </p>
-      ${versionText}
-      ${timestampText}
     </div>
-    
-    <div style="background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 5px;">
-      <p style="margin: 0 0 5px 0; font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Client's Feedback:</p>
-      <p style="margin: 0; font-size: 15px; color: #78350f; white-space: pre-wrap;">
-        ${escapeHtml(commentContent).replace(/\n/g, '<br>')}
-      </p>
-    </div>
-    
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${escapeHtml(appDomain)}/admin" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 5px; font-size: 16px; font-weight: 600;">
-        View in Admin Panel
-      </a>
-    </div>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="font-size: 12px; color: #999; margin-bottom: 0;">
-      This is an automated notification from ${companyName}.
-    </p>
+
   </div>
 </body>
 </html>
   `
 
   // Send to all admin emails
-  const promises = adminEmails.map(email => 
+  const promises = adminEmails.map(email =>
     sendEmail({
       to: email,
       subject,
@@ -512,10 +570,10 @@ export async function sendAdminNewFeedbackEmail({
 
   const results = await Promise.allSettled(promises)
   const successCount = results.filter(r => r.status === 'fulfilled').length
-  
-  return { 
-    success: successCount > 0, 
-    message: `Sent to ${successCount}/${adminEmails.length} admins` 
+
+  return {
+    success: successCount > 0,
+    message: `Sent to ${successCount}/${adminEmails.length} admins`
   }
 }
 
@@ -528,12 +586,14 @@ export async function sendAdminProjectApprovedEmail({
   projectTitle,
   approvedVideos = [],
   isComplete = true,
+  isApproval = true,
 }: {
   adminEmails: string[]
   clientName: string
   projectTitle: string
   approvedVideos?: Array<{ name: string; id: string }>
   isComplete?: boolean
+  isApproval?: boolean
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'Studio'
@@ -543,70 +603,83 @@ export async function sendAdminProjectApprovedEmail({
     throw new Error('App domain not configured. Please configure domain in Settings to enable email notifications.')
   }
 
+  // Determine subject and title based on approval/unapproval and complete/partial
+  const action = isApproval ? 'Approved' : 'Unapproved'
   const subject = isComplete
-    ? `Project Approved by Client: ${projectTitle}`
-    : `Video Approved by Client: ${projectTitle} - ${approvedVideos[0]?.name || 'New Video'}`
-  
+    ? `Client ${action} Project: ${projectTitle}`
+    : `Client ${action} Video: ${projectTitle} - ${approvedVideos[0]?.name || 'Video'}`
+
+  const statusTitle = isComplete ? `Project ${action}` : `Video ${action}`
+  const statusMessage = isComplete
+    ? `The complete project has been ${isApproval ? 'approved' : 'unapproved'} by the client`
+    : `${approvedVideos[0]?.name || 'A video'} has been ${isApproval ? 'approved' : 'unapproved'} by the client`
+
+  // Color scheme based on approval/unapproval
+  const headerGradient = isApproval
+    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'  // Green for approval
+    : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'  // Orange for unapproval
+  const boxBg = isApproval ? '#f0fdf4' : '#fef3c7'
+  const boxBorder = isApproval ? '#86efac' : '#fcd34d'
+  const textColor = isApproval ? '#065f46' : '#78350f'
+  const itemColor = isApproval ? '#166534' : '#92400e'
+  const bulletColor = isApproval ? '#10b981' : '#f59e0b'
+  const buttonBg = isApproval ? '#10b981' : '#f59e0b'
+  const buttonShadow = isApproval ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'
+
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
-    <h1 style="margin: 0; font-size: 28px;">${companyName}</h1>
-    <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Client Approved Project!</p>
-  </div>
-  
-  <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-    <p style="font-size: 18px; margin-top: 0;">Great news! A project has been approved:</p>
-    
-    <div style="background: white; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px;">
-      <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px;">${projectTitle}</h2>
-      <p style="margin: 5px 0; font-size: 14px; color: #666;">
-        <strong>Client:</strong> ${clientName}
+<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background: ${headerGradient}; padding: 32px 24px; text-align: center;">
+      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">${statusTitle}</div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">${statusMessage}</div>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 32px 24px;">
+      <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151; line-height: 1.6;">
+        <strong>${escapeHtml(clientName)}</strong> has ${isApproval ? 'approved' : 'unapproved'} ${isComplete ? 'the project' : 'a video in'} <strong>${escapeHtml(projectTitle)}</strong>.
       </p>
+
       ${approvedVideos.length > 0 ? `
-        <div style="margin-top: 10px;">
-          <p style="margin: 5px 0; font-size: 14px; color: #666; font-weight: 600;">Approved Videos:</p>
-          <ul style="margin: 5px 0; padding-left: 20px; font-size: 14px; color: #666;">
-            ${approvedVideos.map(v => `<li style="margin: 2px 0;">${escapeHtml(v.name)}</li>`).join('')}
-          </ul>
+        <div style="background: ${boxBg}; border: 1px solid ${boxBorder}; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+          <div style="font-size: 13px; font-weight: 600; color: ${textColor}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${isApproval ? 'Approved' : 'Unapproved'} Videos</div>
+          ${approvedVideos.map(v => `
+            <div style="font-size: 15px; color: ${itemColor}; padding: 4px 0;">
+              <span style="display: inline-block; width: 6px; height: 6px; background: ${bulletColor}; border-radius: 50%; margin-right: 8px;"></span>${escapeHtml(v.name)}
+            </div>
+          `).join('')}
         </div>
       ` : ''}
-      <p style="margin: 10px 0 5px 0; font-size: 14px; color: #10b981; font-weight: 600;">
-        ✓ Status: ${isComplete ? 'All Videos Approved' : 'Video Approved'}
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${escapeHtml(appDomain)}/admin" style="display: inline-block; background: ${buttonBg}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 15px; font-weight: 600; box-shadow: 0 2px 4px ${buttonShadow};">
+          View in Admin Panel
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+        Automated notification from ${escapeHtml(companyName)}
       </p>
     </div>
-    
-    <div style="background: #d1fae5; border: 2px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px; text-align: center;">
-      <p style="margin: 0; font-size: 14px; color: #065f46;">
-        The final version without watermarks is now available for the client to download.
-      </p>
-    </div>
-    
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${appDomain}/admin" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 5px; font-size: 16px; font-weight: 600;">
-        View in Admin Panel
-      </a>
-    </div>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="font-size: 12px; color: #999; margin-bottom: 0;">
-      This is an automated notification from ${companyName}.
-    </p>
+
   </div>
 </body>
 </html>
   `
 
   // Send to all admin emails
-  const promises = adminEmails.map(email => 
+  const promises = adminEmails.map(email =>
     sendEmail({
       to: email,
       subject,
@@ -616,10 +689,10 @@ export async function sendAdminProjectApprovedEmail({
 
   const results = await Promise.allSettled(promises)
   const successCount = results.filter(r => r.status === 'fulfilled').length
-  
-  return { 
-    success: successCount > 0, 
-    message: `Sent to ${successCount}/${adminEmails.length} admins` 
+
+  return {
+    success: successCount > 0,
+    message: `Sent to ${successCount}/${adminEmails.length} admins`
   }
 }
 

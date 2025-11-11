@@ -35,19 +35,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error: any) {
-    console.error('Test email error:', error)
-    
     let errorMessage = 'Failed to send test email'
-    
-    // Provide more specific error messages
+
+    // Provide generic error messages without exposing config details
     if (error.message?.includes('SMTP settings are not configured')) {
       errorMessage = 'SMTP settings are not configured. Please configure email settings first.'
     } else if (error.code === 'EAUTH') {
-      errorMessage = 'Authentication failed. Please check your SMTP username and password.'
+      errorMessage = 'Authentication failed. Please check your SMTP credentials.'
     } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
-      errorMessage = 'Could not connect to SMTP server. Please check server address and port.'
-    } else if (error.message) {
-      errorMessage = error.message
+      errorMessage = 'Could not connect to SMTP server. Please check your settings.'
     }
 
     return NextResponse.json(

@@ -76,7 +76,7 @@ export default function SessionMonitor() {
             router.push('/api/auth/logout')
           }
         } catch (error) {
-          console.error('[SESSION] Refresh error:', error)
+          // Session refresh failed - will retry
         } finally {
           setRefreshing(false)
         }

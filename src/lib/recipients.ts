@@ -5,6 +5,7 @@ export interface Recipient {
   email: string | null
   name: string | null
   isPrimary: boolean
+  receiveNotifications: boolean
 }
 
 /**
@@ -23,7 +24,8 @@ export async function getProjectRecipients(projectId: string): Promise<Recipient
     id: r.id,
     email: r.email,
     name: r.name,
-    isPrimary: r.isPrimary
+    isPrimary: r.isPrimary,
+    receiveNotifications: r.receiveNotifications
   }))
 }
 
@@ -71,7 +73,8 @@ export async function addRecipient(
     id: recipient.id,
     email: recipient.email,
     name: recipient.name,
-    isPrimary: recipient.isPrimary
+    isPrimary: recipient.isPrimary,
+    receiveNotifications: recipient.receiveNotifications
   }
 }
 
@@ -80,7 +83,7 @@ export async function addRecipient(
  */
 export async function updateRecipient(
   recipientId: string,
-  data: { name?: string | null; email?: string | null; isPrimary?: boolean }
+  data: { name?: string | null; email?: string | null; isPrimary?: boolean; receiveNotifications?: boolean }
 ): Promise<Recipient> {
   // If setting as primary, get projectId and unset other primaries
   if (data.isPrimary) {
@@ -110,7 +113,8 @@ export async function updateRecipient(
     id: recipient.id,
     email: recipient.email,
     name: recipient.name,
-    isPrimary: recipient.isPrimary
+    isPrimary: recipient.isPrimary,
+    receiveNotifications: recipient.receiveNotifications
   }
 }
 

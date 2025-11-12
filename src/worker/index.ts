@@ -9,6 +9,9 @@ import path from 'path'
 import os from 'os'
 import { pipeline } from 'stream/promises'
 
+// Debug mode - outputs verbose worker logs
+const DEBUG = true // Always enabled for main-debug branch
+
 const TEMP_DIR = '/tmp/vitransfer'
 
 // Ensure temp directory exists
@@ -46,7 +49,13 @@ async function cleanupOldTempFiles() {
 async function processVideo(job: Job<VideoProcessingJob>) {
   const { videoId, originalStoragePath, projectId } = job.data
 
-  console.log(`Processing video ${videoId}`)
+  console.log(`[WORKER] Processing video ${videoId}`)
+
+  if (DEBUG) {
+    console.log('[WORKER DEBUG] Job data:', JSON.stringify(job.data, null, 2))
+    console.log('[WORKER DEBUG] Job ID:', job.id)
+    console.log('[WORKER DEBUG] Job timestamp:', new Date(job.timestamp).toISOString())
+  }
 
   // Declare temp paths outside try block for cleanup in catch
   let tempInputPath: string | undefined
@@ -55,17 +64,33 @@ async function processVideo(job: Job<VideoProcessingJob>) {
 
   try {
     // Update status to processing
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Updating video status to PROCESSING...')
+    }
+
     await prisma.video.update({
       where: { id: videoId },
       data: { status: 'PROCESSING', processingProgress: 0 },
     })
 
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Database updated to PROCESSING status')
+    }
+
     // Download original file to temp location
     tempInputPath = path.join(TEMP_DIR, `${videoId}-original`)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Downloading original file from:', originalStoragePath)
+      console.log('[WORKER DEBUG] Temp input path:', tempInputPath)
+    }
+
+    const downloadStart = Date.now()
     const downloadStream = await downloadFile(originalStoragePath)
     await pipeline(downloadStream, fs.createWriteStream(tempInputPath))
+    const downloadTime = Date.now() - downloadStart
 
-    console.log(`Downloaded original file for video ${videoId}`)
+    console.log(`[WORKER] Downloaded original file for video ${videoId} in ${(downloadTime / 1000).toFixed(2)}s`)
 
     // Verify file exists and has content
     const stats = fs.statSync(tempInputPath)
@@ -73,13 +98,33 @@ async function processVideo(job: Job<VideoProcessingJob>) {
       throw new Error('Downloaded file is empty')
     }
 
-    console.log(`Downloaded file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`)
+    console.log(`[WORKER] Downloaded file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] File verification passed')
+      console.log('[WORKER DEBUG] Download speed:', (stats.size / 1024 / 1024 / (downloadTime / 1000)).toFixed(2), 'MB/s')
+    }
 
     // Get video metadata
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Getting video metadata...')
+    }
+
+    const metadataStart = Date.now()
     const metadata = await getVideoMetadata(tempInputPath)
-    console.log(`Video metadata:`, metadata)
+    const metadataTime = Date.now() - metadataStart
+
+    console.log(`[WORKER] Video metadata:`, metadata)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Metadata extraction took:', (metadataTime / 1000).toFixed(2), 's')
+    }
 
     // Get project and video details for watermark and settings
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Fetching project and video details...')
+    }
+
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: {
@@ -95,16 +140,30 @@ async function processVideo(job: Job<VideoProcessingJob>) {
       select: { versionLabel: true },
     })
 
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Project settings:', {
+        title: project?.title,
+        previewResolution: project?.previewResolution,
+        watermarkEnabled: project?.watermarkEnabled,
+        watermarkText: project?.watermarkText
+      })
+      console.log('[WORKER DEBUG] Video version label:', video?.versionLabel)
+    }
+
     // Use custom watermark text or default format (only if watermarks are enabled)
     const watermarkText = project?.watermarkEnabled
       ? (project.watermarkText || `PREVIEW-${project.title || 'PROJECT'}-${video?.versionLabel || 'v1'}`)
       : undefined
 
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Final watermark text:', watermarkText || '(no watermark)')
+    }
+
     // Detect if video is vertical (portrait) or horizontal (landscape)
     const isVertical = metadata.height > metadata.width
     const aspectRatio = metadata.width / metadata.height
 
-    console.log(`Video orientation: ${isVertical ? 'vertical' : 'horizontal'} (${metadata.width}x${metadata.height}, ratio: ${aspectRatio.toFixed(2)})`)
+    console.log(`[WORKER] Video orientation: ${isVertical ? 'vertical' : 'horizontal'} (${metadata.width}x${metadata.height}, ratio: ${aspectRatio.toFixed(2)})`)
 
     // Calculate output dimensions based on resolution setting and orientation
     let outputWidth: number
@@ -137,10 +196,27 @@ async function processVideo(job: Job<VideoProcessingJob>) {
       }
     }
 
-    console.log(`Output resolution: ${outputWidth}x${outputHeight}`)
+    console.log(`[WORKER] Output resolution: ${outputWidth}x${outputHeight}`)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Resolution details:', {
+        setting: resolution,
+        isVertical,
+        inputDimensions: `${metadata.width}x${metadata.height}`,
+        outputDimensions: `${outputWidth}x${outputHeight}`,
+        aspectRatio
+      })
+    }
 
     // Generate preview with watermark
     tempPreviewPath = path.join(TEMP_DIR, `${videoId}-preview.mp4`)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Starting video transcoding...')
+      console.log('[WORKER DEBUG] Temp preview path:', tempPreviewPath)
+    }
+
+    const transcodeStart = Date.now()
     await transcodeVideo({
       inputPath: tempInputPath,
       outputPath: tempPreviewPath,
@@ -148,40 +224,83 @@ async function processVideo(job: Job<VideoProcessingJob>) {
       height: outputHeight,
       watermarkText,
       onProgress: async (progress) => {
+        if (DEBUG) {
+          console.log(`[WORKER DEBUG] Transcode progress: ${(progress * 100).toFixed(1)}%`)
+        }
         await prisma.video.update({
           where: { id: videoId },
           data: { processingProgress: progress * 0.8 },
         })
       },
     })
+    const transcodeTime = Date.now() - transcodeStart
 
-    console.log(`Generated ${resolution} preview for video ${videoId}`)
+    console.log(`[WORKER] Generated ${resolution} preview for video ${videoId} in ${(transcodeTime / 1000).toFixed(2)}s`)
+
+    if (DEBUG) {
+      const transcodeStats = fs.statSync(tempPreviewPath)
+      console.log('[WORKER DEBUG] Transcoded file size:', (transcodeStats.size / 1024 / 1024).toFixed(2), 'MB')
+      console.log('[WORKER DEBUG] Size reduction:', ((1 - transcodeStats.size / stats.size) * 100).toFixed(1), '%')
+    }
 
     // Upload preview
     const previewPath = `projects/${projectId}/videos/${videoId}/preview-${resolution}.mp4`
     const statsPreview = fs.statSync(tempPreviewPath)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Uploading preview to:', previewPath)
+      console.log('[WORKER DEBUG] Preview file size:', (statsPreview.size / 1024 / 1024).toFixed(2), 'MB')
+    }
+
+    const uploadStart = Date.now()
     await uploadFile(
       previewPath,
       fs.createReadStream(tempPreviewPath),
       statsPreview.size,
       'video/mp4'
     )
+    const uploadTime = Date.now() - uploadStart
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Preview uploaded in:', (uploadTime / 1000).toFixed(2), 's')
+      console.log('[WORKER DEBUG] Upload speed:', (statsPreview.size / 1024 / 1024 / (uploadTime / 1000)).toFixed(2), 'MB/s')
+    }
 
     // Generate thumbnail
     tempThumbnailPath = path.join(TEMP_DIR, `${videoId}-thumb.jpg`)
-    await generateThumbnail(tempInputPath, tempThumbnailPath, 10)
 
-    console.log(`Generated thumbnail for video ${videoId}`)
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Generating thumbnail...')
+      console.log('[WORKER DEBUG] Temp thumbnail path:', tempThumbnailPath)
+    }
+
+    const thumbStart = Date.now()
+    await generateThumbnail(tempInputPath, tempThumbnailPath, 10)
+    const thumbTime = Date.now() - thumbStart
+
+    console.log(`[WORKER] Generated thumbnail for video ${videoId} in ${(thumbTime / 1000).toFixed(2)}s`)
 
     // Upload thumbnail
     const thumbnailPath = `projects/${projectId}/videos/${videoId}/thumbnail.jpg`
     const statsThumbnail = fs.statSync(tempThumbnailPath)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Uploading thumbnail to:', thumbnailPath)
+      console.log('[WORKER DEBUG] Thumbnail file size:', (statsThumbnail.size / 1024).toFixed(2), 'KB')
+    }
+
+    const thumbUploadStart = Date.now()
     await uploadFile(
       thumbnailPath,
       fs.createReadStream(tempThumbnailPath),
       statsThumbnail.size,
       'image/jpeg'
     )
+    const thumbUploadTime = Date.now() - thumbUploadStart
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Thumbnail uploaded in:', (thumbUploadTime / 1000).toFixed(2), 's')
+    }
 
     // Update video record - store preview in appropriate field based on resolution
     const updateData: any = {
@@ -202,47 +321,92 @@ async function processVideo(job: Job<VideoProcessingJob>) {
       updateData.preview1080Path = previewPath
     }
 
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Updating database with final video data...')
+      console.log('[WORKER DEBUG] Update data:', JSON.stringify(updateData, null, 2))
+    }
+
     await prisma.video.update({
       where: { id: videoId },
       data: updateData,
     })
 
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Database updated to READY status')
+    }
+
     // Cleanup temp files with proper async error handling
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Starting temp file cleanup...')
+    }
+
     const cleanupFiles = [tempInputPath, tempPreviewPath, tempThumbnailPath]
     for (const file of cleanupFiles) {
       try {
         if (fs.existsSync(file)) {
+          const fileStats = fs.statSync(file)
           await fs.promises.unlink(file)
-          console.log(`Cleaned up temp file: ${path.basename(file)}`)
+          console.log(`[WORKER] Cleaned up temp file: ${path.basename(file)}`)
+          if (DEBUG) {
+            console.log('[WORKER DEBUG] Freed disk space:', (fileStats.size / 1024 / 1024).toFixed(2), 'MB')
+          }
         }
       } catch (cleanupError) {
-        console.error(`Failed to cleanup temp file ${path.basename(file)}:`, cleanupError)
+        console.error(`[WORKER ERROR] Failed to cleanup temp file ${path.basename(file)}:`, cleanupError)
         // Continue cleanup - don't let one failure stop the others
       }
     }
 
-    console.log(`Successfully processed video ${videoId}`)
+    const totalTime = Date.now() - downloadStart
+    console.log(`[WORKER] Successfully processed video ${videoId} in ${(totalTime / 1000).toFixed(2)}s`)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Processing breakdown:')
+      console.log('[WORKER DEBUG]   - Download:', (downloadTime / 1000).toFixed(2), 's')
+      console.log('[WORKER DEBUG]   - Metadata:', (metadataTime / 1000).toFixed(2), 's')
+      console.log('[WORKER DEBUG]   - Transcode:', (transcodeTime / 1000).toFixed(2), 's')
+      console.log('[WORKER DEBUG]   - Thumbnail:', (thumbTime / 1000).toFixed(2), 's')
+      console.log('[WORKER DEBUG]   - Upload:', ((uploadTime + thumbUploadTime) / 1000).toFixed(2), 's')
+    }
   } catch (error) {
-    console.error(`Error processing video ${videoId}:`, error)
+    console.error(`[WORKER ERROR] Error processing video ${videoId}:`, error)
+
+    if (DEBUG) {
+      console.error('[WORKER DEBUG] Full error stack:', error instanceof Error ? error.stack : error)
+    }
 
     // Cleanup temp files even on error
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Cleaning up temp files after error...')
+    }
+
     const cleanupFiles = [tempInputPath, tempPreviewPath, tempThumbnailPath].filter((f): f is string => !!f)
     for (const file of cleanupFiles) {
       try {
         if (fs.existsSync(file)) {
           await fs.promises.unlink(file)
+          if (DEBUG) {
+            console.log('[WORKER DEBUG] Cleaned up:', path.basename(file))
+          }
         }
       } catch (cleanupError) {
-        console.error(`Failed to cleanup temp file after error:`, cleanupError)
+        console.error(`[WORKER ERROR] Failed to cleanup temp file after error:`, cleanupError)
       }
     }
 
     // Update video with error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Updating database with error status...')
+      console.log('[WORKER DEBUG] Error message:', errorMessage)
+    }
+
     await prisma.video.update({
       where: { id: videoId },
       data: {
         status: 'ERROR',
-        processingError: error instanceof Error ? error.message : 'Unknown error',
+        processingError: errorMessage,
       },
     })
 
@@ -251,10 +415,29 @@ async function processVideo(job: Job<VideoProcessingJob>) {
 }
 
 async function main() {
-  console.log('Initializing video processing worker...')
+  console.log('[WORKER] Initializing video processing worker...')
+
+  if (DEBUG) {
+    console.log('[WORKER DEBUG] Debug mode is ENABLED')
+    console.log('[WORKER DEBUG] Node version:', process.version)
+    console.log('[WORKER DEBUG] Platform:', process.platform)
+    console.log('[WORKER DEBUG] Architecture:', process.arch)
+    console.log('[WORKER DEBUG] Memory:', {
+      total: (os.totalmem() / 1024 / 1024 / 1024).toFixed(2) + ' GB',
+      free: (os.freemem() / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+    })
+  }
 
   // Initialize storage
+  if (DEBUG) {
+    console.log('[WORKER DEBUG] Initializing storage...')
+  }
+
   await initStorage()
+
+  if (DEBUG) {
+    console.log('[WORKER DEBUG] Storage initialized')
+  }
 
   // Calculate optimal concurrency based on available CPU cores
   // - 1-2 cores: 1 video at a time (low-end systems)
@@ -271,7 +454,15 @@ async function main() {
     concurrency = 3
   }
 
-  console.log(`Worker concurrency: ${concurrency} (based on ${cpuCores} CPU cores)`)
+  console.log(`[WORKER] Worker concurrency: ${concurrency} (based on ${cpuCores} CPU cores)`)
+
+  if (DEBUG) {
+    console.log('[WORKER DEBUG] CPU details:', {
+      cores: cpuCores,
+      model: os.cpus()[0]?.model || 'Unknown',
+      concurrency
+    })
+  }
 
   const worker = new Worker<VideoProcessingJob>('video-processing', processVideo, {
     connection: getConnection(),
@@ -282,15 +473,33 @@ async function main() {
     },
   })
 
+  if (DEBUG) {
+    console.log('[WORKER DEBUG] BullMQ worker created with config:', {
+      queue: 'video-processing',
+      concurrency,
+      limiter: {
+        max: concurrency * 10,
+        duration: 60000
+      }
+    })
+  }
+
   worker.on('completed', (job) => {
-    console.log(`Job ${job.id} completed successfully`)
+    console.log(`[WORKER] Job ${job.id} completed successfully`)
   })
 
   worker.on('failed', (job, err) => {
-    console.error(`Job ${job?.id} failed:`, err)
+    console.error(`[WORKER ERROR] Job ${job?.id} failed:`, err)
+    if (DEBUG) {
+      console.error('[WORKER DEBUG] Job failure details:', {
+        jobId: job?.id,
+        jobData: job?.data,
+        error: err instanceof Error ? err.stack : err
+      })
+    }
   })
 
-  console.log('Video processing worker started')
+  console.log('[WORKER] Video processing worker started')
 
   // Run cleanup on startup
   console.log('Running initial TUS upload cleanup...')

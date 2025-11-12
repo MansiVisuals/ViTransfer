@@ -267,15 +267,19 @@ async function processVideo(job: Job<VideoProcessingJob>) {
     }
 
     // Generate thumbnail
+    // Use safe timestamp: 10% into the video or 1 second, whichever is smaller
+    // This prevents seeking beyond video duration for short videos
+    const thumbnailTimestamp = Math.min(Math.max(metadata.duration * 0.1, 0.5), 10)
     tempThumbnailPath = path.join(TEMP_DIR, `${videoId}-thumb.jpg`)
 
     if (DEBUG) {
       console.log('[WORKER DEBUG] Generating thumbnail...')
       console.log('[WORKER DEBUG] Temp thumbnail path:', tempThumbnailPath)
+      console.log('[WORKER DEBUG] Thumbnail timestamp:', thumbnailTimestamp, 's')
     }
 
     const thumbStart = Date.now()
-    await generateThumbnail(tempInputPath, tempThumbnailPath, 10)
+    await generateThumbnail(tempInputPath, tempThumbnailPath, thumbnailTimestamp)
     const thumbTime = Date.now() - thumbStart
 
     console.log(`[WORKER] Generated thumbnail for video ${videoId} in ${(thumbTime / 1000).toFixed(2)}s`)

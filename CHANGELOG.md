@@ -5,6 +5,22 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2025-11-12
+
+### Added
+- **DEBUG_WORKER environment variable**
+  - Optional verbose logging for FFmpeg and worker operations
+  - Logs command execution, process IDs, exit codes, timing breakdowns
+  - Shows download/upload speeds, file sizes, processing time breakdown
+  - Controllable without rebuilding Docker image (set env var and restart)
+  - Helps diagnose video processing issues in production
+
+### Fixed
+- **CRITICAL**: Thumbnail generation failing for videos shorter than 10 seconds
+  - Previously hardcoded to seek to 10 seconds, causing EOF for short videos
+  - Now calculates safe timestamp: 10% of duration (min 0.5s, max 10s)
+  - FFmpeg properly reports when no frames available for extraction
+
 ## [0.2.4] - 2025-11-10
 
 ### Added

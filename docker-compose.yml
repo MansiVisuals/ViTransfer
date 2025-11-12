@@ -105,6 +105,7 @@ services:
       TZ: ${TZ:-UTC}
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
+      # DEBUG_WORKER: "true"  # Uncomment for verbose FFmpeg and worker debug logs
       DATABASE_URL: postgresql://${POSTGRES_USER:-vitransfer}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vitransfer}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379

@@ -99,6 +99,7 @@ services:
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
+      # DEBUG_WORKER: "true"  # Uncomment for verbose FFmpeg and worker debug logs
       DATABASE_URL: postgresql://vitransfer:${POSTGRES_PASSWORD}@vitransfer-postgres:5432/vitransfer?schema=public
       REDIS_HOST: vitransfer-redis
       REDIS_PORT: 6379

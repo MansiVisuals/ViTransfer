@@ -4,7 +4,8 @@ import path from 'path'
 import os from 'os'
 
 // Debug mode - outputs verbose FFmpeg logs
-const DEBUG = true // Always enabled for main-debug branch
+// Enable with: DEBUG_WORKER=true environment variable
+const DEBUG = process.env.DEBUG_WORKER === 'true'
 
 // Use system-installed ffmpeg (installed via apk in Dockerfile)
 const ffmpegPath = 'ffmpeg'

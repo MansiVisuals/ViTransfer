@@ -10,7 +10,8 @@ import os from 'os'
 import { pipeline } from 'stream/promises'
 
 // Debug mode - outputs verbose worker logs
-const DEBUG = true // Always enabled for main-debug branch
+// Enable with: DEBUG_WORKER=true environment variable
+const DEBUG = process.env.DEBUG_WORKER === 'true'
 
 const TEMP_DIR = '/tmp/vitransfer'
 

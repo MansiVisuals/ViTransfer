@@ -95,6 +95,7 @@ services:
       NODE_ENV: production
       PUID: 99
       PGID: 100
+      # DEBUG_WORKER: "true"  # Uncomment for verbose FFmpeg and worker debug logs
       DATABASE_URL: postgresql://vitransfer:${POSTGRES_PASSWORD}@vitransfer-postgres:5432/vitransfer?schema=public
       REDIS_HOST: vitransfer-redis
       REDIS_PORT: 6379

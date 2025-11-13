@@ -3,6 +3,10 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 
+// Debug mode - outputs verbose FFmpeg logs
+// Enable with: DEBUG_WORKER=true environment variable
+const DEBUG = process.env.DEBUG_WORKER === 'true'
+
 // Use system-installed ffmpeg (installed via apk in Dockerfile)
 const ffmpegPath = 'ffmpeg'
 const ffprobePath = 'ffprobe'
@@ -19,25 +23,43 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
   return new Promise((resolve, reject) => {
     // Remove '-v quiet' to capture detailed error messages
     const args = [
+      '-v', 'verbose', // Enable verbose logging for debug
       '-print_format', 'json',
       '-show_format',
       '-show_streams',
       inputPath
     ]
 
+    if (DEBUG) {
+      console.log('[FFPROBE DEBUG] Executing:', ffprobePath, args.join(' '))
+      console.log('[FFPROBE DEBUG] Input file:', inputPath)
+    }
+
     const ffprobe = spawn(ffprobePath, args)
     let stdout = ''
     let stderr = ''
 
     ffprobe.stdout.on('data', (data) => {
-      stdout += data.toString()
+      const text = data.toString()
+      stdout += text
+      if (DEBUG) {
+        console.log('[FFPROBE STDOUT]', text.trim())
+      }
     })
 
     ffprobe.stderr.on('data', (data) => {
-      stderr += data.toString()
+      const text = data.toString()
+      stderr += text
+      if (DEBUG) {
+        console.log('[FFPROBE STDERR]', text.trim())
+      }
     })
 
     ffprobe.on('close', (code) => {
+      if (DEBUG) {
+        console.log('[FFPROBE DEBUG] Process exited with code:', code)
+      }
+
       if (code !== 0) {
         // Extract useful error information from stderr
         const errorLines = stderr.split('\n').filter(line =>
@@ -52,6 +74,10 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
           ? errorLines.join('; ')
           : stderr || 'Unknown error'
 
+        if (DEBUG) {
+          console.error('[FFPROBE DEBUG] Error detected:', errorMessage)
+        }
+
         reject(new Error(
           `ffprobe failed with exit code ${code}: ${errorMessage}. ` +
           `This usually indicates a corrupted or incomplete video file.`
@@ -63,7 +89,14 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
         const metadata = JSON.parse(stdout)
         const videoStream = metadata.streams.find((s: any) => s.codec_type === 'video')
 
+        if (DEBUG) {
+          console.log('[FFPROBE DEBUG] Parsed metadata:', JSON.stringify(metadata, null, 2))
+        }
+
         if (!videoStream) {
+          if (DEBUG) {
+            console.error('[FFPROBE DEBUG] No video stream found in metadata')
+          }
           reject(new Error('No video stream found in file. The file may be audio-only or corrupted.'))
           return
         }
@@ -75,14 +108,23 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
           fps = den ? num / den : undefined
         }
 
-        resolve({
+        const result = {
           duration: parseFloat(metadata.format.duration) || 0,
           width: videoStream.width || 0,
           height: videoStream.height || 0,
           fps,
           codec: videoStream.codec_name,
-        })
+        }
+
+        if (DEBUG) {
+          console.log('[FFPROBE DEBUG] Extracted video metadata:', result)
+        }
+
+        resolve(result)
       } catch (error) {
+        if (DEBUG) {
+          console.error('[FFPROBE DEBUG] Failed to parse output:', error)
+        }
         reject(new Error(`Failed to parse ffprobe output: ${error}. Output was: ${stdout.substring(0, 200)}`))
       }
     })
@@ -112,6 +154,17 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     onProgress
   } = options
 
+  if (DEBUG) {
+    console.log('[FFMPEG DEBUG] Starting transcodeVideo with options:', {
+      inputPath,
+      outputPath,
+      width,
+      height,
+      watermarkText,
+      hasProgressCallback: !!onProgress
+    })
+  }
+
   const cpuCores = os.cpus().length
 
   // Optimize preset based on CPU cores and workload
@@ -136,9 +189,22 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   const maxThreads = Math.max(1, Math.floor(cpuCores * 0.75))
   const threads = Math.min(maxThreads, 12) // Cap at 12 threads max
 
+  if (DEBUG) {
+    console.log('[FFMPEG DEBUG] CPU optimization:', {
+      totalCores: cpuCores,
+      selectedPreset: preset,
+      maxThreads,
+      threads
+    })
+  }
+
   // Get video metadata for duration (needed for progress calculation)
   const metadata = await getVideoMetadata(inputPath)
   const duration = metadata.duration
+
+  if (DEBUG) {
+    console.log('[FFMPEG DEBUG] Input video metadata:', metadata)
+  }
 
   // Build video filters
   const filters: string[] = []
@@ -176,8 +242,13 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
 
   const filterComplex = filters.join(',')
 
+  if (DEBUG) {
+    console.log('[FFMPEG DEBUG] Built filter complex:', filterComplex)
+  }
+
   // Build ffmpeg arguments with optimizations
   const args = [
+    '-v', 'verbose', // Enable verbose logging for debug
     '-i', inputPath,
     '-vf', filterComplex,
     '-c:v', 'libx264',
@@ -197,6 +268,10 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     outputPath
   ]
 
+  if (DEBUG) {
+    console.log('[FFMPEG DEBUG] Executing command:', 'nice -n 10', ffmpegPath, args.join(' '))
+  }
+
   return new Promise((resolve, reject) => {
     // Run FFmpeg with lower CPU priority (nice 10) to prevent system freeze
     // This allows other processes to remain responsive during video processing
@@ -206,9 +281,18 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
     let stderr = ''
 
+    if (DEBUG) {
+      console.log('[FFMPEG DEBUG] FFmpeg process spawned, PID:', ffmpeg.pid)
+    }
+
     ffmpeg.stderr.on('data', (data) => {
       const text = data.toString()
       stderr += text
+
+      // In debug mode, log all stderr output
+      if (DEBUG) {
+        console.log('[FFMPEG STDERR]', text.trim())
+      }
 
       // Parse progress from stderr
       if (onProgress && duration > 0) {
@@ -219,25 +303,42 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
           const seconds = parseFloat(timeMatch[3])
           const currentTime = hours * 3600 + minutes * 60 + seconds
           const progress = Math.min(currentTime / duration, 1)
+          if (DEBUG) {
+            console.log('[FFMPEG DEBUG] Progress:', Math.round(progress * 100) + '%')
+          }
           onProgress(progress)
         }
       }
 
-      // Log errors and warnings
-      if (text.includes('error') || text.includes('Error') || text.includes('failed')) {
+      // Log errors and warnings (even when not in debug mode)
+      if (!DEBUG && (text.includes('error') || text.includes('Error') || text.includes('failed'))) {
         console.error('FFmpeg stderr:', text)
       }
     })
 
     ffmpeg.on('close', (code) => {
+      if (DEBUG) {
+        console.log('[FFMPEG DEBUG] Process exited with code:', code)
+      }
+
       if (code === 0) {
+        if (DEBUG) {
+          console.log('[FFMPEG DEBUG] Transcoding completed successfully')
+        }
         resolve()
       } else {
+        if (DEBUG) {
+          console.error('[FFMPEG DEBUG] Transcoding failed with code:', code)
+          console.error('[FFMPEG DEBUG] Full stderr output:', stderr)
+        }
         reject(new Error(`FFmpeg exited with code ${code}: ${stderr}`))
       }
     })
 
     ffmpeg.on('error', (err) => {
+      if (DEBUG) {
+        console.error('[FFMPEG DEBUG] Failed to spawn FFmpeg:', err)
+      }
       reject(new Error(`Failed to start FFmpeg: ${err.message}`))
     })
   })
@@ -248,7 +349,16 @@ export async function generateThumbnail(
   outputPath: string,
   timestamp: number = 10
 ): Promise<void> {
+  if (DEBUG) {
+    console.log('[FFMPEG DEBUG] Starting generateThumbnail:', {
+      inputPath,
+      outputPath,
+      timestamp
+    })
+  }
+
   const args = [
+    '-v', 'verbose', // Enable verbose logging for debug
     '-ss', timestamp.toString(), // Seek before input (faster - avoids decoding entire video)
     '-i', inputPath,
     '-vframes', '1', // Extract single frame
@@ -258,6 +368,10 @@ export async function generateThumbnail(
     outputPath
   ]
 
+  if (DEBUG) {
+    console.log('[FFMPEG DEBUG] Thumbnail command:', 'nice -n 10', ffmpegPath, args.join(' '))
+  }
+
   return new Promise((resolve, reject) => {
     // Run with lower CPU priority to keep system responsive
     const ffmpeg = spawn('nice', ['-n', '10', ffmpegPath, ...args], {
@@ -265,19 +379,40 @@ export async function generateThumbnail(
     })
     let stderr = ''
 
+    if (DEBUG) {
+      console.log('[FFMPEG DEBUG] Thumbnail process spawned, PID:', ffmpeg.pid)
+    }
+
     ffmpeg.stderr.on('data', (data) => {
-      stderr += data.toString()
+      const text = data.toString()
+      stderr += text
+      if (DEBUG) {
+        console.log('[FFMPEG THUMBNAIL STDERR]', text.trim())
+      }
     })
 
     ffmpeg.on('close', (code) => {
+      if (DEBUG) {
+        console.log('[FFMPEG DEBUG] Thumbnail process exited with code:', code)
+      }
+
       if (code === 0) {
+        if (DEBUG) {
+          console.log('[FFMPEG DEBUG] Thumbnail generated successfully')
+        }
         resolve()
       } else {
+        if (DEBUG) {
+          console.error('[FFMPEG DEBUG] Thumbnail generation failed:', stderr)
+        }
         reject(new Error(`FFmpeg thumbnail generation failed: ${stderr}`))
       }
     })
 
     ffmpeg.on('error', (err) => {
+      if (DEBUG) {
+        console.error('[FFMPEG DEBUG] Failed to spawn FFmpeg for thumbnail:', err)
+      }
       reject(new Error(`Failed to start FFmpeg: ${err.message}`))
     })
   })

@@ -27,8 +27,6 @@ interface AdminVideoManagerProps {
   onVideoSelect?: (videoName: string, videos: any[]) => void
   onRefresh?: () => void
   sortMode?: 'status' | 'alphabetical'
-  maxRevisions?: number
-  enableRevisions?: boolean
 }
 
 export default function AdminVideoManager({
@@ -40,9 +38,7 @@ export default function AdminVideoManager({
   companyName = 'Studio',
   onVideoSelect,
   onRefresh,
-  sortMode = 'status',
-  maxRevisions,
-  enableRevisions
+  sortMode = 'status'
 }: AdminVideoManagerProps) {
   const router = useRouter()
 
@@ -228,9 +224,6 @@ export default function AdminVideoManager({
                     <p className="text-sm text-muted-foreground mt-1">
                       {groupVideos.length} {groupVideos.length === 1 ? 'version' : 'versions'} •
                       Latest: v{latestVideo.version}
-                      {enableRevisions && maxRevisions && (
-                        <> • Revisions {groupVideos.length}/{maxRevisions}</>
-                      )}
                     </p>
                   )}
                 </div>

@@ -409,9 +409,6 @@ export default function SharePage() {
                   projectTitle={project.title}
                   projectDescription={project.description}
                   clientName={project.clientName}
-                  currentRevision={project.currentRevision}
-                  maxRevisions={project.maxRevisions}
-                  enableRevisions={project.enableRevisions}
                   isPasswordProtected={isPasswordProtected || false}
                   watermarkEnabled={project.watermarkEnabled}
                   activeVideoName={activeVideoName}

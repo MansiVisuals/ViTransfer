@@ -12,7 +12,6 @@ interface Project {
   title: string
   status: string
   updatedAt: Date
-  currentRevision: number
   maxRevisions: number
   enableRevisions: boolean
   videos: any[]
@@ -110,11 +109,6 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                         >
                           {project.status.replace('_', ' ')}
                         </span>
-                        {project.enableRevisions && (
-                          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                            Revision {project.currentRevision}/{project.maxRevisions}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </CardHeader>

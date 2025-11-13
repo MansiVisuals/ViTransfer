@@ -217,9 +217,6 @@ export async function PATCH(
     if (body.maxRevisions !== undefined) {
       updateData.maxRevisions = body.maxRevisions
     }
-    if (body.currentRevision !== undefined) {
-      updateData.currentRevision = body.currentRevision
-    }
 
     // Handle comment restrictions
     if (body.restrictCommentsToLatestVersion !== undefined) {

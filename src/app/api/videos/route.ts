@@ -52,15 +52,14 @@ export async function POST(request: NextRequest) {
     // Calculate next version number for this specific video name
     const nextVersion = project.videos.length > 0 ? project.videos[0].version + 1 : 1
 
-    // Check if revisions are enabled and validate
+    // Check if revisions are enabled and validate (per-video tracking)
     if (project.enableRevisions && project.maxRevisions > 0) {
-      // First upload (version 1) doesn't count as a revision
-      // currentRevision tracks actual changes after the first upload
-      const actualRevisionNumber = nextVersion - 1 // 0 for first, 1 for second, etc.
+      // Count existing versions for this specific video name (project.videos is already filtered by name)
+      const existingVersionCount = project.videos.length
 
-      if (actualRevisionNumber > project.maxRevisions) {
+      if (existingVersionCount >= project.maxRevisions) {
         return NextResponse.json(
-          { error: `Maximum revisions (${project.maxRevisions}) exceeded` },
+          { error: `Maximum revisions (${project.maxRevisions}) exceeded for this video` },
           { status: 400 }
         )
       }
@@ -82,16 +81,6 @@ export async function POST(request: NextRequest) {
         height: 0,
       },
     })
-
-    // Update project's currentRevision only if revisions are enabled
-    // First upload = version 1, currentRevision = 0
-    // Second upload = version 2, currentRevision = 1, etc.
-    if (project.enableRevisions) {
-      await prisma.project.update({
-        where: { id: projectId },
-        data: { currentRevision: nextVersion - 1 },
-      })
-    }
 
     // Return videoId - TUS will handle upload directly
     return NextResponse.json({

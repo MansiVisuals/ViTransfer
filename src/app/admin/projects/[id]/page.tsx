@@ -219,7 +219,7 @@ export default function ProjectPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className={`grid ${project.enableRevisions ? 'sm:grid-cols-2' : 'grid-cols-1'} gap-4 text-sm`}>
+                  <div className="text-sm">
                     <div className="min-w-0">
                       <p className="text-muted-foreground">Client</p>
                       <p className="font-medium break-words">
@@ -231,14 +231,6 @@ export default function ProjectPage() {
                         </p>
                       )}
                     </div>
-                    {project.enableRevisions && (
-                      <div>
-                        <p className="text-muted-foreground">Revisions</p>
-                        <p className="font-medium">
-                          {project.currentRevision}/{project.maxRevisions}
-                        </p>
-                      </div>
-                    )}
                   </div>
 
                   <ShareLink shareUrl={shareUrl} />
@@ -271,6 +263,8 @@ export default function ProjectPage() {
                 onVideoSelect={handleVideoSelect}
                 onRefresh={fetchProject}
                 sortMode={sortMode}
+                maxRevisions={project.maxRevisions}
+                enableRevisions={project.enableRevisions}
               />
             </div>
           </div>

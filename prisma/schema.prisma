@@ -38,7 +38,6 @@ model Project {
   // Revision tracking (optional)
   enableRevisions Boolean @default(false)
   maxRevisions    Int     @default(3)
-  currentRevision Int     @default(0)
 
   status          ProjectStatus @default(IN_REVIEW)
   createdAt       DateTime      @default(now())

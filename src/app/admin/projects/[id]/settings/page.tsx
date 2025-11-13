@@ -23,7 +23,6 @@ interface Project {
   description: string | null
   enableRevisions: boolean
   maxRevisions: number
-  currentRevision: number
   restrictCommentsToLatestVersion: boolean
   hideFeedback: boolean
   sharePassword: string | null
@@ -53,7 +52,6 @@ export default function ProjectSettingsPage() {
   const [description, setDescription] = useState('')
   const [enableRevisions, setEnableRevisions] = useState(false)
   const [maxRevisions, setMaxRevisions] = useState<number | ''>('')
-  const [currentRevision, setCurrentRevision] = useState<number | ''>('')
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
   const [hideFeedback, setHideFeedback] = useState(false)
   const [sharePassword, setSharePassword] = useState('')
@@ -115,7 +113,6 @@ export default function ProjectSettingsPage() {
         setDescription(data.description || '')
         setEnableRevisions(data.enableRevisions)
         setMaxRevisions(data.maxRevisions)
-        setCurrentRevision(data.currentRevision)
         setRestrictCommentsToLatestVersion(data.restrictCommentsToLatestVersion)
         setHideFeedback(data.hideFeedback || false)
         setPreviewResolution(data.previewResolution)
@@ -169,17 +166,10 @@ export default function ProjectSettingsPage() {
 
       // Ensure revision values are valid numbers before saving
       const finalMaxRevisions = typeof maxRevisions === 'number' ? maxRevisions : parseInt(String(maxRevisions)) || 1
-      const finalCurrentRevision = typeof currentRevision === 'number' ? currentRevision : parseInt(String(currentRevision)) || 0
 
-      // Validate: maxRevisions must be at least 1, currentRevision at least 0
+      // Validate: maxRevisions must be at least 1
       if (enableRevisions && finalMaxRevisions < 1) {
         setError('Maximum revisions must be at least 1')
-        setSaving(false)
-        return
-      }
-
-      if (enableRevisions && finalCurrentRevision < 0) {
-        setError('Current revision count cannot be negative')
         setSaving(false)
         return
       }
@@ -190,7 +180,6 @@ export default function ProjectSettingsPage() {
         description: description || null,
         enableRevisions,
         maxRevisions: enableRevisions ? finalMaxRevisions : 0,
-        currentRevision: enableRevisions ? finalCurrentRevision : 0,
         restrictCommentsToLatestVersion,
         hideFeedback,
         previewResolution,
@@ -630,42 +619,7 @@ export default function ProjectSettingsPage() {
                       }}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Must be at least 1. First upload doesn't count as a revision.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="currentRevision">Current Revision Count</Label>
-                    <Input
-                      id="currentRevision"
-                      type="number"
-                      min="0"
-                      max={typeof maxRevisions === 'number' ? maxRevisions : undefined}
-                      value={currentRevision}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        if (val === '') {
-                          setCurrentRevision('')
-                        } else {
-                          const num = parseInt(val)
-                          if (!isNaN(num)) setCurrentRevision(num)
-                        }
-                      }}
-                      onBlur={(e) => {
-                        // Only validate on blur - ensure at least 0
-                        const val = e.target.value
-                        if (val === '') {
-                          setCurrentRevision(0)
-                        } else {
-                          const num = parseInt(val)
-                          const max = typeof maxRevisions === 'number' ? maxRevisions : 20
-                          if (isNaN(num) || num < 0) setCurrentRevision(0)
-                          else if (num > max) setCurrentRevision(max)
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Must be at least 0 (0 = initial upload, 1 = first revision, etc.)
+                      Must be at least 1. Applies to each video group independently.
                     </p>
                   </div>
                 </div>

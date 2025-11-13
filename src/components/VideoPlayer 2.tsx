@@ -24,6 +24,9 @@ interface VideoPlayerProps {
   projectTitle?: string
   projectDescription?: string
   clientName?: string
+  currentRevision?: number
+  maxRevisions?: number
+  enableRevisions?: boolean
   isPasswordProtected?: boolean
   watermarkEnabled?: boolean
   isAdmin?: boolean // Admin users can see all versions (default: false for clients)
@@ -41,6 +44,9 @@ export default function VideoPlayer({
   projectTitle,
   projectDescription,
   clientName,
+  currentRevision,
+  maxRevisions,
+  enableRevisions,
   isPasswordProtected,
   watermarkEnabled = true,
   isAdmin = false, // Default to false (client view)
@@ -60,11 +66,12 @@ export default function VideoPlayer({
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
   const lastTimeUpdateRef = useRef(0) // Throttle time updates
 
-  // If ANY video is approved, only show approved videos (for both admin and client)
+  // Filter videos for clients: if ANY video is approved, only show approved videos
+  // Admins always see all videos
   const hasAnyApprovedVideo = videos.some((v: any) => v.approved === true)
-  const displayVideos = hasAnyApprovedVideo
-    ? videos.filter((v: any) => v.approved === true)
-    : videos
+  const displayVideos = (isAdmin || !hasAnyApprovedVideo)
+    ? videos
+    : videos.filter((v: any) => v.approved === true)
 
   // Safety check: ensure index is valid
   const safeIndex = Math.min(selectedVideoIndex, displayVideos.length - 1)
@@ -408,6 +415,14 @@ export default function VideoPlayer({
             <span className="ml-2 font-medium text-foreground">{displayLabel}</span>
           </div>
 
+          {/* Revisions */}
+          {!isVideoApproved && enableRevisions && (
+            <div>
+              <span className="text-xs text-muted-foreground">Revisions:</span>
+              <span className="ml-2 font-medium text-foreground">{currentRevision} of {maxRevisions}</span>
+            </div>
+          )}
+
           {/* Project */}
           {projectTitle && (
             <div className="col-span-2">
@@ -493,9 +508,7 @@ export default function VideoPlayer({
         {isVideoApproved && (
           <div className="flex items-center gap-2 text-sm text-success pt-3 mt-3 border-t border-border">
             <CheckCircle2 className="w-4 h-4" />
-            <span className="font-medium">
-              {selectedVideo.versionLabel} approved - Download available
-            </span>
+            <span className="font-medium">This video is approved - Download available</span>
           </div>
         )}
       </div>

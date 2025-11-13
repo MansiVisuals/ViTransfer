@@ -266,7 +266,6 @@ export async function GET(
 
       enableRevisions: project.enableRevisions,
       maxRevisions: project.maxRevisions,
-      currentRevision: project.currentRevision,
       restrictCommentsToLatestVersion: project.restrictCommentsToLatestVersion,
       hideFeedback: project.hideFeedback,
       previewResolution: project.previewResolution,

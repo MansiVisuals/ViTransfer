@@ -223,20 +223,6 @@ export async function DELETE(
       where: { id: id },
     })
 
-    // Update project's currentRevision to reflect the highest remaining version
-    const remainingVideos = await prisma.video.findMany({
-      where: { projectId },
-      orderBy: { version: 'desc' },
-      take: 1,
-    })
-
-    const newCurrentRevision = remainingVideos.length > 0 ? remainingVideos[0].version : 0
-
-    await prisma.project.update({
-      where: { id: projectId },
-      data: { currentRevision: newCurrentRevision },
-    })
-
     return NextResponse.json({
       success: true,
       message: 'Video and all related files deleted successfully',

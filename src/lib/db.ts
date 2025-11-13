@@ -11,17 +11,28 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 /**
  * Set the database user context for Row Level Security (RLS)
  * This sets PostgreSQL session variables that RLS policies use to determine access
- * 
- * @param userId - The current user's ID
- * @param userRole - The current user's role
+ *
+ * @param userId - The current user's ID (must be valid CUID)
+ * @param userRole - The current user's role (must be valid UserRole enum)
  */
 export async function setDatabaseUserContext(
   userId: string,
   userRole: string
 ): Promise<void> {
+  // Validate userId format (CUID: starts with 'c', followed by 24 alphanumeric chars)
+  if (!/^c[a-z0-9]{24}$/.test(userId)) {
+    throw new Error('Invalid userId format - must be valid CUID')
+  }
+
+  // Validate userRole is a known enum value
+  const validRoles = ['ADMIN']
+  if (!validRoles.includes(userRole)) {
+    throw new Error(`Invalid userRole - must be one of: ${validRoles.join(', ')}`)
+  }
+
   try {
     // Set PostgreSQL session variables for RLS
-    // Note: We use a transaction to ensure these are set properly
+    // Input validation above prevents SQL injection via set_config parameters
     await prisma.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, true)`
     await prisma.$executeRaw`SELECT set_config('app.current_user_role', ${userRole}, true)`
   } catch (error) {

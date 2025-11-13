@@ -6,15 +6,46 @@ import { mkdir } from 'fs/promises'
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/app/uploads'
 
+/**
+ * Validate and sanitize file paths to prevent path traversal attacks
+ * Defense-in-depth validation against multiple attack vectors
+ *
+ * @param filePath - The file path to validate
+ * @returns Validated absolute path within storage root
+ * @throws Error if path traversal is detected
+ */
 function validatePath(filePath: string): string {
-  // Remove any directory traversal attempts
-  const sanitized = path.normalize(filePath).replace(/^(\.\.(\/|\\|$))+/, '')
+  // 1. Reject null bytes (common in path traversal exploits)
+  if (filePath.includes('\0')) {
+    throw new Error('Invalid file path - null byte detected')
+  }
 
+  // 2. URL decode to catch encoded path traversal attempts (%2e%2e%2f, etc.)
+  let decoded = filePath
+  try {
+    decoded = decodeURIComponent(filePath)
+    // Double-decode to catch double-encoding attacks
+    decoded = decodeURIComponent(decoded)
+  } catch (error) {
+    // If decode fails, use original (might be already decoded)
+    decoded = filePath
+  }
+
+  // 3. Normalize path separators (convert backslashes to forward slashes)
+  decoded = decoded.replace(/\\/g, '/')
+
+  // 4. Remove any .. sequences anywhere in the path
+  decoded = decoded.replace(/\.\./g, '')
+
+  // 5. Normalize the path to resolve any remaining . or .. sequences
+  const sanitized = path.normalize(decoded)
+
+  // 6. Build the full path and resolve it
   const fullPath = path.join(STORAGE_ROOT, sanitized)
   const realPath = path.resolve(fullPath)
   const realRoot = path.resolve(STORAGE_ROOT)
 
-  // Ensure resolved path is still within storage root
+  // 7. Final check: ensure resolved path is within storage root
   if (!realPath.startsWith(realRoot + path.sep) && realPath !== realRoot) {
     throw new Error('Invalid file path - path traversal detected')
   }

@@ -117,7 +117,23 @@ export async function verifyVideoAccessToken(
     return null
   }
 
-  const tokenData: VideoAccessToken = JSON.parse(data)
+  // Parse token data with error handling
+  let tokenData: VideoAccessToken
+  try {
+    tokenData = JSON.parse(data)
+
+    // Validate required fields to prevent malformed data
+    if (!tokenData.videoId || !tokenData.projectId || !tokenData.sessionId) {
+      console.error('[SECURITY] Invalid token data structure', { token: token.substring(0, 10) })
+      return null
+    }
+  } catch (error) {
+    console.error('[SECURITY] Failed to parse video access token data', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      token: token.substring(0, 10)
+    })
+    return null
+  }
 
   // Admin sessions (prefixed with "admin:") skip session matching
   // Admins are authenticated via JWT, not share sessions
@@ -408,8 +424,17 @@ export async function revokeProjectVideoTokens(projectId: string): Promise<void>
     for (const key of keys) {
       const data = await redis.get(key)
       if (data) {
-        const tokenData: VideoAccessToken = JSON.parse(data)
-        if (tokenData.projectId === projectId) {
+        try {
+          const tokenData: VideoAccessToken = JSON.parse(data)
+          if (tokenData.projectId === projectId) {
+            keysToDelete.push(key)
+          }
+        } catch (error) {
+          // If token data is corrupted, delete it anyway
+          console.error('[SECURITY] Corrupted token data during revocation, will delete', {
+            key,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
           keysToDelete.push(key)
         }
       }

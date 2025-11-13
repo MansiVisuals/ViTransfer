@@ -12,6 +12,26 @@ import { getClientSessionTimeoutSeconds } from '@/lib/settings'
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
 const MAX_FAILED_ATTEMPTS = 5
 
+/**
+ * Constant-time string comparison to prevent timing attacks
+ * @param a - First string to compare
+ * @param b - Second string to compare
+ * @returns true if strings are equal, false otherwise
+ */
+function constantTimeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8')
+  const bufB = Buffer.from(b, 'utf8')
+
+  // If lengths differ, still compare dummy buffers to maintain constant time
+  if (bufA.length !== bufB.length) {
+    // Compare two equal-length dummy buffers to maintain timing
+    crypto.timingSafeEqual(Buffer.alloc(32), Buffer.alloc(32))
+    return false
+  }
+
+  return crypto.timingSafeEqual(bufA, bufB)
+}
+
 let redis: IORedis | null = null
 
 function getRedisConnection(): IORedis {
@@ -101,11 +121,12 @@ export async function POST(
       return NextResponse.json({ success: true })
     }
 
-    // Decrypt the stored password and compare with provided password
+    // Decrypt the stored password and compare with provided password using constant-time comparison
     let isValid = false
     try {
       const decryptedPassword = decrypt(project.sharePassword)
-      isValid = password === decryptedPassword
+      // Use constant-time comparison to prevent timing attacks
+      isValid = constantTimeCompare(password, decryptedPassword)
     } catch (error) {
       console.error('Error decrypting password:', error)
       // If decryption fails, password is invalid

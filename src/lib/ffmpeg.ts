@@ -19,6 +19,34 @@ export interface VideoMetadata {
   codec?: string
 }
 
+/**
+ * Validate and sanitize watermark text for FFmpeg
+ * Defense-in-depth: validates even if upstream validation exists
+ *
+ * @param text - The watermark text to validate
+ * @returns Sanitized text safe for FFmpeg
+ * @throws Error if text contains invalid characters or exceeds length limit
+ */
+function validateAndSanitizeWatermarkText(text: string): string {
+  // Length check (prevent excessively long watermarks)
+  if (text.length > 100) {
+    throw new Error('Watermark text exceeds 100 character limit')
+  }
+
+  // Check for invalid characters (only alphanumeric, spaces, and safe punctuation)
+  const invalidChars = text.match(/[^a-zA-Z0-9\s\-_.()]/g)
+  if (invalidChars) {
+    const uniqueInvalid = [...new Set(invalidChars)].join(', ')
+    throw new Error(`Watermark text contains invalid characters: ${uniqueInvalid}`)
+  }
+
+  // Sanitize by removing any potentially dangerous characters (should be none at this point)
+  const sanitized = text.replace(/[^a-zA-Z0-9\s\-_.()]/g, '')
+
+  // Escape for FFmpeg drawtext filter
+  return sanitized.replace(/'/g, "\\'").replace(/:/g, "\\:")
+}
+
 export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata> {
   return new Promise((resolve, reject) => {
     // Remove '-v quiet' to capture detailed error messages
@@ -214,16 +242,12 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
 
   // Add watermark if specified
   if (watermarkText) {
+    // Validate and sanitize watermark text (defense-in-depth)
+    const escapedText = validateAndSanitizeWatermarkText(watermarkText)
+
     const isVertical = height > width
     const centerFontSize = isVertical ? Math.round(width * 0.08) : Math.round(width * 0.04)
     const cornerFontSize = isVertical ? Math.round(width * 0.05) : Math.round(width * 0.025)
-
-    // Sanitize watermark text to prevent command injection
-    // Only allow alphanumeric, spaces, and safe punctuation
-    const sanitizedText = watermarkText.replace(/[^a-zA-Z0-9\s\-_.()]/g, '')
-
-    // Escape text for ffmpeg (after sanitization)
-    const escapedText = sanitizedText.replace(/'/g, "\\'").replace(/:/g, "\\:")
 
     // Center watermark
     filters.push(

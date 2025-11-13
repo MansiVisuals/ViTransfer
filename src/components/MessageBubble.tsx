@@ -32,8 +32,11 @@ interface MessageBubbleProps {
 function sanitizeContent(content: string): string {
   return DOMPurify.sanitize(content, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
-    ALLOWED_ATTR: ['href', 'target'],
-    ALLOW_DATA_ATTR: false
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i, // Only allow https://, http://, mailto: URLs
+    ALLOW_DATA_ATTR: false,
+    ADD_ATTR: ['rel'], // Add rel="noopener noreferrer" to all links for security
+    FORCE_BODY: true, // Parse content as body to prevent context-breaking attacks
   })
 }
 

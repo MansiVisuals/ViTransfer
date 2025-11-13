@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         sharePassword: true,
+        companyName: true,
       }
     })
 
@@ -106,7 +107,8 @@ export async function GET(request: NextRequest) {
 
     // Get primary recipient for author name fallback
     const primaryRecipient = await getPrimaryRecipient(projectId)
-    const fallbackName = primaryRecipient?.name || 'Client'
+    // Priority: companyName → primary recipient → 'Client'
+    const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
     // Fetch all comments for the project
     const allComments = await prisma.comment.findMany({
@@ -209,6 +211,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         sharePassword: true,
+        companyName: true,
       }
     })
 
@@ -221,7 +224,8 @@ export async function POST(request: NextRequest) {
 
     // Get primary recipient for author name
     const primaryRecipient = await getPrimaryRecipient(projectId)
-    const fallbackName = primaryRecipient?.name || 'Client'
+    // Priority: companyName → primary recipient → 'Client'
+    const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
     // Verify project access using dual auth pattern
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)

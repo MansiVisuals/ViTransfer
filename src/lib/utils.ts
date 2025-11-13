@@ -48,11 +48,34 @@ export function formatTimestamp(seconds: number): string {
 
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
-  const day = d.getDate()
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const month = months[d.getMonth()]
+
   const year = d.getFullYear()
-  return `${day}-${month}-${year}`
+  const month = (d.getMonth() + 1).toString().padStart(2, '0')
+  const day = d.getDate().toString().padStart(2, '0')
+
+  // Detect format from TZ environment variable
+  const tz = process.env.TZ || 'UTC'
+
+  // US/Americas format (MM-dd-yyyy)
+  if (tz.startsWith('America/') || tz.startsWith('US/')) {
+    return `${month}-${day}-${year}`
+  }
+
+  // European format (dd-MM-yyyy)
+  if (tz.startsWith('Europe/') || tz.startsWith('Africa/')) {
+    return `${day}-${month}-${year}`
+  }
+
+  // Asian/ISO format (yyyy-MM-dd) - also default
+  return `${year}-${month}-${day}`
+}
+
+export function formatDateTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const dateStr = formatDate(d)
+  const hours = d.getHours().toString().padStart(2, '0')
+  const minutes = d.getMinutes().toString().padStart(2, '0')
+  return `${dateStr} ${hours}:${minutes}`
 }
 
 export function generateSlug(title: string): string {

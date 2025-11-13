@@ -76,6 +76,7 @@ export async function GET(
       select: {
         id: true,
         sharePassword: true,
+        companyName: true,
       }
     })
 
@@ -85,7 +86,8 @@ export async function GET(
 
     // Get primary recipient for author name
     const primaryRecipient = await getPrimaryRecipient(project.id)
-    const fallbackName = primaryRecipient?.name || 'Client'
+    // Priority: companyName → primary recipient → 'Client'
+    const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
     // Verify project access using dual auth pattern (admin JWT or share_auth cookie)
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)

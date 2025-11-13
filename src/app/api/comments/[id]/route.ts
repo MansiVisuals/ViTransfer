@@ -94,6 +94,7 @@ export async function PATCH(
           select: {
             id: true,
             sharePassword: true,
+            companyName: true,
             recipients: {
               where: { isPrimary: true },
               take: 1,
@@ -172,7 +173,8 @@ export async function PATCH(
     })
 
     // Sanitize response - never expose PII
-    const primaryRecipientName = existingComment.project.recipients[0]?.name || undefined
+    // Priority: companyName → primary recipient → undefined
+    const primaryRecipientName = existingComment.project.companyName || existingComment.project.recipients[0]?.name || undefined
     const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, primaryRecipientName))
 
     return NextResponse.json(sanitizedComments)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,9 +24,14 @@ export default function ProjectPage() {
   const [shareUrl, setShareUrl] = useState('')
   const [companyName, setCompanyName] = useState('Studio')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
-  const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('status')
   const [adminUser, setAdminUser] = useState<any>(null)
+
+  // Derive active videos from selected video name (synchronous, no useEffect delay)
+  const activeVideos = useMemo(() => {
+    if (!project?.videos || !activeVideoName) return []
+    return project.videos.filter((v: any) => v.name === activeVideoName)
+  }, [project?.videos, activeVideoName])
 
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = async () => {
@@ -138,19 +143,8 @@ export default function ProjectPage() {
   // Handle video selection
   const handleVideoSelect = (videoName: string, videos: any[]) => {
     setActiveVideoName(videoName)
-    setActiveVideos(videos)
+    // activeVideos is now derived from activeVideoName via useMemo
   }
-
-  // Update activeVideos when project data refreshes (e.g., approval changes)
-  useEffect(() => {
-    if (!project?.videos || !activeVideoName) return
-
-    // Rebuild active videos from fresh project data
-    const freshVideos = project.videos.filter((v: any) => v.name === activeVideoName)
-    if (freshVideos.length > 0) {
-      setActiveVideos(freshVideos)
-    }
-  }, [project?.videos, activeVideoName])
 
   if (loading) {
     return (

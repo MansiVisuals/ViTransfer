@@ -337,7 +337,15 @@ export default function SharePage() {
     )
   }
 
-  const readyVideos = activeVideos.filter((v: any) => v.status === 'READY')
+  // Filter to READY videos first
+  let readyVideos = activeVideos.filter((v: any) => v.status === 'READY')
+
+  // If any video is approved, show ONLY approved videos (for both admin and client)
+  const hasApprovedVideo = readyVideos.some((v: any) => v.approved)
+  if (hasApprovedVideo) {
+    readyVideos = readyVideos.filter((v: any) => v.approved)
+  }
+
   const hasMultipleVideos = project.videosByName && Object.keys(project.videosByName).length > 1
 
   // Filter comments to only show comments for active videos

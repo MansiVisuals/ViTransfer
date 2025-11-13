@@ -127,7 +127,10 @@ export default function CommentSection({
   // Check if currently selected video is approved
   const currentVideo = videos.find(v => v.id === selectedVideoId)
   const isCurrentVideoApproved = currentVideo ? (currentVideo as any).approved === true : false
-  const commentsDisabled = isApproved || isCurrentVideoApproved
+  // Check if ANY video in the group is approved (for admin view with multiple versions)
+  const hasAnyApprovedVideo = videos.some(v => (v as any).approved === true)
+  const approvedVideo = videos.find(v => (v as any).approved === true)
+  const commentsDisabled = isApproved || isCurrentVideoApproved || hasAnyApprovedVideo
 
   // Always use hook comments (includes optimistic updates)
   // Local comments only used as fallback if hook hasn't loaded
@@ -311,12 +314,14 @@ export default function CommentSection({
               <CheckCircle2 className="w-8 h-8 text-success flex-shrink-0" />
               <div>
                 <h3 className="text-foreground font-medium">
-                  {isCurrentVideoApproved ? 'Video Approved' : 'Project Approved'}
+                  {isApproved ? 'Project Approved' : 'Video Approved'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isCurrentVideoApproved
-                    ? 'This video has been approved and is ready for download.'
-                    : 'The final version is ready for download without watermarks.'}
+                  {isApproved
+                    ? 'The final version is ready for download without watermarks.'
+                    : approvedVideo
+                    ? `${approvedVideo.versionLabel} of this video has been approved and is ready for download.`
+                    : 'A version of this video has been approved and is ready for download.'}
                 </p>
               </div>
             </div>

@@ -66,12 +66,11 @@ export default function VideoPlayer({
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
   const lastTimeUpdateRef = useRef(0) // Throttle time updates
 
-  // Filter videos for clients: if ANY video is approved, only show approved videos
-  // Admins always see all videos
+  // If ANY video is approved, only show approved videos (for both admin and client)
   const hasAnyApprovedVideo = videos.some((v: any) => v.approved === true)
-  const displayVideos = (isAdmin || !hasAnyApprovedVideo)
-    ? videos
-    : videos.filter((v: any) => v.approved === true)
+  const displayVideos = hasAnyApprovedVideo
+    ? videos.filter((v: any) => v.approved === true)
+    : videos
 
   // Safety check: ensure index is valid
   const safeIndex = Math.min(selectedVideoIndex, displayVideos.length - 1)
@@ -508,7 +507,9 @@ export default function VideoPlayer({
         {isVideoApproved && (
           <div className="flex items-center gap-2 text-sm text-success pt-3 mt-3 border-t border-border">
             <CheckCircle2 className="w-4 h-4" />
-            <span className="font-medium">This video is approved - Download available</span>
+            <span className="font-medium">
+              {selectedVideo.versionLabel} approved - Download available
+            </span>
           </div>
         )}
       </div>

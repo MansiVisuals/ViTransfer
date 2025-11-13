@@ -5,6 +5,38 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-01-13
+
+### Security
+- Add runtime JWT secret validation to prevent undefined secret usage
+- Fix fingerprint hash truncation (use full 256-bit SHA-256 instead of 96-bit)
+- Add CRLF injection protection for companyName field in email headers
+- Strengthen FFmpeg watermark escaping with defense-in-depth approach
+- Implement reusable Content-Disposition header sanitization for file downloads
+- Add rate limiting to admin endpoints (batch ops, approve/unapprove, users)
+- Add batch operation size limits (max 100 items)
+- Fix SMTP password exposure in API responses (return placeholder)
+
+### Added
+- Per-project companyName field in project creation and settings
+- Display priority: companyName → Primary Recipient → "Client"
+- Timezone-aware date/time formatting using Intl.DateTimeFormat
+  - Client-side: uses browser timezone for proper user localization
+  - Server-side: uses TZ environment variable for emails/logs/workers
+  - Format adapts based on region (MM-dd-yyyy, dd-MM-yyyy, yyyy-MM-dd)
+
+### Changed
+- Update all pages to show companyName with fallback logic
+- Update share API to use companyName in clientName field
+- Replace toLocaleString() with formatDateTime() for consistency
+- Hide recipient email when companyName is set for cleaner display
+- Improve comment name picker UX (starts at "Select a name..." instead of pre-selected)
+
+### Fixed
+- Correct product name from "VidTransfer" to "ViTransfer" throughout codebase
+- Fix TypeScript build errors related to Buffer type annotations in streams
+- Revert incorrect project ownership validation (admins see all projects)
+
 ## [0.3.0] - 2025-11-13
 
 **Why v0.3.0?** Originally planned as v0.2.6, this release includes critical security hardening that warrants a minor version bump rather than a patch. The scope of security improvements (SQL injection prevention, XSS protection enhancement, command injection fixes, timing attack mitigation, and path traversal hardening) makes this a significant security-focused upgrade.

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft } from 'lucide-react'
+import { formatDateTime } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,12 +92,14 @@ async function getProjectAnalytics(id: string) {
     createdAt: event.createdAt,
   }))
 
+  const displayName = project.companyName || project.recipients[0]?.name || project.recipients[0]?.email || 'Client'
+
   return {
     project: {
       id: project.id,
       title: project.title,
-      recipientName: project.recipients[0]?.name || null,
-      recipientEmail: project.recipients[0]?.email || null,
+      recipientName: displayName,
+      recipientEmail: project.companyName ? null : project.recipients[0]?.email || null,
       status: project.status,
     },
     stats: {
@@ -235,7 +238,7 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
                       {video.lastAccessed && (
                         <div className="mt-3 pt-3 border-t text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          Last accessed: {new Date(video.lastAccessed).toLocaleString()}
+                          Last accessed: {formatDateTime(video.lastAccessed)}
                         </div>
                       )}
                     </div>
@@ -269,7 +272,7 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
                       <div className="text-right">
                         <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                           <Calendar className="w-3 h-3" />
-                          {new Date(event.createdAt).toLocaleString()}
+                          {formatDateTime(event.createdAt)}
                         </div>
                       </div>
                     </div>

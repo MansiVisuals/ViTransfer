@@ -223,9 +223,12 @@ export default function ProjectPage() {
                     <div className="min-w-0">
                       <p className="text-muted-foreground">Client</p>
                       <p className="font-medium break-words">
-                        {project.recipients?.[0]?.name || project.recipients?.[0]?.email || 'No recipient'}
+                        {(() => {
+                          const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
+                          return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
+                        })()}
                       </p>
-                      {project.recipients?.[0]?.name && project.recipients?.[0]?.email && (
+                      {!project.companyName && project.recipients?.[0]?.name && project.recipients?.[0]?.email && (
                         <p className="text-xs text-muted-foreground break-all">
                           {project.recipients[0].email}
                         </p>
@@ -279,7 +282,10 @@ export default function ProjectPage() {
                   projectId={project.id}
                   projectSlug={project.slug}
                   comments={filteredComments}
-                  clientName={project.recipients?.[0]?.name || project.recipients?.[0]?.email || 'Client'}
+                  clientName={(() => {
+                    const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
+                    return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
+                  })()}
                   clientEmail={project.recipients?.[0]?.email}
                   isApproved={project.status === 'APPROVED'}
                   restrictToLatestVersion={project.restrictCommentsToLatestVersion}

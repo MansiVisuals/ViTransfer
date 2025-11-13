@@ -245,7 +245,7 @@ export async function GET(
       // Rationale: Password protection implies client expects privacy
       // Non-protected shares remain anonymous for client safety
       ...(project.sharePassword || isAdmin ? {
-        clientName: primaryRecipient?.name || null,
+        clientName: project.companyName || primaryRecipient?.name || 'Client',
         clientEmail: primaryRecipient?.email || null,
         recipients: allRecipients, // All recipients for comment author selection
       } : {}),

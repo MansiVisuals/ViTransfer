@@ -29,12 +29,13 @@ async function getProjectsWithAnalytics() {
   return projects.map(project => {
     const totalDownloads = project.analytics.filter(a => a.eventType === 'DOWNLOAD_COMPLETE').length
     const totalPageVisits = project.analytics.filter(a => a.eventType === 'PAGE_VISIT').length
+    const displayName = project.companyName || project.recipients[0]?.name || project.recipients[0]?.email || 'Client'
 
     return {
       id: project.id,
       title: project.title,
-      recipientName: project.recipients[0]?.name || null,
-      recipientEmail: project.recipients[0]?.email || null,
+      recipientName: displayName,
+      recipientEmail: project.companyName ? null : project.recipients[0]?.email || null,
       status: project.status,
       videoCount: project.videos.length,
       totalDownloads,

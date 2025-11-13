@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw } from 'lucide-react'
 import { Select } from '@/components/ui/select'
+import { formatDateTime } from '@/lib/utils'
 
 interface SecurityEvent {
   id: string
@@ -293,7 +294,7 @@ export default function SecurityEventsClient() {
                       </div>
 
                       <div className="text-xs text-muted-foreground text-right whitespace-nowrap">
-                        {new Date(event.createdAt).toLocaleString()}
+                        {formatDateTime(event.createdAt)}
                       </div>
                     </div>
                   </div>

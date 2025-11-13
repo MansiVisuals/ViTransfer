@@ -46,23 +46,40 @@ export function formatTimestamp(seconds: number): string {
   return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
+/**
+ * Format date with timezone awareness
+ * Uses browser's timezone (client-side) or TZ env variable (server-side)
+ * Format adapts based on detected timezone region
+ */
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
 
-  const year = d.getFullYear()
-  const month = (d.getMonth() + 1).toString().padStart(2, '0')
-  const day = d.getDate().toString().padStart(2, '0')
+  // Client-side: use browser timezone
+  // Server-side: use TZ environment variable
+  const timezone = typeof window !== 'undefined'
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : process.env.TZ!
 
-  // Detect format from TZ environment variable
-  const tz = process.env.TZ || 'UTC'
+  // Format date parts using Intl.DateTimeFormat with timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+
+  const parts = formatter.formatToParts(d)
+  const year = parts.find(p => p.type === 'year')?.value || ''
+  const month = parts.find(p => p.type === 'month')?.value || ''
+  const day = parts.find(p => p.type === 'day')?.value || ''
 
   // US/Americas format (MM-dd-yyyy)
-  if (tz.startsWith('America/') || tz.startsWith('US/')) {
+  if (timezone.startsWith('America/') || timezone.startsWith('US/')) {
     return `${month}-${day}-${year}`
   }
 
   // European format (dd-MM-yyyy)
-  if (tz.startsWith('Europe/') || tz.startsWith('Africa/')) {
+  if (timezone.startsWith('Europe/') || timezone.startsWith('Africa/')) {
     return `${day}-${month}-${year}`
   }
 
@@ -70,12 +87,32 @@ export function formatDate(date: Date | string): string {
   return `${year}-${month}-${day}`
 }
 
+/**
+ * Format date and time with timezone awareness
+ * Uses browser's timezone (client-side) or TZ env variable (server-side)
+ * Time is displayed in user's local timezone
+ */
 export function formatDateTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
+
+  // Client-side: use browser timezone
+  // Server-side: use TZ environment variable
+  const timezone = typeof window !== 'undefined'
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : process.env.TZ!
+
   const dateStr = formatDate(d)
-  const hours = d.getHours().toString().padStart(2, '0')
-  const minutes = d.getMinutes().toString().padStart(2, '0')
-  return `${dateStr} ${hours}:${minutes}`
+
+  // Format time using Intl.DateTimeFormat with timezone
+  const timeFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false, // 24-hour format
+  })
+
+  const timeStr = timeFormatter.format(d)
+  return `${dateStr} ${timeStr}`
 }
 
 export function generateSlug(title: string): string {

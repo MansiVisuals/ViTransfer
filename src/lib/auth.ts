@@ -103,6 +103,10 @@ function generateRefreshToken(user: AuthUser): string {
  */
 export async function verifyAccessToken(token: string): Promise<JWTPayload | null> {
   try {
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET not configured')
+    }
+
     const decoded = jwt.verify(token, JWT_SECRET, {
       algorithms: ['HS256'],
     }) as JWTPayload
@@ -141,6 +145,10 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload | nul
  */
 export async function verifyRefreshToken(token: string): Promise<JWTPayload | null> {
   try {
+    if (!JWT_REFRESH_SECRET) {
+      throw new Error('JWT_REFRESH_SECRET not configured')
+    }
+
     const decoded = jwt.verify(token, JWT_REFRESH_SECRET, {
       algorithms: ['HS256'],
     }) as JWTPayload

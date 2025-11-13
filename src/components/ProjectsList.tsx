@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/utils'
 interface Project {
   id: string
   title: string
+  companyName: string | null
   status: string
   updatedAt: Date
   maxRevisions: number
@@ -80,19 +81,22 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                       <div className="flex-1 min-w-0">
                         <CardTitle className="text-lg sm:text-xl">{project.title}</CardTitle>
                         <CardDescription className="mt-2 text-sm break-words">
-                          {project.recipients && project.recipients.length > 0 ? (
-                            <>
-                              Client: {project.recipients[0].name || project.recipients[0].email || 'No contact info'}
-                              {project.recipients[0].name && project.recipients[0].email && (
-                                <>
-                                  <span className="hidden sm:inline"> ({project.recipients[0].email})</span>
-                                  <span className="block sm:hidden text-xs mt-1">{project.recipients[0].email}</span>
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            'No recipient'
-                          )}
+                          {(() => {
+                            const primaryRecipient = project.recipients?.find(r => r.isPrimary) || project.recipients?.[0]
+                            const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
+
+                            return (
+                              <>
+                                Client: {displayName}
+                                {!project.companyName && primaryRecipient?.name && primaryRecipient?.email && (
+                                  <>
+                                    <span className="hidden sm:inline"> ({primaryRecipient.email})</span>
+                                    <span className="block sm:hidden text-xs mt-1">{primaryRecipient.email}</span>
+                                  </>
+                                )}
+                              </>
+                            )
+                          })()}
                         </CardDescription>
                       </div>
                       <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">

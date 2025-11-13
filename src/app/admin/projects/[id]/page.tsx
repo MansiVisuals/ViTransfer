@@ -141,6 +141,16 @@ export default function ProjectPage() {
     setActiveVideos(videos)
   }
 
+  // Update activeVideos when project data refreshes (e.g., approval changes)
+  useEffect(() => {
+    if (!project?.videosByName || !activeVideoName) return
+
+    const freshVideos = project.videosByName[activeVideoName]
+    if (freshVideos) {
+      setActiveVideos(freshVideos)
+    }
+  }, [project, activeVideoName])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">

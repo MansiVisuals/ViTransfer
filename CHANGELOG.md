@@ -5,10 +5,53 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.6] - TBD
+## [0.3.0] - 2025-11-13
+
+**Why v0.3.0?** Originally planned as v0.2.6, this release includes critical security hardening that warrants a minor version bump rather than a patch. The scope of security improvements (SQL injection prevention, XSS protection enhancement, command injection fixes, timing attack mitigation, and path traversal hardening) makes this a significant security-focused upgrade.
+
+### Security
+- **CRITICAL**: Fixed SQL injection vulnerability in database context management
+  - Added strict CUID format validation (`/^c[a-z0-9]{24}$/`) before executing raw SQL
+  - Added UserRole enum validation to prevent arbitrary role injection
+  - Prevents malicious user IDs from bypassing Row Level Security (RLS)
+  - Location: `src/lib/db.ts:setDatabaseUserContext()`
+- **CRITICAL**: Enhanced XSS protection in comment rendering
+  - Configured DOMPurify with strict ALLOWED_TAGS whitelist
+  - Added ALLOWED_URI_REGEXP to only allow https://, http://, mailto: URLs
+  - Enabled FORCE_BODY to prevent context-breaking attacks
+  - Added rel="noopener noreferrer" to all links automatically
+  - Location: `src/components/MessageBubble.tsx:sanitizeContent()`
+- **CRITICAL**: Fixed command injection in FFmpeg watermark processing
+  - Created dedicated `validateAndSanitizeWatermarkText()` function
+  - Validates character whitelist (alphanumeric, spaces, safe punctuation only)
+  - Enforces 100 character limit to prevent resource exhaustion
+  - Properly escapes text for FFmpeg drawtext filter
+  - Location: `src/lib/ffmpeg.ts`
+- **CRITICAL**: Fixed timing attack vulnerability in password verification
+  - Implemented constant-time comparison using `crypto.timingSafeEqual()`
+  - Prevents password enumeration through timing analysis
+  - Maintains constant execution time even when lengths differ
+  - Location: `src/app/api/share/[token]/verify/route.ts:constantTimeCompare()`
+- **HIGH**: Added robust JSON.parse error handling in video access tokens
+  - Gracefully handles corrupted Redis data without crashing
+  - Validates required fields (videoId, projectId, sessionId) after parsing
+  - Logs security events with sanitized token preview (first 10 chars only)
+  - Location: `src/lib/video-access.ts:verifyVideoAccessToken()`
+- **HIGH**: Enhanced path traversal protection with 7-layer defense
+  - Layer 1: Null byte injection check
+  - Layer 2: Double URL decoding (catches `%252e%252e%252f` attacks)
+  - Layer 3: Path separator normalization
+  - Layer 4: Explicit `..` sequence removal
+  - Layer 5: Path normalization
+  - Layer 6: Absolute path resolution
+  - Layer 7: Boundary validation (ensure path is within STORAGE_ROOT)
+  - Location: `src/lib/storage.ts:validatePath()`
+- **Code Quality**: Removed 51KB of duplicate component files
+  - Deleted: AdminVideoManager 2.tsx, LoginModal 2.tsx, VideoPlayer 2.tsx, VideoUpload 2.tsx
+  - Eliminates maintenance burden and potential inconsistencies
 
 ### Added
-- **Complete Email Notification System** (originally planned for v0.3.0, delivered early!)
+- **Complete Email Notification System** (originally planned for future release, delivered now!)
   - Configurable notification schedules: Immediate, Hourly, Daily, Weekly
   - Email notification summaries to reduce spam (batches updates by schedule)
   - Separate admin and client notification settings per project
@@ -17,12 +60,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - BullMQ repeatable jobs for scheduled summary delivery (every minute check)
   - Professional email templates with project context and direct share links
   - Unified notification flow for all comment types (client comments, admin replies)
+- **Per-Video Revision Tracking**
+  - Track revision count per video (not just per project)
+  - Better control over individual video approval cycles
+  - Maintains project-wide revision limits while tracking per video
 - Sort toggle for projects dashboard (status/alphabetical sorting)
 - Sort toggle for project videos and versions (status/alphabetical sorting)
 - Section dividers in share page sidebar (For Review / Approved sections)
 - Green check mark icon for approved videos in sidebar (replaces play icon)
 - New `formatDate()` utility for consistent date formatting (11-Nov-2025 format)
-- **DEBUG_WORKER environment variable** for optional verbose logging (from v0.2.5)
+- **DEBUG_WORKER environment variable** for optional verbose logging
 
 ### Changed
 - **BREAKING**: All comments must now be video-specific (general comments removed)
@@ -39,8 +86,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - General/system comments (all comments must be attached to a video)
 - System audit comments for approval/unapproval actions (status tracked in database)
 - Old per-comment email notification system (replaced with unified notification queue)
+- Duplicate component files (AdminVideoManager 2.tsx, LoginModal 2.tsx, VideoPlayer 2.tsx, VideoUpload 2.tsx)
 
 ### Improved
+- Comment section approval updates now instant (optimistic UI updates)
+- Share page filtering refreshes immediately on approval state changes
+- Comment/reply updates appear instantly without page refresh
+- Optimistic updates for comment replies (no loading delays)
+- Admin comment version filtering on share page more accurate
+- Feedback & Discussion section updates immediately on approval changes
 - Approved badge spacing in admin panel
 - "All Versions" section spacing from content above
 - Analytics projects card spacing to prevent overlap
@@ -49,9 +103,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified comment filtering logic (no more null videoId checks)
 
 ### Fixed
-- **CRITICAL**: Thumbnail generation failing for videos shorter than 10 seconds (from v0.2.5)
+- **CRITICAL**: Thumbnail generation failing for videos shorter than 10 seconds
   - Previously hardcoded to seek to 10s, causing EOF for short videos
   - Now calculates safe timestamp: 10% of duration (min 0.5s, max 10s)
+- Comment section not updating when approval status changes
+- Share page filtering not refreshing after approval/unapproval
+- Instant comment/reply updates not working correctly
+- Optimistic updates for comment replies failing
+- Feedback & Discussion section not updating on approval changes
+- Admin comment version filtering on share page
 - Projects dashboard now loads correctly after refactoring
 - Mobile overflow when editing video/group names
 - Version label hover animation cutoff at top of container
@@ -63,6 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added lastAdminNotificationSent and lastClientNotificationSent timestamps
 - Created NotificationQueue table for batched email delivery with retry tracking
 - Added ProjectRecipient.receiveNotifications boolean field
+- Added per-video revision tracking fields
 - **IRREVERSIBLE**: Deleted all existing general comments (where videoId IS NULL)
 - Made Comment.videoId field required (NOT NULL constraint)
 - **IRREVERSIBLE**: Migrated all UUID format recipient IDs to CUID format

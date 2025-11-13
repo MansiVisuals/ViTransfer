@@ -123,7 +123,7 @@ export default function CommentInput({
                     {recipient.name}
                   </option>
                 ))}
-                <option value="custom">Custom Name
+                <option value="custom">Custom Name</option>
               </select>
 
               {nameSource === 'custom' && (

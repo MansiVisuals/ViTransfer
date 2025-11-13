@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
 import { isSmtpConfigured, sendProjectApprovedEmail, sendAdminProjectApprovedEmail } from '@/lib/email'
 import { handleApprovalNotification } from '@/lib/notifications'
 import { getProjectRecipients, getPrimaryRecipient } from '@/lib/recipients'
 import { generateShareUrl } from '@/lib/url'
 import { getAutoApproveProject } from '@/lib/settings'
+import { verifyProjectAccess } from '@/lib/project-access'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,28 +29,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // SECURITY: Check password authentication for password-protected projects using cookies
-    if (project.sharePassword) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
+    // Verify project access using dual auth pattern (clients can approve via share link)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
 
-      if (!authSessionId) {
-        return NextResponse.json({
-          error: 'Password required to approve this project'
-        }, { status: 401 })
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== project.id) {
-        return NextResponse.json({
-          error: 'Password required to approve this project'
-        }, { status: 401 })
-      }
+    if (!accessCheck.authorized) {
+      return NextResponse.json({
+        error: 'Password required to approve this project'
+      }, { status: 401 })
     }
-    // If no password protection, anyone can approve
 
     if (project.status === 'APPROVED') {
       return NextResponse.json({ error: 'Project already approved' }, { status: 400 })

@@ -3,9 +3,9 @@ import { prisma } from '@/lib/db'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, createCommentSchema } from '@/lib/validation'
-import { cookies } from 'next/headers'
 import { isSmtpConfigured } from '@/lib/settings'
 import { getPrimaryRecipient } from '@/lib/recipients'
+import { verifyProjectAccess } from '@/lib/project-access'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -79,10 +79,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get current user if authenticated (for admin view)
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
-
     // Fetch the project to check password protection
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -99,34 +95,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Track if user is authenticated (admin or has password access)
-    let isAuthenticated = isAdmin
+    // Verify project access using dual auth pattern
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
 
-    // If password protected and user is not admin, verify share authentication
-    if (project.sharePassword && !currentUser) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (!authSessionId) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== project.id) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-
-      isAuthenticated = true
+    if (!accessCheck.authorized) {
+      return accessCheck.errorResponse!
     }
+
+    const { isAdmin, isAuthenticated } = accessCheck
 
     // Get primary recipient for author name fallback
     const primaryRecipient = await getPrimaryRecipient(projectId)
@@ -247,38 +223,18 @@ export async function POST(request: NextRequest) {
     const primaryRecipient = await getPrimaryRecipient(projectId)
     const fallbackName = primaryRecipient?.name || 'Client'
 
-    // Track if user is authenticated (admin or has password access)
-    const isAdmin = currentUser?.role === 'ADMIN'
-    let isAuthenticated = isAdmin
+    // Verify project access using dual auth pattern
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
 
-    // If password protected and user is not admin, verify share authentication
-    if (project.sharePassword && !currentUser) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (!authSessionId) {
-        // Don't reveal if project exists - return generic error
-        return NextResponse.json(
-          { error: 'Unable to process request' },
-          { status: 400 }
-        )
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== project.id) {
-        // Don't reveal if project exists - return generic error
-        return NextResponse.json(
-          { error: 'Unable to process request' },
-          { status: 400 }
-        )
-      }
-
-      // User has valid password authentication
-      isAuthenticated = true
+    if (!accessCheck.authorized) {
+      // Don't reveal if project exists - return generic error
+      return NextResponse.json(
+        { error: 'Unable to process request' },
+        { status: 400 }
+      )
     }
+
+    const { isAdmin, isAuthenticated } = accessCheck
 
     // Get video version if videoId is provided but version isn't
     let finalVideoVersion = videoVersion

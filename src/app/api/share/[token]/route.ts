@@ -5,6 +5,7 @@ import { generateVideoAccessToken } from '@/lib/video-access'
 import { isSmtpConfigured, getClientSessionTimeoutSeconds } from '@/lib/settings'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
+import { verifyProjectAccess } from '@/lib/project-access'
 import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
 
@@ -51,33 +52,18 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Check if user is admin (for both data sanitization and auth bypass)
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
+    // Verify project access using dual auth pattern
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
 
-    // Check authentication if password protected (admins bypass password)
-    if (project.sharePassword && !isAdmin) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (!authSessionId) {
-        return NextResponse.json({
-          error: 'Password required',
-          requiresPassword: true
-        }, { status: 401 })
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== project.id) {
-        return NextResponse.json({
-          error: 'Password required',
-          requiresPassword: true
-        }, { status: 401 })
-      }
+    if (!accessCheck.authorized) {
+      // Return password required error for share page
+      return NextResponse.json({
+        error: 'Password required',
+        requiresPassword: true
+      }, { status: 401 })
     }
+
+    const { isAdmin } = accessCheck
 
     // Get or create session ID for this share access
     const cookieStore = await cookies()

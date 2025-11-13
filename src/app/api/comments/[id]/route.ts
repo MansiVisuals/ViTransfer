@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, updateCommentSchema } from '@/lib/validation'
 import { getCurrentUserFromRequest } from '@/lib/auth'
-import { cookies } from 'next/headers'
+import { verifyProjectAccess } from '@/lib/project-access'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -113,36 +113,22 @@ export async function PATCH(
       )
     }
 
-    // Check authentication for password-protected projects
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
-    let isAuthenticated = isAdmin
+    // Verify project access using dual auth pattern
+    const accessCheck = await verifyProjectAccess(
+      request,
+      existingComment.project.id,
+      existingComment.project.sharePassword
+    )
 
-    if (existingComment.project.sharePassword && !isAdmin) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (!authSessionId) {
-        return NextResponse.json(
-          { error: 'Unable to process request' },
-          { status: 400 }
-        )
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== existingComment.project.id) {
-        return NextResponse.json(
-          { error: 'Unable to process request' },
-          { status: 400 }
-        )
-      }
-
-      // User has valid password authentication
-      isAuthenticated = true
+    if (!accessCheck.authorized) {
+      // Don't reveal if comment exists - return generic error
+      return NextResponse.json(
+        { error: 'Unable to process request' },
+        { status: 400 }
+      )
     }
+
+    const { isAdmin, isAuthenticated } = accessCheck
 
     // Update the comment
     await prisma.comment.update({

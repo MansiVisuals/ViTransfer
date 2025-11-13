@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { cookies } from 'next/headers'
-import { getCurrentUserFromRequest } from '@/lib/auth'
 import { getPrimaryRecipient } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
+import { verifyProjectAccess } from '@/lib/project-access'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -88,33 +87,14 @@ export async function GET(
     const primaryRecipient = await getPrimaryRecipient(project.id)
     const fallbackName = primaryRecipient?.name || 'Client'
 
-    // Check if user is admin
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
+    // Verify project access using dual auth pattern (admin JWT or share_auth cookie)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
 
-    // Track if user is authenticated (admin or has password access)
-    let isAuthenticated = isAdmin
-
-    // Check authentication if password protected (admins bypass password)
-    if (project.sharePassword && !isAdmin) {
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-
-      if (!authSessionId) {
-        return NextResponse.json({ error: 'Password required' }, { status: 401 })
-      }
-
-      // Verify auth session maps to this project
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
-
-      if (mappedProjectId !== project.id) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
-      }
-
-      // User has valid password authentication
-      isAuthenticated = true
+    if (!accessCheck.authorized) {
+      return accessCheck.errorResponse!
     }
+
+    const { isAdmin, isAuthenticated } = accessCheck
 
     // Fetch comments with nested replies
     const comments = await prisma.comment.findMany({

@@ -67,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Made Comment.videoId field required (NOT NULL constraint)
 - **IRREVERSIBLE**: Migrated all UUID format recipient IDs to CUID format
 
-## [0.2.5] - TBD
+## [0.2.5] - 2025-11-12
 
 ### Added
 - **DEBUG_WORKER environment variable**

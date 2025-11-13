@@ -524,93 +524,50 @@ async function processAdminNotifications() {
     // Increment attempt counter before sending
     await prisma.notificationQueue.updateMany({
       where: { id: { in: notificationIds } },
-      data: {
-        adminAttempts: { increment: 1 }
+      data: { adminAttempts: { increment: 1 } }
+    })
+
+    const currentAttempts = pendingNotifications[0]?.adminAttempts + 1 || 1
+    console.log(`[ADMIN] Attempt #${currentAttempts} for ${pendingNotifications.length} notification(s)`)
+
+    // Send summary to each admin
+    const result = await sendNotificationsWithRetry({
+      notificationIds,
+      currentAttempts,
+      isClientNotification: false,
+      logPrefix: '[ADMIN]',
+      onSuccess: async () => {
+        const projects = Object.values(projectGroups)
+
+        for (const admin of admins) {
+          const html = generateAdminSummaryEmail({
+            adminName: admin.name || '',
+            period,
+            projects
+          })
+
+          const result = await sendEmail({
+            to: admin.email,
+            subject: `Project activity summary (${pendingNotifications.length} updates)`,
+            html,
+          })
+
+          if (result.success) {
+            console.log(`[ADMIN]   Sent to ${admin.email}`)
+          } else {
+            throw new Error(`Failed to send to ${admin.email}: ${result.error}`)
+          }
+        }
       }
     })
 
-    console.log(`[ADMIN] Attempt #${pendingNotifications[0]?.adminAttempts + 1 || 1} for ${pendingNotifications.length} notification(s)`)
-
-    let sendSuccess = false
-    let lastError: string | undefined
-
-    // Send summary to each admin
-    for (const admin of admins) {
-      try {
-        const projects = Object.values(projectGroups)
-        if (projects.length > 0 && projects[0].notifications.length > 0) {
-          console.log(`[ADMIN]   Notification data sample:`, JSON.stringify(projects[0].notifications[0], null, 2))
-        }
-
-        const html = generateAdminSummaryEmail({
-          adminName: admin.name || '',
-          period,
-          projects
-        })
-
-        const result = await sendEmail({
-          to: admin.email,
-          subject: `Project activity summary (${pendingNotifications.length} updates)`,
-          html,
-        })
-
-        if (result.success) {
-          sendSuccess = true
-          console.log(`[ADMIN] Sent admin summary (${pendingNotifications.length} notifications to ${admin.email})`)
-        } else {
-          lastError = result.error || 'Unknown error'
-          console.error(`[ADMIN] Failed to send to ${admin.email}: ${lastError}`)
-        }
-      } catch (error) {
-        lastError = error instanceof Error ? error.message : 'Unknown error'
-        console.error(`[ADMIN] Failed to send admin summary:`, error)
-        // Continue sending to other admins
-      }
-    }
-
-    if (sendSuccess) {
-      // Mark as sent to admins
-      await prisma.notificationQueue.updateMany({
-        where: { id: { in: notificationIds } },
-        data: {
-          sentToAdmins: true,
-          adminSentAt: now,
-          lastError: null // Clear error on success
-        }
-      })
-
-      // Update last sent timestamp
+    // Update settings last sent timestamp on success
+    if (result.success) {
       await prisma.settings.update({
         where: { id: 'default' },
         data: { lastAdminNotificationSent: now }
       })
-
       console.log(`[ADMIN] Summary sent (${pendingNotifications.length} notifications to ${admins.length} admins)`)
-    } else {
-      // Check if we've exhausted retries
-      const maxAttempts = 3
-      const currentAttempts = pendingNotifications[0]?.adminAttempts + 1 || 1
-
-      if (currentAttempts >= maxAttempts) {
-        // Mark as permanently failed after 3 attempts
-        await prisma.notificationQueue.updateMany({
-          where: { id: { in: notificationIds } },
-          data: {
-            adminFailed: true,
-            lastError: lastError || 'Failed after 3 attempts'
-          }
-        })
-        console.error(`[ADMIN] Permanently failed after ${maxAttempts} attempts`)
-      } else {
-        // Update error for retry
-        await prisma.notificationQueue.updateMany({
-          where: { id: { in: notificationIds } },
-          data: {
-            lastError: lastError || 'Send failed'
-          }
-        })
-        console.log(`[ADMIN] Will retry (attempt ${currentAttempts}/${maxAttempts})`)
-      }
     }
   } catch (error) {
     console.error('Failed to process admin notifications:', error)
@@ -716,94 +673,53 @@ async function processClientNotifications() {
       // Increment attempt counter before sending
       await prisma.notificationQueue.updateMany({
         where: { id: { in: notificationIds } },
-        data: {
-          clientAttempts: { increment: 1 }
-        }
+        data: { clientAttempts: { increment: 1 } }
       })
 
       const currentAttempts = project.notificationQueue[0]?.clientAttempts + 1 || 1
       console.log(`[CLIENT]   Attempt #${currentAttempts} for ${project.notificationQueue.length} notification(s)`)
 
-      let sendSuccess = false
-      let lastError: string | undefined
-
       // Send summary to each recipient
-      for (const recipient of recipients) {
-        try {
+      const result = await sendNotificationsWithRetry({
+        notificationIds,
+        currentAttempts,
+        isClientNotification: true,
+        logPrefix: '[CLIENT]  ',
+        onSuccess: async () => {
           const notifications = project.notificationQueue.map(n => n.data as any)
-          console.log(`[CLIENT]     Notification data sample:`, JSON.stringify(notifications[0], null, 2))
 
-          const html = generateNotificationSummaryEmail({
-            projectTitle: project.title,
-            shareUrl,
-            recipientName: recipient.name || recipient.email!,
-            recipientEmail: recipient.email!,
-            period,
-            notifications
-          })
+          for (const recipient of recipients) {
+            const html = generateNotificationSummaryEmail({
+              projectTitle: project.title,
+              shareUrl,
+              recipientName: recipient.name || recipient.email!,
+              recipientEmail: recipient.email!,
+              period,
+              notifications
+            })
 
-          const result = await sendEmail({
-            to: recipient.email!,
-            subject: `Updates on ${project.title}`,
-            html,
-          })
+            const result = await sendEmail({
+              to: recipient.email!,
+              subject: `Updates on ${project.title}`,
+              html,
+            })
 
-          if (result.success) {
-            sendSuccess = true
-            console.log(`[CLIENT]     Sent to ${recipient.name || recipient.email}`)
-          } else {
-            lastError = result.error || 'Unknown error'
-            console.error(`[CLIENT]     Failed to send to ${recipient.email}: ${lastError}`)
+            if (result.success) {
+              console.log(`[CLIENT]     Sent to ${recipient.name || recipient.email}`)
+            } else {
+              throw new Error(`Failed to send to ${recipient.email}: ${result.error}`)
+            }
           }
-        } catch (error) {
-          lastError = error instanceof Error ? error.message : 'Unknown error'
-          console.error(`[CLIENT]     Failed to send to ${recipient.email}:`, error)
-          // Continue sending to other recipients
         }
-      }
+      })
 
-      if (sendSuccess) {
-        // Mark as sent to clients
-        await prisma.notificationQueue.updateMany({
-          where: { id: { in: notificationIds } },
-          data: {
-            sentToClients: true,
-            clientSentAt: now,
-            lastError: null // Clear error on success
-          }
-        })
-
-        // Update last sent timestamp
+      // Update project last sent timestamp on success
+      if (result.success) {
         await prisma.project.update({
           where: { id: project.id },
           data: { lastClientNotificationSent: now }
         })
-
         console.log(`[CLIENT]   Summary sent (${project.notificationQueue.length} items to ${recipients.length} recipient(s))`)
-      } else {
-        // Check if we've exhausted retries
-        const maxAttempts = 3
-
-        if (currentAttempts >= maxAttempts) {
-          // Mark as permanently failed after 3 attempts
-          await prisma.notificationQueue.updateMany({
-            where: { id: { in: notificationIds } },
-            data: {
-              clientFailed: true,
-              lastError: lastError || 'Failed after 3 attempts'
-            }
-          })
-          console.error(`[CLIENT]   Permanently failed after ${maxAttempts} attempts`)
-        } else {
-          // Update error for retry
-          await prisma.notificationQueue.updateMany({
-            where: { id: { in: notificationIds } },
-            data: {
-              lastError: lastError || 'Send failed'
-            }
-          })
-          console.log(`[CLIENT]   Will retry (attempt ${currentAttempts}/${maxAttempts})`)
-        }
       }
     }
 
@@ -811,6 +727,67 @@ async function processClientNotifications() {
   } catch (error) {
     console.error('[CLIENT] Error processing notifications:', error)
   }
+}
+
+/**
+ * Handle notification send with automatic retry logic
+ * DRY helper - used by both admin and client notification processing
+ */
+async function sendNotificationsWithRetry(config: {
+  notificationIds: string[]
+  currentAttempts: number
+  isClientNotification: boolean
+  onSuccess: () => Promise<void>
+  logPrefix: string
+}): Promise<{ success: boolean; lastError?: string }> {
+  const { notificationIds, currentAttempts, isClientNotification, onSuccess, logPrefix } = config
+  const MAX_ATTEMPTS = 3
+
+  let sendSuccess = false
+  let lastError: string | undefined
+
+  try {
+    await onSuccess()
+    sendSuccess = true
+  } catch (error) {
+    lastError = error instanceof Error ? error.message : 'Unknown error'
+    console.error(`${logPrefix} Send failed:`, error)
+  }
+
+  const fieldPrefix = isClientNotification ? 'client' : 'admin'
+  const now = new Date()
+
+  if (sendSuccess) {
+    // Mark as sent
+    await prisma.notificationQueue.updateMany({
+      where: { id: { in: notificationIds } },
+      data: {
+        [isClientNotification ? 'sentToClients' : 'sentToAdmins']: true,
+        [isClientNotification ? 'clientSentAt' : 'adminSentAt']: now,
+        lastError: null
+      }
+    })
+    console.log(`${logPrefix} Successfully sent`)
+  } else if (currentAttempts >= MAX_ATTEMPTS) {
+    // Permanently failed after 3 attempts
+    await prisma.notificationQueue.updateMany({
+      where: { id: { in: notificationIds } },
+      data: {
+        [isClientNotification ? 'clientFailed' : 'adminFailed']: true,
+        lastError: lastError || `Failed after ${MAX_ATTEMPTS} attempts`
+      }
+    })
+    console.error(`${logPrefix} Permanently failed after ${MAX_ATTEMPTS} attempts`)
+  } else {
+    // Will retry
+    await prisma.notificationQueue.updateMany({
+      where: { id: { in: notificationIds } },
+      data: { lastError: lastError || 'Send failed' }
+    })
+    console.log(`${logPrefix} Will retry (attempt ${currentAttempts}/${MAX_ATTEMPTS})`)
+  }
+
+  return { success: sendSuccess, lastError }
 }
 
 /**
@@ -830,12 +807,12 @@ function getPeriodString(schedule: string): string {
 }
 
 /**
- * Check if notifications should be sent now (flexible cron-like scheduling)
- * Key principle: If schedule changes, immediately re-evaluate based on new schedule
+ * Check if notifications should be sent now (CRON-like scheduling)
  *
- * HOURLY: Send every hour at :00 (10:00, 11:00, 12:00, etc.)
- * DAILY: Send once per day at specified time
- * WEEKLY: Send once per week on specified day and time
+ * CRON Principle: Compares last sent time against the most recent target time.
+ * If schedule changes (e.g., WEEKLY→DAILY), immediately re-evaluates and sends if past due.
+ *
+ * TZ Note: All Date operations use container's TZ (set via TZ env var in docker-compose)
  */
 function shouldSendNow(
   schedule: string,
@@ -844,62 +821,50 @@ function shouldSendNow(
   lastSent: Date | null,
   now: Date
 ): boolean {
-  switch (schedule) {
-    case 'HOURLY':
-      // Send every hour at :00
-      // Allow 2-minute window to catch the :00 mark (worker runs every minute)
-      const currentMinute = now.getMinutes()
-      if (currentMinute > 2) return false
+  // Helper: Calculate target datetime
+  const getTargetTime = (): Date | null => {
+    switch (schedule) {
+      case 'HOURLY':
+        // Target: Start of current hour
+        const hourTarget = new Date(now)
+        hourTarget.setMinutes(0, 0, 0)
+        return hourTarget
 
-      // Calculate the start of current hour
-      const currentHourStart = new Date(now)
-      currentHourStart.setMinutes(0, 0, 0)
+      case 'DAILY':
+        if (!time) return null
+        const [dailyHour, dailyMin] = time.split(':').map(Number)
+        const dailyTarget = new Date(now)
+        dailyTarget.setHours(dailyHour, dailyMin, 0, 0)
+        return dailyTarget
 
-      // If never sent, or last sent was before this hour started, send
-      if (!lastSent || lastSent < currentHourStart) return true
-      return false
+      case 'WEEKLY':
+        if (!time || day === null) return null
+        // Only send on the target day
+        if (now.getDay() !== day) return null
+        const [weeklyHour, weeklyMin] = time.split(':').map(Number)
+        const weeklyTarget = new Date(now)
+        weeklyTarget.setHours(weeklyHour, weeklyMin, 0, 0)
+        return weeklyTarget
 
-    case 'DAILY':
-      if (!time) return false
-      const [dailyHour, dailyMin] = time.split(':').map(Number)
-      const targetDailyMinutes = dailyHour * 60 + dailyMin
-      const currentDailyMinutes = now.getHours() * 60 + now.getMinutes()
-
-      // Haven't reached the target time yet today
-      if (currentDailyMinutes < targetDailyMinutes) return false
-
-      // Calculate today's target time
-      const todayTarget = new Date(now)
-      todayTarget.setHours(dailyHour, dailyMin, 0, 0)
-
-      // If never sent, or last sent was before today's target time, send
-      if (!lastSent || lastSent < todayTarget) return true
-      return false
-
-    case 'WEEKLY':
-      if (!time || day === null) return false
-
-      // Not the target day
-      if (now.getDay() !== day) return false
-
-      const [weeklyHour, weeklyMin] = time.split(':').map(Number)
-      const targetWeeklyMinutes = weeklyHour * 60 + weeklyMin
-      const currentWeeklyMinutes = now.getHours() * 60 + now.getMinutes()
-
-      // Haven't reached the target time yet today
-      if (currentWeeklyMinutes < targetWeeklyMinutes) return false
-
-      // Calculate this week's target time (current day at target time)
-      const weekTarget = new Date(now)
-      weekTarget.setHours(weeklyHour, weeklyMin, 0, 0)
-
-      // If never sent, or last sent was before this week's target time, send
-      if (!lastSent || lastSent < weekTarget) return true
-      return false
-
-    default:
-      return false
+      default:
+        return null
+    }
   }
+
+  const target = getTargetTime()
+  if (!target) return false
+
+  // Not past target time yet - wait
+  if (now < target) return false
+
+  // Never sent before - send now
+  if (!lastSent) return true
+
+  // Already sent after this target - don't send again
+  if (lastSent >= target) return false
+
+  // Last sent was before this target - send now
+  return true
 }
 
 async function main() {

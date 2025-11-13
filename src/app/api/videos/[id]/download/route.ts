@@ -48,7 +48,7 @@ export async function GET(
     // Convert Node.js stream to Web API ReadableStream
     const readableStream = new ReadableStream({
       start(controller) {
-        fileStream.on('data', (chunk: Buffer) => controller.enqueue(chunk))
+        fileStream.on('data', (chunk) => controller.enqueue(chunk))
         fileStream.on('end', () => controller.close())
         fileStream.on('error', (err) => controller.error(err))
       },

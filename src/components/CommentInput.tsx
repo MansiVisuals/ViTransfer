@@ -105,16 +105,19 @@ export default function CommentInput({
           {namedRecipients.length > 0 ? (
             <>
               <select
-                value={nameSource === 'recipient' ? selectedRecipientId : 'custom'}
+                value={nameSource === 'recipient' && selectedRecipientId ? selectedRecipientId : nameSource === 'custom' ? 'custom' : 'placeholder'}
                 onChange={(e) => {
                   if (e.target.value === 'custom') {
                     onNameSourceChange('custom')
+                  } else if (e.target.value === 'placeholder') {
+                    // Do nothing, just keep placeholder selected
                   } else {
                     onNameSourceChange('recipient', e.target.value)
                   }
                 }}
                 className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md"
               >
+                <option value="placeholder">Select a name...</option>
                 {namedRecipients.map((recipient) => (
                   <option key={recipient.id} value={recipient.id}>
                     {recipient.name}

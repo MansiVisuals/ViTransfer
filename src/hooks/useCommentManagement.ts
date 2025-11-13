@@ -45,11 +45,10 @@ export function useCommentManagement({
   // Author name management
   const displayClientName = isPasswordProtected ? clientName : 'Client'
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
-  const initialAuthorName = namedRecipients[0]?.name || displayClientName || ''
 
-  const [authorName, setAuthorName] = useState(initialAuthorName)
-  const [nameSource, setNameSource] = useState<'recipient' | 'custom'>('recipient')
-  const [selectedRecipientId, setSelectedRecipientId] = useState(namedRecipients[0]?.id || '')
+  const [authorName, setAuthorName] = useState('')
+  const [nameSource, setNameSource] = useState<'recipient' | 'custom'>('custom')
+  const [selectedRecipientId, setSelectedRecipientId] = useState('')
 
   // Merge real comments with optimistic comments
   // Check both top-level comments AND replies to avoid duplicates

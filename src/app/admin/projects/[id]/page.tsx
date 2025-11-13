@@ -143,13 +143,14 @@ export default function ProjectPage() {
 
   // Update activeVideos when project data refreshes (e.g., approval changes)
   useEffect(() => {
-    if (!project?.videosByName || !activeVideoName) return
+    if (!project?.videos || !activeVideoName) return
 
-    const freshVideos = project.videosByName[activeVideoName]
-    if (freshVideos) {
+    // Rebuild active videos from fresh project data
+    const freshVideos = project.videos.filter((v: any) => v.name === activeVideoName)
+    if (freshVideos.length > 0) {
       setActiveVideos(freshVideos)
     }
-  }, [project, activeVideoName])
+  }, [project?.videos, activeVideoName])
 
   if (loading) {
     return (

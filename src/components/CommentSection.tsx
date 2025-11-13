@@ -84,7 +84,7 @@ export default function CommentSection({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [localComments, setLocalComments] = useState<CommentWithReplies[]>(initialComments)
 
-  // Fetch comments function
+  // Fetch comments function (only used for event-triggered updates)
   const fetchComments = async () => {
     try {
       const response = await fetch(`/api/comments?projectId=${projectId}`, {
@@ -99,17 +99,10 @@ export default function CommentSection({
     }
   }
 
-  // Auto-refresh comments every 5 seconds for real-time updates
+  // Initialize localComments only (no polling - hook handles optimistic updates)
   useEffect(() => {
-    const pollComments = () => fetchComments()
-
-    // Initial sync
     setLocalComments(initialComments)
-
-    // Poll every 5 seconds
-    const interval = setInterval(pollComments, 5000)
-    return () => clearInterval(interval)
-  }, [projectId, initialComments])
+  }, [initialComments])
 
   // Listen for immediate comment updates (delete, approve, etc.)
   useEffect(() => {
@@ -136,8 +129,9 @@ export default function CommentSection({
   const isCurrentVideoApproved = currentVideo ? (currentVideo as any).approved === true : false
   const commentsDisabled = isApproved || isCurrentVideoApproved
 
-  // Merge local comments with hook comments (prefer hook for optimistic updates)
-  const mergedComments = comments.length > localComments.length ? comments : localComments
+  // Always use hook comments (includes optimistic updates)
+  // Local comments only used as fallback if hook hasn't loaded
+  const mergedComments = comments.length > 0 ? comments : localComments
 
   // Filter comments based on currently selected video and version (admin only)
   const displayComments = (() => {

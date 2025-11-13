@@ -47,7 +47,7 @@ export function useCommentManagement({
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
 
   const [authorName, setAuthorName] = useState('')
-  const [nameSource, setNameSource] = useState<'recipient' | 'custom'>('custom')
+  const [nameSource, setNameSource] = useState<'recipient' | 'custom' | 'none'>('none')
   const [selectedRecipientId, setSelectedRecipientId] = useState('')
 
   // Merge real comments with optimistic comments
@@ -273,10 +273,13 @@ export function useCommentManagement({
     setHasAutoFilledTimestamp(false)
   }
 
-  const handleNameSourceChange = (source: 'recipient' | 'custom', recipientId?: string) => {
+  const handleNameSourceChange = (source: 'recipient' | 'custom' | 'none', recipientId?: string) => {
     setNameSource(source)
     if (source === 'custom') {
       setAuthorName('')
+    } else if (source === 'none') {
+      setAuthorName('')
+      setSelectedRecipientId('')
     } else if (recipientId) {
       setSelectedRecipientId(recipientId)
       const selected = namedRecipients.find(r => r.id === recipientId)

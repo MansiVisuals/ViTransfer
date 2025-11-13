@@ -26,9 +26,9 @@ interface CommentInputProps {
   authorName: string
   onAuthorNameChange: (value: string) => void
   namedRecipients: Array<{ id: string; name: string | null }>
-  nameSource: 'recipient' | 'custom'
+  nameSource: 'recipient' | 'custom' | 'none'
   selectedRecipientId: string
-  onNameSourceChange: (source: 'recipient' | 'custom', recipientId?: string) => void
+  onNameSourceChange: (source: 'recipient' | 'custom' | 'none', recipientId?: string) => void
 
   // Restrictions
   currentVideoRestricted: boolean
@@ -105,25 +105,25 @@ export default function CommentInput({
           {namedRecipients.length > 0 ? (
             <>
               <select
-                value={nameSource === 'recipient' && selectedRecipientId ? selectedRecipientId : nameSource === 'custom' ? 'custom' : 'placeholder'}
+                value={nameSource === 'recipient' && selectedRecipientId ? selectedRecipientId : nameSource === 'custom' ? 'custom' : 'none'}
                 onChange={(e) => {
                   if (e.target.value === 'custom') {
                     onNameSourceChange('custom')
-                  } else if (e.target.value === 'placeholder') {
-                    // Do nothing, just keep placeholder selected
+                  } else if (e.target.value === 'none') {
+                    onNameSourceChange('none')
                   } else {
                     onNameSourceChange('recipient', e.target.value)
                   }
                 }}
                 className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md"
               >
-                <option value="placeholder">Select a name...</option>
+                <option value="none">Select a name...</option>
                 {namedRecipients.map((recipient) => (
                   <option key={recipient.id} value={recipient.id}>
                     {recipient.name}
                   </option>
                 ))}
-                <option value="custom">Custom Name...</option>
+                <option value="custom">Custom Name
               </select>
 
               {nameSource === 'custom' && (

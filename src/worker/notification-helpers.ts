@@ -36,6 +36,11 @@ export function shouldSendNow(
   const getTargetTime = (): Date | null => {
     switch (schedule) {
       case 'HOURLY':
+        // Only send at the top of the hour (:00 or :01 minutes to account for cron timing)
+        // This ensures messages accumulate during the hour and send at the next :00
+        if (now.getMinutes() > 1) return null
+
+        // Target is the current hour (already at :00 or :01)
         const hourTarget = new Date(now)
         hourTarget.setMinutes(0, 0, 0)
         return hourTarget

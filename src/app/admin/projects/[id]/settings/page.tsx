@@ -401,12 +401,9 @@ export default function ProjectSettingsPage() {
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="e.g., Acme Studios"
+                  placeholder="e.g., XYZ Corporation"
                   maxLength={100}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Display name in emails: Company/Brand Name → Primary Contact → "Client"
-                </p>
               </div>
 
               <div className="space-y-4">

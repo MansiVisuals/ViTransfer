@@ -148,16 +148,28 @@ export default function CommentSection({
         : mergedComments
     }
 
-    // Admin view: show comments for ALL versions of selected video name
+    // Admin view: filter by video name and version
     if (isAdminView && videos.length > 0) {
-      const videoIds = videos.map(v => v.id)
+      // Find currently selected video
+      const selectedVideo = videos.find(v => v.id === selectedVideoId)
+      if (!selectedVideo) return []
+
+      // Get all video IDs with the same name (all versions of this video)
+      const sameNameVideoIds = videos
+        .filter(v => v.name === selectedVideo.name)
+        .map(v => v.id)
+
+      // Filter comments to videos with same name, then apply version filter
       return mergedComments.filter(comment => {
-        if (!videoIds.includes(comment.videoId)) return false
-        // Filter by version if specific version selected
-        if (selectedVersion !== 'all') {
-          return comment.videoVersion === selectedVersion
+        if (!sameNameVideoIds.includes(comment.videoId)) return false
+
+        // If 'all' is selected, show ONLY the currently playing video (not all versions)
+        if (selectedVersion === 'all') {
+          return comment.videoId === selectedVideoId
         }
-        return true
+
+        // Filter by specific version selected in dropdown
+        return comment.videoVersion === selectedVersion
       })
     }
 

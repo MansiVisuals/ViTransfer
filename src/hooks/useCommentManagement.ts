@@ -52,12 +52,23 @@ export function useCommentManagement({
   const [selectedRecipientId, setSelectedRecipientId] = useState(namedRecipients[0]?.id || '')
 
   // Merge real comments with optimistic comments
+  // Check both top-level comments AND replies to avoid duplicates
   const activeOptimisticComments = optimisticComments.filter(oc => {
-    const hasRealVersion = initialComments.some(rc =>
+    // Check top-level comments
+    const hasRealVersionTopLevel = initialComments.some(rc =>
       rc.content === oc.content &&
       Math.abs(new Date(rc.createdAt).getTime() - new Date(oc.createdAt).getTime()) < 5000
     )
-    return !hasRealVersion
+
+    // Check nested replies
+    const hasRealVersionInReplies = initialComments.some(rc =>
+      rc.replies?.some((reply: any) =>
+        reply.content === oc.content &&
+        Math.abs(new Date(reply.createdAt).getTime() - new Date(oc.createdAt).getTime()) < 5000
+      )
+    )
+
+    return !hasRealVersionTopLevel && !hasRealVersionInReplies
   })
 
   // Merge optimistic comments properly (nest replies under parent comments)

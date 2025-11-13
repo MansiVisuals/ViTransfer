@@ -15,6 +15,18 @@ export function escapeHtml(unsafe: string): string {
     .replace(/'/g, "&#039;")
 }
 
+/**
+ * Sanitize string for email header use (defense-in-depth)
+ * Removes CRLF and other header injection attempts
+ */
+function sanitizeEmailHeader(value: string): string {
+  if (!value) return ''
+  return value
+    .replace(/[\r\n]/g, '') // Remove CRLF
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .trim()
+}
+
 interface EmailSettings {
   smtpServer: string | null
   smtpPort: number | null
@@ -144,8 +156,8 @@ export async function sendEmail({
     const settings = await getEmailSettings()
     const transporter = await createTransporter()
 
-    const fromAddress = settings.smtpFromAddress || settings.smtpUsername || 'noreply@vidtransfer.com'
-    const companyName = settings.companyName || 'VidTransfer'
+    const fromAddress = settings.smtpFromAddress || settings.smtpUsername || 'noreply@vitransfer.com'
+    const companyName = sanitizeEmailHeader(settings.companyName || 'ViTransfer')
 
     const info = await transporter.sendMail({
       from: `"${companyName}" <${fromAddress}>`,
@@ -895,7 +907,7 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
     <p style="font-size: 12px; color: #999; margin-bottom: 0; text-align: center;">
-      This is a test email from ${settings.companyName || 'VidTransfer'}
+      This is a test email from ${settings.companyName || 'ViTransfer'}
     </p>
   </div>
 </body>

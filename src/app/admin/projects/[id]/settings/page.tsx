@@ -21,6 +21,7 @@ interface Project {
   title: string
   slug: string
   description: string | null
+  companyName: string | null
   enableRevisions: boolean
   maxRevisions: number
   restrictCommentsToLatestVersion: boolean
@@ -50,6 +51,7 @@ export default function ProjectSettingsPage() {
   // Form state
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [companyName, setCompanyName] = useState('')
   const [enableRevisions, setEnableRevisions] = useState(false)
   const [maxRevisions, setMaxRevisions] = useState<number | ''>('')
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
@@ -111,6 +113,7 @@ export default function ProjectSettingsPage() {
         // Set form values
         setTitle(data.title)
         setDescription(data.description || '')
+        setCompanyName(data.companyName || '')
         setEnableRevisions(data.enableRevisions)
         setMaxRevisions(data.maxRevisions)
         setRestrictCommentsToLatestVersion(data.restrictCommentsToLatestVersion)
@@ -178,6 +181,7 @@ export default function ProjectSettingsPage() {
         title,
         slug: sanitizedSlug,
         description: description || null,
+        companyName: companyName || null,
         enableRevisions,
         maxRevisions: enableRevisions ? finalMaxRevisions : 0,
         restrictCommentsToLatestVersion,
@@ -387,6 +391,21 @@ export default function ProjectSettingsPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Optional description to help identify and organize this project
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company/Brand Name</Label>
+                <Input
+                  id="companyName"
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="e.g., Acme Studios"
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Display name in emails: Company/Brand Name → Primary Contact → "Client"
                 </p>
               </div>
 

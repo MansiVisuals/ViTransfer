@@ -133,6 +133,16 @@ export async function PATCH(
     if (body.description !== undefined) {
       updateData.description = body.description || null
     }
+    if (body.companyName !== undefined) {
+      // Validate companyName (CRLF protection)
+      if (body.companyName && /[\r\n]/.test(body.companyName)) {
+        return NextResponse.json(
+          { error: 'Company name cannot contain line breaks' },
+          { status: 400 }
+        )
+      }
+      updateData.companyName = body.companyName || null
+    }
 
     // Handle status update (for approval)
     if (body.status !== undefined) {

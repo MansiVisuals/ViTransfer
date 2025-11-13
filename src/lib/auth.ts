@@ -24,21 +24,16 @@ const COOKIE_OPTIONS = {
   path: '/',
 } as const
 
-// JWT secrets - REQUIRED in production (see README for setup instructions)
-// Note: During build time, we allow missing secrets but will validate at runtime
-// SKIP_ENV_VALIDATION is set during Docker builds to skip validation
-const skipValidation = process.env.SKIP_ENV_VALIDATION === '1'
+// JWT secrets - allow skip during Docker builds, but must be set at runtime
+// SKIP_ENV_VALIDATION is set during Docker builds to allow image creation
+const JWT_SECRET = process.env.JWT_SECRET
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET
 
-if (!skipValidation && (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET)) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in production. See README for setup instructions.')
-  } else {
-    console.warn('WARNING: Using insecure JWT secrets for DEVELOPMENT only. See README for production setup.')
+if (process.env.SKIP_ENV_VALIDATION !== '1') {
+  if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set. See README for setup instructions.')
   }
 }
-
-const JWT_SECRET = process.env.JWT_SECRET || 'DEV_ONLY_INSECURE_SECRET_CHANGE_THIS'
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'DEV_ONLY_INSECURE_REFRESH_SECRET_CHANGE_THIS'
 
 export interface AuthUser {
   id: string
@@ -57,31 +52,13 @@ export interface JWTPayload {
 }
 
 /**
- * Validate that JWT secrets are configured (runtime check)
- */
-function validateJWTSecrets(): void {
-  // Skip validation during build or if explicitly disabled
-  if (process.env.SKIP_ENV_VALIDATION === '1') {
-    return
-  }
-  
-  if (process.env.NODE_ENV === 'production') {
-    if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
-      throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in production. See README for setup instructions.')
-    }
-    if (process.env.JWT_SECRET === 'DEV_ONLY_INSECURE_SECRET_CHANGE_THIS' || 
-        process.env.JWT_REFRESH_SECRET === 'DEV_ONLY_INSECURE_REFRESH_SECRET_CHANGE_THIS') {
-      throw new Error('Production JWT secrets must not use default development values. Generate secure secrets using scripts/generate-jwt-secrets.sh')
-    }
-  }
-}
-
-/**
  * Generate JWT access token
  */
 function generateAccessToken(user: AuthUser): string {
-  validateJWTSecrets()
-  
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET not configured')
+  }
+
   const payload: JWTPayload = {
     userId: user.id,
     email: user.email,
@@ -99,8 +76,10 @@ function generateAccessToken(user: AuthUser): string {
  * Generate JWT refresh token
  */
 function generateRefreshToken(user: AuthUser): string {
-  validateJWTSecrets()
-  
+  if (!JWT_REFRESH_SECRET) {
+    throw new Error('JWT_REFRESH_SECRET not configured')
+  }
+
   const payload: JWTPayload = {
     userId: user.id,
     email: user.email,

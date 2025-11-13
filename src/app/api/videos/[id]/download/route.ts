@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getFilePath } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
 import fs from 'fs'
+import { createReadStream } from 'fs'
+import { Readable } from 'stream'
 
 export async function GET(
   request: NextRequest,
@@ -29,23 +31,41 @@ export async function GET(
     // Get the full file path
     const fullPath = getFilePath(filePath)
 
-    // Check if file exists
-    if (!fs.existsSync(fullPath)) {
+    // Check if file exists and get stats
+    const stat = await fs.promises.stat(fullPath)
+    if (!stat.isFile()) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    // Read file as buffer
-    const fileBuffer = await fs.promises.readFile(fullPath)
-
     // Use the original filename from the database
     const originalFilename = video.originalFileName
+    const safeFilename = sanitizeFilenameForHeader(originalFilename)
+
+    // CRITICAL FIX: Stream file instead of loading into memory
+    // This prevents OOM crashes with large video files
+    const fileStream = createReadStream(fullPath)
+
+    // Convert Node.js stream to Web API ReadableStream
+    const readableStream = new ReadableStream({
+      start(controller) {
+        fileStream.on('data', (chunk: Buffer) => controller.enqueue(chunk))
+        fileStream.on('end', () => controller.close())
+        fileStream.on('error', (err) => controller.error(err))
+      },
+      cancel() {
+        fileStream.destroy()
+      },
+    })
 
     // Return file with proper headers for download
-    return new NextResponse(fileBuffer as any, {
+    return new NextResponse(readableStream, {
       headers: {
         'Content-Type': 'video/mp4',
-        'Content-Disposition': `attachment; filename="${originalFilename}"`,
-        'Content-Length': fileBuffer.length.toString(),
+        'Content-Disposition': `attachment; filename="${safeFilename}"`,
+        'Content-Length': stat.size.toString(),
+        // Security headers
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, no-cache',
       },
     })
   } catch (error) {

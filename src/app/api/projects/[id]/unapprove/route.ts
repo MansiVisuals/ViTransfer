@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(
   request: NextRequest,
@@ -10,6 +11,17 @@ export async function POST(
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // Rate limiting: 20 unapproval actions per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: 'Too many requests. Please slow down.'
+  }, 'admin-unapprove')
+
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {

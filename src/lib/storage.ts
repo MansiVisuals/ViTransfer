@@ -116,3 +116,21 @@ export async function deleteDirectory(dirPath: string): Promise<void> {
 export function getFilePath(filePath: string): string {
   return validatePath(filePath)
 }
+
+/**
+ * Sanitize filename for Content-Disposition header
+ * Prevents CRLF injection and other header injection attacks
+ *
+ * @param filename - The filename to sanitize
+ * @returns Sanitized filename safe for HTTP headers
+ */
+export function sanitizeFilenameForHeader(filename: string): string {
+  if (!filename) return 'download.mp4'
+
+  return filename
+    .replace(/["\\]/g, '')         // Remove quotes and backslashes
+    .replace(/[\r\n]/g, '')        // Remove CRLF (header injection)
+    .replace(/[^\x20-\x7E]/g, '_') // Replace non-ASCII with underscore
+    .substring(0, 255)             // Limit length to 255 characters
+    .trim() || 'download.mp4'      // Fallback if empty after sanitization
+}

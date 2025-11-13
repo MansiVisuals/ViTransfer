@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { hashPassword, validatePassword } from '@/lib/encryption'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,17 @@ export async function GET(request: NextRequest) {
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // Rate limiting: 100 requests per minute for listing users
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 100,
+    message: 'Too many requests. Please slow down.'
+  }, 'admin-users-list')
+
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {
@@ -44,6 +56,17 @@ export async function POST(request: NextRequest) {
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // Rate limiting: 10 user creation requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 10,
+    message: 'Too many user creation requests. Please slow down.'
+  }, 'admin-users-create')
+
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {

@@ -126,11 +126,11 @@ async function storeTokenFingerprint(
     const { getRedis } = await import('@/lib/token-revocation')
     const redis = getRedis()
 
+    // Use full hash (256 bits) - no truncation for better collision resistance
     const tokenHash = crypto
       .createHash('sha256')
       .update(refreshToken)
       .digest('base64url')
-      .substring(0, 16)
 
     const key = `token_fingerprint:${userId}:${tokenHash}`
     const ttl = 7 * 24 * 60 * 60 // 7 days

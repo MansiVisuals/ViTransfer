@@ -42,14 +42,14 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Decrypt sensitive fields before sending
-    const decryptedSettings = {
+    // Don't expose decrypted password - return placeholder if set
+    const safeSettings = {
       ...settings,
-      smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
+      smtpPassword: settings.smtpPassword ? '••••••••' : null,
     }
 
     return NextResponse.json({
-      ...decryptedSettings,
+      ...safeSettings,
       security: securitySettings,
     })
   } catch (error) {
@@ -188,13 +188,13 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
-    // Decrypt sensitive fields before returning
-    const decryptedSettings = {
+    // Don't expose decrypted password - return placeholder if set
+    const safeSettings = {
       ...settings,
-      smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
+      smtpPassword: settings.smtpPassword ? '••••••••' : null,
     }
 
-    return NextResponse.json(decryptedSettings)
+    return NextResponse.json(safeSettings)
   } catch (error) {
     console.error('Error updating settings:', error)
     return NextResponse.json(

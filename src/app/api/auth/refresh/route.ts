@@ -203,13 +203,13 @@ async function getTokenFingerprint(
 
 /**
  * Hash token for use as Redis key
+ * Use full hash (256 bits) for better collision resistance
  */
 function hashToken(token: string): string {
   return crypto
     .createHash('sha256')
     .update(token)
     .digest('base64url')
-    .substring(0, 16) // Use first 16 chars for key
 }
 
 /**

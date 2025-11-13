@@ -226,7 +226,7 @@ export default function GlobalSettingsPage() {
         smtpPassword: smtpPassword || null,
         smtpFromAddress: smtpFromAddress || null,
         smtpSecure: smtpSecure || 'STARTTLS',
-        companyName: companyName || 'VidTransfer',
+        companyName: companyName || 'ViTransfer',
       }
 
       // Validate that all required fields are filled

@@ -107,6 +107,11 @@ export const loginSchema = z.object({
 export const createProjectSchema = z.object({
   title: safeStringSchema(1, 255),
   description: safeStringSchema(0, 5000).optional(),
+  companyName: safeStringSchema(1, 100)
+    .refine(val => !val || !/[\r\n]/.test(val), {
+      message: 'Company name cannot contain line breaks'
+    })
+    .optional(),
   recipientEmail: emailSchema.optional().or(z.literal('')), // Optional recipient email (will create ProjectRecipient if provided)
   recipientName: safeStringSchema(0, 255).optional(), // Optional recipient name
   sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
@@ -121,6 +126,11 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = z.object({
   title: safeStringSchema(1, 255).optional(),
   description: safeStringSchema(0, 5000).optional(),
+  companyName: safeStringSchema(1, 100)
+    .refine(val => !val || !/[\r\n]/.test(val), {
+      message: 'Company name cannot contain line breaks'
+    })
+    .optional(),
   sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),
@@ -169,7 +179,11 @@ export const updateCommentSchema = z.object({
 // ============================================================================
 
 export const updateSettingsSchema = z.object({
-  companyName: safeStringSchema(1, 100).optional(),
+  companyName: safeStringSchema(1, 100)
+    .refine(val => !val || !/[\r\n]/.test(val), {
+      message: 'Company name cannot contain line breaks'
+    })
+    .optional(),
   smtpServer: z.string().max(255).optional(),
   smtpPort: z.number().int().min(1).max(65535).optional(),
   smtpUsername: z.string().max(255).optional(),

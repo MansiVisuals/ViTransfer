@@ -6,8 +6,20 @@ import { getProjectRecipients, getPrimaryRecipient } from '@/lib/recipients'
 import { generateShareUrl } from '@/lib/url'
 import { getAutoApproveProject } from '@/lib/settings'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Rate limiting: 20 approval actions per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: 'Too many approval requests. Please slow down.'
+  }, 'project-approve')
+
+  if (rateLimitResult) {
+    return rateLimitResult
+  }
+
   try {
     const { id: projectId } = await params
     const body = await request.json()

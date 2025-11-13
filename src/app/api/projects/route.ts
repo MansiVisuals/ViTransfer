@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const {
       title,
       description,
+      companyName,
       recipientEmail,
       recipientName,
       sharePassword,
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
           title,
           slug,
           description,
+          companyName: companyName || null,
           sharePassword: encryptedSharePassword,
           enableRevisions: isShareOnly ? false : (enableRevisions || false),
           maxRevisions: isShareOnly ? 0 : (enableRevisions ? (maxRevisions || 3) : 0),

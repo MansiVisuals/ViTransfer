@@ -53,6 +53,7 @@ export default function NewProjectPage() {
     const data = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
+      companyName: formData.get('companyName') as string,
       recipientName: formData.get('recipientName') as string,
       recipientEmail: formData.get('recipientEmail') as string,
       sharePassword: passwordProtected ? sharePassword : '', // Only send password if enabled
@@ -105,6 +106,19 @@ export default function NewProjectPage() {
                   placeholder="e.g., Project details, deliverables, notes..."
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company/Brand Name (Optional)</Label>
+                <Input
+                  id="companyName"
+                  name="companyName"
+                  placeholder="e.g., Acme Studios"
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Display name in emails: Company/Brand Name → Primary Contact → "Client"
+                </p>
               </div>
 
               <div className="space-y-3">

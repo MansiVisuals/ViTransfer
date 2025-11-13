@@ -43,8 +43,15 @@ function validateAndSanitizeWatermarkText(text: string): string {
   // Sanitize by removing any potentially dangerous characters (should be none at this point)
   const sanitized = text.replace(/[^a-zA-Z0-9\s\-_.()]/g, '')
 
-  // Escape for FFmpeg drawtext filter
-  return sanitized.replace(/'/g, "\\'").replace(/:/g, "\\:")
+  // Escape for FFmpeg drawtext filter (defense-in-depth)
+  // Escape all special characters that FFmpeg might interpret
+  return sanitized
+    .replace(/\\/g, '\\\\')  // Backslash first (prevents double-escaping)
+    .replace(/'/g, "\\'")    // Single quote
+    .replace(/:/g, '\\:')    // Colon (used in filter syntax)
+    .replace(/%/g, '\\%')    // Percent (used in FFmpeg expressions)
+    .replace(/\[/g, '\\[')   // Square brackets (used in filter syntax)
+    .replace(/\]/g, '\\]')
 }
 
 export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata> {

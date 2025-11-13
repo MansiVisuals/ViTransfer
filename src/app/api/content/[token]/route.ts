@@ -3,7 +3,7 @@ import { verifyVideoAccessToken, detectHotlinking, trackVideoAccess, logSecurity
 import { prisma } from '@/lib/db'
 import { createReadStream, existsSync, statSync } from 'fs'
 import fs from 'fs'
-import { getFilePath } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
 import { cookies } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
@@ -216,9 +216,10 @@ export async function GET(
     // OPTIMIZATION: Use streaming instead of loading entire file into memory
     if (isDownload) {
       // Use original filename for approved videos, generic name for others
-      const filename = video.approved
+      const rawFilename = video.approved
         ? video.originalFileName
         : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`
+      const filename = sanitizeFilenameForHeader(rawFilename)
 
       // Track full file download bandwidth
       await trackVideoAccess({

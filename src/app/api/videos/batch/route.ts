@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function PATCH(request: NextRequest) {
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // Rate limiting: 60 requests per minute for batch operations
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: 'Too many batch operations. Please slow down.'
+  }, 'admin-batch-ops')
+
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {
@@ -14,7 +26,15 @@ export async function PATCH(request: NextRequest) {
 
     if (!Array.isArray(videoIds) || videoIds.length === 0) {
       return NextResponse.json(
-        { error: 'videoIds must be a non-empty array' },
+        { error: 'Invalid request' },
+        { status: 400 }
+      )
+    }
+
+    // Batch size limit: max 100 items
+    if (videoIds.length > 100) {
+      return NextResponse.json(
+        { error: 'Batch size limit exceeded' },
         { status: 400 }
       )
     }

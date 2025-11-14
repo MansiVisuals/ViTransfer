@@ -23,7 +23,8 @@ interface CommentSectionProps {
   restrictToLatestVersion?: boolean
   videos?: Video[]
   isAdminView?: boolean
-  companyName?: string
+  companyName?: string // Studio company name
+  clientCompanyName?: string | null // Client company name
   smtpConfigured?: boolean
   isPasswordProtected?: boolean
   adminUser?: any
@@ -41,6 +42,7 @@ export default function CommentSection({
   videos = [],
   isAdminView = false,
   companyName = 'Studio',
+  clientCompanyName = null,
   smtpConfigured = false,
   isPasswordProtected = false,
   adminUser = null,
@@ -241,7 +243,7 @@ export default function CommentSection({
   }
 
   return (
-    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[600px] lg:max-h-[calc(100vh-8rem)]" data-comment-section>
+    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[50vh]" data-comment-section>
       <CardHeader className="border-b border-border flex-shrink-0">
         <CardTitle className="text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
@@ -301,7 +303,8 @@ export default function CommentSection({
                     comment={comment}
                     isReply={isReply}
                     isStudio={comment.isInternal}
-                    companyName={companyName}
+                    studioCompanyName={companyName}
+                    clientCompanyName={clientCompanyName}
                     parentComment={parentComment}
                     onReply={!isReply ? () => handleReply(comment.id, comment.videoId) : undefined}
                     onSeekToTimestamp={handleSeekToTimestamp}

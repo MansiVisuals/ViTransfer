@@ -248,6 +248,7 @@ export async function GET(
       ...(project.sharePassword || isAdmin ? {
         clientName: project.companyName || primaryRecipient?.name || 'Client',
         clientEmail: primaryRecipient?.email || null,
+        companyName: project.companyName || null, // Client company name for comment display
         recipients: allRecipients, // All recipients for comment author selection
       } : {}),
 

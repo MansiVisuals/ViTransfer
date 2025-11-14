@@ -2,7 +2,7 @@
 
 import { Comment } from '@prisma/client'
 import { Clock, Trash2, CornerDownRight } from 'lucide-react'
-import { formatTimestamp } from '@/lib/utils'
+import { formatTimestamp, getUserColor } from '@/lib/utils'
 import DOMPurify from 'dompurify'
 
 type CommentWithReplies = Comment & {
@@ -13,7 +13,8 @@ interface MessageBubbleProps {
   comment: CommentWithReplies
   isReply: boolean
   isStudio: boolean
-  companyName: string
+  studioCompanyName: string
+  clientCompanyName?: string | null
   parentComment?: Comment | null
   onReply?: () => void
   onSeekToTimestamp?: (timestamp: number, videoId: string, videoVersion: number | null) => void
@@ -44,7 +45,8 @@ export default function MessageBubble({
   comment,
   isReply,
   isStudio,
-  companyName,
+  studioCompanyName,
+  clientCompanyName,
   parentComment,
   onReply,
   onSeekToTimestamp,
@@ -54,14 +56,39 @@ export default function MessageBubble({
   commentsDisabled,
   isViewerMessage,
 }: MessageBubbleProps) {
-  // Viewer's own messages always on RIGHT (like texting apps)
+  // Determine which company name to show
+  const displayCompanyName = isStudio ? studioCompanyName : clientCompanyName
+
+  // Viewer's own messages on RIGHT, others on LEFT
   const alignment = isViewerMessage ? 'justify-end' : 'justify-start'
-  // Viewer's messages: blue with slightly rounded corners on left
-  // Other person's messages: gray with slightly rounded corners on right
-  const bgColor = isViewerMessage ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'
-  const textColor = isViewerMessage ? 'text-white' : 'text-gray-900 dark:text-gray-100'
-  const textAlign = isViewerMessage ? 'text-right' : 'text-left'
-  const bubbleRounding = isViewerMessage ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md'
+  const headerAlign = isViewerMessage ? 'flex-row-reverse' : 'flex-row'
+
+  // Bubble colors:
+  // Sender (your messages): Blue bubble with vibrant border per person
+  // Received (others): Gray bubble with vibrant colored border per person
+  // Both: Text is black-ish in light mode, white in dark mode
+
+  // Get effective author name for color generation
+  // For internal comments without authorName, fall back to user.name or user.email
+  const effectiveAuthorName = comment.authorName ||
+    (comment.isInternal && (comment as any).user ?
+      ((comment as any).user.name || (comment as any).user.email) :
+      null)
+
+  const userColor = getUserColor(effectiveAuthorName, isViewerMessage)
+  const borderColor = userColor.border
+
+  let bubbleBg: string
+  if (isViewerMessage) {
+    // Your messages: Blue background
+    bubbleBg = 'bg-blue-500 dark:bg-blue-600'
+  } else {
+    // Received messages: Neutral gray background (more contrast in light mode)
+    bubbleBg = 'bg-gray-200 dark:bg-gray-800'
+  }
+
+  // Text color adapts to light/dark mode (same for both sender and receiver)
+  const textColor = 'text-gray-900 dark:text-gray-100'
 
   const handleTimestampClick = () => {
     if (comment.timestamp !== null && comment.timestamp !== undefined && onSeekToTimestamp) {
@@ -70,58 +97,66 @@ export default function MessageBubble({
   }
 
   return (
-    <div className={`flex ${alignment}`} id={`comment-${comment.id}`}>
-      <div className={`max-w-[90%] sm:max-w-[80%] md:max-w-[75%] ${textAlign}`}>
-        {/* Message Bubble */}
-        <div className={`${bgColor} ${textColor} ${bubbleRounding} px-3 py-2.5 inline-block shadow-sm max-w-full`}>
-          {/* Reply Preview - Inside bubble at top if replying */}
-          {isReply && parentComment && (
-            <div
-              onClick={() => onScrollToComment?.(parentComment.id)}
-              className={`mb-2 pb-2 border-b ${isViewerMessage ? 'border-white/20' : 'border-gray-400/30'} cursor-pointer hover:opacity-80 transition-opacity`}
-            >
-              <div className="flex items-start gap-1.5">
-                <CornerDownRight className="w-3 h-3 flex-shrink-0 opacity-75 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-semibold opacity-75 mb-0.5">
-                    Replying to {parentComment.authorName || 'Anonymous'}
-                  </p>
-                  <p className="text-[11px] opacity-70 line-clamp-2 leading-snug">
-                    {parentComment.content}
-                  </p>
+    <div className={`flex ${alignment} w-full`} id={`comment-${comment.id}`}>
+      <div className="max-w-[85%] md:max-w-[75%]">
+        {/* Name and version header */}
+        <div className={`flex ${headerAlign} items-center gap-2 mb-1 px-1`}>
+          <span className="text-sm font-semibold text-foreground">
+            {effectiveAuthorName || 'Anonymous'}
+          </span>
+          {displayCompanyName && (
+            <>
+              <span className="text-xs text-muted-foreground">•</span>
+              <span className="text-xs text-muted-foreground">{displayCompanyName}</span>
+            </>
+          )}
+          {comment.videoVersion && (
+            <>
+              <span className="text-xs text-muted-foreground">•</span>
+              <span className="text-xs text-muted-foreground">v{comment.videoVersion}</span>
+            </>
+          )}
+        </div>
+
+        {/* Message Card with colored left border */}
+        <div className={`${bubbleBg} ${borderColor} border-l-4 rounded-lg p-3 shadow-sm`}>
+          {/* Reply Preview at top if replying */}
+          {isReply && parentComment && (() => {
+            // Get effective parent author name
+            const parentEffectiveName = parentComment.authorName ||
+              (parentComment.isInternal && (parentComment as any).user ?
+                ((parentComment as any).user.name || (parentComment as any).user.email) :
+                null)
+
+            return (
+              <div
+                onClick={() => onScrollToComment?.(parentComment.id)}
+                className="mb-2 pb-2 border-b border-gray-400/30 dark:border-gray-500/30 cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                <div className="flex items-start gap-1.5">
+                  <CornerDownRight className="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-600 dark:text-gray-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold mb-0.5 text-gray-700 dark:text-gray-300">
+                      Replying to {parentEffectiveName || 'Anonymous'}
+                    </p>
+                    <p className="text-xs line-clamp-2 leading-snug text-gray-600 dark:text-gray-400">
+                      {parentComment.content}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Author Name & Studio Badge - Inside bubble at top */}
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-xs font-semibold opacity-90">
-              {comment.authorName || 'Anonymous'}
-            </span>
-            {isStudio && (
-              <>
-                <span className="text-xs opacity-70">•</span>
-                <span className="text-xs font-medium opacity-80">{companyName}</span>
-              </>
-            )}
-            {comment.videoVersion && (
-              <>
-                <span className="text-xs opacity-70">•</span>
-                <span className="text-xs opacity-75">v{comment.videoVersion}</span>
-              </>
-            )}
-          </div>
+            )
+          })()}
 
           {/* Timestamp Badge (if present) */}
           {comment.timestamp !== null && comment.timestamp !== undefined && (
             <button
               onClick={handleTimestampClick}
-              className="flex items-center gap-1 mb-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+              className="flex items-center gap-1 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
               title="Seek to this timestamp"
             >
-              <Clock className="w-3 h-3 text-warning" />
-              <span className="text-xs text-warning underline decoration-dotted">
+              <Clock className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+              <span className="text-xs underline decoration-dotted font-medium text-orange-600 dark:text-orange-400">
                 {formatTimestamp(comment.timestamp)}
               </span>
             </button>
@@ -129,13 +164,13 @@ export default function MessageBubble({
 
           {/* Message Content */}
           <div
-            className="text-sm whitespace-pre-wrap break-words leading-relaxed"
+            className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${textColor}`}
             dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.content) }}
           />
         </div>
 
-        {/* Message Time, Reply & Delete Buttons - Below bubble */}
-        <div className={`flex items-center gap-2 mt-1 px-2 ${isViewerMessage ? 'justify-end' : 'justify-start'}`}>
+        {/* Message Time, Reply & Delete Buttons - Below card */}
+        <div className={`flex items-center gap-2 mt-1 px-1 ${isViewerMessage ? 'justify-end' : 'justify-start'}`}>
           <span className="text-xs text-muted-foreground">
             {formatMessageTime(comment.createdAt)}
           </span>

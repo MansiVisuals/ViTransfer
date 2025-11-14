@@ -292,6 +292,7 @@ export default function ProjectPage() {
                   videos={activeVideos}
                   isAdminView={true}
                   companyName={companyName}
+                  clientCompanyName={project.companyName}
                   smtpConfigured={true}
                   isPasswordProtected={!!project.sharePassword}
                   adminUser={adminUser}

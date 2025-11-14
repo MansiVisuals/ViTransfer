@@ -432,6 +432,7 @@ export default function SharePage() {
                     videos={readyVideos}
                     isAdminView={!!adminUser}
                     companyName={companyName}
+                    clientCompanyName={project.companyName}
                     smtpConfigured={project.smtpConfigured}
                     isPasswordProtected={isPasswordProtected || false}
                     adminUser={adminUser}

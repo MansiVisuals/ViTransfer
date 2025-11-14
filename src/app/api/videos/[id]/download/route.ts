@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
+import { verifyProjectAccess } from '@/lib/project-access'
 import fs from 'fs'
 import { createReadStream } from 'fs'
 import { Readable } from 'stream'
@@ -20,6 +21,12 @@ export async function GET(
 
     if (!video) {
       return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
+
+    // SECURITY: Verify user has access to this project (admin OR valid share session)
+    const accessCheck = await verifyProjectAccess(request, video.project.id, video.project.sharePassword)
+    if (!accessCheck.authorized) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     // For approved projects, serve the original file

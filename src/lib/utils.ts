@@ -180,21 +180,7 @@ export function getUserColor(name: string | null | undefined, isSender: boolean 
 
   // Separate color palettes - sender and receiver NEVER share colors
   const senderColors = [
-    // Vibrant high-contrast colors for sender
-    { border: 'border-red-500' },
-    { border: 'border-orange-500' },
-    { border: 'border-amber-500' },
-    { border: 'border-yellow-400' },
-    { border: 'border-lime-500' },
-    { border: 'border-green-500' },
-    { border: 'border-emerald-500' },
-    { border: 'border-pink-500' },
-    { border: 'border-rose-500' },
-    { border: 'border-fuchsia-500' },
-  ]
-
-  const receiverColors = [
-    // Earth tones for receiver (beige, brown, army green)
+    // Earth tones for sender (beige, brown, army green)
     { border: 'border-amber-700' },
     { border: 'border-orange-800' },
     { border: 'border-stone-600' },
@@ -205,6 +191,20 @@ export function getUserColor(name: string | null | undefined, isSender: boolean 
     { border: 'border-teal-800' },
     { border: 'border-slate-600' },
     { border: 'border-zinc-600' },
+  ]
+
+  const receiverColors = [
+    // Vibrant high-contrast colors for receiver
+    { border: 'border-red-500' },
+    { border: 'border-orange-500' },
+    { border: 'border-amber-500' },
+    { border: 'border-yellow-400' },
+    { border: 'border-lime-500' },
+    { border: 'border-green-500' },
+    { border: 'border-emerald-500' },
+    { border: 'border-pink-500' },
+    { border: 'border-rose-500' },
+    { border: 'border-fuchsia-500' },
   ]
 
   const colors = isSender ? senderColors : receiverColors

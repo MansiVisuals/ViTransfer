@@ -9,18 +9,7 @@ const config: Config = {
   ],
   safelist: [
     // Dynamic user color borders for message bubbles
-    // Sender colors (vibrant, high-contrast)
-    'border-red-500',
-    'border-orange-500',
-    'border-amber-500',
-    'border-yellow-400',
-    'border-lime-500',
-    'border-green-500',
-    'border-emerald-500',
-    'border-pink-500',
-    'border-rose-500',
-    'border-fuchsia-500',
-    // Receiver colors (earth tones - beige, brown, army green)
+    // Sender colors (earth tones - beige, brown, army green)
     'border-amber-700',
     'border-orange-800',
     'border-stone-600',
@@ -31,6 +20,17 @@ const config: Config = {
     'border-teal-800',
     'border-slate-600',
     'border-zinc-600',
+    // Receiver colors (vibrant, high-contrast)
+    'border-red-500',
+    'border-orange-500',
+    'border-amber-500',
+    'border-yellow-400',
+    'border-lime-500',
+    'border-green-500',
+    'border-emerald-500',
+    'border-pink-500',
+    'border-rose-500',
+    'border-fuchsia-500',
     // Default
     'border-gray-500',
   ],

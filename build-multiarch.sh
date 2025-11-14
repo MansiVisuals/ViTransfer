@@ -2,10 +2,11 @@
 
 # ViTransfer Multi-Architecture Build Script
 # Builds for both amd64 and arm64 platforms
-# Usage: ./build-multiarch.sh [version|--dev]
+# Usage: ./build-multiarch.sh [version|--dev] [--no-cache]
 # Examples:
 #   ./build-multiarch.sh 0.1.0    # Tag as 0.1.0 and latest
 #   ./build-multiarch.sh --dev    # Tag as dev only
+#   ./build-multiarch.sh --dev --no-cache    # Tag as dev with no cache
 #   ./build-multiarch.sh          # Tag as latest
 
 set -e
@@ -13,6 +14,13 @@ set -e
 DOCKERHUB_USERNAME="crypt010"
 IMAGE_NAME="vitransfer"
 VERSION="${1:-latest}"
+NO_CACHE_FLAG=""
+
+# Check for --no-cache flag
+if [ "$2" = "--no-cache" ] || [ "$1" = "--no-cache" ]; then
+    NO_CACHE_FLAG="--no-cache"
+    echo "🔨 Building with --no-cache flag"
+fi
 
 # Check if we're building dev
 if [ "$VERSION" = "--dev" ] || [ "$VERSION" = "dev" ]; then
@@ -89,6 +97,7 @@ docker buildx build \
     --platform linux/amd64,linux/arm64 \
     --build-arg APP_VERSION="${VERSION}" \
     $TAG_ARGS \
+    $NO_CACHE_FLAG \
     --push \
     .
 

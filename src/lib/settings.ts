@@ -132,3 +132,63 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
   }
 }
 
+/**
+ * Check if HTTPS enforcement is enabled
+ *
+ * Priority: Environment variable (HTTPS_ENABLED) > Database setting > Default (true)
+ *
+ * IMPORTANT: Environment variable ALWAYS takes precedence - this is the escape hatch!
+ * If you get locked out on localhost, set HTTPS_ENABLED=false in docker-compose.yml
+ *
+ * When HTTPS is OFF:
+ * - Cookies use secure: false
+ * - No HSTS header
+ * - Use for: localhost, internal LAN (set HTTPS_ENABLED=false in docker-compose)
+ *
+ * When HTTPS is ON (default for security):
+ * - Cookies use secure: true (only sent over HTTPS)
+ * - HSTS header enabled (forces browser to use HTTPS)
+ * - Use for: production deployments with HTTPS (direct or reverse proxy)
+ */
+/**
+ * Initialize security settings from environment variables on container startup
+ * This should be called once when the application starts
+ */
+export async function initializeSecuritySettings() {
+  try {
+    const envValue = process.env.HTTPS_ENABLED
+
+    if (envValue !== undefined) {
+      const httpsEnabled = envValue === 'true' || envValue === '1'
+
+      // Update database with environment variable value
+      await prisma.securitySettings.upsert({
+        where: { id: 'default' },
+        update: { httpsEnabled },
+        create: { id: 'default', httpsEnabled },
+      })
+
+      console.log(`[INIT] HTTPS_ENABLED environment variable detected. Set database value to: ${httpsEnabled}`)
+    }
+  } catch (error) {
+    console.error('[INIT] Error initializing security settings from environment:', error)
+  }
+}
+
+export async function isHttpsEnabled(): Promise<boolean> {
+  try {
+    // Read from database (env var is synced to DB on startup via initializeSecuritySettings)
+    const settings = await prisma.securitySettings.findUnique({
+      where: { id: 'default' },
+      select: { httpsEnabled: true },
+    })
+
+    // Default to true for production security
+    return settings?.httpsEnabled ?? true
+  } catch (error) {
+    console.error('Error checking HTTPS enabled status:', error)
+    // Default to true even on error for security
+    return true
+  }
+}
+

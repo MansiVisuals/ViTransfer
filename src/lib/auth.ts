@@ -4,25 +4,27 @@ import jwt from 'jsonwebtoken'
 import { prisma, setDatabaseUserContext } from './db'
 import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
+import { isHttpsEnabled } from './settings'
 
 // JWT and session configuration
-// Container always runs HTTP - reverse proxy handles HTTPS
 const SESSION_COOKIE_NAME = 'vitransfer_session'
 const REFRESH_COOKIE_NAME = 'vitransfer_refresh'
 const ACCESS_TOKEN_DURATION = 15 * 60 // 15 minutes in seconds
 const REFRESH_TOKEN_DURATION = 3 * 24 * 60 * 60 // 3 days in seconds (long-lived, rotated on use)
 const SESSION_INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes of inactivity in ms
 
-// Cookie configuration
-// Self-hosters access via localhost/LAN (HTTP) or reverse proxy (HTTPS termination)
-// Secure flag breaks Safari on localhost and provides no security benefit
-// When behind reverse proxy, proxy terminates HTTPS and sends HTTP to container
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: false, // Reverse proxy handles HTTPS
-  sameSite: 'strict' as const,
-  path: '/',
-} as const
+/**
+ * Get cookie options with dynamic secure flag based on HTTPS setting
+ */
+async function getCookieOptions() {
+  const httpsEnabled = await isHttpsEnabled()
+  return {
+    httpOnly: true,
+    secure: httpsEnabled,
+    sameSite: 'strict' as const,
+    path: '/',
+  }
+}
 
 // JWT secrets - allow skip during Docker builds, but must be set at runtime
 // SKIP_ENV_VALIDATION is set during Docker builds to allow image creation
@@ -231,18 +233,19 @@ export async function verifyCredentials(
 export async function createSession(user: AuthUser): Promise<void> {
   const accessToken = generateAccessToken(user)
   const refreshToken = generateRefreshToken(user)
+  const cookieOptions = await getCookieOptions()
 
   const cookieStore = await cookies()
 
   // Set access token cookie (short-lived)
   cookieStore.set(SESSION_COOKIE_NAME, accessToken, {
-    ...COOKIE_OPTIONS,
+    ...cookieOptions,
     maxAge: ACCESS_TOKEN_DURATION,
   })
 
   // Set refresh token cookie (long-lived)
   cookieStore.set(REFRESH_COOKIE_NAME, refreshToken, {
-    ...COOKIE_OPTIONS,
+    ...cookieOptions,
     maxAge: REFRESH_TOKEN_DURATION,
   })
 }
@@ -284,10 +287,11 @@ export async function refreshAccessToken(): Promise<boolean> {
 
     // Generate new access token
     const newAccessToken = generateAccessToken(user)
+    const cookieOptions = await getCookieOptions()
 
     // Update access token cookie
     cookieStore.set(SESSION_COOKIE_NAME, newAccessToken, {
-      ...COOKIE_OPTIONS,
+      ...cookieOptions,
       maxAge: ACCESS_TOKEN_DURATION,
     })
 

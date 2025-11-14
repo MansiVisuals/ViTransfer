@@ -253,6 +253,9 @@ model SecuritySettings {
   sessionTimeoutValue Int    @default(15) // Numeric value (15, 30, 1, 2, etc.)
   sessionTimeoutUnit  String @default("MINUTES") // MINUTES, HOURS, DAYS, WEEKS
 
+  // HTTPS Enforcement (HTTPS_ENABLED env var always takes precedence if set)
+  httpsEnabled Boolean @default(true) // Enable secure cookies and HSTS (default: true for production security)
+
   // Logging toggles
   trackAnalytics    Boolean @default(true)
   trackSecurityLogs Boolean @default(true)

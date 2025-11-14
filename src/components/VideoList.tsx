@@ -7,7 +7,7 @@ import { Progress } from './ui/progress'
 import { Button } from './ui/button'
 import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
-import { Trash2, CheckCircle2, XCircle, Pencil } from 'lucide-react'
+import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare } from 'lucide-react'
 
 interface VideoListProps {
   videos: Video[]
@@ -179,6 +179,19 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     }
   }
 
+  const handleShowComments = (videoId: string) => {
+    // Dispatch event to update CommentSection to show this video's comments
+    window.dispatchEvent(new CustomEvent('selectVideoForComments', {
+      detail: { videoId }
+    }))
+
+    // Scroll to comment section smoothly
+    const commentSection = document.querySelector('[data-comment-section]')
+    if (commentSection) {
+      commentSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   if (videos.length === 0) {
     return <p className="text-sm text-muted-foreground">No videos uploaded yet</p>
   }
@@ -260,6 +273,17 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                     ) : (
                       <CheckCircle2 className="w-4 h-4" />
                     )}
+                  </Button>
+                )}
+                {isAdmin && video.status === 'READY' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleShowComments(video.id)}
+                    className="text-primary hover:text-primary hover:bg-primary-visible"
+                    title="Show Feedback & Discussion"
+                  >
+                    <MessageSquare className="w-4 h-4" />
                   </Button>
                 )}
                 {isAdmin && (

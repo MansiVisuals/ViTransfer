@@ -77,9 +77,6 @@ export default function CommentSection({
     restrictToLatestVersion,
   })
 
-  // Admin version filter (only for admin view with multiple versions)
-  const [selectedVersion, setSelectedVersion] = useState<number | 'all'>('all')
-
   // Auto-scroll to latest comment (like messaging apps)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [localComments, setLocalComments] = useState<CommentWithReplies[]>(initialComments)
@@ -136,7 +133,7 @@ export default function CommentSection({
   // Local comments only used as fallback if hook hasn't loaded
   const mergedComments = comments.length > 0 ? comments : localComments
 
-  // Filter comments based on currently selected video and version (admin only)
+  // Filter comments based on currently selected video
   const displayComments = (() => {
     if (!selectedVideoId) {
       // No video selected - show all or latest version only
@@ -145,32 +142,7 @@ export default function CommentSection({
         : mergedComments
     }
 
-    // Admin view: filter by video name and version
-    if (isAdminView && videos.length > 0) {
-      // Find currently selected video
-      const selectedVideo = videos.find(v => v.id === selectedVideoId)
-      if (!selectedVideo) return []
-
-      // Get all video IDs with the same name (all versions of this video)
-      const sameNameVideoIds = videos
-        .filter(v => v.name === selectedVideo.name)
-        .map(v => v.id)
-
-      // Filter comments to videos with same name, then apply version filter
-      return mergedComments.filter(comment => {
-        if (!sameNameVideoIds.includes(comment.videoId)) return false
-
-        // If 'all' is selected, show ONLY the currently playing video (not all versions)
-        if (selectedVersion === 'all') {
-          return comment.videoId === selectedVideoId
-        }
-
-        // Filter by specific version selected in dropdown
-        return comment.videoVersion === selectedVersion
-      })
-    }
-
-    // Share page: show comments for specific videoId only
+    // Both admin and share page: show comments for specific videoId only
     return mergedComments.filter(comment => comment.videoId === selectedVideoId)
   })()
 
@@ -269,34 +241,12 @@ export default function CommentSection({
   }
 
   return (
-    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[600px] lg:max-h-[calc(100vh-8rem)]">
+    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[600px] lg:max-h-[calc(100vh-8rem)]" data-comment-section>
       <CardHeader className="border-b border-border flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-foreground flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            Feedback & Discussion
-          </CardTitle>
-          {/* Admin version filter */}
-          {isAdminView && videos.length > 1 && (
-            <select
-              value={selectedVersion}
-              onChange={(e) => setSelectedVersion(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-              className="text-xs px-2 py-1 bg-card border border-border rounded-md"
-            >
-              <option value="all">All Versions</option>
-              {Array.from(new Set(videos.map(v => v.version)))
-                .sort((a, b) => b - a)
-                .map(version => {
-                  const video = videos.find(v => v.version === version)
-                  return (
-                    <option key={version} value={version}>
-                      {video?.versionLabel || `v${version}`}
-                    </option>
-                  )
-                })}
-            </select>
-          )}
-        </div>
+        <CardTitle className="text-foreground flex items-center gap-2">
+          <MessageSquare className="w-5 h-5" />
+          Feedback & Discussion
+        </CardTitle>
         {selectedVideoId && currentVideo && !isAdminView && (
           <p className="text-xs text-muted-foreground mt-1">
             {commentsDisabled

@@ -116,6 +116,36 @@ export function useCommentManagement({
     return () => clearInterval(interval)
   }, [selectedVideoId])
 
+  // Listen for immediate video changes from VideoPlayer (for responsive comment updates)
+  useEffect(() => {
+    const handleVideoChange = (e: CustomEvent) => {
+      const { videoId } = e.detail
+      if (videoId && videoId !== selectedVideoId) {
+        setSelectedVideoId(videoId)
+      }
+    }
+
+    window.addEventListener('videoChanged', handleVideoChange as EventListener)
+    return () => {
+      window.removeEventListener('videoChanged', handleVideoChange as EventListener)
+    }
+  }, [selectedVideoId])
+
+  // Listen for video selection from admin page (message icon clicks)
+  useEffect(() => {
+    const handleSelectVideo = (e: CustomEvent) => {
+      const { videoId } = e.detail
+      if (videoId) {
+        setSelectedVideoId(videoId)
+      }
+    }
+
+    window.addEventListener('selectVideoForComments', handleSelectVideo as EventListener)
+    return () => {
+      window.removeEventListener('selectVideoForComments', handleSelectVideo as EventListener)
+    }
+  }, [])
+
   // Listen for add comment events from video player
   useEffect(() => {
     const handleAddComment = (e: CustomEvent) => {

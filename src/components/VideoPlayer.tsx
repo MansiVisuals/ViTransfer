@@ -70,6 +70,15 @@ export default function VideoPlayer({
   const safeIndex = Math.min(selectedVideoIndex, displayVideos.length - 1)
   const selectedVideo = displayVideos[safeIndex >= 0 ? safeIndex : 0]
 
+  // Dispatch event when selected video changes (for immediate comment section update)
+  useEffect(() => {
+    if (selectedVideo?.id) {
+      window.dispatchEvent(new CustomEvent('videoChanged', {
+        detail: { videoId: selectedVideo.id }
+      }))
+    }
+  }, [selectedVideo?.id])
+
   // Safety check: ensure selectedVideo exists before accessing properties
   const isVideoApproved = selectedVideo ? (selectedVideo as any).approved === true : false
   const isProjectApproved = projectStatus === 'APPROVED' || projectStatus === 'SHARE_ONLY'

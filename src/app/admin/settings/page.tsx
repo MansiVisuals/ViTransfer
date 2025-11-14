@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Save } from 'lucide-react'
+import { Settings as SettingsIcon, Save } from 'lucide-react'
 import { CompanyBrandingSection } from '@/components/settings/CompanyBrandingSection'
 import { DomainConfigurationSection } from '@/components/settings/DomainConfigurationSection'
 import { EmailSettingsSection } from '@/components/settings/EmailSettingsSection'
@@ -31,6 +31,7 @@ interface Settings {
 
 interface SecuritySettings {
   id: string
+  httpsEnabled: boolean
   hotlinkProtection: string
   ipRateLimit: number
   sessionRateLimit: number
@@ -75,6 +76,7 @@ export default function GlobalSettingsPage() {
 
   // Form state for security settings
   const [showSecuritySettings, setShowSecuritySettings] = useState(false)
+  const [httpsEnabled, setHttpsEnabled] = useState(false)
   const [hotlinkProtection, setHotlinkProtection] = useState('LOG_ONLY')
   const [ipRateLimit, setIpRateLimit] = useState('1000')
   const [sessionRateLimit, setSessionRateLimit] = useState('600')
@@ -84,6 +86,13 @@ export default function GlobalSettingsPage() {
   const [trackAnalytics, setTrackAnalytics] = useState(true)
   const [trackSecurityLogs, setTrackSecurityLogs] = useState(true)
   const [viewSecurityEvents, setViewSecurityEvents] = useState(false)
+
+  // Collapsible section state (all collapsed by default)
+  const [showCompanyBranding, setShowCompanyBranding] = useState(false)
+  const [showDomainConfiguration, setShowDomainConfiguration] = useState(false)
+  const [showEmailSettings, setShowEmailSettings] = useState(false)
+  const [showVideoProcessing, setShowVideoProcessing] = useState(false)
+  const [showProjectBehavior, setShowProjectBehavior] = useState(false)
 
   useEffect(() => {
     async function loadSettings() {
@@ -121,6 +130,7 @@ export default function GlobalSettingsPage() {
           setSecuritySettings(securityData)
 
           // Set security form values
+          setHttpsEnabled(securityData.httpsEnabled ?? false)
           setHotlinkProtection(securityData.hotlinkProtection || 'LOG_ONLY')
           setIpRateLimit(securityData.ipRateLimit?.toString() || '1000')
           setSessionRateLimit(securityData.sessionRateLimit?.toString() || '600')
@@ -177,6 +187,7 @@ export default function GlobalSettingsPage() {
 
       // Save security settings
       const securityUpdates = {
+        httpsEnabled,
         hotlinkProtection,
         ipRateLimit: parseInt(ipRateLimit) || 1000,
         sessionRateLimit: parseInt(sessionRateLimit) || 600,
@@ -200,12 +211,50 @@ export default function GlobalSettingsPage() {
       }
 
       setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
 
-      // Force full page reload to update menu (if security dashboard toggle changed)
-      // This ensures AdminHeader re-fetches settings and shows/hides Security menu
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000) // Give user 1 second to see success message
+      // Reload settings data to reflect changes
+      const refreshResponse = await fetch('/api/settings')
+      if (refreshResponse.ok) {
+        const refreshedData = await refreshResponse.json()
+        setSettings(refreshedData)
+        // Update form state with refreshed data
+        setCompanyName(refreshedData.companyName || '')
+        setSmtpServer(refreshedData.smtpServer || '')
+        setSmtpPort(refreshedData.smtpPort?.toString() || '587')
+        setSmtpUsername(refreshedData.smtpUsername || '')
+        setSmtpPassword(refreshedData.smtpPassword || '')
+        setSmtpFromAddress(refreshedData.smtpFromAddress || '')
+        setSmtpSecure(refreshedData.smtpSecure || 'STARTTLS')
+        setAppDomain(refreshedData.appDomain || '')
+        setDefaultPreviewResolution(refreshedData.defaultPreviewResolution || '720p')
+        setDefaultWatermarkText(refreshedData.defaultWatermarkText || '')
+        setAutoApproveProject(refreshedData.autoApproveProject ?? true)
+        setAdminNotificationSchedule(refreshedData.adminNotificationSchedule || 'HOURLY')
+        setAdminNotificationTime(refreshedData.adminNotificationTime || '09:00')
+        setAdminNotificationDay(refreshedData.adminNotificationDay ?? 1)
+      }
+
+      // Reload security settings data
+      const securityRefreshResponse = await fetch('/api/settings/security')
+      if (securityRefreshResponse.ok) {
+        const refreshedSecurityData = await securityRefreshResponse.json()
+        setSecuritySettings(refreshedSecurityData)
+        // Update form state with refreshed data
+        setHttpsEnabled(refreshedSecurityData.httpsEnabled)
+        setHotlinkProtection(refreshedSecurityData.hotlinkProtection)
+        setIpRateLimit(refreshedSecurityData.ipRateLimit?.toString() || '1000')
+        setSessionRateLimit(refreshedSecurityData.sessionRateLimit?.toString() || '600')
+        setPasswordAttempts(refreshedSecurityData.passwordAttempts?.toString() || '5')
+        setSessionTimeoutValue(refreshedSecurityData.sessionTimeoutValue?.toString() || '15')
+        setSessionTimeoutUnit(refreshedSecurityData.sessionTimeoutUnit || 'MINUTES')
+        setTrackAnalytics(refreshedSecurityData.trackAnalytics)
+        setTrackSecurityLogs(refreshedSecurityData.trackSecurityLogs)
+        setViewSecurityEvents(refreshedSecurityData.viewSecurityEvents)
+      }
+
+      // Refresh the page to update server components (like AdminHeader menu)
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings')
     } finally {
@@ -286,7 +335,10 @@ export default function GlobalSettingsPage() {
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Global Settings</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+                <SettingsIcon className="w-7 h-7 sm:w-8 sm:h-8" />
+                Global Settings
+              </h1>
               <p className="text-sm sm:text-base text-muted-foreground mt-1">
                 Configure application-wide settings
               </p>
@@ -315,11 +367,15 @@ export default function GlobalSettingsPage() {
           <CompanyBrandingSection
             companyName={companyName}
             setCompanyName={setCompanyName}
+            show={showCompanyBranding}
+            setShow={setShowCompanyBranding}
           />
 
           <DomainConfigurationSection
             appDomain={appDomain}
             setAppDomain={setAppDomain}
+            show={showDomainConfiguration}
+            setShow={setShowDomainConfiguration}
           />
 
           <EmailSettingsSection
@@ -346,6 +402,8 @@ export default function GlobalSettingsPage() {
             setAdminNotificationTime={setAdminNotificationTime}
             adminNotificationDay={adminNotificationDay}
             setAdminNotificationDay={setAdminNotificationDay}
+            show={showEmailSettings}
+            setShow={setShowEmailSettings}
           />
 
           <VideoProcessingSettingsSection
@@ -353,16 +411,22 @@ export default function GlobalSettingsPage() {
             setDefaultPreviewResolution={setDefaultPreviewResolution}
             defaultWatermarkText={defaultWatermarkText}
             setDefaultWatermarkText={setDefaultWatermarkText}
+            show={showVideoProcessing}
+            setShow={setShowVideoProcessing}
           />
 
           <ProjectBehaviorSection
             autoApproveProject={autoApproveProject}
             setAutoApproveProject={setAutoApproveProject}
+            show={showProjectBehavior}
+            setShow={setShowProjectBehavior}
           />
 
           <SecuritySettingsSection
             showSecuritySettings={showSecuritySettings}
             setShowSecuritySettings={setShowSecuritySettings}
+            httpsEnabled={httpsEnabled}
+            setHttpsEnabled={setHttpsEnabled}
             hotlinkProtection={hotlinkProtection}
             setHotlinkProtection={setHotlinkProtection}
             ipRateLimit={ipRateLimit}

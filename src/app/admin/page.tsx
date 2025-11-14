@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/db'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { getCompanyName } from '@/lib/settings'
-import { Plus } from 'lucide-react'
+import { FolderKanban, Plus } from 'lucide-react'
 import ProjectsList from '@/components/ProjectsList'
 
 // Force dynamic rendering (no static pre-rendering)
@@ -27,14 +26,16 @@ async function getProjects() {
 
 export default async function AdminPage() {
   const projects = await getProjects()
-  const companyName = await getCompanyName()
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{companyName} Dashboard</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+              <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
+              Projects Dashboard
+            </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage your video projects</p>
           </div>
           <Link href="/admin/projects/new">

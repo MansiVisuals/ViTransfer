@@ -108,7 +108,14 @@ export default function SecurityEventsClient() {
   }, [pagination.page, filterType, filterSeverity])
 
   const handleDeleteOld = async (days: number) => {
-    if (!confirm(`Delete all security events older than ${days} days? This cannot be undone.`)) {
+    let confirmMessage
+    if (days === 0) {
+      confirmMessage = 'Delete ALL security events? This will permanently delete every security event in the system and CANNOT be undone.'
+    } else {
+      confirmMessage = `Delete all security events older than ${days} days? This cannot be undone.`
+    }
+
+    if (!confirm(confirmMessage)) {
       return
     }
 
@@ -224,6 +231,15 @@ export default function SecurityEventsClient() {
 
             <div className="flex flex-wrap gap-2 pt-2">
               <Button
+                onClick={() => handleDeleteOld(7)}
+                variant="outline"
+                size="sm"
+                disabled={deleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete events older than 7 days
+              </Button>
+              <Button
                 onClick={() => handleDeleteOld(30)}
                 variant="outline"
                 size="sm"
@@ -240,6 +256,15 @@ export default function SecurityEventsClient() {
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete events older than 90 days
+              </Button>
+              <Button
+                onClick={() => handleDeleteOld(0)}
+                variant="destructive"
+                size="sm"
+                disabled={deleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete all events
               </Button>
             </div>
           </CardContent>

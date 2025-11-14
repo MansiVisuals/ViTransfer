@@ -14,7 +14,7 @@ import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { generateSecurePassword, generateRandomSlug, sanitizeSlug } from '@/lib/password-utils'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Project {
   id: string
@@ -69,6 +69,13 @@ export default function ProjectSettingsPage() {
   const [clientNotificationTime, setClientNotificationTime] = useState('09:00')
   const [clientNotificationDay, setClientNotificationDay] = useState(1)
 
+  // Collapsible section state (all collapsed by default)
+  const [showProjectDetails, setShowProjectDetails] = useState(false)
+  const [showClientInfo, setShowClientInfo] = useState(false)
+  const [showVideoProcessing, setShowVideoProcessing] = useState(false)
+  const [showRevisionTracking, setShowRevisionTracking] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [showSecurity, setShowSecurity] = useState(false)
 
   // Track original processing settings for change detection
   const [originalSettings, setOriginalSettings] = useState({
@@ -358,56 +365,72 @@ export default function ProjectSettingsPage() {
 
         <div className="space-y-4 sm:space-y-6">
           {/* Project Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Details</CardTitle>
-              <CardDescription>
-                Basic project information and client details
-              </CardDescription>
+          <Card className="border-border">
+            <CardHeader
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setShowProjectDetails(!showProjectDetails)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Project Details</CardTitle>
+                  <CardDescription>
+                    Basic project information and client details
+                  </CardDescription>
+                </div>
+                {showProjectDetails ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Project Title</Label>
-                <Input
-                  id="title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Brand Video Project"
-                />
-                <p className="text-xs text-muted-foreground">
-                  The name of this project as shown to clients and in the admin panel
-                </p>
+
+            {showProjectDetails && (
+              <CardContent className="space-y-4 border-t pt-4">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Project Title</Label>
+                  <Input
+                    id="title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g., Brand Video Project"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The name of this project as shown to clients and in the admin panel
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Project Description</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="e.g., Marketing video for Q4 campaign"
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional description to help identify and organize this project
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company/Brand Name</Label>
+                  <Input
+                    id="companyName"
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g., XYZ Corporation"
+                    maxLength={100}
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Project Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g., Marketing video for Q4 campaign"
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Optional description to help identify and organize this project
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Company/Brand Name</Label>
-                <Input
-                  id="companyName"
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="e.g., XYZ Corporation"
-                  maxLength={100}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
                     <Label htmlFor="useCustomSlug">Custom Link</Label>
                     <p className="text-xs text-muted-foreground">
@@ -470,21 +493,35 @@ export default function ProjectSettingsPage() {
                 </div>
               </div>
             </CardContent>
+            )}
           </Card>
 
           {/* Client Information & Notifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Client Information & Notifications</CardTitle>
-              <CardDescription>
-                Manage client recipients and notification settings
-              </CardDescription>
+          <Card className="border-border">
+            <CardHeader
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setShowClientInfo(!showClientInfo)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Client Information & Notifications</CardTitle>
+                  <CardDescription>
+                    Manage client recipients and notification settings
+                  </CardDescription>
+                </div>
+                {showClientInfo ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+
+            {showClientInfo && (
+              <CardContent className="space-y-6 border-t pt-4">
               <RecipientManager projectId={projectId} onError={setError} />
 
-              {/* Client Notification Schedule Section */}
-              <div className="border-t pt-6 mt-6">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <ScheduleSelector
                   schedule={clientNotificationSchedule}
                   time={clientNotificationTime}
@@ -497,37 +534,52 @@ export default function ProjectSettingsPage() {
                 />
               </div>
             </CardContent>
+            )}
           </Card>
 
           {/* Video Processing Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Video Processing</CardTitle>
-              <CardDescription>
-                Configure how videos are processed and displayed
-              </CardDescription>
+          <Card className="border-border">
+            <CardHeader
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setShowVideoProcessing(!showVideoProcessing)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Video Processing</CardTitle>
+                  <CardDescription>
+                    Configure how videos are processed and displayed
+                  </CardDescription>
+                </div>
+                {showVideoProcessing ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Preview Resolution */}
-              <div className="space-y-2">
-                <Label htmlFor="resolution">Preview Resolution</Label>
-                <select
-                  id="resolution"
-                  value={previewResolution}
-                  onChange={(e) => setPreviewResolution(e.target.value)}
-                  className="w-full px-3 py-2 bg-card border border-border rounded-md"
-                >
-                  <option value="720p">720p (1280x720 or 720x1280 for vertical)</option>
-                  <option value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</option>
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Higher resolutions take longer to process and use more storage.
-                  Vertical videos automatically adjust dimensions while maintaining aspect ratio.
-                </p>
+
+            {showVideoProcessing && (
+              <CardContent className="space-y-6 border-t pt-4">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="resolution">Preview Resolution</Label>
+                  <select
+                    id="resolution"
+                    value={previewResolution}
+                    onChange={(e) => setPreviewResolution(e.target.value)}
+                    className="w-full px-3 py-2 bg-card border border-border rounded-md"
+                  >
+                    <option value="720p">720p (1280x720 or 720x1280 for vertical)</option>
+                    <option value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Higher resolutions take longer to process and use more storage.
+                    Vertical videos automatically adjust dimensions while maintaining aspect ratio.
+                  </p>
+                </div>
               </div>
 
-              {/* Watermark Enable/Disable */}
-              <div className="space-y-4">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="watermarkEnabled">Enable Watermarks</Label>
@@ -578,163 +630,215 @@ export default function ProjectSettingsPage() {
                 )}
               </div>
             </CardContent>
+            )}
           </Card>
 
           {/* Revision Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Revision Tracking</CardTitle>
-              <CardDescription>
-                Manage how video revisions are tracked and limited
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="space-y-0.5 flex-1">
-                  <Label htmlFor="enableRevisions">Enable Revision Tracking</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Track and limit the number of video revisions
-                  </p>
+          <Card className="border-border">
+            <CardHeader
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setShowRevisionTracking(!showRevisionTracking)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Revision Tracking</CardTitle>
+                  <CardDescription>
+                    Manage how video revisions are tracked and limited
+                  </CardDescription>
                 </div>
-                <Switch
-                  id="enableRevisions"
-                  checked={enableRevisions}
-                  onCheckedChange={setEnableRevisions}
-                />
+                {showRevisionTracking ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                )}
               </div>
+            </CardHeader>
 
-              {enableRevisions && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="maxRevisions">Maximum Revisions</Label>
-                    <Input
-                      id="maxRevisions"
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={maxRevisions}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        if (val === '') {
-                          setMaxRevisions('')
-                        } else {
-                          const num = parseInt(val)
-                          if (!isNaN(num)) setMaxRevisions(num)
-                        }
-                      }}
-                      onBlur={(e) => {
-                        // Only validate on blur - ensure at least 1
-                        const val = e.target.value
-                        if (val === '') {
-                          setMaxRevisions(1)
-                        } else {
-                          const num = parseInt(val)
-                          if (isNaN(num) || num < 1) setMaxRevisions(1)
-                          else if (num > 20) setMaxRevisions(20)
-                        }
-                      }}
-                    />
+            {showRevisionTracking && (
+              <CardContent className="space-y-6 border-t pt-4">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="enableRevisions">Enable Revision Tracking</Label>
                     <p className="text-xs text-muted-foreground">
-                      Must be at least 1. Applies to each video group independently.
+                      Track and limit the number of video revisions
                     </p>
                   </div>
+                  <Switch
+                    id="enableRevisions"
+                    checked={enableRevisions}
+                    onCheckedChange={setEnableRevisions}
+                  />
                 </div>
-              )}
+
+                {enableRevisions && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="maxRevisions">Maximum Revisions</Label>
+                      <Input
+                        id="maxRevisions"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={maxRevisions}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (val === '') {
+                            setMaxRevisions('')
+                          } else {
+                            const num = parseInt(val)
+                            if (!isNaN(num)) setMaxRevisions(num)
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Only validate on blur - ensure at least 1
+                          const val = e.target.value
+                          if (val === '') {
+                            setMaxRevisions(1)
+                          } else {
+                            const num = parseInt(val)
+                            if (isNaN(num) || num < 1) setMaxRevisions(1)
+                            else if (num > 20) setMaxRevisions(20)
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Must be at least 1. Applies to each video group independently.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
+            )}
           </Card>
 
           {/* Comment Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Feedback & Comments</CardTitle>
-              <CardDescription>
-                Control how clients can leave feedback
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="space-y-0.5 flex-1">
-                  <Label htmlFor="hideFeedback">Hide Feedback Section</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Completely hide the feedback and discussion window from clients
-                  </p>
+          <Card className="border-border">
+            <CardHeader
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setShowFeedback(!showFeedback)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Feedback & Comments</CardTitle>
+                  <CardDescription>
+                    Control how clients can leave feedback
+                  </CardDescription>
                 </div>
-                <Switch
-                  id="hideFeedback"
-                  checked={hideFeedback}
-                  onCheckedChange={setHideFeedback}
-                />
+                {showFeedback ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                )}
               </div>
+            </CardHeader>
 
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="space-y-0.5 flex-1">
-                  <Label htmlFor="restrictComments">Restrict Comments to Latest Version</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Only allow feedback on the most recent video version
-                  </p>
+            {showFeedback && (
+              <CardContent className="space-y-6 border-t pt-4">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="hideFeedback">Hide Feedback Section</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Completely hide the Feedback & Discussion window from clients
+                    </p>
+                  </div>
+                  <Switch
+                    id="hideFeedback"
+                    checked={hideFeedback}
+                    onCheckedChange={setHideFeedback}
+                  />
                 </div>
-                <Switch
-                  id="restrictComments"
-                  checked={restrictCommentsToLatestVersion}
-                  onCheckedChange={setRestrictCommentsToLatestVersion}
-                />
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="restrictComments">Restrict Comments to Latest Version</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Only allow feedback on the most recent video version
+                    </p>
+                  </div>
+                  <Switch
+                    id="restrictComments"
+                    checked={restrictCommentsToLatestVersion}
+                    onCheckedChange={setRestrictCommentsToLatestVersion}
+                  />
+                </div>
               </div>
             </CardContent>
+            )}
           </Card>
 
           {/* Security Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Security</CardTitle>
-              <CardDescription>
-                Password protection for the share page
-              </CardDescription>
+          <Card className="border-border">
+            <CardHeader
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setShowSecurity(!showSecurity)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Security</CardTitle>
+                  <CardDescription>
+                    Password protection for the share page
+                  </CardDescription>
+                </div>
+                {showSecurity ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Share Page Password</Label>
-                <div className="flex gap-2 w-full">
-                  <PasswordInput
-                    id="password"
-                    value={sharePassword}
-                    onChange={(e) => setSharePassword(e.target.value)}
-                    placeholder="Leave empty to disable password protection"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSharePassword(generateSecurePassword())}
-                    title="Generate random password"
-                    className="h-10 w-10 p-0 flex-shrink-0"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </Button>
-                  {sharePassword && (
+
+            {showSecurity && (
+              <CardContent className="space-y-4 border-t pt-4">
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Share Page Password</Label>
+                  <div className="flex gap-2 w-full">
+                    <PasswordInput
+                      id="password"
+                      value={sharePassword}
+                      onChange={(e) => setSharePassword(e.target.value)}
+                      placeholder="Leave empty to disable password protection"
+                      className="flex-1"
+                    />
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={copyPassword}
-                      title={copiedPassword ? 'Copied!' : 'Copy password'}
+                      onClick={() => setSharePassword(generateSecurePassword())}
+                      title="Generate random password"
                       className="h-10 w-10 p-0 flex-shrink-0"
                     >
-                      {copiedPassword ? (
-                        <Check className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
+                      <RefreshCw className="w-4 h-4" />
                     </Button>
-                  )}
+                    {sharePassword && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={copyPassword}
+                        title={copiedPassword ? 'Copied!' : 'Copy password'}
+                        className="h-10 w-10 p-0 flex-shrink-0"
+                      >
+                        {copiedPassword ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {sharePassword
+                      ? 'Password will be required to access the share page'
+                      : 'Leave empty to allow anyone with the link to access'}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {sharePassword
-                    ? 'Password will be required to access the share page'
-                    : 'Leave empty to allow anyone with the link to access'}
-                </p>
               </div>
             </CardContent>
+            )}
           </Card>
 
         </div>

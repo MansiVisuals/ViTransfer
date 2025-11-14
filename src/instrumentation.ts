@@ -16,6 +16,10 @@ export async function register() {
       const { ensureDefaultAdmin } = await import('./lib/seed')
       await ensureDefaultAdmin()
 
+      // Initialize security settings from environment variables
+      const { initializeSecuritySettings } = await import('./lib/settings')
+      await initializeSecuritySettings()
+
       console.log('[INIT] Server initialization complete')
     } catch (error) {
       console.error('[INIT] Initialization error:', error)

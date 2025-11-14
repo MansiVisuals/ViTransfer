@@ -27,6 +27,10 @@ export async function POST(
   try {
     const { id: projectId } = await params
 
+    // Parse request body to get unapprove options
+    const body = await request.json().catch(() => ({}))
+    const { unapproveVideos = true } = body // Default to true for backward compatibility
+
     // Get project details
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -41,16 +45,23 @@ export async function POST(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // Unapprove ALL videos in the project
-    await prisma.video.updateMany({
-      where: { projectId },
-      data: {
-        approved: false,
-        approvedAt: null
-      }
-    })
+    let unapprovedCount = 0
 
-    // Unapprove the project
+    // Conditionally unapprove videos based on the parameter
+    if (unapproveVideos) {
+      // Unapprove ALL videos in the project
+      await prisma.video.updateMany({
+        where: { projectId },
+        data: {
+          approved: false,
+          approvedAt: null
+        }
+      })
+
+      unapprovedCount = project.videos.filter(v => v.approved).length
+    }
+
+    // Always unapprove the project
     await prisma.project.update({
       where: { id: projectId },
       data: {
@@ -60,11 +71,10 @@ export async function POST(
       }
     })
 
-    const approvedCount = project.videos.filter(v => v.approved).length
-
     return NextResponse.json({
       success: true,
-      unapprovedCount: approvedCount
+      unapprovedCount,
+      unapprovedVideos: unapproveVideos
     })
   } catch (error) {
     console.error('Error unapproving project:', error)

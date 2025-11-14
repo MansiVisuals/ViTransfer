@@ -276,7 +276,7 @@ export default function ProjectPage() {
             <ProjectActions project={project} videos={project.videos} onRefresh={fetchProject} />
 
             {!hideFeedback && activeVideos.length > 0 && (
-              <div className="lg:sticky lg:top-6">
+              <div className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
                 <CommentSection
                   key={activeVideoName} // Force fresh component per video
                   projectId={project.id}

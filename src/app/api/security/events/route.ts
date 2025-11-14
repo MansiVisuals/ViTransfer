@@ -111,30 +111,41 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { olderThan } = body // Days
+    const { olderThan } = body // Days (0 = delete all)
 
-    if (!olderThan || olderThan < 1) {
+    if (olderThan === undefined || olderThan === null || olderThan < 0) {
       return NextResponse.json(
-        { error: 'olderThan must be at least 1 day' },
+        { error: 'olderThan must be 0 or greater (0 = delete all)' },
         { status: 400 }
       )
     }
 
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - olderThan)
+    let result
+    let message
 
-    const result = await prisma.securityEvent.deleteMany({
-      where: {
-        createdAt: {
-          lt: cutoffDate
+    if (olderThan === 0) {
+      // Delete all events
+      result = await prisma.securityEvent.deleteMany({})
+      message = `Deleted all ${result.count} security events`
+    } else {
+      // Delete events older than specified days
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - olderThan)
+
+      result = await prisma.securityEvent.deleteMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
         }
-      }
-    })
+      })
+      message = `Deleted ${result.count} events older than ${olderThan} days`
+    }
 
     return NextResponse.json({
       success: true,
       deleted: result.count,
-      message: `Deleted ${result.count} events older than ${olderThan} days`
+      message
     })
   } catch (error) {
     console.error('Error deleting security events:', error)

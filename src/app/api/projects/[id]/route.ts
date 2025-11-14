@@ -152,71 +152,15 @@ export async function PATCH(
       }
       updateData.status = body.status
 
-      // When admin approves project, approve ALL latest videos (one per unique video name)
+      // When approving project, just set the status and timestamp
+      // Video approvals are handled separately by the admin
       if (body.status === 'APPROVED') {
         updateData.approvedAt = new Date()
-
-        // Get all videos for this project
-        const allVideos = await prisma.video.findMany({
-          where: { projectId: id },
-          select: { id: true, name: true, versionLabel: true, createdAt: true },
-          orderBy: { createdAt: 'desc' }
-        })
-
-        // Group videos by name and get the latest version of each
-        const videosByName = allVideos.reduce((acc: Record<string, any>, video) => {
-          if (!acc[video.name]) {
-            acc[video.name] = video // First one is latest (due to desc order)
-          }
-          return acc
-        }, {})
-
-        // Get IDs of all latest videos
-        const latestVideoIds = Object.values(videosByName).map((v: any) => v.id)
-
-        // Unapprove all other videos (non-latest versions)
-        await prisma.video.updateMany({
-          where: {
-            projectId: id,
-            id: { notIn: latestVideoIds }
-          },
-          data: {
-            approved: false,
-            approvedAt: null
-          }
-        })
-
-        // Approve all latest videos
-        await prisma.video.updateMany({
-          where: {
-            projectId: id,
-            id: { in: latestVideoIds }
-          },
-          data: {
-            approved: true,
-            approvedAt: new Date()
-          }
-        })
-
-        // Set approvedVideoId to the first latest video (for backward compatibility)
-        if (latestVideoIds.length > 0) {
-          updateData.approvedVideoId = latestVideoIds[0]
-        }
       }
 
-      // When unapproving (changing from APPROVED to IN_REVIEW), clear all video approvals
-      if (body.status === 'IN_REVIEW') {
-        updateData.approvedVideoId = null
+      // When changing status away from APPROVED, clear approval metadata
+      if (body.status !== 'APPROVED') {
         updateData.approvedAt = null
-
-        // Unapprove all videos
-        await prisma.video.updateMany({
-          where: { projectId: id },
-          data: {
-            approved: false,
-            approvedAt: null
-          }
-        })
       }
     }
 

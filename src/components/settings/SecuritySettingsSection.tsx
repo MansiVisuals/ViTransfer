@@ -1,11 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Clock, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Clock, AlertTriangle, CheckCircle, Lock, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface SecuritySettingsSectionProps {
   showSecuritySettings: boolean
   setShowSecuritySettings: (value: boolean) => void
+  httpsEnabled: boolean
+  setHttpsEnabled: (value: boolean) => void
   hotlinkProtection: string
   setHotlinkProtection: (value: string) => void
   ipRateLimit: string
@@ -29,6 +32,8 @@ interface SecuritySettingsSectionProps {
 export function SecuritySettingsSection({
   showSecuritySettings,
   setShowSecuritySettings,
+  httpsEnabled,
+  setHttpsEnabled,
   hotlinkProtection,
   setHotlinkProtection,
   ipRateLimit,
@@ -50,7 +55,10 @@ export function SecuritySettingsSection({
 }: SecuritySettingsSectionProps) {
   return (
     <Card className="border-border">
-      <CardHeader>
+      <CardHeader
+        className="cursor-pointer hover:bg-accent/50 transition-colors"
+        onClick={() => setShowSecuritySettings(!showSecuritySettings)}
+      >
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Advanced Security Settings</CardTitle>
@@ -58,15 +66,11 @@ export function SecuritySettingsSection({
               Configure advanced security options
             </CardDescription>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showSecuritySettings}
-              onChange={(e) => setShowSecuritySettings(e.target.checked)}
-              className="w-5 h-5"
-            />
-            <span className="text-sm font-medium">Advanced Security Settings</span>
-          </label>
+          {showSecuritySettings ? (
+            <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          )}
         </div>
       </CardHeader>
 
@@ -81,7 +85,49 @@ export function SecuritySettingsSection({
             </p>
           </div>
 
-          <div className="space-y-2">
+          {/* HTTPS Enforcement */}
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 flex-1">
+                <Lock className="w-5 h-5 text-primary flex-shrink-0" />
+                <Label htmlFor="httpsEnabled" className="text-base font-semibold">
+                  HTTPS Enforcement
+                </Label>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Switch
+                  id="httpsEnabled"
+                  checked={httpsEnabled}
+                  onCheckedChange={setHttpsEnabled}
+                />
+                <span className="text-sm font-medium whitespace-nowrap">{httpsEnabled ? 'ON' : 'OFF'}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <p className="text-muted-foreground">
+                <strong>OFF:</strong> Use for local deployments with HTTP
+              </p>
+              <p className="text-muted-foreground">
+                <strong>ON:</strong> Use for production deployments with HTTPS
+              </p>
+
+              {httpsEnabled && (
+                <div className="mt-3 p-3 bg-primary-visible border-2 border-primary-visible rounded-md">
+                  <p className="text-sm font-semibold text-primary mb-2">
+                    When HTTPS is enabled, the following are enforced:
+                  </p>
+                  <ul className="text-xs text-primary space-y-1 list-disc list-inside">
+                    <li>Cookies use <code className="bg-background px-1 py-0.5 rounded">secure: true</code> (only sent over HTTPS)</li>
+                    <li>HSTS header enabled (forces browser to use HTTPS)</li>
+                    <li>Enhanced security for all sessions and authentication</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
             <Label htmlFor="hotlinkProtection">Hotlink Protection</Label>
             <select
               id="hotlinkProtection"
@@ -94,56 +140,59 @@ export function SecuritySettingsSection({
               <option value="BLOCK_STRICT">Block Strict - Block suspected hotlinks</option>
             </select>
             <p className="text-xs text-muted-foreground">
-              Controls how the system handles hotlinking attempts. LOG_ONLY is recommended for monitoring.
+              Controls how the system handles hotlinking attempts. Log Only is recommended for monitoring.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="ipRateLimit">IP Rate Limit</Label>
-              <Input
-                id="ipRateLimit"
-                type="number"
-                value={ipRateLimit}
-                onChange={(e) => setIpRateLimit(e.target.value)}
-                placeholder="300"
-              />
-              <p className="text-xs text-muted-foreground">
-                Requests per minute per IP
-              </p>
-            </div>
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+            <Label className="text-base">Rate Limiting & Security</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ipRateLimit">IP Rate Limit</Label>
+                <Input
+                  id="ipRateLimit"
+                  type="number"
+                  value={ipRateLimit}
+                  onChange={(e) => setIpRateLimit(e.target.value)}
+                  placeholder="300"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Requests per minute per IP
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="sessionRateLimit">Session Rate Limit</Label>
-              <Input
-                id="sessionRateLimit"
-                type="number"
-                value={sessionRateLimit}
-                onChange={(e) => setSessionRateLimit(e.target.value)}
-                placeholder="120"
-              />
-              <p className="text-xs text-muted-foreground">
-                Requests per minute per session
-              </p>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="sessionRateLimit">Session Rate Limit</Label>
+                <Input
+                  id="sessionRateLimit"
+                  type="number"
+                  value={sessionRateLimit}
+                  onChange={(e) => setSessionRateLimit(e.target.value)}
+                  placeholder="120"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Requests per minute per session
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="passwordAttempts">Password Attempts</Label>
-              <Input
-                id="passwordAttempts"
-                type="number"
-                value={passwordAttempts}
-                onChange={(e) => setPasswordAttempts(e.target.value)}
-                placeholder="5"
-              />
-              <p className="text-xs text-muted-foreground">
-                Attempts before lockout
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="passwordAttempts">Password Attempts</Label>
+                <Input
+                  id="passwordAttempts"
+                  type="number"
+                  value={passwordAttempts}
+                  onChange={(e) => setPasswordAttempts(e.target.value)}
+                  placeholder="5"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Attempts before lockout
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Client Session Timeout */}
-          <div className="space-y-3 border-t pt-4">
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
             <div>
               <Label className="text-base flex items-center gap-2">
                 <Clock className="w-4 h-4" />
@@ -214,53 +263,49 @@ export function SecuritySettingsSection({
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="trackAnalytics" className="flex items-center gap-2 cursor-pointer">
-                <input
-                  id="trackAnalytics"
-                  type="checkbox"
-                  checked={trackAnalytics}
-                  onChange={(e) => setTrackAnalytics(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                Track Analytics
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Enable or disable analytics tracking for page visits and downloads
-              </p>
+          <div className="space-y-4 border p-4 rounded-lg bg-muted/30">
+            <Label className="text-base">Logging & Monitoring</Label>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="trackAnalytics">Track Analytics</Label>
+                <p className="text-xs text-muted-foreground">
+                  Enable or disable analytics tracking for page visits and downloads
+                </p>
+              </div>
+              <Switch
+                id="trackAnalytics"
+                checked={trackAnalytics}
+                onCheckedChange={setTrackAnalytics}
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="trackSecurityLogs" className="flex items-center gap-2 cursor-pointer">
-                <input
-                  id="trackSecurityLogs"
-                  type="checkbox"
-                  checked={trackSecurityLogs}
-                  onChange={(e) => setTrackSecurityLogs(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                Track Security Logs
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Enable or disable security event logging (hotlink attempts, rate limits, suspicious activity)
-              </p>
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="trackSecurityLogs">Track Security Logs</Label>
+                <p className="text-xs text-muted-foreground">
+                  Enable or disable security event logging (hotlink attempts, rate limits, suspicious activity)
+                </p>
+              </div>
+              <Switch
+                id="trackSecurityLogs"
+                checked={trackSecurityLogs}
+                onCheckedChange={setTrackSecurityLogs}
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="viewSecurityEvents" className="flex items-center gap-2 cursor-pointer">
-                <input
-                  id="viewSecurityEvents"
-                  type="checkbox"
-                  checked={viewSecurityEvents}
-                  onChange={(e) => setViewSecurityEvents(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                Show Security Dashboard
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Enable access to /admin/security page to view security events and logs (only visible when enabled)
-              </p>
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="viewSecurityEvents">Show Security Dashboard</Label>
+                <p className="text-xs text-muted-foreground">
+                  Enable access to /admin/security page to view security events and logs (only visible when enabled)
+                </p>
+              </div>
+              <Switch
+                id="viewSecurityEvents"
+                checked={viewSecurityEvents}
+                onCheckedChange={setViewSecurityEvents}
+              />
             </div>
           </div>
         </CardContent>

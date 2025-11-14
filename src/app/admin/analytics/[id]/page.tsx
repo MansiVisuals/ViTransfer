@@ -188,36 +188,36 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
           </Card>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-          <Card>
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 overflow-hidden">
+          <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle>Videos in this Project</CardTitle>
               <CardDescription>Analytics grouped by video name, showing all versions</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-hidden">
               {videoStats.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No videos available</p>
               ) : (
                 <div className="space-y-4">
                   {videoStats.map((video) => (
-                    <div key={video.videoName} className="border rounded-lg p-4">
+                    <div key={video.videoName} className="border rounded-lg p-3 sm:p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-base">{video.videoName}</h4>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <h4 className="font-semibold text-sm sm:text-base break-words">{video.videoName}</h4>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                             {video.versions.length} version{video.versions.length !== 1 ? 's' : ''}
                           </p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3">
                         <div className="text-sm">
                           <div className="text-xs text-muted-foreground mb-1">Total Downloads</div>
-                          <div className="font-medium text-lg">{video.totalDownloads}</div>
+                          <div className="font-medium text-base sm:text-lg">{video.totalDownloads}</div>
                         </div>
                         <div className="text-sm">
                           <div className="text-xs text-muted-foreground mb-1">Total Views</div>
-                          <div className="font-medium text-lg">{video.totalPageVisits}</div>
+                          <div className="font-medium text-base sm:text-lg">{video.totalPageVisits}</div>
                         </div>
                       </div>
 
@@ -226,9 +226,9 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
                           <div className="text-xs text-muted-foreground mb-2">Per-version breakdown:</div>
                           <div className="space-y-1.5">
                             {video.versions.map((version) => (
-                              <div key={version.id} className="flex items-center justify-between text-sm bg-accent/50 rounded px-2 py-1.5">
-                                <span className="text-muted-foreground">{version.versionLabel}</span>
-                                <span className="font-medium">{version.downloads} download{version.downloads !== 1 ? 's' : ''}</span>
+                              <div key={version.id} className="flex items-center justify-between gap-2 text-xs sm:text-sm bg-accent/50 rounded px-2 py-1.5">
+                                <span className="text-muted-foreground truncate">{version.versionLabel}</span>
+                                <span className="font-medium whitespace-nowrap flex-shrink-0">{version.downloads} download{version.downloads !== 1 ? 's' : ''}</span>
                               </div>
                             ))}
                           </div>
@@ -237,8 +237,8 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
 
                       {video.lastAccessed && (
                         <div className="mt-3 pt-3 border-t text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Last accessed: {formatDateTime(video.lastAccessed)}
+                          <Clock className="w-3 h-3 flex-shrink-0" />
+                          <span className="break-all">Last accessed: {formatDateTime(video.lastAccessed)}</span>
                         </div>
                       )}
                     </div>
@@ -248,31 +248,31 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
               <CardDescription>Last 20 events</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-hidden">
               {recentActivity.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No activity yet</p>
               ) : (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
                   {recentActivity.map((event) => (
-                    <div key={event.id} className="flex items-center justify-between p-3 rounded-lg border text-sm">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getEventColor(event.eventType)}`}>
+                    <div key={event.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border text-sm">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${getEventColor(event.eventType)}`}>
                           {formatEventType(event.eventType)}
                         </span>
-                        <div className="truncate">
+                        <div className="truncate min-w-0">
                           <span className="font-medium">{event.videoName}</span>
                           <span className="text-muted-foreground ml-1.5">({event.videoLabel})</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                      <div className="text-left sm:text-right flex-shrink-0">
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 sm:justify-end">
                           <Calendar className="w-3 h-3" />
-                          {formatDateTime(event.createdAt)}
+                          <span className="whitespace-nowrap">{formatDateTime(event.createdAt)}</span>
                         </div>
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { Comment } from '@prisma/client'
-import { Clock, Trash2 } from 'lucide-react'
+import { Clock, Trash2, CornerDownRight } from 'lucide-react'
 import { formatTimestamp } from '@/lib/utils'
 import DOMPurify from 'dompurify'
 
@@ -81,9 +81,10 @@ export default function MessageBubble({
               className={`mb-2 pb-2 border-b ${isViewerMessage ? 'border-white/20' : 'border-gray-400/30'} cursor-pointer hover:opacity-80 transition-opacity`}
             >
               <div className="flex items-start gap-1.5">
+                <CornerDownRight className="w-3 h-3 flex-shrink-0 opacity-75 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-semibold opacity-75 mb-0.5">
-                    ↩ Replying to {parentComment.authorName || 'Anonymous'}
+                    Replying to {parentComment.authorName || 'Anonymous'}
                   </p>
                   <p className="text-[11px] opacity-70 line-clamp-2 leading-snug">
                     {parentComment.content}

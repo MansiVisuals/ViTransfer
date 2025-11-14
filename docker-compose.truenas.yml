@@ -68,6 +68,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      HTTPS_ENABLED: ${HTTPS_ENABLED:-false}
     ports:
       - "4321:4321"
     volumes:

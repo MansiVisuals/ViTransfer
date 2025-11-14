@@ -40,9 +40,8 @@ Environment=ENCRYPTION_KEY=CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32
 Environment=JWT_SECRET=CHANGE_THIS_SECRET
 Environment=JWT_REFRESH_SECRET=CHANGE_THIS_REFRESH_SECRET
 
-# Optional HTTPS
-Environment=HTTPS_KEY=
-Environment=HTTPS_CERT=
+# HTTPS Enforcement (Optional) - Set to 'true' when using reverse proxy with HTTPS
+Environment=HTTPS_ENABLED=false
 
 # Volumes - bind mount to /podman/vitransfer
 Volume=/podman/vitransfer/uploads:/app/uploads:Z

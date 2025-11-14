@@ -73,6 +73,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
 
     const {
+      httpsEnabled,
       hotlinkProtection,
       ipRateLimit,
       sessionRateLimit,
@@ -118,6 +119,7 @@ export async function PATCH(request: NextRequest) {
     const settings = await prisma.securitySettings.upsert({
       where: { id: 'default' },
       update: {
+        httpsEnabled: httpsEnabled ?? false,
         hotlinkProtection,
         ipRateLimit: ipRateLimit ? parseInt(ipRateLimit) : 1000,
         sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit) : 600,
@@ -130,6 +132,7 @@ export async function PATCH(request: NextRequest) {
       },
       create: {
         id: 'default',
+        httpsEnabled: httpsEnabled ?? false,
         hotlinkProtection,
         ipRateLimit: ipRateLimit ? parseInt(ipRateLimit) : 1000,
         sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit) : 600,

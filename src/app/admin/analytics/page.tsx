@@ -60,7 +60,10 @@ export default async function AnalyticsDashboard() {
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold">Analytics Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <BarChart3 className="w-7 h-7 sm:w-8 sm:h-8" />
+            Analytics Dashboard
+          </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Video analytics and usage metrics
           </p>
@@ -100,29 +103,33 @@ export default async function AnalyticsDashboard() {
                   No analytics data available yet
                 </p>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-6">
                   {projects.map((project) => (
                     <Link key={project.id} href={`/admin/analytics/${project.id}`}>
-                      <div className="flex items-center justify-between p-4 rounded-lg border-2 border-border bg-card hover:bg-muted hover:shadow-xl shadow-md dark:shadow-[0_4px_16px_rgba(255,255,255,0.08)] dark:hover:shadow-[0_8px_24px_rgba(255,255,255,0.12)] hover:-translate-y-1 hover:border-primary/50 transition-all duration-200 cursor-pointer mb-2">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{project.title}</h3>
-                          {(project.recipientName || project.recipientEmail) && (
-                            <p className="text-sm text-muted-foreground">
-                              Client: {project.recipientName || project.recipientEmail}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 sm:gap-6 text-sm">
-                          <div className="text-center">
-                            <div className="font-medium">{project.totalPageVisits}</div>
-                            <div className="text-xs text-muted-foreground">Visits</div>
+                      <Card className="hover:shadow-elevation-lg hover:-translate-y-1 hover:border-primary/50 transition-all duration-200 cursor-pointer mb-4">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium truncate">{project.title}</h3>
+                              {(project.recipientName || project.recipientEmail) && (
+                                <p className="text-sm text-muted-foreground">
+                                  Client: {project.recipientName || project.recipientEmail}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 sm:gap-6 text-sm">
+                              <div className="text-center">
+                                <div className="font-medium">{project.totalPageVisits}</div>
+                                <div className="text-xs text-muted-foreground">Visits</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="font-medium">{project.totalDownloads}</div>
+                                <div className="text-xs text-muted-foreground">Downloads</div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-center">
-                            <div className="font-medium">{project.totalDownloads}</div>
-                            <div className="text-xs text-muted-foreground">Downloads</div>
-                          </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     </Link>
                   ))}
                 </div>

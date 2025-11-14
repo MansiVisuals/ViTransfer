@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { generateVideoAccessToken } from '@/lib/video-access'
-import { isSmtpConfigured, getClientSessionTimeoutSeconds } from '@/lib/settings'
+import { isSmtpConfigured, getClientSessionTimeoutSeconds, isHttpsEnabled } from '@/lib/settings'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import { verifyProjectAccess } from '@/lib/project-access'
@@ -75,8 +75,9 @@ export async function GET(
       sessionId = crypto.randomBytes(16).toString('base64url')
       isNewSession = true
 
-      // Get configurable client session timeout
+      // Get configurable client session timeout and HTTPS setting
       const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
+      const httpsEnabled = await isHttpsEnabled()
 
       // Set generic session cookie (no project ID exposure)
       cookieStore.set({
@@ -84,7 +85,7 @@ export async function GET(
         value: sessionId,
         path: '/',
         httpOnly: true,
-        secure: false, // Match auth cookie settings
+        secure: httpsEnabled,
         sameSite: 'strict',
         maxAge: sessionTimeoutSeconds,
       })

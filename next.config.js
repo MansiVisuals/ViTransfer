@@ -11,8 +11,9 @@ const nextConfig = {
 
   // SECURITY: Add comprehensive security headers
   async headers() {
-    // Only enable HSTS when HTTPS is actually configured
-    const isHttpsEnabled = process.env.HTTPS_KEY && process.env.HTTPS_CERT;
+    // Check if HTTPS is enabled (via environment variable)
+    // Database setting is checked at runtime in cookie functions
+    const isHttpsEnabled = process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1';
 
     const securityHeaders = [
       {

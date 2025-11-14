@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { UserPlus, Edit, Trash2 } from 'lucide-react'
+import { Users, UserPlus, Edit, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface User {
@@ -74,7 +74,10 @@ export default function UsersPage() {
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">User Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <Users className="w-7 h-7 sm:w-8 sm:h-8" />
+            User Management
+          </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage admin users and their permissions</p>
         </div>
         <Button variant="default" size="default" onClick={() => router.push('/admin/users/new')}>

@@ -19,12 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select'
+import { UnapproveModal } from './UnapproveModal'
 
 interface Video {
   id: string
   name: string
   versionLabel: string
   status: string
+  approved: boolean
 }
 
 interface ProjectActionsProps {
@@ -37,6 +39,9 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingApproval, setIsTogglingApproval] = useState(false)
+
+  // Unapprove modal state
+  const [showUnapproveModal, setShowUnapproveModal] = useState(false)
 
   // Notification modal state
   const [showNotificationModal, setShowNotificationModal] = useState(false)
@@ -60,6 +65,21 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
 
   // Filter only ready videos
   const readyVideos = videos.filter(v => v.status === 'READY')
+
+  // Check if all unique videos have at least one approved version
+  const videosByNameForApproval = readyVideos.reduce((acc, video) => {
+    if (!acc[video.name]) {
+      acc[video.name] = []
+    }
+    acc[video.name].push(video)
+    return acc
+  }, {} as Record<string, Video[]>)
+
+  const allVideosHaveApprovedVersion = Object.values(videosByNameForApproval).every((versions: Video[]) =>
+    versions.some(v => v.approved)
+  )
+
+  const canApproveProject = readyVideos.length > 0 && allVideosHaveApprovedVersion
 
   // Group videos by name
   const videosByName = readyVideos.reduce((acc, video) => {
@@ -131,42 +151,54 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
 
   const handleToggleApproval = async () => {
     const isCurrentlyApproved = project.status === 'APPROVED'
-    const action = isCurrentlyApproved ? 'unapprove' : 'approve'
 
     if (isCurrentlyApproved) {
-      // Unapproving - this will unapprove ALL videos in the project
-      if (!confirm(
-        'Are you sure you want to unapprove this project?\n\n' +
-        'This will unapprove ALL videos in the project, removing access to original quality downloads.'
-      )) {
-        return
-      }
+      // Show the unapprove modal to let user choose
+      setShowUnapproveModal(true)
     } else {
+      // For approval, just confirm and proceed
       if (!confirm(`Are you sure you want to approve this project?`)) {
         return
       }
-    }
 
-    setIsTogglingApproval(true)
-    try {
-      let response
-
-      if (isCurrentlyApproved) {
-        // Use the dedicated unapprove endpoint that handles all videos
-        response = await fetch(`/api/projects/${project.id}/unapprove`, {
-          method: 'POST'
-        })
-      } else {
-        // For approval, use the existing PATCH endpoint
-        response = await fetch(`/api/projects/${project.id}`, {
+      setIsTogglingApproval(true)
+      try {
+        const response = await fetch(`/api/projects/${project.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'APPROVED' })
         })
+
+        if (!response.ok) {
+          throw new Error('Failed to approve project')
+        }
+
+        // Refresh project data
+        await onRefresh?.()
+        router.refresh()
+
+        alert('Project approved successfully')
+      } catch (error) {
+        alert('Failed to approve project')
+      } finally {
+        setIsTogglingApproval(false)
       }
+    }
+  }
+
+  const handleUnapprove = async (unapproveVideos: boolean) => {
+    setIsTogglingApproval(true)
+    setShowUnapproveModal(false)
+
+    try {
+      const response = await fetch(`/api/projects/${project.id}/unapprove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unapproveVideos })
+      })
 
       if (!response.ok) {
-        throw new Error(`Failed to ${action} project`)
+        throw new Error('Failed to unapprove project')
       }
 
       const data = await response.json()
@@ -175,16 +207,31 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
       await onRefresh?.()
       router.refresh()
 
-      if (isCurrentlyApproved && data.unapprovedCount) {
-        alert(`Project unapproved successfully. ${data.unapprovedCount} video(s) were unapproved.`)
+      // Show appropriate success message
+      if (data.unapprovedVideos && data.unapprovedCount > 0) {
+        alert(`Project unapproved successfully. ${data.unapprovedCount} video(s) were also unapproved.`)
+      } else if (data.unapprovedVideos && data.unapprovedCount === 0) {
+        alert('Project unapproved successfully. No videos were approved.')
       } else {
-        alert(`Project ${action}d successfully`)
+        alert('Project unapproved successfully. Videos remain approved.')
       }
     } catch (error) {
-      alert(`Failed to ${action} project`)
+      alert('Failed to unapprove project')
     } finally {
       setIsTogglingApproval(false)
     }
+  }
+
+  const handleUnapproveProjectOnly = () => {
+    handleUnapprove(false)
+  }
+
+  const handleUnapproveAll = () => {
+    handleUnapprove(true)
+  }
+
+  const handleCancelUnapprove = () => {
+    setShowUnapproveModal(false)
   }
 
   const handleDelete = async () => {
@@ -269,25 +316,37 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
           </Button>
 
           {/* Approve/Unapprove Toggle Button */}
-          <Button
-            variant="outline"
-            size="default"
-            className="w-full"
-            onClick={handleToggleApproval}
-            disabled={isTogglingApproval}
-          >
-            {project.status === 'APPROVED' ? (
-              <>
-                <RotateCcw className="w-4 h-4 mr-2" />
-                {isTogglingApproval ? 'Unapproving...' : 'Unapprove Project'}
-              </>
-            ) : (
-              <>
-                <Archive className="w-4 h-4 mr-2" />
-                {isTogglingApproval ? 'Approving...' : 'Approve Project'}
-              </>
+          <div>
+            <Button
+              variant="outline"
+              size="default"
+              className="w-full"
+              onClick={handleToggleApproval}
+              disabled={isTogglingApproval || (project.status !== 'APPROVED' && !canApproveProject)}
+              title={
+                project.status !== 'APPROVED' && !canApproveProject
+                  ? 'Approve one version of each video first'
+                  : ''
+              }
+            >
+              {project.status === 'APPROVED' ? (
+                <>
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  {isTogglingApproval ? 'Unapproving...' : 'Unapprove Project'}
+                </>
+              ) : (
+                <>
+                  <Archive className="w-4 h-4 mr-2" />
+                  {isTogglingApproval ? 'Approving...' : 'Approve Project'}
+                </>
+              )}
+            </Button>
+            {project.status !== 'APPROVED' && !canApproveProject && (
+              <p className="text-xs text-muted-foreground mt-1 px-1">
+                Approve one version of each video to enable project approval
+              </p>
             )}
-          </Button>
+          </div>
 
           <Button
             variant="destructive"
@@ -439,6 +498,15 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Unapprove Modal */}
+      <UnapproveModal
+        show={showUnapproveModal}
+        onCancel={handleCancelUnapprove}
+        onUnapproveProjectOnly={handleUnapproveProjectOnly}
+        onUnapproveAll={handleUnapproveAll}
+        processing={isTogglingApproval}
+      />
     </>
   )
 }

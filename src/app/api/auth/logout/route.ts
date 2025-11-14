@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { deleteSession } from '@/lib/auth'
+import { isHttpsEnabled } from '@/lib/settings'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -47,6 +48,9 @@ export async function POST(request: NextRequest) {
     // 3. Deletes HttpOnly cookies
     await deleteSession()
 
+    // Get HTTPS setting for cookie deletion
+    const httpsEnabled = await isHttpsEnabled()
+
     // Return 204 No Content (standard for successful logout)
     // No response body needed
     const response = new NextResponse(null, { status: 204 })
@@ -59,7 +63,7 @@ export async function POST(request: NextRequest) {
       value: '',
       path: '/',
       httpOnly: true,
-      secure: false, // Match cookie creation settings
+      secure: httpsEnabled,
       sameSite: 'strict',
       maxAge: 0, // Immediate deletion
     })
@@ -69,7 +73,7 @@ export async function POST(request: NextRequest) {
       value: '',
       path: '/',
       httpOnly: true,
-      secure: false, // Match cookie creation settings
+      secure: httpsEnabled,
       sameSite: 'strict',
       maxAge: 0, // Immediate deletion
     })

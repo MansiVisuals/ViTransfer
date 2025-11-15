@@ -5,6 +5,56 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2025-11-15
+
+### Added
+- **PassKey/WebAuthn Authentication** - Modern passwordless login for admin accounts
+  - Usernameless authentication support (no email required at login)
+  - Multi-device support with auto-generated device names (iPhone, Mac, Windows PC, etc.)
+  - Per-user PassKey management in admin user settings
+  - Built with SimpleWebAuthn following official security patterns
+  - Challenge stored in Redis with 5-minute TTL and one-time use
+  - Replay attack prevention via signature counter tracking
+  - Comprehensive security event logging for all PassKey operations
+  - Rate limiting on authentication endpoints
+  - Strict domain validation (production requires HTTPS, localhost allows HTTP)
+  - Configuration via Settings.appDomain (no environment variables needed)
+
+### Changed
+- Restore SMTP password reveal functionality (reverted to v0.3.0 behavior)
+  - Admin-authenticated GET /api/settings now returns decrypted SMTP password
+  - Eye icon in password field works normally to show/hide actual password
+  - Removed unnecessary placeholder logic for cleaner implementation
+- Smart password update logic prevents unnecessary database writes
+  - SMTP password only updates if value actually changes
+  - Project share password only updates if value actually changes
+  - Prevents unnecessary session invalidations when password unchanged
+
+### Fixed
+- SMTP password no longer lost when saving other settings
+- Project password updates now properly compare with current value before updating
+- Session invalidation only triggered when password actually changes
+
+### Security
+- PassKey authentication endpoints protected with rate limiting
+- Generic error messages prevent information disclosure
+  - Client sees: "PassKey authentication failed. Please try again."
+  - Server logs detailed error for debugging
+- All PassKey operations require admin authentication (except login)
+- Session invalidation on password change prevents race conditions
+
+### Database Migration
+- Added PasskeyCredential model for WebAuthn credential storage
+  - credentialID (unique identifier)
+  - publicKey (verification key)
+  - counter (replay attack prevention)
+  - transports (USB, NFC, BLE, internal)
+  - deviceType (single-device or multi-device)
+  - backedUp (synced credential indicator)
+  - aaguid (authenticator identifier)
+  - userAgent and credentialName (device tracking)
+  - lastUsedAt and lastUsedIP (security monitoring)
+
 ## [0.3.2] - 2025-11-14
 
 ### Added

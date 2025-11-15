@@ -22,6 +22,7 @@ model User {
 
   projects Project[]
   comments Comment[]
+  passkeys PasskeyCredential[]
 }
 
 enum UserRole {
@@ -310,4 +311,31 @@ model VideoAnalytics {
   @@index([projectId, createdAt])
   @@index([videoId, createdAt])
   @@index([eventType])
+}
+
+model PasskeyCredential {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // WebAuthn credential data (following SimpleWebAuthn patterns)
+  credentialID Bytes  @unique // Authenticator's credential ID
+  publicKey    Bytes // Public key for signature verification
+  counter      BigInt // Signature counter (prevents replay attacks)
+
+  // UX and security metadata
+  transports        String[] // ['internal', 'usb', 'nfc', 'ble', 'hybrid']
+  deviceType        String // 'singleDevice' | 'multiDevice' (cloud-synced passkey)
+  backedUp          Boolean  @default(false) // Indicates key material is backed up
+  aaguid            String? // Authenticator Attestation GUID (optional)
+  userAgent         String? // Browser/device info for admin reference
+  credentialName    String? // User-friendly name: "MacBook Touch ID", "iPhone Passkey"
+
+  // Security tracking
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  lastUsedIP String?
+
+  @@index([userId])
+  @@index([userId, lastUsedAt])
 }

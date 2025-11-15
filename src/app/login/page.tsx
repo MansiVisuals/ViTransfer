@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
-import { Lock, Video, LogIn } from 'lucide-react'
+import { Lock, Video, LogIn, Fingerprint } from 'lucide-react'
+import { startAuthentication } from '@simplewebauthn/browser'
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 
 function LoginForm() {
   const router = useRouter()
@@ -19,6 +21,64 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+
+  async function handlePasskeyLogin() {
+    setError('')
+    setPasskeyLoading(true)
+
+    try {
+      // Get authentication options (usernameless - no email needed)
+      const optionsRes = await fetch('/api/auth/passkey/authenticate/options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+
+      if (!optionsRes.ok) {
+        const data = await optionsRes.json()
+        throw new Error(data.error || 'Failed to generate options')
+      }
+
+      const { options, sessionId }: { options: PublicKeyCredentialRequestOptionsJSON; sessionId?: string } = await optionsRes.json()
+
+      // Start WebAuthn authentication
+      const assertion = await startAuthentication({ optionsJSON: options })
+
+      // Verify authentication (send sessionId for usernameless auth)
+      const verifyRes = await fetch('/api/auth/passkey/authenticate/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          response: assertion,
+          sessionId,
+        }),
+      })
+
+      const data = await verifyRes.json()
+
+      if (!verifyRes.ok) {
+        setError(data.error || 'PassKey authentication failed')
+        setPasskeyLoading(false)
+        return
+      }
+
+      // Success - redirect
+      router.push(returnUrl)
+      router.refresh()
+    } catch (err: any) {
+      // Log full error for debugging
+      console.error('[PASSKEY] Login error:', err)
+
+      // Show generic error to prevent information disclosure
+      if (err.name === 'NotAllowedError') {
+        setError('PassKey authentication cancelled')
+      } else {
+        setError('PassKey authentication failed. Please check your configuration.')
+      }
+      setPasskeyLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -129,6 +189,27 @@ function LoginForm() {
               >
                 <LogIn className="w-4 h-4 mr-2" />
                 {loading ? 'Signing in...' : 'Sign In'}
+              </Button>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
+                className="w-full"
+                disabled={passkeyLoading}
+                onClick={handlePasskeyLogin}
+              >
+                <Fingerprint className="w-4 h-4 mr-2" />
+                {passkeyLoading ? 'Authenticating...' : 'Use PassKey'}
               </Button>
             </form>
           </CardContent>

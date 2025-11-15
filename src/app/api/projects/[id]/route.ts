@@ -224,17 +224,36 @@ export async function PATCH(
       updateData.watermarkText = body.watermarkText || null
     }
 
-    // Handle password update
+    // Handle password update - only update if actually changed
     let passwordWasChanged = false
     if (body.sharePassword !== undefined) {
-      if (body.sharePassword === null || body.sharePassword === '') {
-        // Remove password
-        updateData.sharePassword = null
-      } else {
-        // Encrypt password (so we can decrypt it later for email notifications)
-        updateData.sharePassword = encrypt(body.sharePassword)
+      // Get current project to compare password
+      const currentProject = await prisma.project.findUnique({
+        where: { id },
+        select: { sharePassword: true }
+      })
+
+      if (!currentProject) {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
       }
-      passwordWasChanged = true
+
+      // Decrypt current password for comparison
+      const currentPassword = currentProject.sharePassword ? decrypt(currentProject.sharePassword) : null
+
+      // Only update if password actually changed
+      if (body.sharePassword === null || body.sharePassword === '') {
+        // Clearing password
+        if (currentPassword !== null) {
+          updateData.sharePassword = null
+          passwordWasChanged = true
+        }
+      } else {
+        // Setting/updating password - only if different from current
+        if (body.sharePassword !== currentPassword) {
+          updateData.sharePassword = encrypt(body.sharePassword)
+          passwordWasChanged = true
+        }
+      }
     }
 
     // Handle client notification schedule

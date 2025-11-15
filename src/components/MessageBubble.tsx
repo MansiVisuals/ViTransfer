@@ -131,7 +131,7 @@ export default function MessageBubble({
             return (
               <div
                 onClick={() => onScrollToComment?.(parentComment.id)}
-                className="mb-2 pb-2 border-b border-gray-400/30 dark:border-gray-500/30 cursor-pointer hover:opacity-80 transition-opacity"
+                className="mb-2 pb-2 border-b border-gray-400/60 dark:border-gray-500/60 cursor-pointer hover:opacity-80 transition-opacity"
               >
                 <div className="flex items-start gap-1.5">
                   <CornerDownRight className="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-600 dark:text-gray-400" />

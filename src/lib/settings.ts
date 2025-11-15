@@ -192,3 +192,178 @@ export async function isHttpsEnabled(): Promise<boolean> {
   }
 }
 
+/**
+ * Get WebAuthn Relying Party configuration from settings
+ *
+ * SECURITY: Throws error if appDomain is not configured
+ * PassKey authentication REQUIRES proper domain configuration
+ *
+ * @returns RP_ID and origin(s) for WebAuthn operations
+ */
+export async function getWebAuthnConfig(): Promise<{
+  rpID: string
+  rpName: string
+  origins: string[]
+}> {
+  try {
+    const settings = await prisma.settings.findUnique({
+      where: { id: 'default' },
+      select: {
+        appDomain: true,
+        companyName: true,
+      },
+    })
+
+    if (!settings?.appDomain) {
+      throw new Error(
+        'PASSKEY_CONFIG_ERROR: Application Domain must be configured in Settings before using PassKey authentication. ' +
+        'Go to Admin Settings and configure your domain (e.g., https://yourdomain.com)'
+      )
+    }
+
+    // Parse and validate domain
+    let url: URL
+    try {
+      url = new URL(settings.appDomain)
+    } catch {
+      throw new Error(
+        `PASSKEY_CONFIG_ERROR: Invalid appDomain format: "${settings.appDomain}". ` +
+        'Must be a valid URL (e.g., https://yourdomain.com)'
+      )
+    }
+
+    // RP_ID is the hostname without protocol or port
+    const rpID = url.hostname
+
+    // Origin is the full protocol + hostname + port (if non-standard)
+    const origin = url.origin
+
+    // Support localhost for development
+    const origins = [origin]
+    if (rpID === 'localhost' || rpID === '127.0.0.1') {
+      // Allow both localhost and 127.0.0.1 for development
+      origins.push('http://localhost:3000', 'http://127.0.0.1:3000')
+    }
+
+    return {
+      rpID,
+      rpName: settings.companyName || 'ViTransfer',
+      origins,
+    }
+  } catch (error) {
+    // Re-throw configuration errors
+    if (error instanceof Error && error.message.startsWith('PASSKEY_CONFIG_ERROR')) {
+      throw error
+    }
+
+    console.error('Error fetching WebAuthn config:', error)
+    throw new Error('Failed to retrieve PassKey configuration. Please check Settings.')
+  }
+}
+
+/**
+ * Check if PassKey authentication is properly configured
+ *
+ * STRICT VALIDATION:
+ * - Production: Real domain + HTTPS enabled
+ * - Development: Localhost + HTTPS disabled
+ * - NO MIXED CONFIGURATIONS (localhost+HTTPS or domain+no-HTTPS)
+ *
+ * Returns false if appDomain is not set or configuration is invalid
+ */
+export async function isPasskeyConfigured(): Promise<boolean> {
+  try {
+    const config = await getWebAuthnConfig()
+    const httpsEnabled = await isHttpsEnabled()
+
+    const isLocalhost =
+      config.rpID === 'localhost' ||
+      config.rpID === '127.0.0.1'
+
+    // Valid configurations (no mixing):
+    // 1. Production: Real domain + HTTPS enabled
+    // 2. Development: Localhost + HTTPS disabled
+    const isValidConfig =
+      (!isLocalhost && httpsEnabled) ||
+      (isLocalhost && !httpsEnabled)
+
+    return isValidConfig
+  } catch (error) {
+    return false
+  }
+}
+
+/**
+ * Get detailed passkey configuration status
+ * Used for admin UI to show why passkey is not available
+ */
+export async function getPasskeyConfigStatus(): Promise<{
+  available: boolean
+  reason?: string
+  config?: {
+    domain: string
+    httpsEnabled: boolean
+    isLocalhost: boolean
+  }
+}> {
+  try {
+    const config = await getWebAuthnConfig()
+    const httpsEnabled = await isHttpsEnabled()
+
+    const isLocalhost =
+      config.rpID === 'localhost' ||
+      config.rpID === '127.0.0.1'
+
+    const isValidConfig =
+      (!isLocalhost && httpsEnabled) ||
+      (isLocalhost && !httpsEnabled)
+
+    if (!isValidConfig) {
+      if (isLocalhost && httpsEnabled) {
+        return {
+          available: false,
+          reason: 'Invalid configuration: Localhost requires HTTPS to be disabled',
+          config: {
+            domain: config.rpID,
+            httpsEnabled,
+            isLocalhost,
+          },
+        }
+      }
+
+      if (!isLocalhost && !httpsEnabled) {
+        return {
+          available: false,
+          reason: 'Invalid configuration: Production domain requires HTTPS to be enabled',
+          config: {
+            domain: config.rpID,
+            httpsEnabled,
+            isLocalhost,
+          },
+        }
+      }
+    }
+
+    return {
+      available: true,
+      config: {
+        domain: config.rpID,
+        httpsEnabled,
+        isLocalhost,
+      },
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('PASSKEY_CONFIG_ERROR')) {
+      return {
+        available: false,
+        reason: error.message.replace('PASSKEY_CONFIG_ERROR: ', ''),
+      }
+    }
+
+    return {
+      available: false,
+      reason: 'Domain not configured. Set appDomain in Settings.',
+    }
+  }
+}
+

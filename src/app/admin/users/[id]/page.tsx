@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { X, Save, RefreshCw, Eye, EyeOff, Copy, Check } from 'lucide-react'
+import { X, Save, RefreshCw, Eye, EyeOff, Copy, Check, Fingerprint, Plus, Trash2, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordRequirements } from '@/components/PasswordRequirements'
+import { startRegistration } from '@simplewebauthn/browser'
+import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 
 export default function EditUserPage() {
   const router = useRouter()
@@ -29,9 +31,114 @@ export default function EditUserPage() {
     confirmPassword: '',
   })
 
+  // PassKey state
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false)
+  const [passkeyReason, setPasskeyReason] = useState('')
+  const [passkeys, setPasskeys] = useState<any[]>([])
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+  const [passkeyError, setPasskeyError] = useState('')
+
   useEffect(() => {
     fetchUser()
+    fetchPasskeyStatus()
+    fetchPasskeys()
   }, [userId])
+
+  const fetchPasskeyStatus = async () => {
+    try {
+      const res = await fetch('/api/auth/passkey/status')
+      if (res.ok) {
+        const data = await res.json()
+        setPasskeyAvailable(data.available)
+        setPasskeyReason(data.reason || '')
+      }
+    } catch (err) {
+      // Silently fail - passkey is optional
+    }
+  }
+
+  const fetchPasskeys = async () => {
+    try {
+      const res = await fetch('/api/auth/passkey/list')
+      if (res.ok) {
+        const data = await res.json()
+        setPasskeys(data.passkeys || [])
+      }
+    } catch (err) {
+      // Silently fail
+    }
+  }
+
+  const handleRegisterPasskey = async () => {
+    setPasskeyError('')
+    setPasskeyLoading(true)
+
+    try {
+      // Get registration options
+      const optionsRes = await fetch('/api/auth/passkey/register/options', {
+        method: 'POST',
+      })
+
+      if (!optionsRes.ok) {
+        const data = await optionsRes.json()
+        throw new Error(data.error || 'Failed to generate options')
+      }
+
+      const options: PublicKeyCredentialCreationOptionsJSON = await optionsRes.json()
+
+      // Start WebAuthn ceremony
+      const attestation = await startRegistration({ optionsJSON: options })
+
+      // Verify registration
+      const verifyRes = await fetch('/api/auth/passkey/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attestation),
+      })
+
+      if (!verifyRes.ok) {
+        const data = await verifyRes.json()
+        throw new Error(data.error || 'Verification failed')
+      }
+
+      // Refresh passkey list
+      await fetchPasskeys()
+    } catch (err: any) {
+      // Log full error for debugging
+      console.error('[PASSKEY] Registration error:', err)
+
+      // Show generic errors to prevent information disclosure
+      if (err.name === 'NotAllowedError') {
+        setPasskeyError('Cancelled or timed out')
+      } else if (err.name === 'InvalidStateError') {
+        setPasskeyError('This authenticator is already registered')
+      } else {
+        setPasskeyError('Failed to register PassKey. Please check your configuration.')
+      }
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
+
+  const handleDeletePasskey = async (id: string) => {
+    if (!confirm('Delete this PassKey?')) return
+
+    setPasskeyError('')
+    try {
+      const res = await fetch(`/api/auth/passkey/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to delete')
+      }
+
+      await fetchPasskeys()
+    } catch (err: any) {
+      setPasskeyError(err.message)
+    }
+  }
 
   const fetchUser = async () => {
     try {
@@ -317,6 +424,85 @@ export default function EditUserPage() {
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* PassKey Section */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <Fingerprint className="w-4 h-4" />
+                    PassKey Authentication
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Passwordless login using biometrics or security keys
+                  </p>
+                </div>
+              </div>
+
+              {!passkeyAvailable ? (
+                <div className="bg-muted border border-border rounded p-3 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                  <div className="text-sm">
+                    <p className="font-medium">Not Available</p>
+                    <p className="text-xs text-muted-foreground mt-1">{passkeyReason}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {passkeyError && (
+                    <div className="bg-destructive-visible border-2 border-destructive-visible text-destructive font-medium px-3 py-2 rounded text-sm">
+                      {passkeyError}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between bg-muted p-3 rounded">
+                    <div className="text-sm">
+                      <p className="font-medium">
+                        {passkeys.length === 0 ? 'No passkeys registered' : `${passkeys.length} passkey(s)`}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {passkeys.length === 0 ? 'Register your first passkey' : 'Manage your passkeys'}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRegisterPasskey}
+                      disabled={passkeyLoading}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add PassKey
+                    </Button>
+                  </div>
+
+                  {passkeys.length > 0 && (
+                    <div className="space-y-2">
+                      {passkeys.map((pk: any) => (
+                        <div key={pk.id} className="flex items-center justify-between bg-card border p-3 rounded">
+                          <div className="text-sm">
+                            <p className="font-medium">{pk.credentialName || 'Unnamed PassKey'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {pk.deviceType === 'multiDevice' ? 'Multi-device' : 'Single device'} •
+                              Last used: {new Date(pk.lastUsedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeletePasskey(pk.id)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-4">

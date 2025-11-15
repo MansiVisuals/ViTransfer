@@ -42,14 +42,14 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Don't expose decrypted password - return placeholder if set
-    const safeSettings = {
+    // Decrypt sensitive fields before sending to admin
+    const decryptedSettings = {
       ...settings,
-      smtpPassword: settings.smtpPassword ? '••••••••' : null,
+      smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
     }
 
     return NextResponse.json({
-      ...safeSettings,
+      ...decryptedSettings,
       security: securitySettings,
     })
   } catch (error) {
@@ -147,35 +147,72 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Encrypt sensitive fields before storing
-    const encryptedPassword = smtpPassword ? encrypt(smtpPassword) : null
+    // Handle SMTP password update - only update if actually changed
+    let passwordUpdate: string | null | undefined
+    if (smtpPassword !== undefined) {
+      // Get current settings to compare password
+      const currentSettings = await prisma.settings.findUnique({
+        where: { id: 'default' },
+        select: { smtpPassword: true },
+      })
+
+      // Decrypt current password for comparison
+      const currentPassword = currentSettings?.smtpPassword ? decrypt(currentSettings.smtpPassword) : null
+
+      // Only update if password actually changed
+      if (smtpPassword === null || smtpPassword === '') {
+        // Clearing password
+        if (currentPassword !== null) {
+          passwordUpdate = null
+        } else {
+          passwordUpdate = undefined // Already null, don't update
+        }
+      } else {
+        // Setting/updating password - only if different from current
+        if (smtpPassword !== currentPassword) {
+          passwordUpdate = encrypt(smtpPassword)
+        } else {
+          passwordUpdate = undefined // Same password, don't update
+        }
+      }
+    } else {
+      // Password not provided in request, don't update
+      passwordUpdate = undefined
+    }
+
+    // Build update data (only include password if it should be updated)
+    const updateData: any = {
+      companyName,
+      smtpServer,
+      smtpPort: smtpPort ? parseInt(smtpPort) : null,
+      smtpUsername,
+      smtpFromAddress,
+      smtpSecure,
+      appDomain,
+      defaultPreviewResolution,
+      defaultWatermarkText,
+      autoApproveProject,
+      adminNotificationSchedule,
+      adminNotificationTime,
+      adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
+    }
+
+    // Only update password if it's not the placeholder
+    if (passwordUpdate !== undefined) {
+      updateData.smtpPassword = passwordUpdate
+    }
 
     // Update or create the settings
     const settings = await prisma.settings.upsert({
       where: { id: 'default' },
-      update: {
-        companyName,
-        smtpServer,
-        smtpPort: smtpPort ? parseInt(smtpPort) : null,
-        smtpUsername,
-        smtpPassword: encryptedPassword,
-        smtpFromAddress,
-        smtpSecure,
-        appDomain,
-        defaultPreviewResolution,
-        defaultWatermarkText,
-        autoApproveProject,
-        adminNotificationSchedule,
-        adminNotificationTime,
-        adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
-      },
+      update: updateData,
       create: {
         id: 'default',
         companyName,
         smtpServer,
         smtpPort: smtpPort ? parseInt(smtpPort) : null,
         smtpUsername,
-        smtpPassword: encryptedPassword,
+        smtpPassword: passwordUpdate || null,
         smtpFromAddress,
         smtpSecure,
         appDomain,
@@ -188,13 +225,13 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
-    // Don't expose decrypted password - return placeholder if set
-    const safeSettings = {
+    // Decrypt sensitive fields before sending to admin
+    const decryptedSettings = {
       ...settings,
-      smtpPassword: settings.smtpPassword ? '••••••••' : null,
+      smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
     }
 
-    return NextResponse.json(safeSettings)
+    return NextResponse.json(decryptedSettings)
   } catch (error) {
     console.error('Error updating settings:', error)
     return NextResponse.json(

@@ -36,6 +36,7 @@ model Project {
   description   String?
   companyName   String? // Optional company/brand name (display priority: companyName → primary recipient → 'Client')
   sharePassword String?
+  authMode      String  @default("PASSWORD") // Authentication mode: PASSWORD, OTP, or BOTH
 
   // Revision tracking (optional)
   enableRevisions Boolean @default(false)

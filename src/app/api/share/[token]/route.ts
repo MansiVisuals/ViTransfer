@@ -53,13 +53,14 @@ export async function GET(
     }
 
     // Verify project access using dual auth pattern
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
 
     if (!accessCheck.authorized) {
       // Return password required error for share page
       return NextResponse.json({
-        error: 'Password required',
-        requiresPassword: true
+        error: 'Authentication required',
+        requiresPassword: true,
+        authMode: project.authMode || 'PASSWORD'
       }, { status: 401 })
     }
 

@@ -98,18 +98,18 @@ export async function GET(
         return NextResponse.json({ error: 'Access denied' }, { status: 401 })
       }
 
-      // Verify session → project mapping in Redis
-      const mappedProjectId = await redis.get(`session_project:${sessionId}`)
+      // Verify session includes this project in Redis
+      const hasAccess = await redis.sismember(`session_projects:${sessionId}`, preliminaryTokenData.projectId)
 
-      if (!mappedProjectId || mappedProjectId !== preliminaryTokenData.projectId) {
-        // Session doesn't map to this project - possible attack
+      if (!hasAccess) {
+        // Session doesn't have access to this project - possible attack
         await logSecurityEvent({
           type: 'SESSION_PROJECT_MISMATCH',
           severity: 'WARNING',
           projectId: preliminaryTokenData.projectId,
           sessionId,
           ipAddress: getClientIpAddress(request),
-          details: { expectedProject: preliminaryTokenData.projectId, mappedProject: mappedProjectId }
+          details: { expectedProject: preliminaryTokenData.projectId }
         })
 
         return NextResponse.json({ error: 'Access denied' }, { status: 401 })

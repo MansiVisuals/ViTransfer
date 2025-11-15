@@ -243,7 +243,7 @@ export default function CommentSection({
   }
 
   return (
-    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[50vh]" data-comment-section>
+    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[75vh]" data-comment-section>
       <CardHeader className="border-b border-border flex-shrink-0">
         <CardTitle className="text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />

@@ -71,14 +71,14 @@ export async function GET(
     let sessionId = cookieStore.get('share_session')?.value
     let isNewSession = false
 
+    // Get configurable client session timeout and HTTPS setting
+    const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
+    const httpsEnabled = await isHttpsEnabled()
+
     if (!sessionId) {
       // Generate new session ID (cryptographically secure)
       sessionId = crypto.randomBytes(16).toString('base64url')
       isNewSession = true
-
-      // Get configurable client session timeout and HTTPS setting
-      const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
-      const httpsEnabled = await isHttpsEnabled()
 
       // Set generic session cookie (no project ID exposure)
       cookieStore.set({
@@ -90,16 +90,16 @@ export async function GET(
         sameSite: 'strict',
         maxAge: sessionTimeoutSeconds,
       })
+    }
 
-      // Store session → project mapping in Redis (server-side only)
-      const redis = await import('@/lib/video-access').then(m => m.getRedis())
-      await redis.set(
-        `session_project:${sessionId}`,
-        project.id,
-        'EX',
-        sessionTimeoutSeconds
-      )
+    // Store session → project mapping in Redis (always, for new or existing sessions)
+    const redis = await import('@/lib/video-access').then(m => m.getRedis())
+    // Add project to session's authorized projects set
+    await redis.sadd(`session_projects:${sessionId}`, project.id)
+    // Refresh TTL on the entire set
+    await redis.expire(`session_projects:${sessionId}`, sessionTimeoutSeconds)
 
+    if (isNewSession) {
       // Track page visit for new sessions only (don't count admins)
       // Create ONE analytics entry per project visit (using the first video as reference)
       if (!isAdmin && project.videos.length > 0) {

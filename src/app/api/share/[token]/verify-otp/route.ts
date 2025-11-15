@@ -223,30 +223,32 @@ export async function POST(
     // SUCCESS - Create session (same as password flow)
     const redis = getRedis()
 
-    // Generate unique auth session ID (no project ID exposure)
-    const authSessionId = crypto.randomBytes(16).toString('base64url')
-
     // Get configurable client session timeout and HTTPS setting
     const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
     const httpsEnabled = await isHttpsEnabled()
 
-    // Store auth → project mapping in Redis
-    await redis.set(
-      `auth_project:${authSessionId}`,
-      project.id,
-      'EX',
-      sessionTimeoutSeconds
-    )
-
-    // Set generic authentication cookie (no project ID exposure)
+    // Check for existing session or generate new one
     const cookieStore = await cookies()
-    cookieStore.set('share_auth', authSessionId, {
-      httpOnly: true,
-      secure: httpsEnabled,
-      sameSite: 'strict',
-      path: '/',
-      maxAge: sessionTimeoutSeconds,
-    })
+    let authSessionId = cookieStore.get('share_auth')?.value
+
+    if (!authSessionId) {
+      // Generate unique auth session ID (no project ID exposure)
+      authSessionId = crypto.randomBytes(16).toString('base64url')
+
+      // Set generic authentication cookie (no project ID exposure)
+      cookieStore.set('share_auth', authSessionId, {
+        httpOnly: true,
+        secure: httpsEnabled,
+        sameSite: 'strict',
+        path: '/',
+        maxAge: sessionTimeoutSeconds,
+      })
+    }
+
+    // Add project to session's authorized projects set
+    await redis.sadd(`auth_projects:${authSessionId}`, project.id)
+    // Refresh TTL on the entire set
+    await redis.expire(`auth_projects:${authSessionId}`, sessionTimeoutSeconds)
 
     // Log security event for successful OTP verification
     const ipAddress = getClientIpAddress(request)

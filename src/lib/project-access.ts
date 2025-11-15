@@ -62,11 +62,11 @@ export async function verifyProjectAccess(
     }
   }
 
-  // Verify auth session maps to this project
+  // Verify auth session includes this project
   const redis = getRedis()
-  const mappedProjectId = await redis.get(`auth_project:${authSessionId}`)
+  const hasAccess = await redis.sismember(`auth_projects:${authSessionId}`, projectId)
 
-  if (mappedProjectId !== projectId) {
+  if (!hasAccess) {
     return {
       authorized: false,
       isAdmin: false,

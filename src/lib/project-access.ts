@@ -21,7 +21,8 @@ import { prisma } from '@/lib/db'
 export async function verifyProjectAccess(
   request: NextRequest,
   projectId: string,
-  sharePassword: string | null
+  sharePassword: string | null,
+  authMode: string = 'PASSWORD'
 ): Promise<{
   authorized: boolean
   isAdmin: boolean
@@ -33,8 +34,11 @@ export async function verifyProjectAccess(
   const isAdmin = currentUser?.role === 'ADMIN'
   let isAuthenticated = isAdmin
 
-  // If project has no password OR user is admin, grant access
-  if (!sharePassword || isAdmin) {
+  // Determine if authentication is required
+  const requiresAuth = sharePassword !== null || authMode === 'OTP' || authMode === 'BOTH'
+
+  // If no auth required OR user is admin, grant access
+  if (!requiresAuth || isAdmin) {
     return {
       authorized: true,
       isAdmin,

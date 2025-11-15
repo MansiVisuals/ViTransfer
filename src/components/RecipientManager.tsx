@@ -17,9 +17,10 @@ interface Recipient {
 interface RecipientManagerProps {
   projectId: string
   onError: (message: string) => void
+  onRecipientsChange?: (recipients: Recipient[]) => void
 }
 
-export function RecipientManager({ projectId, onError }: RecipientManagerProps) {
+export function RecipientManager({ projectId, onError, onRecipientsChange }: RecipientManagerProps) {
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -39,7 +40,9 @@ export function RecipientManager({ projectId, onError }: RecipientManagerProps) 
       const response = await fetch(`/api/projects/${projectId}/recipients`)
       if (response.ok) {
         const data = await response.json()
-        setRecipients(data.recipients || [])
+        const loadedRecipients = data.recipients || []
+        setRecipients(loadedRecipients)
+        onRecipientsChange?.(loadedRecipients)
       }
     } catch (error) {
       // Failed to load recipients - will show empty state

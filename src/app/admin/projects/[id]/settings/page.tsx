@@ -28,6 +28,7 @@ interface Project {
   hideFeedback: boolean
   sharePassword: string | null
   sharePasswordDecrypted: string | null
+  authMode: string
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
@@ -57,6 +58,7 @@ export default function ProjectSettingsPage() {
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
   const [hideFeedback, setHideFeedback] = useState(false)
   const [sharePassword, setSharePassword] = useState('')
+  const [authMode, setAuthMode] = useState('PASSWORD')
   const [useCustomSlug, setUseCustomSlug] = useState(false) // Toggle for custom slug
   const [customSlugValue, setCustomSlugValue] = useState('') // Store custom slug value
   const [previewResolution, setPreviewResolution] = useState('720p')
@@ -68,6 +70,11 @@ export default function ProjectSettingsPage() {
   const [clientNotificationSchedule, setClientNotificationSchedule] = useState('HOURLY')
   const [clientNotificationTime, setClientNotificationTime] = useState('09:00')
   const [clientNotificationDay, setClientNotificationDay] = useState(1)
+
+  // SMTP and recipients validation (for OTP)
+  const [smtpConfigured, setSmtpConfigured] = useState(true)
+  const [recipients, setRecipients] = useState<any[]>([])
+  const hasRecipientWithEmail = recipients?.some((r: any) => r.email && r.email.trim() !== '') || false
 
   // Collapsible section state (all collapsed by default)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
@@ -117,6 +124,10 @@ export default function ProjectSettingsPage() {
         const data = await response.json()
         setProject(data)
 
+        // Set SMTP status and recipients
+        setSmtpConfigured(data.smtpConfigured !== false)
+        setRecipients(data.recipients || [])
+
         // Set form values
         setTitle(data.title)
         setDescription(data.description || '')
@@ -130,6 +141,7 @@ export default function ProjectSettingsPage() {
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
         setSharePassword(data.sharePasswordDecrypted || '')
+        setAuthMode(data.authMode || 'PASSWORD')
 
         // Store original processing settings
         setOriginalSettings({
@@ -174,6 +186,19 @@ export default function ProjectSettingsPage() {
         return
       }
 
+      // Validate OTP requirements
+      if ((authMode === 'OTP' || authMode === 'BOTH') && !smtpConfigured) {
+        setError('OTP authentication requires SMTP configuration. Please configure email settings first.')
+        setSaving(false)
+        return
+      }
+
+      if ((authMode === 'OTP' || authMode === 'BOTH') && !hasRecipientWithEmail) {
+        setError('OTP authentication requires at least one recipient with an email address. Please add recipients first.')
+        setSaving(false)
+        return
+      }
+
       // Ensure revision values are valid numbers before saving
       const finalMaxRevisions = typeof maxRevisions === 'number' ? maxRevisions : parseInt(String(maxRevisions)) || 1
 
@@ -197,6 +222,7 @@ export default function ProjectSettingsPage() {
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
         sharePassword: sharePassword || null,
+        authMode,
         clientNotificationSchedule,
         clientNotificationTime: (clientNotificationSchedule === 'DAILY' || clientNotificationSchedule === 'WEEKLY') ? clientNotificationTime : null,
         clientNotificationDay: clientNotificationSchedule === 'WEEKLY' ? clientNotificationDay : null,
@@ -519,7 +545,11 @@ export default function ProjectSettingsPage() {
 
             {showClientInfo && (
               <CardContent className="space-y-6 border-t pt-4">
-              <RecipientManager projectId={projectId} onError={setError} />
+              <RecipientManager
+                projectId={projectId}
+                onError={setError}
+                onRecipientsChange={setRecipients}
+              />
 
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <ScheduleSelector
@@ -794,6 +824,42 @@ export default function ProjectSettingsPage() {
               <CardContent className="space-y-4 border-t pt-4">
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="space-y-2">
+                  <Label htmlFor="authMode">Authentication Method</Label>
+                  <select
+                    id="authMode"
+                    value={authMode}
+                    onChange={(e) => setAuthMode(e.target.value)}
+                    className="w-full px-3 py-2 bg-card border border-border rounded-md"
+                  >
+                    <option value="PASSWORD">Password Only</option>
+                    <option value="OTP" disabled={!smtpConfigured || !hasRecipientWithEmail}>
+                      Email OTP Only {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
+                    </option>
+                    <option value="BOTH" disabled={!smtpConfigured || !hasRecipientWithEmail}>
+                      Both Password and OTP {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
+                    </option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {authMode === 'PASSWORD' && 'Clients must enter a password to access the project'}
+                    {authMode === 'OTP' && 'Clients receive a one-time code via email (must be a registered recipient)'}
+                    {authMode === 'BOTH' && 'Clients can choose between password or email OTP authentication'}
+                  </p>
+                  {!smtpConfigured && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Configure SMTP in Settings to enable OTP authentication options
+                    </p>
+                  )}
+                  {smtpConfigured && !hasRecipientWithEmail && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Add at least one recipient with an email address to enable OTP authentication options
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {(authMode === 'PASSWORD' || authMode === 'BOTH') && (
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="space-y-2">
                   <Label htmlFor="password">Share Page Password</Label>
                   <div className="flex gap-2 w-full">
                     <PasswordInput
@@ -837,6 +903,7 @@ export default function ProjectSettingsPage() {
                   </p>
                 </div>
               </div>
+              )}
             </CardContent>
             )}
           </Card>

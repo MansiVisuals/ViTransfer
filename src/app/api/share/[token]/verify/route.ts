@@ -6,11 +6,10 @@ import IORedis from 'ioredis'
 import crypto from 'crypto'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
-import { getClientSessionTimeoutSeconds, isHttpsEnabled } from '@/lib/settings'
+import { getClientSessionTimeoutSeconds, isHttpsEnabled, getMaxAuthAttempts } from '@/lib/settings'
 
 // Rate limit configuration
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
-const MAX_FAILED_ATTEMPTS = 5
 
 /**
  * Constant-time string comparison to prevent timing attacks
@@ -66,7 +65,10 @@ export async function POST(
     const { token } = await params
     const redis = getRedisConnection()
     const rateLimitKey = getIdentifier(request, token)
-    
+
+    // Get max auth attempts from settings
+    const MAX_FAILED_ATTEMPTS = await getMaxAuthAttempts()
+
     // Check if currently locked out from too many failed attempts
     const lockoutData = await redis.get(rateLimitKey)
     if (lockoutData) {

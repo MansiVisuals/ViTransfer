@@ -175,6 +175,18 @@ export async function initializeSecuritySettings() {
   }
 }
 
+export async function getMaxAuthAttempts(): Promise<number> {
+  try {
+    const securitySettings = await prisma.securitySettings.findUnique({
+      where: { id: 'default' },
+      select: { passwordAttempts: true }
+    })
+    return securitySettings?.passwordAttempts || 5
+  } catch (error) {
+    return 5 // Default fallback
+  }
+}
+
 export async function isHttpsEnabled(): Promise<boolean> {
   try {
     // Read from database (env var is synced to DB on startup via initializeSecuritySettings)

@@ -256,6 +256,15 @@ export async function PATCH(
       }
     }
 
+    // Handle authentication mode
+    if (body.authMode !== undefined) {
+      const validAuthModes = ['PASSWORD', 'OTP', 'BOTH']
+      if (!validAuthModes.includes(body.authMode)) {
+        return NextResponse.json({ error: 'Invalid authentication mode' }, { status: 400 })
+      }
+      updateData.authMode = body.authMode
+    }
+
     // Handle client notification schedule
     if (body.clientNotificationSchedule !== undefined) {
       const validSchedules = ['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']

@@ -5,7 +5,37 @@ import { cookies } from 'next/headers'
 import crypto from 'crypto'
 import { logSecurityEvent, getRedis } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
-import { getClientSessionTimeoutSeconds, isHttpsEnabled } from '@/lib/settings'
+import { getClientSessionTimeoutSeconds, isHttpsEnabled, getMaxAuthAttempts } from '@/lib/settings'
+import IORedis from 'ioredis'
+
+// Rate limit configuration
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+
+let redis: IORedis | null = null
+
+function getRedisConnection(): IORedis {
+  if (redis) return redis
+
+  redis = new IORedis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD,
+  })
+
+  return redis
+}
+
+function getIdentifier(request: NextRequest, token: string, email: string): string {
+  const ip = getClientIpAddress(request)
+
+  const hash = crypto
+    .createHash('sha256')
+    .update(`${ip}:${token}:${email}`)
+    .digest('hex')
+    .slice(0, 16)
+
+  return `ratelimit:share-verify-otp-failed:${token}:${hash}`
+}
 
 export async function POST(
   request: NextRequest,
@@ -53,6 +83,45 @@ export async function POST(
       )
     }
 
+    // Get max auth attempts from settings
+    const MAX_FAILED_ATTEMPTS = await getMaxAuthAttempts()
+
+    // Check rate limiting
+    const redisClient = getRedisConnection()
+    const rateLimitKey = getIdentifier(request, token, email.toLowerCase().trim())
+
+    // Check if currently locked out from too many failed attempts
+    const lockoutData = await redisClient.get(rateLimitKey)
+    if (lockoutData) {
+      const { count, lockoutUntil } = JSON.parse(lockoutData)
+      const now = Date.now()
+
+      if (lockoutUntil && lockoutUntil > now) {
+        const retryAfter = Math.ceil((lockoutUntil - now) / 1000)
+
+        // Log security event for rate limit hit
+        const ipAddress = getClientIpAddress(request)
+
+        await logSecurityEvent({
+          type: 'OTP_RATE_LIMIT_HIT',
+          severity: 'WARNING',
+          ipAddress,
+          details: {
+            shareToken: token,
+            email,
+            failedAttempts: count,
+            retryAfter,
+          },
+          wasBlocked: true,
+        })
+
+        return NextResponse.json(
+          { error: 'Too many failed attempts. Please try again later.', retryAfter },
+          { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+        )
+      }
+    }
+
     // Get project
     const project = await prisma.project.findUnique({
       where: { slug: token },
@@ -92,20 +161,50 @@ export async function POST(
     const result = await verifyOTP(email, project.id, code)
 
     if (!result.success) {
+      // FAILED attempt - increment rate limit counter
+      const now = Date.now()
+      const existingData = await redisClient.get(rateLimitKey)
+
+      let count = 1
+      let firstAttempt = now
+
+      if (existingData) {
+        const parsed = JSON.parse(existingData)
+        // Reset if window expired
+        if (now - parsed.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+          count = 1
+          firstAttempt = now
+        } else {
+          count = parsed.count + 1
+          firstAttempt = parsed.firstAttempt
+        }
+      }
+
+      const rateLimitEntry = {
+        count,
+        firstAttempt,
+        lastAttempt: now,
+        lockoutUntil: count >= MAX_FAILED_ATTEMPTS ? now + RATE_LIMIT_WINDOW_MS : undefined
+      }
+
+      const ttlSeconds = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
+      await redisClient.setex(rateLimitKey, ttlSeconds, JSON.stringify(rateLimitEntry))
+
       // Log security event for failed OTP verification
       const ipAddress = getClientIpAddress(request)
       await logSecurityEvent({
         type: 'OTP_VERIFICATION_FAILED',
-        severity: 'WARNING',
+        severity: count >= MAX_FAILED_ATTEMPTS ? 'CRITICAL' : 'WARNING',
         projectId: project.id,
         ipAddress,
         details: {
           shareToken: token,
           email,
           error: result.error,
+          failedAttempts: count,
           attemptsLeft: result.attemptsLeft,
         },
-        wasBlocked: false,
+        wasBlocked: count >= MAX_FAILED_ATTEMPTS,
       })
 
       // SECURITY: Return same generic error as non-recipient to prevent enumeration
@@ -117,6 +216,9 @@ export async function POST(
         { status: 403 }
       )
     }
+
+    // SUCCESS - Clear rate limit on successful verification
+    await redisClient.del(rateLimitKey)
 
     // SUCCESS - Create session (same as password flow)
     const redis = getRedis()

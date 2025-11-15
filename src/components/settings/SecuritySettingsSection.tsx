@@ -176,7 +176,7 @@ export function SecuritySettingsSection({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="passwordAttempts">Password Attempts</Label>
+                <Label htmlFor="passwordAttempts">Authentication Attempts</Label>
                 <Input
                   id="passwordAttempts"
                   type="number"
@@ -185,7 +185,7 @@ export function SecuritySettingsSection({
                   placeholder="5"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Attempts before lockout
+                  Maximum authentication attempts (password or OTP) before lockout
                 </p>
               </div>
             </div>

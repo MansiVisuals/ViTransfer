@@ -5,11 +5,12 @@ import { useParams, useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
 import VideoSidebar from '@/components/VideoSidebar'
+import { OTPInput } from '@/components/OTPInput'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
-import { Lock, Check, ArrowLeft } from 'lucide-react'
+import { Lock, Check, ArrowLeft, Mail, KeyRound } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SharePage() {
@@ -24,8 +25,13 @@ export default function SharePage() {
 
   const [isPasswordProtected, setIsPasswordProtected] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authMode, setAuthMode] = useState<string>('PASSWORD')
   const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [sendingOtp, setSendingOtp] = useState(false)
   const [error, setError] = useState('')
   const [project, setProject] = useState<any>(null)
   const [comments, setComments] = useState<any[]>([])
@@ -111,11 +117,12 @@ export default function SharePage() {
 
         // Handle different response statuses
         if (response.status === 401) {
-          // Password required
+          // Authentication required
           const data = await response.json()
           if (isMounted) {
             setIsPasswordProtected(true)
             setIsAuthenticated(false)
+            setAuthMode(data.authMode || 'PASSWORD')
           }
           return
         }
@@ -234,6 +241,78 @@ export default function SharePage() {
     setActiveVideos(project.videosByName[videoName])
   }
 
+  async function handleSendOtp(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) return
+
+    setSendingOtp(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/share/${token}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setOtpSent(true)
+        setError('') // Clear any previous errors
+      } else {
+        // Show generic message to prevent email enumeration
+        setError(data.error || 'Failed to send code. Please try again.')
+      }
+    } catch (error) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setSendingOtp(false)
+    }
+  }
+
+  async function handleOtpSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email || !otp) return
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/share/${token}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: otp }),
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        setIsAuthenticated(true)
+
+        // Fetch project data
+        const projectResponse = await fetch(`/api/share/${token}`, {
+          credentials: 'include'
+        })
+        if (projectResponse.ok) {
+          const projectData = await projectResponse.json()
+          setProject(projectData)
+
+          // Fetch comments after successful auth (if not hidden)
+          if (!projectData.hideFeedback) {
+            fetchComments()
+          }
+        }
+      } else {
+        setError('Invalid or expired code. Please try again.')
+      }
+    } catch (error) {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -282,7 +361,7 @@ export default function SharePage() {
     )
   }
 
-  // Show password prompt
+  // Show authentication prompt
   if (isPasswordProtected && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -291,33 +370,135 @@ export default function SharePage() {
             <div className="flex justify-center mb-4">
               <Lock className="w-12 h-12 text-muted-foreground" />
             </div>
-            <CardTitle className="text-foreground">Password Protected</CardTitle>
+            <CardTitle className="text-foreground">Authentication Required</CardTitle>
             <p className="text-muted-foreground text-sm mt-2">
-              This project is password protected. Please enter the password to continue.
+              {authMode === 'PASSWORD' && 'Please enter the password to continue.'}
+              {authMode === 'OTP' && 'Enter your email to receive an access code.'}
+              {authMode === 'BOTH' && 'Choose your preferred authentication method.'}
             </p>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <PasswordInput
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoFocus
-              />
-              {error && (
+          <CardContent className="space-y-6">
+            {/* Password Authentication */}
+            {(authMode === 'PASSWORD' || authMode === 'BOTH') && (
+              <div className="space-y-4">
+                {authMode === 'BOTH' && (
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">Password</p>
+                  </div>
+                )}
+                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                  <PasswordInput
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoFocus={authMode === 'PASSWORD'}
+                  />
+                  <Button
+                    type="submit"
+                    variant="default"
+                    size="default"
+                    disabled={loading || !password}
+                    className="w-full"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    {loading ? 'Verifying...' : 'Submit'}
+                  </Button>
+                </form>
+              </div>
+            )}
+
+            {/* Divider for BOTH mode */}
+            {authMode === 'BOTH' && (
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+            )}
+
+            {/* OTP Authentication */}
+            {(authMode === 'OTP' || authMode === 'BOTH') && (
+              <div className="space-y-4">
+                {authMode === 'BOTH' && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">Email Verification</p>
+                  </div>
+                )}
+                {!otpSent ? (
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <Input
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoFocus={authMode === 'OTP'}
+                      required
+                    />
+                    <Button
+                      type="submit"
+                      variant="default"
+                      size="default"
+                      disabled={sendingOtp || !email}
+                      className="w-full"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      {sendingOtp ? 'Sending Code...' : 'Send Verification Code'}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleOtpSubmit} className="space-y-4">
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground text-center">
+                        If an account exists for <span className="font-medium text-foreground">{email}</span>, you will receive a verification code shortly.
+                      </p>
+                      <OTPInput
+                        value={otp}
+                        onChange={setOtp}
+                        disabled={loading}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="default"
+                        onClick={() => {
+                          setOtpSent(false)
+                          setOtp('')
+                          setError('')
+                        }}
+                        className="flex-1"
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="default"
+                        size="default"
+                        disabled={loading || otp.length !== 6}
+                        className="flex-1"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        {loading ? 'Verifying...' : 'Verify'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* Error message */}
+            {error && (
+              <div className="p-3 bg-destructive-visible border border-destructive-visible rounded-lg">
                 <p className="text-sm text-destructive">{error}</p>
-              )}
-              <Button
-                type="submit"
-                variant="default"
-                size="default"
-                disabled={loading || !password}
-                className="w-full"
-              >
-                <Check className="w-4 h-4 mr-2" />
-                {loading ? 'Verifying...' : 'Submit'}
-              </Button>
-            </form>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

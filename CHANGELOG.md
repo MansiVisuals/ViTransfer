@@ -5,6 +5,26 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2025-11-16
+
+### Security
+- **Resolved 4 HIGH severity Go CVEs** in esbuild dependency
+  - Upgraded esbuild from 0.25.12 to 0.27.0 via npm overrides
+  - Fixed CVE-2025-58188, CVE-2025-61725, CVE-2025-58187, CVE-2025-61723
+  - Reduced total CVE count from 0C 5H 7M 2L to 0C 1H 6M 2L
+  - All Go CVEs resolved - esbuild now compiled with patched Go 1.25.4
+- Updated Docker base image to node:25.2.0-alpine3.22
+- Updated SECURITY.md with current CVE status
+  - Removed all fixed Go CVEs
+  - Added curl CVE-2025-10966
+  - All remaining CVEs are in Alpine/npm packages awaiting upstream fixes
+
+### Improved
+- UI consistency across admin interface
+  - Standardized form styling and spacing
+  - Improved visual consistency in user management
+  - Better alignment of UI elements
+
 ## [0.3.4] - 2025-11-16
 
 ### Added

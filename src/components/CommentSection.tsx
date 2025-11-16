@@ -81,6 +81,7 @@ export default function CommentSection({
 
   // Auto-scroll to latest comment (like messaging apps)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [localComments, setLocalComments] = useState<CommentWithReplies[]>(initialComments)
 
   // Fetch comments function (only used for event-triggered updates)
@@ -172,13 +173,12 @@ export default function CommentSection({
   })
 
   // Auto-scroll to bottom when new comments appear
-  // Client view: auto-scroll to latest message (like chat apps)
-  // Admin view: don't auto-scroll, let admin manually scroll (comment section still has overflow-y-auto)
+  // Scrolls only the messages container, not the entire page
   useEffect(() => {
-    if (!isAdminView) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
     }
-  }, [displayComments.length, isAdminView])
+  }, [displayComments.length])
 
   // Check if commenting on current video is allowed
   const isCurrentVideoAllowed = () => {
@@ -281,7 +281,7 @@ export default function CommentSection({
         )}
 
         {/* Messages Area - Chat Style */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-gray-50 dark:bg-gray-900/30">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-gray-50 dark:bg-gray-900/30">
           {flattenedMessages.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-3" />

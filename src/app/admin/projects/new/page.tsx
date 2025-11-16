@@ -251,7 +251,7 @@ export default function NewProjectPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  size="default"
+                  size="lg"
                   onClick={() => router.back()}
                   disabled={loading}
                 >

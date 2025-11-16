@@ -181,8 +181,9 @@ export default function ProjectPage() {
         <div className="mb-6 flex justify-between items-center">
           <Link href="/admin">
             <Button variant="ghost" size="default">
-              <ArrowLeft className="w-4 h-4 sm:mr-2" />
+              <ArrowLeft className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </Link>
           <Link href={`/admin/projects/${id}/settings`}>

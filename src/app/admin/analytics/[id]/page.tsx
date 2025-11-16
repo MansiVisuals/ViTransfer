@@ -145,8 +145,9 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
           <div>
             <Link href="/admin/analytics">
               <Button variant="ghost" size="default" className="mb-2">
-                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <ArrowLeft className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Back to Analytics</span>
+                <span className="sm:hidden">Back</span>
               </Button>
             </Link>
             <h1 className="text-2xl sm:text-3xl font-bold">{project.title}</h1>

@@ -262,20 +262,20 @@ export default function NewUserPage() {
               )}
               {formData.confirmPassword && formData.password === formData.confirmPassword && formData.password.length > 0 && (
                 <p className="text-sm text-success flex items-center gap-1">
-                  ✓ Passwords match
+                  <Check className="w-4 h-4" /> Passwords match
                 </p>
               )}
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" variant="default" size="default" disabled={loading}>
+              <Button type="submit" variant="default" size="lg" disabled={loading}>
                 <UserPlus className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">{loading ? 'Creating...' : 'Create User'}</span>
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                size="default"
+                size="lg"
                 onClick={() => router.push('/admin/users')}
                 disabled={loading}
               >

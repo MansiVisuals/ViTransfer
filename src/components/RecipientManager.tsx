@@ -214,8 +214,8 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
           onClick={() => setShowAddForm(true)}
           disabled={showAddForm}
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Recipient
+          <Plus className="w-4 h-4 sm:mr-2" />
+          <span className="hidden sm:inline">Add Recipient</span>
         </Button>
       </div>
 

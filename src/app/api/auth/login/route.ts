@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       // FAILED LOGIN: Increment rate limit counter FOR THIS SPECIFIC USERNAME/EMAIL
       // This prevents attackers from bypassing via browser rotation
       await incrementRateLimit(request, 'login', email)
-      
+
       return NextResponse.json(
         { error: 'Invalid username/email or password' },
         { status: 401 }

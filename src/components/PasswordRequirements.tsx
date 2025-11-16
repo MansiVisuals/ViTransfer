@@ -67,7 +67,9 @@ export function PasswordRequirements({ password, className = '' }: PasswordRequi
         ))}
       </ul>
       {allPassed && password.length > 0 && (
-        <p className="text-sm text-success font-medium mt-2">✓ Password meets all requirements</p>
+        <p className="text-sm text-success font-medium mt-2 flex items-center gap-1">
+          <Check className="w-4 h-4" /> Password meets all requirements
+        </p>
       )}
     </div>
   )

@@ -30,7 +30,7 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+        <div className="flex justify-between items-center gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
@@ -39,7 +39,7 @@ export default async function AdminPage() {
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage your video projects</p>
           </div>
           <Link href="/admin/projects/new">
-            <Button variant="default" size="default" className="w-full sm:w-auto">
+            <Button variant="default" size="default">
               <Plus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">New Project</span>
             </Button>

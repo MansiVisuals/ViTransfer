@@ -6,7 +6,7 @@ Currently supported versions with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 0.3.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
@@ -53,49 +53,21 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 
 The following CVEs are present in Alpine Linux packages and dependencies (latest available versions). These are **transitive dependencies** from FFmpeg, Node.js, and Alpine system packages, and are **NOT directly exploitable** in ViTransfer's use case.
 
-### CVE Summary (As of 2025-01-31)
+### CVE Summary (As of 2025-11-16)
 
 | CVE ID | Severity | Package | Status | Real Risk |
 |--------|----------|---------|--------|-----------|
-| CVE-2025-58188 | 7.5 H | golang/stdlib | ⚠️ False Positive | None |
-| CVE-2025-61725 | 7.5 H | golang/stdlib | ⚠️ False Positive | None |
 | CVE-2025-52194 | 7.5 H | libsndfile | ⏳ Awaiting Fix | Low |
-| CVE-2025-58187 | 6.5 M | golang/stdlib | ⚠️ False Positive | None |
-| CVE-2025-61723 | 6.5 M | golang/stdlib | ⚠️ False Positive | None |
 | CVE-2024-50613 | 6.5 M | libsndfile | ⏳ Awaiting Fix | Low |
 | CVE-2024-45993 | 6.5 M | giflib | ⏳ Awaiting Fix | Very Low |
 | CVE-2025-4574 | 6.3 M | crossbeam-channel | ⏳ Awaiting Fix | Very Low |
-| CVE-2025-64118 | 6.1 M | npm/tar | ⚠️ Unconfirmed | Very Low |
+| CVE-2025-64118 | 6.1 M | npm/tar | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-10966 | 6.0 M | curl | ⏳ Awaiting Fix | Low |
 | CVE-2025-47436 | 6.0 M | orc | ⏳ Awaiting Fix | Low |
 
 **Key Points:**
-- ✅ **0 npm package vulnerabilities** (verified by `npm audit`)
-- ⚠️ **4 Go CVEs are false positives** - Go is not installed or used
-- ⏳ **5 CVEs in Alpine packages** - Using latest available versions, awaiting upstream fixes
+- ⏳ **7 CVEs in Alpine/npm packages** - Using latest available versions, awaiting upstream fixes
 - 🔒 **All CVEs have low real-world exploitability** in ViTransfer's containerized environment
-
-### High Severity (Limited Impact in ViTransfer Context)
-
-#### CVE-2025-58188, CVE-2025-61725 - Go stdlib 1.23.12 (Severity: 7.5 High)
-- **Status**: ⚠️ False Positive - Go is not installed in the container
-- **Impact**: None - These CVEs likely detected from Go-compiled binaries in Alpine packages
-- **Exploitability**: None - No Go runtime or Go code in ViTransfer
-- **Mitigation**: These are Alpine system binaries, not accessible to application code
-- **Risk**: None - False positive from vulnerability scanner
-
-### Medium Severity (Minimal Impact)
-
-#### CVE-2025-58187, CVE-2025-61723 - Go stdlib 1.23.12 (Severity: 6.5 Medium)
-- **Status**: ⚠️ False Positive - Same as above
-- **Impact**: None
-- **Risk**: None
-
-#### CVE-2025-64118 - npm tar 7.5.1 (Severity: 6.1 Medium)
-- **Status**: ⏳ Not confirmed - npm audit shows 0 vulnerabilities
-- **Impact**: Minimal - tar is only used during npm install, not at runtime
-- **Exploitability**: Very Low - Only runs during container build, not production
-- **Mitigation**: Container is rebuilt from scratch for each deployment
-- **Risk**: Very Low - Build-time only, not runtime
 
 ### High Severity (Limited Impact in ViTransfer Context)
 
@@ -106,13 +78,13 @@ The following CVEs are present in Alpine Linux packages and dependencies (latest
 - **Mitigation**: ViTransfer validates video files; FFmpeg handles audio internally
 - **Risk**: Low - Not a primary attack vector
 
+### Medium Severity (Minimal Impact)
+
 #### CVE-2024-50613 - libsndfile 1.2.2-r2 (Severity: 6.5 Medium)
 - **Status**: ⏳ Awaiting upstream fix
 - **Impact**: Limited - Audio parsing vulnerability
 - **Mitigation**: Same as CVE-2025-52194
 - **Risk**: Low
-
-### Medium Severity (Minimal Impact)
 
 #### CVE-2024-45993 - giflib 5.2.2-r1 (Severity: 6.5 Medium)
 - **Status**: ⏳ Awaiting upstream fix
@@ -125,6 +97,19 @@ The following CVEs are present in Alpine Linux packages and dependencies (latest
 - **Impact**: Minimal - Internal FFmpeg Rust dependency
 - **Exploitability**: Very Low - Not directly accessible
 - **Risk**: Very Low
+
+#### CVE-2025-64118 - npm tar 7.5.1 (Severity: 6.1 Medium)
+- **Status**: ⏳ Awaiting upstream npm fix
+- **Impact**: Minimal - tar is only used during npm install, not at runtime
+- **Exploitability**: Very Low - Only runs during container build, not production
+- **Mitigation**: Container is rebuilt from scratch for each deployment
+- **Risk**: Very Low - Build-time only, not runtime
+
+#### CVE-2025-10966 - curl 8.14.1-r2 (Severity: 6.0 Medium)
+- **Status**: ⏳ Awaiting upstream Alpine fix
+- **Impact**: Minimal - curl is used for health checks and external requests
+- **Exploitability**: Low - Limited exposure in containerized environment
+- **Risk**: Low
 
 #### CVE-2025-47436 - orc 0.4.40-r1 (Severity: 6.0 Medium)
 - **Status**: ⏳ Awaiting upstream fix

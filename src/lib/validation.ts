@@ -107,7 +107,7 @@ export const loginSchema = z.object({
 export const createProjectSchema = z.object({
   title: safeStringSchema(1, 255),
   description: safeStringSchema(0, 5000).optional(),
-  companyName: safeStringSchema(1, 100)
+  companyName: safeStringSchema(0, 100)
     .refine(val => !val || !/[\r\n]/.test(val), {
       message: 'Company name cannot contain line breaks'
     })
@@ -126,7 +126,7 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = z.object({
   title: safeStringSchema(1, 255).optional(),
   description: safeStringSchema(0, 5000).optional(),
-  companyName: safeStringSchema(1, 100)
+  companyName: safeStringSchema(0, 100)
     .refine(val => !val || !/[\r\n]/.test(val), {
       message: 'Company name cannot contain line breaks'
     })
@@ -179,7 +179,7 @@ export const updateCommentSchema = z.object({
 // ============================================================================
 
 export const updateSettingsSchema = z.object({
-  companyName: safeStringSchema(1, 100)
+  companyName: safeStringSchema(0, 100)
     .refine(val => !val || !/[\r\n]/.test(val), {
       message: 'Company name cannot contain line breaks'
     })

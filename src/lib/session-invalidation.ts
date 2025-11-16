@@ -1,4 +1,4 @@
-import IORedis from 'ioredis'
+import { getRedis } from './redis'
 
 /**
  * Session Invalidation Utilities
@@ -17,23 +17,6 @@ import IORedis from 'ioredis'
  * 4. Password attempt changes → Clear rate limit counters
  */
 
-let redis: IORedis | null = null
-
-/**
- * Get Redis connection (reuse existing connection if available)
- */
-function getRedisConnection(): IORedis {
-  if (redis) return redis
-
-  redis = new IORedis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-  })
-
-  return redis
-}
-
 /**
  * Scan and delete Redis keys matching a pattern with optional filtering
  * @private
@@ -42,7 +25,7 @@ async function scanAndDeleteKeys(
   pattern: string,
   filter?: (key: string, value: string | null) => boolean
 ): Promise<number> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
   const stream = redis.scanStream({ match: pattern, count: 100 })
   const keysToDelete: string[] = []
 
@@ -153,7 +136,7 @@ export async function getSessionStats(): Promise<{
   sessionsByProject: Record<string, number>
 }> {
   try {
-    const redis = getRedisConnection()
+    const redis = getRedis()
     const sessionsByProject: Record<string, number> = {}
     let totalSessions = 0
 

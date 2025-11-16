@@ -1,9 +1,9 @@
 /**
  * Token Revocation Service
- * 
+ *
  * Implements a JWT token revocation/blacklist mechanism using Redis.
  * This ensures that even if a JWT hasn't expired, it can be invalidated on logout.
- * 
+ *
  * Security considerations:
  * 1. Uses Redis for distributed token revocation (works across multiple instances)
  * 2. Tokens are stored with TTL matching their expiration time (automatic cleanup)
@@ -12,48 +12,7 @@
  * 5. NO FALLBACKS - fails securely if Redis is unavailable
  */
 
-import IORedis from 'ioredis'
-
-let redis: IORedis | null = null
-
-/**
- * Get or create Redis connection for token revocation
- * Throws error if Redis is not configured
- */
-function getRedisConnection(): IORedis {
-  if (redis) return redis
-
-  if (!process.env.REDIS_HOST) {
-    throw new Error('REDIS_HOST environment variable is required for token revocation')
-  }
-
-  redis = new IORedis({
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true,
-  })
-
-  redis.on('error', (error) => {
-    console.error('Redis connection error (token revocation):', error)
-  })
-
-  redis.on('connect', () => {
-    // Redis connected successfully
-  })
-
-  return redis
-}
-
-/**
- * Export Redis connection for use in auth routes (fingerprinting)
- * This allows the login/refresh endpoints to store and verify fingerprints
- */
-export function getRedis(): IORedis {
-  return getRedisConnection()
-}
+import { getRedis } from './redis'
 
 /**
  * Revoke a JWT token by adding it to the blacklist
@@ -69,7 +28,7 @@ export function getRedis(): IORedis {
  * Security: Throws error if Redis is unavailable (fail closed)
  */
 export async function revokeToken(token: string, expiresIn: number): Promise<void> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
   
   if (redis.status !== 'ready') {
     await redis.connect()
@@ -96,7 +55,7 @@ export async function revokeToken(token: string, expiresIn: number): Promise<voi
  * This ensures we never accidentally allow a revoked token
  */
 export async function isTokenRevoked(token: string): Promise<boolean> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
   
   if (redis.status !== 'ready') {
     await redis.connect()
@@ -123,7 +82,7 @@ export async function isTokenRevoked(token: string): Promise<boolean> {
  * Security: Throws error if Redis is unavailable (fail closed)
  */
 export async function revokeAllUserTokens(userId: string): Promise<void> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
 
   if (redis.status !== 'ready') {
     await redis.connect()
@@ -149,7 +108,7 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
  * Security: Throws error if Redis is unavailable (fail closed)
  */
 export async function isUserTokensRevoked(userId: string, tokenIssuedAt?: number): Promise<boolean> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
 
   if (redis.status !== 'ready') {
     await redis.connect()
@@ -182,7 +141,7 @@ export async function isUserTokensRevoked(userId: string, tokenIssuedAt?: number
  * Security: Throws error if Redis is unavailable (fail closed)
  */
 export async function clearUserRevocation(userId: string): Promise<void> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
 
   if (redis.status !== 'ready') {
     await redis.connect()
@@ -190,15 +149,4 @@ export async function clearUserRevocation(userId: string): Promise<void> {
 
   const key = `blacklist:user:${userId}`
   await redis.del(key)
-}
-
-/**
- * Clean up and close Redis connection
- * Should be called on application shutdown
- */
-export async function closeRedisConnection(): Promise<void> {
-  if (redis) {
-    await redis.quit()
-    redis = null
-  }
 }

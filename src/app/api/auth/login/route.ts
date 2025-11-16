@@ -123,7 +123,7 @@ async function storeTokenFingerprint(
   fingerprintHash: string
 ): Promise<void> {
   try {
-    const { getRedis } = await import('@/lib/token-revocation')
+    const { getRedis } = await import('@/lib/redis')
     const redis = getRedis()
 
     // Use full hash (256 bits) - no truncation for better collision resistance

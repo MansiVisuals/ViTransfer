@@ -326,36 +326,33 @@ export async function getPasskeyConfigStatus(): Promise<{
       config.rpID === 'localhost' ||
       config.rpID === '127.0.0.1'
 
-    const isValidConfig =
-      (!isLocalhost && httpsEnabled) ||
-      (isLocalhost && !httpsEnabled)
-
-    if (!isValidConfig) {
-      if (isLocalhost && httpsEnabled) {
-        return {
-          available: false,
-          reason: 'Invalid configuration: Localhost requires HTTPS to be disabled',
-          config: {
-            domain: config.rpID,
-            httpsEnabled,
-            isLocalhost,
-          },
-        }
-      }
-
-      if (!isLocalhost && !httpsEnabled) {
-        return {
-          available: false,
-          reason: 'Invalid configuration: Production domain requires HTTPS to be enabled',
-          config: {
-            domain: config.rpID,
-            httpsEnabled,
-            isLocalhost,
-          },
-        }
+    // Early return for invalid localhost configuration
+    if (isLocalhost && httpsEnabled) {
+      return {
+        available: false,
+        reason: 'Invalid configuration: Localhost requires HTTPS to be disabled',
+        config: {
+          domain: config.rpID,
+          httpsEnabled,
+          isLocalhost,
+        },
       }
     }
 
+    // Early return for invalid production configuration
+    if (!isLocalhost && !httpsEnabled) {
+      return {
+        available: false,
+        reason: 'Invalid configuration: Production domain requires HTTPS to be enabled',
+        config: {
+          domain: config.rpID,
+          httpsEnabled,
+          isLocalhost,
+        },
+      }
+    }
+
+    // Valid configuration
     return {
       available: true,
       config: {

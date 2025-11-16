@@ -3,50 +3,10 @@ import { prisma } from '@/lib/db'
 import { getPrimaryRecipient } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { sanitizeComment } from '@/lib/comment-sanitization'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
-
-/**
- * Sanitize comment data before sending to client
- * SECURITY: Zero PII exposure policy
- */
-function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolean, clientName?: string) {
-  const sanitized: any = {
-    id: comment.id,
-    projectId: comment.projectId,
-    videoId: comment.videoId,
-    videoVersion: comment.videoVersion,
-    timestamp: comment.timestamp,
-    content: comment.content,
-    isInternal: comment.isInternal,
-    createdAt: comment.createdAt,
-    updatedAt: comment.updatedAt,
-    parentId: comment.parentId,
-  }
-
-  if (isAdmin) {
-    // Admins get real data
-    sanitized.authorName = comment.authorName
-    sanitized.authorEmail = comment.authorEmail
-    sanitized.userId = comment.userId
-  } else if (isAuthenticated) {
-    // Authenticated users see the actual author name (custom or recipient name)
-    sanitized.authorName = comment.isInternal ? 'Admin' : (comment.authorName || clientName || 'Client')
-    // NO email fields at all for non-admins
-  } else {
-    // Non-authenticated users see generic labels only
-    sanitized.authorName = comment.isInternal ? 'Admin' : 'Client'
-    // NO email fields at all for non-admins
-  }
-
-  // Recursively sanitize replies
-  if (comment.replies && Array.isArray(comment.replies)) {
-    sanitized.replies = comment.replies.map((reply: any) => sanitizeComment(reply, isAdmin, isAuthenticated, clientName))
-  }
-
-  return sanitized
-}
 
 /**
  * GET /api/share/[token]/comments

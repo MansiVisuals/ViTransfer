@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { prisma } from './db'
 import { sendEmail, escapeHtml } from './email'
-import { getRedis } from './video-access'
+import { getRedis } from './redis'
 
 // OTP Configuration
 const OTP_LENGTH = 6

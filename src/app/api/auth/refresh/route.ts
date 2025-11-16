@@ -166,8 +166,8 @@ async function storeTokenFingerprint(
   fingerprintHash: string
 ): Promise<void> {
   try {
-    // Use Redis from token-revocation module
-    const { getRedis } = await import('@/lib/token-revocation')
+    // Use Redis from centralized module
+    const { getRedis } = await import('@/lib/redis')
     const redis = getRedis()
 
     const key = `token_fingerprint:${userId}:${hashToken(refreshToken)}`
@@ -188,7 +188,7 @@ async function getTokenFingerprint(
   refreshToken: string
 ): Promise<string | null> {
   try {
-    const { getRedis } = await import('@/lib/token-revocation')
+    const { getRedis } = await import('@/lib/redis')
     const redis = getRedis()
 
     const key = `token_fingerprint:${userId}:${hashToken(refreshToken)}`

@@ -1,37 +1,16 @@
 import crypto from 'crypto'
-import IORedis from 'ioredis'
 import { NextRequest } from 'next/server'
 import { prisma } from './db'
 import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
+import { getRedis } from './redis'
 
 /**
  * Video Access Token System
- * 
+ *
  * Provides secure, time-limited, session-bound access to videos
  * with full analytics tracking and hotlink detection
  */
-
-let redis: IORedis | null = null
-
-export function getRedis(): IORedis {
-  if (redis) return redis
-  
-  redis = new IORedis({
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true,
-  })
-  
-  redis.on('error', (error) => {
-    console.error('Redis error (video access):', error.message)
-  })
-  
-  return redis
-}
 
 interface VideoAccessToken {
   videoId: string

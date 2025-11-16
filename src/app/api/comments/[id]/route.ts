@@ -4,55 +4,10 @@ import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, updateCommentSchema } from '@/lib/validation'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { sanitizeComment } from '@/lib/comment-sanitization'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
-
-/**
- * Sanitize comment data before sending to client
- * SECURITY-FIRST: Zero PII exposure policy
- */
-function sanitizeComment(comment: any, isAdmin: boolean, isAuthenticated: boolean, clientName?: string) {
-  const sanitized: any = {
-    id: comment.id,
-    projectId: comment.projectId,
-    videoId: comment.videoId,
-    videoVersion: comment.videoVersion,
-    timestamp: comment.timestamp,
-    content: comment.content,
-    isInternal: comment.isInternal,
-    createdAt: comment.createdAt,
-    updatedAt: comment.updatedAt,
-    parentId: comment.parentId,
-  }
-
-  if (isAdmin) {
-    // Admins get real data for management
-    sanitized.authorName = comment.authorName
-    sanitized.authorEmail = comment.authorEmail
-    sanitized.userId = comment.userId
-    if (comment.user) {
-      sanitized.user = {
-        id: comment.user.id,
-        name: comment.user.name,
-        email: comment.user.email
-      }
-    }
-  } else if (isAuthenticated && clientName) {
-    // Authenticated users see client name (not PII like emails)
-    sanitized.authorName = comment.isInternal ? 'Admin' : clientName
-  } else {
-    // Clients ONLY see generic labels - zero PII
-    sanitized.authorName = comment.isInternal ? 'Admin' : 'Client'
-  }
-
-  // Recursively sanitize replies
-  if (comment.replies && Array.isArray(comment.replies)) {
-    sanitized.replies = comment.replies.map((reply: any) => sanitizeComment(reply, isAdmin, isAuthenticated, clientName))
-  }
-
-  return sanitized
-}
 
 // PATCH /api/comments/[id] - Update a comment
 export async function PATCH(

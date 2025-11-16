@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { cookies } from 'next/headers'
-import { getRedis } from '@/lib/video-access'
+import { getRedis } from '@/lib/redis'
 import { prisma } from '@/lib/db'
 
 /**

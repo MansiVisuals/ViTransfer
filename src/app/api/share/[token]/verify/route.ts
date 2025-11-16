@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { decrypt } from '@/lib/encryption'
 import { cookies } from 'next/headers'
-import IORedis from 'ioredis'
 import crypto from 'crypto'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { getClientSessionTimeoutSeconds, isHttpsEnabled, getMaxAuthAttempts } from '@/lib/settings'
+import { getRedis } from '@/lib/redis'
 
 // Rate limit configuration
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
@@ -31,20 +31,6 @@ function constantTimeCompare(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufA, bufB)
 }
 
-let redis: IORedis | null = null
-
-function getRedisConnection(): IORedis {
-  if (redis) return redis
-
-  redis = new IORedis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-  })
-
-  return redis
-}
-
 function getIdentifier(request: NextRequest, token: string): string {
   const ip = getClientIpAddress(request)
   
@@ -63,7 +49,7 @@ export async function POST(
 ) {
   try {
     const { token } = await params
-    const redis = getRedisConnection()
+    const redis = getRedis()
     const rateLimitKey = getIdentifier(request, token)
 
     // Get max auth attempts from settings

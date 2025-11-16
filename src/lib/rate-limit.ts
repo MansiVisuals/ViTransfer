@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import IORedis from 'ioredis'
 import crypto from 'crypto'
 import { prisma } from './db'
 import { getClientIpAddress } from './utils'
+import { getRedis } from './redis'
 
 /**
  * Production-Ready Redis-based Rate Limiting
- * 
+ *
  * Security Features:
  * - NO in-memory fallback (fail closed for security)
  * - Persistent across server restarts (Redis storage)
  * - Works in distributed environments (multiple instances)
  * - Automatic expiration via Redis TTL
  * - Fails securely: returns error if Redis is unavailable
- * 
+ *
  * Production Requirements:
  * - Redis MUST be available
  * - No graceful degradation that could bypass rate limiting
@@ -25,45 +25,6 @@ interface RateLimitEntry {
   firstAttempt: number
   lastAttempt: number
   lockoutUntil?: number
-}
-
-let redis: IORedis | null = null
-
-/**
- * Get Redis connection - throws if unavailable
- */
-function getRedisConnection(): IORedis {
-  if (redis) return redis
-
-  if (!process.env.REDIS_HOST) {
-    throw new Error('REDIS_HOST environment variable is required for rate limiting')
-  }
-
-  redis = new IORedis({
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true,
-    retryStrategy: (times) => {
-      if (times > 3) {
-        console.error('Redis connection failed - rate limiting unavailable')
-        return null
-      }
-      return Math.min(times * 100, 3000)
-    }
-  })
-
-  redis.on('error', (error) => {
-    console.error('Redis error (rate limiting):', error.message)
-  })
-
-  redis.on('connect', () => {
-    // Redis connected successfully
-  })
-
-  return redis
 }
 
 function getIdentifier(request: NextRequest, prefix: string = '', customKey?: string): string {
@@ -93,7 +54,7 @@ function getIdentifier(request: NextRequest, prefix: string = '', customKey?: st
 }
 
 async function getRateLimitEntry(identifier: string): Promise<RateLimitEntry | null> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
   
   if (redis.status !== 'ready') {
     await redis.connect()
@@ -110,7 +71,7 @@ async function setRateLimitEntry(
   entry: RateLimitEntry,
   ttlMs: number
 ): Promise<void> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
   
   if (redis.status !== 'ready') {
     await redis.connect()
@@ -121,7 +82,7 @@ async function setRateLimitEntry(
 }
 
 async function deleteRateLimitEntry(identifier: string): Promise<void> {
-  const redis = getRedisConnection()
+  const redis = getRedis()
   
   if (redis.status !== 'ready') {
     await redis.connect()

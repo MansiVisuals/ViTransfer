@@ -36,7 +36,7 @@ import type {
 } from '@simplewebauthn/server'
 import { isoBase64URL } from '@simplewebauthn/server/helpers'
 import { prisma } from './db'
-import { getRedis } from './token-revocation'
+import { getRedis } from './redis'
 import { getWebAuthnConfig } from './settings'
 import { logSecurityEvent } from './video-access'
 import type { AuthUser } from './auth'

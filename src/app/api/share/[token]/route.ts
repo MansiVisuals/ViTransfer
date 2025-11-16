@@ -93,7 +93,7 @@ export async function GET(
     }
 
     // Store session → project mapping in Redis (always, for new or existing sessions)
-    const redis = await import('@/lib/video-access').then(m => m.getRedis())
+    const redis = await import('@/lib/redis').then(m => m.getRedis())
     // Add project to session's authorized projects set
     await redis.sadd(`session_projects:${sessionId}`, project.id)
     // Refresh TTL on the entire set

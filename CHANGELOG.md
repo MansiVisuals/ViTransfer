@@ -5,6 +5,80 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2025-11-16
+
+### Added
+- **OTP (One-Time Password) Authentication** - Alternative authentication method for share links
+  - Modern 6-box OTP input component with auto-focus and keyboard navigation
+  - Automatic paste support for codes from email or SMS
+  - Configurable via per-project authMode setting (password, OTP, or both)
+  - Requires SMTP configuration and at least one recipient
+  - Integrates with existing rate limiting and security event logging
+  - OTP codes are 6-digit, expire after 10 minutes, and are one-time use only
+  - Stored securely in Redis with automatic cleanup
+  - Email delivery with professional template including OTP code
+- Centralized Redis connection management (`src/lib/redis.ts`)
+  - Singleton pattern for consistent connection handling
+  - `getRedis()` and `getRedisConnection()` functions
+  - Replaces 6 duplicate Redis connection implementations
+- Centralized comment sanitization (`src/lib/comment-sanitization.ts`)
+  - `sanitizeComment()` function for consistent PII removal
+  - Used across all comment API routes
+  - Prevents email/name exposure to non-admins
+- OTPInput component for user-friendly code entry
+  - Individual boxes for each digit with auto-advance
+  - Paste support that distributes digits across boxes
+  - Backspace support with smart cursor movement
+  - Arrow key navigation between boxes
+
+### Changed
+- Authentication session storage now supports multiple projects simultaneously
+  - Changed from single project ID to Redis SET for auth sessions
+  - Changed from single project ID to Redis SET for video access sessions
+  - Reuse existing session cookies when authenticating to new projects
+  - Add projects to session SET instead of overwriting single value
+  - Refresh TTL on each project access to maintain active sessions
+  - Update validation to use SISMEMBER instead of exact match
+  - Each project still requires authentication before being added to session
+- Comment section height increased from 50vh to 75vh (150% larger display area)
+- Authentication Attempts setting now applies to both password and OTP verification
+- Rate limiting now reads max attempts from Settings instead of hardcoded values
+- `verifyProjectAccess()` now supports authMode parameter for flexible authentication
+- Company Name validation now properly allows empty strings
+  - Changed minimum length from 1 to 0 characters
+  - Fixes validation mismatch where UI shows field as optional but validation required it
+  - Updated in createProjectSchema, updateProjectSchema, and updateSettingsSchema
+
+### Fixed
+- **CRITICAL**: Multi-project session conflicts resolved
+  - Opening a second project no longer breaks access to the first project
+  - Video playback and comments work correctly across all authenticated projects
+  - Session state properly maintained when switching between projects
+- Comment section auto-scroll behavior improved
+  - Now works correctly for both admin and client users
+  - Fixed page-level scroll issue by using scrollTop instead of scrollIntoView
+  - Auto-scroll only affects comments container, not entire page
+  - Prevents page jumping when switching video versions or when new comments appear
+- Recipient change callback keeps project settings page in sync with recipient updates
+
+### Improved
+- Code maintainability with major refactoring following DRY principles
+  - Removed 241 lines of dead/duplicate code
+  - Centralized Redis connection management
+  - Consolidated duplicate comment sanitization logic
+  - Flattened deep nesting in getPasskeyConfigStatus()
+- Authentication UI with more concise and helpful messages
+- Security event logging now tracks OTP attempts and rate limiting
+
+### Removed
+- Duplicate Redis connection implementations across 6 files
+- Duplicate sanitizeComment() functions from 3 API route files
+- `src/lib/api-responses.ts` (85 lines, unused)
+- `src/lib/error-handler.ts` (156 lines, unused)
+
+### Database Migration
+- Added authMode field to Project table (password, OTP, or both)
+
 ## [0.3.3] - 2025-11-15
 
 ### Added

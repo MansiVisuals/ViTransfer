@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X } from 'lucide-react'
+import { getCsrfToken } from '@/lib/csrf-client'
 
 // Generate a secure random password
 function generateSecurePassword(): string {
@@ -61,9 +62,13 @@ export default function NewProjectPage() {
     }
 
     try {
+      const csrfToken = await getCsrfToken()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (csrfToken) headers['X-CSRF-Token'] = csrfToken
+
       const response = await fetch('/api/projects', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(data),
       })
 

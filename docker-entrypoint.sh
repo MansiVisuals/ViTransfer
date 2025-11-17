@@ -180,10 +180,10 @@ wait_for_app() {
     max_attempts=150  # 5 minutes (150 attempts * 2 seconds)
     attempt=0
 
-    echo "  Checking: http://${APP_HOST}:${APP_PORT}/api/settings/public"
+    echo "  Checking: http://${APP_HOST}:${APP_PORT}/api/health"
 
     while [ $attempt -lt $max_attempts ]; do
-        if curl -s -f http://${APP_HOST}:${APP_PORT}/api/settings/public > /dev/null 2>&1; then
+        if curl -s -f http://${APP_HOST}:${APP_PORT}/api/health > /dev/null 2>&1; then
             echo "[OK] Application is ready!"
             return 0
         fi

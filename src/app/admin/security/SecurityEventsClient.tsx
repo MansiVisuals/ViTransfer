@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw } from 'lucide-react'
+import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight } from 'lucide-react'
 import { Select } from '@/components/ui/select'
 import { formatDateTime } from '@/lib/utils'
 
@@ -77,6 +77,7 @@ export default function SecurityEventsClient() {
   const [deleting, setDeleting] = useState(false)
   const [filterType, setFilterType] = useState<string>('')
   const [filterSeverity, setFilterSeverity] = useState<string>('')
+  const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set())
 
   const loadEvents = async () => {
     setLoading(true)
@@ -106,6 +107,18 @@ export default function SecurityEventsClient() {
   useEffect(() => {
     loadEvents()
   }, [pagination.page, filterType, filterSeverity])
+
+  const toggleDetails = (eventId: string) => {
+    setExpandedDetails(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId)
+      } else {
+        newSet.add(eventId)
+      }
+      return newSet
+    })
+  }
 
   const handleDeleteOld = async (days: number) => {
     let confirmMessage
@@ -308,12 +321,20 @@ export default function SecurityEventsClient() {
                           {event.project && <div>Project: {event.project.title}</div>}
                           {event.referer && <div>Referer: {event.referer}</div>}
                           {event.details && (
-                            <details className="mt-2">
-                              <summary className="cursor-pointer text-xs font-medium">View Details</summary>
-                              <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
-                                {JSON.stringify(event.details, null, 2)}
-                              </pre>
-                            </details>
+                            <div className="mt-2">
+                              <button
+                                onClick={() => toggleDetails(event.id)}
+                                className="cursor-pointer text-xs font-medium flex items-center gap-1 hover:text-foreground transition-colors"
+                              >
+                                <ChevronRight className={`w-3 h-3 transition-transform ${expandedDetails.has(event.id) ? 'rotate-90' : ''}`} />
+                                View Details
+                              </button>
+                              {expandedDetails.has(event.id) && (
+                                <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
+                                  {JSON.stringify(event.details, null, 2)}
+                                </pre>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

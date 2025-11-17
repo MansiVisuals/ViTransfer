@@ -221,6 +221,15 @@ export async function GET(
     // Convert BigInt fields to strings for JSON serialization
     const smtpConfigured = await isSmtpConfigured()
 
+    // Get global settings for share page
+    const globalSettings = await prisma.settings.findUnique({
+      where: { id: 'default' },
+      select: {
+        companyName: true,
+        defaultPreviewResolution: true,
+      },
+    })
+
     // Get primary recipient for display
     const primaryRecipient = await getPrimaryRecipient(project.id)
 
@@ -264,6 +273,12 @@ export async function GET(
       videos: videosWithTokens,
       videosByName: sortedVideosByName,
       smtpConfigured,
+
+      // Global settings (safe to expose publicly)
+      settings: {
+        companyName: globalSettings?.companyName || 'Studio',
+        defaultPreviewResolution: globalSettings?.defaultPreviewResolution || '720p',
+      },
 
       // REMOVED: comments (now loaded separately via /api/share/[token]/comments)
       // NEVER send: sharePassword, createdById, watermarkText, approvedVideoId, approvedAt

@@ -114,7 +114,7 @@ export default function ProjectPage() {
   useEffect(() => {
     async function fetchCompanyName() {
       try {
-        const response = await fetch('/api/settings/public')
+        const response = await fetch('/api/settings')
         if (response.ok) {
           const data = await response.json()
           setCompanyName(data.companyName || 'Studio')

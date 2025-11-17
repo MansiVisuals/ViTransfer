@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Comment, Video } from '@prisma/client'
 import { useRouter } from 'next/navigation'
+import { getCsrfToken } from '@/lib/csrf-client'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -263,9 +264,20 @@ export function useCommentManagement({
         requestBody.parentId = commentParentId
       }
 
+      // Get CSRF token
+      const csrfToken = await getCsrfToken()
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken
+      }
+
       const response = await fetch('/api/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify(requestBody),
       })

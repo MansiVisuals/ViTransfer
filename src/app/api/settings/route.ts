@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -12,6 +14,14 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult // Return 401/403 response
   }
+
+  // Rate limiting to prevent enumeration/scraping
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 30,
+    message: 'Too many requests. Please slow down.'
+  }, 'settings-read')
+  if (rateLimitResult) return rateLimitResult
 
   try {
     // Get or create the default settings
@@ -67,6 +77,10 @@ export async function PATCH(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult // Return 401/403 response
   }
+
+  // CSRF Protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const body = await request.json()

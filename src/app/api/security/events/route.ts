@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +17,14 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // Rate limiting to prevent excessive log queries
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 60,
+    message: 'Too many requests. Please slow down.'
+  }, 'security-events-read')
+  if (rateLimitResult) return rateLimitResult
 
   try {
     // Check if security events viewing is enabled

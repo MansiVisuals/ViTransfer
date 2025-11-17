@@ -84,23 +84,8 @@ export default function SharePage() {
     }
   }
 
-  // Fetch company name and default quality from public settings
-  useEffect(() => {
-    async function fetchPublicSettings() {
-      try {
-        const response = await fetch('/api/settings/public')
-        if (response.ok) {
-          const data = await response.json()
-          setCompanyName(data.companyName || 'Studio')
-          setDefaultQuality(data.defaultPreviewResolution || '720p')
-        }
-      } catch (error) {
-        // Keep defaults on error
-      }
-    }
-
-    fetchPublicSettings()
-  }, [])
+  // Company name and default quality now loaded from project settings
+  // This ensures they're only accessible after authentication
 
   // Load project data (handles auth check implicitly via API response)
   useEffect(() => {
@@ -142,6 +127,12 @@ export default function SharePage() {
             // (recipients are only included for password-protected projects)
             setIsPasswordProtected(!!projectData.recipients && projectData.recipients.length > 0)
             setIsAuthenticated(true)
+
+            // Load global settings from project response
+            if (projectData.settings) {
+              setCompanyName(projectData.settings.companyName || 'Studio')
+              setDefaultQuality(projectData.settings.defaultPreviewResolution || '720p')
+            }
 
             // Fetch comments separately (if not hidden)
             if (!projectData.hideFeedback) {

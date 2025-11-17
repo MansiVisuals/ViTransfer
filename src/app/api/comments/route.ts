@@ -7,6 +7,8 @@ import { isSmtpConfigured } from '@/lib/settings'
 import { getPrimaryRecipient } from '@/lib/recipients'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { sanitizeCommentHtml, validateCommentLength, containsSuspiciousPatterns } from '@/lib/security/html-sanitization'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -102,13 +104,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // CSRF Protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
+
   // Rate limiting to prevent comment spam
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
     message: 'Too many comments. Please slow down.'
   }, 'comments-create')
-  
+
   if (rateLimitResult) {
     return rateLimitResult
   }
@@ -240,13 +246,33 @@ export async function POST(request: NextRequest) {
       sanitizedAuthorName = sanitizedAuthorName.trim()
     }
 
+    // SECURITY: Server-side HTML sanitization to prevent XSS
+    // Validate content length
+    if (!validateCommentLength(content)) {
+      return NextResponse.json(
+        { error: 'Comment is too long (max 10,000 characters)' },
+        { status: 400 }
+      )
+    }
+
+    // Check for suspicious patterns
+    if (containsSuspiciousPatterns(content)) {
+      return NextResponse.json(
+        { error: 'Comment contains potentially malicious content' },
+        { status: 400 }
+      )
+    }
+
+    // Sanitize HTML content
+    const sanitizedContent = sanitizeCommentHtml(content)
+
     const comment = await prisma.comment.create({
       data: {
         projectId,
         videoId,
         videoVersion: finalVideoVersion || null,
         timestamp: timestamp !== null && timestamp !== undefined ? timestamp : null,
-        content,
+        content: sanitizedContent, // Store sanitized content
         authorName: sanitizedAuthorName,
         authorEmail: finalAuthorEmail || null,
         isInternal: isInternal || false,

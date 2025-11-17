@@ -10,6 +10,7 @@ import { EmailSettingsSection } from '@/components/settings/EmailSettingsSection
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
 import { ProjectBehaviorSection } from '@/components/settings/ProjectBehaviorSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
+import { getCsrfToken } from '@/lib/csrf-client'
 
 interface Settings {
   id: string
@@ -174,9 +175,13 @@ export default function GlobalSettingsPage() {
         adminNotificationDay: adminNotificationSchedule === 'WEEKLY' ? adminNotificationDay : null,
       }
 
+      const csrfToken = await getCsrfToken()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (csrfToken) headers['X-CSRF-Token'] = csrfToken
+
       const response = await fetch('/api/settings', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(updates),
       })
 

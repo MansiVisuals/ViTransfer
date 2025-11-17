@@ -5,6 +5,38 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2025-11-17
+
+### Added
+- **Health Check Endpoint** (`/api/health`)
+  - Public endpoint for Docker health checks and monitoring systems
+  - Tests database and Redis connectivity
+  - Returns minimal information (no version or config exposure)
+  - No authentication required for health monitoring
+  - Replaces deprecated `/api/settings/public` endpoint
+- **CSRF Protection Infrastructure**
+  - Client-side CSRF token utilities (`src/lib/csrf-client.ts`)
+  - Security middleware foundation (`src/lib/security/`)
+  - CSRF API endpoint (`/api/csrf/`)
+- **Database Performance Improvements**
+  - Added indexes on Video table for status queries
+  - Migration: `20251117000000_add_video_status_indexes`
+
+### Improved
+- **Security Events UI Consistency**
+  - Replaced HTML disclosure triangle with Lucide ChevronRight icon
+  - Standardized font sizes across all admin sections
+  - Consistent text sizing with Analytics and Projects pages
+  - Better mobile experience with proper SVG icons
+  - Smooth rotation animation on details expand/collapse
+- **Admin Interface Typography**
+  - Unified font sizes: `text-sm` for titles and descriptions
+  - `text-xs` for timestamps and labels (consistent with Analytics)
+  - Improved readability across desktop and mobile
+
+### Removed
+- Deprecated `/api/settings/public` endpoint (replaced by `/api/health`)
+
 ## [0.3.5] - 2025-11-16
 
 ### Security

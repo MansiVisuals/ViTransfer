@@ -23,6 +23,7 @@ interface Settings {
   smtpSecure: string | null
   appDomain: string | null
   defaultPreviewResolution: string | null
+  defaultWatermarkEnabled: boolean | null
   defaultWatermarkText: string | null
   autoApproveProject: boolean | null
   adminNotificationSchedule: string | null
@@ -67,6 +68,7 @@ export default function GlobalSettingsPage() {
   const [smtpSecure, setSmtpSecure] = useState('STARTTLS')
   const [appDomain, setAppDomain] = useState('')
   const [defaultPreviewResolution, setDefaultPreviewResolution] = useState('720p')
+  const [defaultWatermarkEnabled, setDefaultWatermarkEnabled] = useState(true)
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
 
@@ -115,6 +117,7 @@ export default function GlobalSettingsPage() {
         setSmtpSecure(data.smtpSecure || 'STARTTLS')
         setAppDomain(data.appDomain || '')
         setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
+        setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
         setDefaultWatermarkText(data.defaultWatermarkText || '')
         setAutoApproveProject(data.autoApproveProject ?? true)
         setTestEmailAddress(data.smtpFromAddress || '')
@@ -168,6 +171,7 @@ export default function GlobalSettingsPage() {
         smtpSecure: smtpSecure || 'STARTTLS',
         appDomain: appDomain || null,
         defaultPreviewResolution: defaultPreviewResolution || '720p',
+        defaultWatermarkEnabled: defaultWatermarkEnabled,
         defaultWatermarkText: defaultWatermarkText || null,
         autoApproveProject: autoApproveProject,
         adminNotificationSchedule: adminNotificationSchedule,
@@ -380,6 +384,8 @@ export default function GlobalSettingsPage() {
           <VideoProcessingSettingsSection
             defaultPreviewResolution={defaultPreviewResolution}
             setDefaultPreviewResolution={setDefaultPreviewResolution}
+            defaultWatermarkEnabled={defaultWatermarkEnabled}
+            setDefaultWatermarkEnabled={setDefaultWatermarkEnabled}
             defaultWatermarkText={defaultWatermarkText}
             setDefaultWatermarkText={setDefaultWatermarkText}
             show={showVideoProcessing}

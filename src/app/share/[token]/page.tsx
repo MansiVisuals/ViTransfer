@@ -25,7 +25,9 @@ export default function SharePage() {
 
   const [isPasswordProtected, setIsPasswordProtected] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isGuest, setIsGuest] = useState(false)
   const [authMode, setAuthMode] = useState<string>('PASSWORD')
+  const [guestMode, setGuestMode] = useState(false)
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
@@ -105,9 +107,30 @@ export default function SharePage() {
           // Authentication required
           const data = await response.json()
           if (isMounted) {
+            // If authMode is NONE and guestMode is enabled, auto-enter as guest
+            if (data.authMode === 'NONE' && data.guestMode) {
+              // Auto-enter as guest
+              try {
+                const guestResponse = await fetch(`/api/share/${token}/guest`, {
+                  method: 'POST',
+                  credentials: 'include'
+                })
+                if (guestResponse.ok) {
+                  setIsGuest(true)
+                  setIsAuthenticated(true)
+                  // Re-fetch project data
+                  loadProject()
+                  return
+                }
+              } catch (error) {
+                // Fall through to show auth screen
+              }
+            }
+
             setIsPasswordProtected(true)
             setIsAuthenticated(false)
             setAuthMode(data.authMode || 'PASSWORD')
+            setGuestMode(data.guestMode || false)
           }
           return
         }
@@ -127,6 +150,8 @@ export default function SharePage() {
             // (recipients are only included for password-protected projects)
             setIsPasswordProtected(!!projectData.recipients && projectData.recipients.length > 0)
             setIsAuthenticated(true)
+            // Set guest mode from API response
+            setIsGuest(projectData.isGuest || false)
 
             // Load global settings from project response
             if (projectData.settings) {
@@ -280,6 +305,7 @@ export default function SharePage() {
 
       if (response.ok) {
         setIsAuthenticated(true)
+        setIsGuest(false)
 
         // Fetch project data
         const projectResponse = await fetch(`/api/share/${token}`, {
@@ -319,6 +345,7 @@ export default function SharePage() {
 
       if (response.ok) {
         setIsAuthenticated(true)
+        setIsGuest(false)
 
         // Fetch project data
         const projectResponse = await fetch(`/api/share/${token}`, {
@@ -335,6 +362,38 @@ export default function SharePage() {
         }
       } else {
         setError('Incorrect password')
+      }
+    } catch (error) {
+      setError('An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGuestEntry() {
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/share/${token}/guest`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        setIsAuthenticated(true)
+        setIsGuest(true)
+
+        // Fetch project data
+        const projectResponse = await fetch(`/api/share/${token}`, {
+          credentials: 'include'
+        })
+        if (projectResponse.ok) {
+          const projectData = await projectResponse.json()
+          setProject(projectData)
+        }
+      } else {
+        setError('Unable to access as guest')
       }
     } catch (error) {
       setError('An error occurred')
@@ -490,6 +549,30 @@ export default function SharePage() {
                 <p className="text-sm text-destructive">{error}</p>
               </div>
             )}
+
+            {/* Guest Entry Button */}
+            {guestMode && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">Or</span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="default"
+                  onClick={handleGuestEntry}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  Continue as Guest
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -570,29 +653,29 @@ export default function SharePage() {
               </CardContent>
             </Card>
           ) : (
-            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col max-w-7xl mx-auto w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
+            <div className={`flex-1 min-h-0 ${(project.hideFeedback || isGuest) ? 'flex flex-col max-w-7xl mx-auto w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
               {/* Video Player - centered */}
-              <div className={project.hideFeedback ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
+              <div className={(project.hideFeedback || isGuest) ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}
                   projectStatus={project.status}
                   defaultQuality={defaultQuality}
                   projectTitle={project.title}
-                  projectDescription={project.description}
-                  clientName={project.clientName}
+                  projectDescription={isGuest ? null : project.description}
+                  clientName={isGuest ? null : project.clientName}
                   isPasswordProtected={isPasswordProtected || false}
                   watermarkEnabled={project.watermarkEnabled}
                   activeVideoName={activeVideoName}
-                  onApprove={fetchProjectData}
+                  onApprove={isGuest ? undefined : fetchProjectData}
                   initialSeekTime={initialSeekTime}
                   initialVideoIndex={initialVideoIndex}
                   isAdmin={!!adminUser}
                 />
               </div>
 
-              {/* Comments Section */}
-              {!project.hideFeedback && (
+              {/* Comments Section - hidden for guests */}
+              {!project.hideFeedback && !isGuest && (
                 <div className="lg:sticky lg:top-6 lg:self-start">
                   <CommentSection
                     projectId={project.id}

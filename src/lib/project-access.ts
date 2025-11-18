@@ -46,11 +46,12 @@ export async function verifyProjectAccess(
     }
   }
 
-  // Password-protected project + non-admin user → verify share_auth cookie
+  // Password-protected project + non-admin user → verify share_auth or share_session cookie
   const cookieStore = await cookies()
   const authSessionId = cookieStore.get('share_auth')?.value
+  const shareSessionId = cookieStore.get('share_session')?.value
 
-  if (!authSessionId) {
+  if (!authSessionId && !shareSessionId) {
     return {
       authorized: false,
       isAdmin: false,
@@ -62,9 +63,21 @@ export async function verifyProjectAccess(
     }
   }
 
-  // Verify auth session includes this project
+  // Verify session includes this project
   const redis = getRedis()
-  const hasAccess = await redis.sismember(`auth_projects:${authSessionId}`, projectId)
+  let hasAccess = false
+
+  // Check auth_projects (for password/OTP authenticated users)
+  if (authSessionId) {
+    const isMember = await redis.sismember(`auth_projects:${authSessionId}`, projectId)
+    hasAccess = isMember === 1
+  }
+
+  // Check session_projects (for guest users and general share sessions)
+  if (!hasAccess && shareSessionId) {
+    const isMember = await redis.sismember(`session_projects:${shareSessionId}`, projectId)
+    hasAccess = isMember === 1
+  }
 
   if (!hasAccess) {
     return {
@@ -78,7 +91,7 @@ export async function verifyProjectAccess(
     }
   }
 
-  // User has valid password authentication
+  // User has valid authentication (password or guest)
   isAuthenticated = true
 
   return {

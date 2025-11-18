@@ -282,6 +282,16 @@ export async function PATCH(
       updateData.authMode = body.authMode
     }
 
+    // Handle guest mode
+    if (body.guestMode !== undefined) {
+      updateData.guestMode = body.guestMode
+    }
+
+    // Handle guest latest only restriction
+    if (body.guestLatestOnly !== undefined) {
+      updateData.guestLatestOnly = body.guestLatestOnly
+    }
+
     // Handle client notification schedule
     if (body.clientNotificationSchedule !== undefined) {
       const validSchedules = ['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']

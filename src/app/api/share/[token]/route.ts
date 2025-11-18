@@ -6,6 +6,7 @@ import { isSmtpConfigured, getClientSessionTimeoutSeconds, isHttpsEnabled } from
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { getRedis } from '@/lib/redis'
 import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
 
@@ -60,7 +61,8 @@ export async function GET(
       return NextResponse.json({
         error: 'Authentication required',
         requiresPassword: true,
-        authMode: project.authMode || 'PASSWORD'
+        authMode: project.authMode || 'PASSWORD',
+        guestMode: project.guestMode || false
       }, { status: 401 })
     }
 
@@ -93,11 +95,14 @@ export async function GET(
     }
 
     // Store session → project mapping in Redis (always, for new or existing sessions)
-    const redis = await import('@/lib/redis').then(m => m.getRedis())
+    const redis = await getRedis()
     // Add project to session's authorized projects set
     await redis.sadd(`session_projects:${sessionId}`, project.id)
     // Refresh TTL on the entire set
     await redis.expire(`session_projects:${sessionId}`, sessionTimeoutSeconds)
+
+    // Check if this is a guest session
+    const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
 
     if (isNewSession) {
       // Track page visit for new sessions only (don't count admins)
@@ -197,6 +202,14 @@ export async function GET(
       videosByName[name].sort((a: any, b: any) => b.version - a.version)
     })
 
+    // If guest mode is enabled and guest can only view latest version, filter to latest only
+    if (isGuestSession === 1 && project.guestLatestOnly) {
+      Object.keys(videosByName).forEach(name => {
+        // Keep only the first video (latest version) after sorting
+        videosByName[name] = [videosByName[name][0]]
+      })
+    }
+
     // Sort video groups by approval status (unapproved first, approved last)
     // This helps clients see which videos still need approval at the top
     const sortedVideosByName: Record<string, any[]> = {}
@@ -251,11 +264,13 @@ export async function GET(
       title: project.title,
       description: project.description,
       status: project.status,
+      guestMode: project.guestMode || false,
+      isGuest: isGuestSession === 1, // Tell frontend if this is a guest session
 
-      // SECURITY: Only include clientName/clientEmail for password-protected shares OR admins
+      // SECURITY: Only include clientName/clientEmail for password-protected shares OR admins (NOT for guests)
       // Rationale: Password protection implies client expects privacy
       // Non-protected shares remain anonymous for client safety
-      ...(project.sharePassword || isAdmin ? {
+      ...((project.sharePassword || isAdmin) && !isGuestSession ? {
         clientName: project.companyName || primaryRecipient?.name || 'Client',
         clientEmail: primaryRecipient?.email || null,
         companyName: project.companyName || null, // Client company name for comment display

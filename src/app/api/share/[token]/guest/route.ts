@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { cookies } from 'next/headers'
+import crypto from 'crypto'
+import { getClientSessionTimeoutSeconds, isHttpsEnabled } from '@/lib/settings'
+import { getRedis } from '@/lib/redis'
+import { rateLimit } from '@/lib/rate-limit'
+
+/**
+ * POST /api/share/[token]/guest
+ *
+ * Creates a guest session for limited access (videos only, no comments/approval)
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  // Rate limiting: Prevent abuse of guest session creation
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: 'Too many guest access attempts. Please try again later.'
+  }, 'guest-entry')
+  if (rateLimitResult) return rateLimitResult
+
+  try {
+    const { token } = await params
+
+    // Find project by slug
+    const project = await prisma.project.findUnique({
+      where: { slug: token },
+      select: {
+        id: true,
+        guestMode: true,
+      },
+    })
+
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // Check if guest mode is enabled
+    if (!project.guestMode) {
+      return NextResponse.json({ error: 'Guest access is not enabled for this project' }, { status: 403 })
+    }
+
+    // Create guest session
+    const cookieStore = await cookies()
+    const sessionId = crypto.randomBytes(16).toString('base64url')
+
+    const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
+    const httpsEnabled = await isHttpsEnabled()
+
+    // Set guest session cookie
+    cookieStore.set({
+      name: 'share_session',
+      value: sessionId,
+      path: '/',
+      httpOnly: true,
+      secure: httpsEnabled,
+      sameSite: 'strict',
+      maxAge: sessionTimeoutSeconds,
+    })
+
+    // Mark this session as a guest session in Redis
+    const redis = await getRedis()
+    await redis.set(
+      `guest_session:${sessionId}`,
+      project.id,
+      'EX',
+      sessionTimeoutSeconds
+    )
+
+    // Also add to authorized projects set for compatibility
+    await redis.sadd(`session_projects:${sessionId}`, project.id)
+    await redis.expire(`session_projects:${sessionId}`, sessionTimeoutSeconds)
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Unable to process request' },
+      { status: 500 }
+    )
+  }
+}

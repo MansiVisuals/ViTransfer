@@ -30,6 +30,8 @@ interface Project {
   sharePassword: string | null
   sharePasswordDecrypted: string | null
   authMode: string
+  guestMode: boolean
+  guestLatestOnly: boolean
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
@@ -60,6 +62,8 @@ export default function ProjectSettingsPage() {
   const [hideFeedback, setHideFeedback] = useState(false)
   const [sharePassword, setSharePassword] = useState('')
   const [authMode, setAuthMode] = useState('PASSWORD')
+  const [guestMode, setGuestMode] = useState(false)
+  const [guestLatestOnly, setGuestLatestOnly] = useState(true)
   const [useCustomSlug, setUseCustomSlug] = useState(false) // Toggle for custom slug
   const [customSlugValue, setCustomSlugValue] = useState('') // Store custom slug value
   const [previewResolution, setPreviewResolution] = useState('720p')
@@ -143,6 +147,8 @@ export default function ProjectSettingsPage() {
         setUseCustomWatermark(!!data.watermarkText)
         setSharePassword(data.sharePasswordDecrypted || '')
         setAuthMode(data.authMode || 'PASSWORD')
+        setGuestMode(data.guestMode || false)
+        setGuestLatestOnly(data.guestLatestOnly ?? true)
 
         // Store original processing settings
         setOriginalSettings({
@@ -173,10 +179,11 @@ export default function ProjectSettingsPage() {
     loadProject()
   }, [projectId])
 
-  // Clear password when No Authentication is selected
+  // Auto-enable guest mode when No Authentication is selected
   useEffect(() => {
     if (authMode === 'NONE') {
       setSharePassword('')
+      setGuestMode(true)
     }
   }, [authMode])
 
@@ -231,6 +238,8 @@ export default function ProjectSettingsPage() {
         watermarkText: useCustomWatermark ? watermarkText : null,
         sharePassword: sharePassword || null,
         authMode,
+        guestMode,
+        guestLatestOnly,
         clientNotificationSchedule,
         clientNotificationTime: (clientNotificationSchedule === 'DAILY' || clientNotificationSchedule === 'WEEKLY') ? clientNotificationTime : null,
         clientNotificationDay: clientNotificationSchedule === 'WEEKLY' ? clientNotificationDay : null,
@@ -854,7 +863,48 @@ export default function ProjectSettingsPage() {
                   <div className="flex items-start gap-2 p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
                     <span className="text-warning text-sm font-bold">!</span>
                     <p className="text-sm text-warning font-medium">
-                      Without authentication, anyone with the share link can view and approve your project. Not recommended for sensitive content.
+                      Without authentication, anyone with the share link can access your project. {guestMode ? 'Guest mode limits access to videos only.' : 'Full access allows comments and approvals from anyone.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="guestMode">Guest Mode</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Limit access to videos only (no comments, approval, or project details)
+                    </p>
+                  </div>
+                  <Switch
+                    id="guestMode"
+                    checked={guestMode}
+                    onCheckedChange={setGuestMode}
+                  />
+                </div>
+
+                {guestMode && (
+                  <div className="flex items-center justify-between gap-4 pt-2 mt-2 border-t border-border">
+                    <div className="space-y-0.5 flex-1">
+                      <Label htmlFor="guestLatestOnly">Restrict to Latest Version</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Guests can only view the latest version of each video
+                      </p>
+                    </div>
+                    <Switch
+                      id="guestLatestOnly"
+                      checked={guestLatestOnly}
+                      onCheckedChange={setGuestLatestOnly}
+                    />
+                  </div>
+                )}
+
+                {authMode === 'NONE' && !guestMode && (
+                  <div className="flex items-start gap-2 p-2 bg-warning-visible/50 border border-warning-visible rounded-md">
+                    <span className="text-warning text-xs font-bold">!</span>
+                    <p className="text-xs text-warning font-medium">
+                      Guest mode is recommended with no authentication to prevent unauthorized comments and approvals.
                     </p>
                   </div>
                 )}

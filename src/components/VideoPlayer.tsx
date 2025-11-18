@@ -442,8 +442,8 @@ export default function VideoPlayer({
           )}
         </div>
 
-        {/* Note & Approval Section (only if video not approved) */}
-        {!isVideoApproved && (
+        {/* Note & Approval Section (only if video not approved and approval is allowed) */}
+        {!isVideoApproved && onApprove && (
           <>
             <div className="text-xs text-muted-foreground pt-3 mt-3 border-t border-border">
               <span className="font-medium text-foreground">Note:</span> This is a downscaled preview{watermarkEnabled && ' with watermark'}. Original quality will be available for download once approved.

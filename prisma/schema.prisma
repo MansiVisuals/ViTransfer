@@ -36,7 +36,9 @@ model Project {
   description   String?
   companyName   String? // Optional company/brand name (display priority: companyName → primary recipient → 'Client')
   sharePassword String?
-  authMode      String  @default("PASSWORD") // Authentication mode: PASSWORD, OTP, or BOTH
+  authMode      String  @default("PASSWORD") // Authentication mode: PASSWORD, OTP, BOTH, or NONE
+  guestMode     Boolean @default(false) // Allow guest access with limited view (videos only, no comments/approval)
+  guestLatestOnly Boolean @default(true) // Guests can only view latest version of each video
 
   // Revision tracking (optional)
   enableRevisions Boolean @default(false)
@@ -223,7 +225,8 @@ model Settings {
   appDomain String? // e.g., "https://yourdomain.com"
 
   // Default Video Processing Settings
-  defaultPreviewResolution String? @default("720p")
+  defaultPreviewResolution String?  @default("720p")
+  defaultWatermarkEnabled  Boolean  @default(true)
   defaultWatermarkText     String?
 
   // Project Behavior

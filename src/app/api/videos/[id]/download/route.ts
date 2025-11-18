@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { rateLimit } from '@/lib/rate-limit'
 import fs from 'fs'
 import { createReadStream } from 'fs'
 import { Readable } from 'stream'
@@ -10,6 +11,17 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Rate limiting: 30 downloads per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 30,
+    message: 'Too many download requests. Please slow down.'
+  }, 'video-download')
+
+  if (rateLimitResult) {
+    return rateLimitResult
+  }
+
   try {
     const { id } = await params
 

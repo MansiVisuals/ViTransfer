@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateShareUrl } from '@/lib/url'
 import { requireApiAdmin } from '@/lib/auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // Rate limiting: 60 requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: 'Too many requests. Please slow down.'
+  }, 'share-url-gen')
+
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {

@@ -5,6 +5,7 @@ import { generateShareUrl } from '@/lib/url'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
 import { getProjectRecipients } from '@/lib/recipients'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // CSRF protection
+    const csrfCheck = await validateCsrfProtection(request)
+    if (csrfCheck) return csrfCheck
 
     // Check if SMTP is configured
     const smtpConfigured = await isSmtpConfigured()

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight } from 'lucide-react'
 import { Select } from '@/components/ui/select'
 import { formatDateTime } from '@/lib/utils'
+import { apiDelete } from '@/lib/api-client'
 
 interface SecurityEvent {
   id: string
@@ -134,15 +135,11 @@ export default function SecurityEventsClient() {
 
     setDeleting(true)
     try {
-      const response = await fetch('/api/security/events', {
-        method: 'DELETE',
+      const data = await apiDelete('/api/security/events', {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ olderThan: days })
       })
 
-      if (!response.ok) throw new Error('Failed to delete events')
-
-      const data = await response.json()
       alert(data.message)
       loadEvents()
     } catch (error) {
@@ -160,7 +157,7 @@ export default function SecurityEventsClient() {
             <Shield className="w-8 h-8" />
             Security Events
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Monitor security events, hotlink attempts, rate limits, and suspicious activity
           </p>
         </div>

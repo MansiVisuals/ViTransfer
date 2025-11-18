@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { getVideoQueue } from '@/lib/queue'
 import { deleteFile } from '@/lib/storage'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 export async function POST(
   request: NextRequest,
@@ -13,6 +14,10 @@ export async function POST(
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const { id: projectId } = await params

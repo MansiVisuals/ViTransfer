@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { deleteFile } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { getAutoApproveProject } from '@/lib/settings'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 // Helper: Check if all videos have at least one approved version
 async function checkAllVideosApproved(projectId: string): Promise<boolean> {
@@ -68,6 +69,10 @@ export async function PATCH(
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const { id } = await params
@@ -180,6 +185,10 @@ export async function DELETE(
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const { id } = await params

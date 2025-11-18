@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Mail, Edit, Trash2, Plus, Star, Check, Bell, BellOff } from 'lucide-react'
+import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
 
 interface Recipient {
   id?: string
@@ -63,27 +64,19 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/recipients`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newEmail || null,
-          name: newName || null,
-          isPrimary: recipients.length === 0,
-        }),
+      // Use centralized API client (handles CSRF automatically)
+      await apiPost(`/api/projects/${projectId}/recipients`, {
+        email: newEmail || null,
+        name: newName || null,
+        isPrimary: recipients.length === 0,
       })
 
-      if (response.ok) {
-        setNewEmail('')
-        setNewName('')
-        setShowAddForm(false)
-        await loadRecipients()
-      } else {
-        const data = await response.json()
-        onError(data.error || 'Failed to add recipient')
-      }
+      setNewEmail('')
+      setNewName('')
+      setShowAddForm(false)
+      await loadRecipients()
     } catch (error) {
-      onError('Failed to add recipient')
+      onError(error instanceof Error ? error.message : 'Failed to add recipient')
     }
   }
 
@@ -93,54 +86,31 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/recipients/${recipientId}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        await loadRecipients()
-      } else {
-        const data = await response.json()
-        onError(data.error || 'Failed to delete recipient')
-      }
+      // Use centralized API client (handles CSRF automatically)
+      await apiDelete(`/api/projects/${projectId}/recipients/${recipientId}`)
+      await loadRecipients()
     } catch (error) {
-      onError('Failed to delete recipient')
+      onError(error instanceof Error ? error.message : 'Failed to delete recipient')
     }
   }
 
   const setPrimary = async (recipientId: string) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/recipients/${recipientId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPrimary: true }),
-      })
-
-      if (response.ok) {
-        await loadRecipients()
-      } else {
-        onError('Failed to set primary recipient')
-      }
+      // Use centralized API client (handles CSRF automatically)
+      await apiPatch(`/api/projects/${projectId}/recipients/${recipientId}`, { isPrimary: true })
+      await loadRecipients()
     } catch (error) {
-      onError('Failed to set primary recipient')
+      onError(error instanceof Error ? error.message : 'Failed to set primary recipient')
     }
   }
 
   const toggleNotifications = async (recipientId: string, currentValue: boolean) => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/recipients/${recipientId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiveNotifications: !currentValue }),
-      })
-
-      if (response.ok) {
-        await loadRecipients()
-      } else {
-        onError('Failed to update notification settings')
-      }
+      // Use centralized API client (handles CSRF automatically)
+      await apiPatch(`/api/projects/${projectId}/recipients/${recipientId}`, { receiveNotifications: !currentValue })
+      await loadRecipients()
     } catch (error) {
-      onError('Failed to update notification settings')
+      onError(error instanceof Error ? error.message : 'Failed to update notification settings')
     }
   }
 
@@ -170,23 +140,16 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/recipients/${editingId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editName || null,
-          email: editEmail || null
-        }),
+      // Use centralized API client (handles CSRF automatically)
+      await apiPatch(`/api/projects/${projectId}/recipients/${editingId}`, {
+        name: editName || null,
+        email: editEmail || null
       })
 
-      if (response.ok) {
-        cancelEdit()
-        await loadRecipients()
-      } else {
-        onError('Failed to update recipient')
-      }
+      cancelEdit()
+      await loadRecipients()
     } catch (error) {
-      onError('Failed to update recipient')
+      onError(error instanceof Error ? error.message : 'Failed to update recipient')
     }
   }
 

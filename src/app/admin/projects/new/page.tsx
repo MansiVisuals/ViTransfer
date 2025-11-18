@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X } from 'lucide-react'
-import { getCsrfToken } from '@/lib/csrf-client'
+import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
+import { apiPost } from '@/lib/api-client'
 
 // Generate a secure random password
 function generateSecurePassword(): string {
@@ -24,15 +24,42 @@ export default function NewProjectPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [isShareOnly, setIsShareOnly] = useState(false)
-  const [passwordProtected, setPasswordProtected] = useState(true) // Default to enabled
+  const [passwordProtected, setPasswordProtected] = useState(true)
   const [sharePassword, setSharePassword] = useState('')
-  const [showPassword, setShowPassword] = useState(true) // Show by default so they see it
+  const [showPassword, setShowPassword] = useState(true)
   const [copied, setCopied] = useState(false)
+
+  // Authentication mode
+  const [authMode, setAuthMode] = useState<'PASSWORD' | 'OTP' | 'BOTH'>('PASSWORD')
+  const [smtpConfigured, setSmtpConfigured] = useState(false)
+  const [recipientEmail, setRecipientEmail] = useState('')
 
   // Generate password on mount
   useEffect(() => {
     setSharePassword(generateSecurePassword())
+    checkSmtpConfiguration()
   }, [])
+
+  // Check if SMTP is configured (reuse centralized logic from settings API)
+  async function checkSmtpConfiguration() {
+    try {
+      const res = await fetch('/api/settings')
+      if (res.ok) {
+        const data = await res.json()
+        // Settings API now includes smtpConfigured field using isSmtpConfigured() helper
+        setSmtpConfigured(data.smtpConfigured !== false)
+      }
+    } catch (err) {
+      console.error('Failed to check SMTP configuration:', err)
+    }
+  }
+
+  // Smart recommendation: if email provided, recommend OTP
+  useEffect(() => {
+    if (recipientEmail && smtpConfigured && authMode === 'PASSWORD') {
+      // Don't auto-switch, just show recommendation
+    }
+  }, [recipientEmail, smtpConfigured])
 
   function handleGeneratePassword() {
     setSharePassword(generateSecurePassword())
@@ -57,24 +84,13 @@ export default function NewProjectPage() {
       companyName: formData.get('companyName') as string,
       recipientName: formData.get('recipientName') as string,
       recipientEmail: formData.get('recipientEmail') as string,
-      sharePassword: passwordProtected ? sharePassword : '', // Only send password if enabled
+      sharePassword: (authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected ? sharePassword : '',
+      authMode: passwordProtected ? authMode : 'PASSWORD',
       isShareOnly: isShareOnlyValue,
     }
 
     try {
-      const csrfToken = await getCsrfToken()
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (csrfToken) headers['X-CSRF-Token'] = csrfToken
-
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) throw new Error('Failed to create project')
-
-      const project = await response.json()
+      const project = await apiPost('/api/projects', data)
       router.push(`/admin/projects/${project.id}`)
     } catch (error) {
       alert('Failed to create project')
@@ -82,6 +98,10 @@ export default function NewProjectPage() {
       setLoading(false)
     }
   }
+
+  const canUseOTP = smtpConfigured && recipientEmail
+  const showOTPRecommendation = recipientEmail && smtpConfigured && authMode === 'PASSWORD'
+  const needsPassword = authMode === 'PASSWORD' || authMode === 'BOTH'
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,6 +157,8 @@ export default function NewProjectPage() {
                       name="recipientEmail"
                       type="email"
                       placeholder="e.g., client@example.com"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
                     />
                   </div>
                 </div>
@@ -145,14 +167,15 @@ export default function NewProjectPage() {
                 </p>
               </div>
 
+              {/* Authentication Section */}
               <div className="space-y-4 border rounded-lg p-4 bg-primary-visible border-2 border-primary-visible">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <Label htmlFor="passwordProtected" className="text-base font-semibold">
-                      Password Protection (Recommended)
+                      Require Authentication (Recommended)
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Secure by default. Clients need this password to view and approve the project.
+                      Secure by default. Clients must authenticate (password, email OTP, or both) to view and approve the project.
                     </p>
                   </div>
                   <input
@@ -165,49 +188,129 @@ export default function NewProjectPage() {
                 </div>
 
                 {passwordProtected && (
-                  <div className="space-y-3 pt-2 border-t">
-                    <Label htmlFor="sharePassword">Share Password</Label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          id="sharePassword"
-                          value={sharePassword}
-                          onChange={(e) => setSharePassword(e.target.value)}
-                          type={showPassword ? 'text' : 'password'}
-                          className="pr-10 font-mono"
-                          required={passwordProtected}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleGeneratePassword}
-                        title="Generate new password"
+                  <div className="space-y-4 pt-2 border-t">
+                    {/* Authentication Method Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="authMode">Authentication Method</Label>
+                      <select
+                        id="authMode"
+                        value={authMode}
+                        onChange={(e) => setAuthMode(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-card border border-border rounded-md"
                       >
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyPassword}
-                        title="Copy password"
-                      >
-                        {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-                      </Button>
+                        <option value="PASSWORD">Password Only</option>
+                        <option value="OTP" disabled={!canUseOTP}>
+                          Email OTP Only {!canUseOTP ? '(requires SMTP & client email)' : ''}
+                        </option>
+                        <option value="BOTH" disabled={!canUseOTP}>
+                          Both Password and OTP {!canUseOTP ? '(requires SMTP & client email)' : ''}
+                        </option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">
+                        {authMode === 'PASSWORD' && 'Clients must enter a password to access the project'}
+                        {authMode === 'OTP' && 'Clients receive a one-time code via email (must be a registered recipient)'}
+                        {authMode === 'BOTH' && 'Clients can choose between password or email OTP authentication'}
+                      </p>
+
+                      {/* Smart Recommendation */}
+                      {showOTPRecommendation && (
+                        <div className="flex items-start gap-2 p-3 bg-muted border border-border rounded-md">
+                          <Mail className="w-4 h-4 text-primary mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">Consider Email OTP</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              You've provided a client email. Email OTP provides seamless authentication without sharing passwords.
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() => setAuthMode('OTP')}
+                              >
+                                OTP Only
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() => setAuthMode('BOTH')}
+                              >
+                                Both Password + OTP
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {!smtpConfigured && (
+                        <div className="flex items-start gap-2 p-3 bg-warning-visible border border-warning-visible rounded-md">
+                          <AlertCircle className="w-4 h-4 text-warning mt-0.5" />
+                          <p className="text-xs text-warning">
+                            Configure SMTP in Settings to enable OTP authentication options
+                          </p>
+                        </div>
+                      )}
+
+                      {smtpConfigured && !recipientEmail && authMode !== 'PASSWORD' && (
+                        <div className="flex items-start gap-2 p-3 bg-warning-visible border border-warning-visible rounded-md">
+                          <AlertCircle className="w-4 h-4 text-warning mt-0.5" />
+                          <p className="text-xs text-warning">
+                            Enter a client email address above to use OTP authentication
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      <strong className="text-warning">Important:</strong> Save this password! 
-                      You'll need to share it with your client so they can view and approve the project.
-                    </p>
+
+                    {/* Password Field (conditional) */}
+                    {needsPassword && (
+                      <div className="space-y-3">
+                        <Label htmlFor="sharePassword">Share Password</Label>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              id="sharePassword"
+                              value={sharePassword}
+                              onChange={(e) => setSharePassword(e.target.value)}
+                              type={showPassword ? 'text' : 'password'}
+                              className="pr-10 font-mono"
+                              required={needsPassword}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={handleGeneratePassword}
+                            title="Generate new password"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={handleCopyPassword}
+                            title="Copy password"
+                          >
+                            {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          <strong className="text-warning">Important:</strong> Save this password!
+                          You'll need to share it with your client so they can view and approve the project.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -215,7 +318,7 @@ export default function NewProjectPage() {
                   <div className="flex items-start gap-2 p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
                     <span className="text-warning text-sm font-bold">!</span>
                     <p className="text-sm text-warning font-medium">
-                      Without password protection, anyone with the share link can view and approve your project.
+                      Without authentication, anyone with the share link can view and approve your project. Not recommended for sensitive content.
                     </p>
                   </div>
                 )}
@@ -248,8 +351,8 @@ export default function NewProjectPage() {
                 </p>
               </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" variant="default" size="lg" disabled={loading} className="flex-1">
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" variant="default" size="lg" disabled={loading}>
                   <Plus className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">{loading ? 'Creating...' : 'Create Project'}</span>
                 </Button>
@@ -257,7 +360,7 @@ export default function NewProjectPage() {
                   type="button"
                   variant="outline"
                   size="lg"
-                  onClick={() => router.back()}
+                  onClick={() => router.push('/admin')}
                   disabled={loading}
                 >
                   <X className="w-4 h-4 sm:mr-2" />

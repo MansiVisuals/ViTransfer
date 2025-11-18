@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 export const dynamic = 'force-dynamic'
 
@@ -117,6 +118,10 @@ export async function DELETE(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const body = await request.json()

@@ -13,6 +13,7 @@ import { ReprocessModal } from '@/components/ReprocessModal'
 import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { generateSecurePassword, generateRandomSlug, sanitizeSlug } from '@/lib/password-utils'
+import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
 import { ArrowLeft, Save, RefreshCw, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -172,6 +173,13 @@ export default function ProjectSettingsPage() {
     loadProject()
   }, [projectId])
 
+  // Clear password when No Authentication is selected
+  useEffect(() => {
+    if (authMode === 'NONE') {
+      setSharePassword('')
+    }
+  }, [authMode])
+
   async function handleSave() {
     setSaving(true)
     setError('')
@@ -257,16 +265,8 @@ export default function ProjectSettingsPage() {
     setError('')
 
     try {
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to save settings')
-      }
+      // Save project settings
+      await apiPatch(`/api/projects/${projectId}`, updates)
 
       // Update custom slug value to sanitized version if using custom slug
       const sanitizedSlug = updates.slug
@@ -316,16 +316,7 @@ export default function ProjectSettingsPage() {
   async function reprocessVideos() {
     setReprocessing(true)
     try {
-      const response = await fetch(`/api/projects/${projectId}/reprocess`, {
-        method: 'POST',
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to reprocess videos')
-      }
-
-      const data = await response.json()
+      const data = await apiPost(`/api/projects/${projectId}/reprocess`, {})
       console.log(`Reprocessing ${data.count} videos`)
     } catch (err) {
       console.error('Error reprocessing videos:', err)
@@ -358,7 +349,7 @@ export default function ProjectSettingsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <Link href={`/admin/projects/${projectId}`}>
-                <Button variant="ghost" size="default">
+                <Button variant="ghost" size="lg">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">Back to Project</span>
                   <span className="sm:hidden">Back</span>
@@ -492,6 +483,7 @@ export default function ProjectSettingsPage() {
                           size="sm"
                           onClick={() => setCustomSlugValue(generateRandomSlug())}
                           title="Generate random URL"
+                          className="h-10 w-10 p-0 flex-shrink-0"
                         >
                           <RefreshCw className="w-4 h-4" />
                         </Button>
@@ -838,23 +830,34 @@ export default function ProjectSettingsPage() {
                     <option value="BOTH" disabled={!smtpConfigured || !hasRecipientWithEmail}>
                       Both Password and OTP {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
                     </option>
+                    <option value="NONE">No Authentication</option>
                   </select>
                   <p className="text-xs text-muted-foreground">
                     {authMode === 'PASSWORD' && 'Clients must enter a password to access the project'}
                     {authMode === 'OTP' && 'Clients receive a one-time code via email (must be a registered recipient)'}
                     {authMode === 'BOTH' && 'Clients can choose between password or email OTP authentication'}
+                    {authMode === 'NONE' && 'Anyone with the share link can access the project'}
                   </p>
-                  {!smtpConfigured && (
+                  {!smtpConfigured && authMode !== 'NONE' && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Configure SMTP in Settings to enable OTP authentication options
                     </p>
                   )}
-                  {smtpConfigured && !hasRecipientWithEmail && (
+                  {smtpConfigured && !hasRecipientWithEmail && authMode !== 'NONE' && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Add at least one recipient with an email address to enable OTP authentication options
                     </p>
                   )}
                 </div>
+
+                {authMode === 'NONE' && (
+                  <div className="flex items-start gap-2 p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
+                    <span className="text-warning text-sm font-bold">!</span>
+                    <p className="text-sm text-warning font-medium">
+                      Without authentication, anyone with the share link can view and approve your project. Not recommended for sensitive content.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {(authMode === 'PASSWORD' || authMode === 'BOTH') && (

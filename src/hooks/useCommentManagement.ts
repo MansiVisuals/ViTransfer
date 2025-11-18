@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Comment, Video } from '@prisma/client'
 import { useRouter } from 'next/navigation'
-import { getCsrfToken } from '@/lib/csrf-client'
+import { apiPost, apiDelete } from '@/lib/api-client'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -264,28 +264,8 @@ export function useCommentManagement({
         requestBody.parentId = commentParentId
       }
 
-      // Get CSRF token
-      const csrfToken = await getCsrfToken()
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken
-      }
-
-      const response = await fetch('/api/comments', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify(requestBody),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || `Server error: ${response.status}`)
-      }
+      // Use centralized API client (handles CSRF automatically)
+      await apiPost('/api/comments', requestBody)
 
       router.refresh()
     } catch (error) {
@@ -340,15 +320,8 @@ export function useCommentManagement({
     }
 
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || `Server error: ${response.status}`)
-      }
+      // Use centralized API client (handles CSRF automatically)
+      await apiDelete(`/api/comments/${commentId}`)
 
       // Trigger immediate re-fetch via window event (CommentSection polling will pick it up)
       window.dispatchEvent(new CustomEvent('commentDeleted'))

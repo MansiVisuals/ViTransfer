@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordRequirements } from '@/components/PasswordRequirements'
+import { apiPatch, apiPost, apiDelete } from '@/lib/api-client'
 import { startRegistration } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 
@@ -75,31 +76,13 @@ export default function EditUserPage() {
 
     try {
       // Get registration options
-      const optionsRes = await fetch('/api/auth/passkey/register/options', {
-        method: 'POST',
-      })
-
-      if (!optionsRes.ok) {
-        const data = await optionsRes.json()
-        throw new Error(data.error || 'Failed to generate options')
-      }
-
-      const options: PublicKeyCredentialCreationOptionsJSON = await optionsRes.json()
+      const options: PublicKeyCredentialCreationOptionsJSON = await apiPost('/api/auth/passkey/register/options', {})
 
       // Start WebAuthn ceremony
       const attestation = await startRegistration({ optionsJSON: options })
 
       // Verify registration
-      const verifyRes = await fetch('/api/auth/passkey/register/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(attestation),
-      })
-
-      if (!verifyRes.ok) {
-        const data = await verifyRes.json()
-        throw new Error(data.error || 'Verification failed')
-      }
+      await apiPost('/api/auth/passkey/register/verify', attestation)
 
       // Refresh passkey list
       await fetchPasskeys()
@@ -125,15 +108,7 @@ export default function EditUserPage() {
 
     setPasskeyError('')
     try {
-      const res = await fetch(`/api/auth/passkey/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to delete')
-      }
-
+      await apiDelete(`/api/auth/passkey/${id}`)
       await fetchPasskeys()
     } catch (err: any) {
       setPasskeyError(err.message)
@@ -236,16 +211,8 @@ export default function EditUserPage() {
         updateData.password = formData.password
       }
 
-      const res = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to update user')
-      }
+      // Update user
+      await apiPatch(`/api/users/${userId}`, updateData)
 
       router.push('/admin/users')
     } catch (err: any) {

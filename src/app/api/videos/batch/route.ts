@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 export async function PATCH(request: NextRequest) {
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   // Rate limiting: 60 requests per minute for batch operations
   const rateLimitResult = await rateLimit(request, {

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordRequirements } from '@/components/PasswordRequirements'
+import { apiPost } from '@/lib/api-client'
 
 export default function NewUserPage() {
   const router = useRouter()
@@ -88,22 +89,13 @@ export default function NewUserPage() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          username: formData.username || null,
-          password: formData.password,
-          name: formData.name || null,
-          role: 'ADMIN',
-        }),
+      await apiPost('/api/users', {
+        email: formData.email,
+        username: formData.username || null,
+        password: formData.password,
+        name: formData.name || null,
+        role: 'ADMIN',
       })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to create user')
-      }
 
       router.push('/admin/users')
     } catch (err: any) {

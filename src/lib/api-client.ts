@@ -1,17 +1,20 @@
 /**
- * Secure API Client with Automatic Session Handling
+ * Secure API Client with Automatic Session & CSRF Handling
  *
  * Industry best practice: Global fetch wrapper that handles:
  * 1. Automatic logout on 401/403 (session expired/revoked)
  * 2. Consistent error handling across the app
  * 3. Proper credentials handling (HttpOnly cookies)
+ * 4. Automatic CSRF token injection for POST/PATCH/DELETE
  *
  * Used by: GitHub, AWS Console, Stripe, and most modern web apps
  *
  * Usage:
- *   import { apiFetch } from '@/lib/api-client'
- *   const data = await apiFetch('/api/projects')
+ *   import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
+ *   const data = await apiPost('/api/projects', { name: 'Project 1' })
  */
+
+import { getCsrfToken } from './csrf-client'
 
 // Track if we're already redirecting to prevent multiple redirects
 let isRedirecting = false
@@ -112,17 +115,21 @@ export async function apiJson<T = any>(
 
 /**
  * Helper for POST requests with JSON body
+ * Automatically includes CSRF token
  */
 export async function apiPost<T = any>(
   url: string,
   data: any,
   init?: RequestInit
 ): Promise<T> {
+  const csrfToken = await getCsrfToken()
+
   return apiJson<T>(url, {
     ...init,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
       ...init?.headers,
     },
     body: JSON.stringify(data),
@@ -131,17 +138,21 @@ export async function apiPost<T = any>(
 
 /**
  * Helper for PATCH requests with JSON body
+ * Automatically includes CSRF token
  */
 export async function apiPatch<T = any>(
   url: string,
   data: any,
   init?: RequestInit
 ): Promise<T> {
+  const csrfToken = await getCsrfToken()
+
   return apiJson<T>(url, {
     ...init,
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
       ...init?.headers,
     },
     body: JSON.stringify(data),
@@ -150,13 +161,20 @@ export async function apiPatch<T = any>(
 
 /**
  * Helper for DELETE requests
+ * Automatically includes CSRF token
  */
 export async function apiDelete<T = any>(
   url: string,
   init?: RequestInit
 ): Promise<T> {
+  const csrfToken = await getCsrfToken()
+
   return apiJson<T>(url, {
     ...init,
     method: 'DELETE',
+    headers: {
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      ...init?.headers,
+    },
   })
 }

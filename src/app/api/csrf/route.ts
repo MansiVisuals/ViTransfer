@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateCsrfToken, getCsrfSessionIdentifier } from '@/lib/security/csrf'
 import { isHttpsEnabled } from '@/lib/settings'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,17 @@ export const dynamic = 'force-dynamic'
  * SECURITY: 1-hour TTL, stored in Redis
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting: 60 requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: 'Too many requests. Please slow down.'
+  }, 'csrf-token-gen')
+
+  if (rateLimitResult) {
+    return rateLimitResult
+  }
+
   try {
     // Get session identifier (admin or share session)
     const sessionIdentifier = await getCsrfSessionIdentifier(request)

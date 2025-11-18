@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from './ui/select'
 import { UnapproveModal } from './UnapproveModal'
+import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
 
 interface Video {
   id: string
@@ -117,28 +118,19 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
     setMessage(null)
 
     try {
-      const response = await fetch(`/api/projects/${project.id}/notify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          videoId: notificationType === 'specific-video' ? selectedVideoId : null,
-          notifyEntireProject: notificationType === 'entire-project',
-          sendPasswordSeparately: isPasswordProtected && sendPasswordSeparately
-        }),
+      // Use centralized API client (handles CSRF automatically)
+      const data = await apiPost(`/api/projects/${project.id}/notify`, {
+        videoId: notificationType === 'specific-video' ? selectedVideoId : null,
+        notifyEntireProject: notificationType === 'entire-project',
+        sendPasswordSeparately: isPasswordProtected && sendPasswordSeparately
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setMessage({ type: 'success', text: data.message || 'Notification sent successfully!' })
-        setSelectedVideoName('')
-        setSelectedVideoId('')
-        setSendPasswordSeparately(false)
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to send notification' })
-      }
+      setMessage({ type: 'success', text: data.message || 'Notification sent successfully!' })
+      setSelectedVideoName('')
+      setSelectedVideoId('')
+      setSendPasswordSeparately(false)
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to send notification' })
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to send notification' })
     } finally {
       setLoading(false)
     }
@@ -163,15 +155,8 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
 
       setIsTogglingApproval(true)
       try {
-        const response = await fetch(`/api/projects/${project.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'APPROVED' })
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to approve project')
-        }
+        // Use centralized API client (handles CSRF automatically)
+        await apiPatch(`/api/projects/${project.id}`, { status: 'APPROVED' })
 
         // Refresh project data
         await onRefresh?.()
@@ -191,17 +176,8 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
     setShowUnapproveModal(false)
 
     try {
-      const response = await fetch(`/api/projects/${project.id}/unapprove`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unapproveVideos })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to unapprove project')
-      }
-
-      const data = await response.json()
+      // Use centralized API client (handles CSRF automatically)
+      const data = await apiPost(`/api/projects/${project.id}/unapprove`, { unapproveVideos })
 
       // Refresh project data
       await onRefresh?.()
@@ -248,13 +224,8 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete project')
-      }
+      // Use centralized API client (handles CSRF automatically)
+      await apiDelete(`/api/projects/${project.id}`)
 
       // Redirect to admin page after successful deletion
       router.push('/admin')

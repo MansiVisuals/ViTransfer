@@ -1,10 +1,22 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Rate limiting: 120 requests per minute (session checks are frequent)
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 120,
+    message: 'Too many requests. Please slow down.'
+  }, 'session-check')
+
+  if (rateLimitResult) {
+    return rateLimitResult
+  }
+
   try {
     const user = await getCurrentUser()
 

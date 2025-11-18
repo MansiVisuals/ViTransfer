@@ -8,6 +8,7 @@ import { Button } from './ui/button'
 import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
 import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare } from 'lucide-react'
+import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
 
 interface VideoListProps {
   videos: Video[]
@@ -57,14 +58,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
     setDeletingId(videoId)
     try {
-      const response = await fetch(`/api/videos/${videoId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete video')
-      }
-
+      await apiDelete(`/api/videos/${videoId}`)
       await onRefresh?.()
     } catch (error) {
       alert('Failed to delete video')
@@ -81,15 +75,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
     setApprovingId(videoId)
     try {
-      const response = await fetch(`/api/videos/${videoId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved: !currentlyApproved })
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} video`)
-      }
+      await apiPatch(`/api/videos/${videoId}`, { approved: !currentlyApproved })
 
       // Trigger immediate UI update for comment section approval banner
       window.dispatchEvent(new CustomEvent('videoApprovalChanged'))
@@ -128,15 +114,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
     setSavingId(pendingVideoUpdate.videoId)
     try {
-      const response = await fetch(`/api/videos/${pendingVideoUpdate.videoId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ versionLabel: pendingVideoUpdate.newLabel })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update version label')
-      }
+      await apiPatch(`/api/videos/${pendingVideoUpdate.videoId}`, { versionLabel: pendingVideoUpdate.newLabel })
 
       // Reprocess if requested
       if (shouldReprocess) {
@@ -161,16 +139,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       const video = videos.find(v => v.id === videoId)
       if (!video) return
 
-      const response = await fetch(`/api/projects/${video.projectId}/reprocess`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoIds: [videoId] })
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to reprocess video')
-      }
+      await apiPost(`/api/projects/${video.projectId}/reprocess`, { videoIds: [videoId] })
 
     } catch (err) {
       // Don't throw - we still want to save the label

@@ -39,7 +39,7 @@ export default async function AdminPage() {
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage your video projects</p>
           </div>
           <Link href="/admin/projects/new">
-            <Button variant="default" size="default">
+            <Button variant="default" size="lg">
               <Plus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">New Project</span>
             </Button>

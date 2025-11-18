@@ -11,6 +11,7 @@ import VideoList from './VideoList'
 import { InlineEdit } from './InlineEdit'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { apiPatch } from '@/lib/api-client'
 
 interface VideoGroup {
   name: string
@@ -129,16 +130,8 @@ export default function AdminVideoManager({
       const videosInGroup = videoGroups[oldName]
       const videoIds = videosInGroup.map(v => v.id)
 
-      // Single batch update for all videos
-      const response = await fetch('/api/videos/batch', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoIds, name: editGroupValue.trim() })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update video name')
-      }
+      // Single batch update for all videos (uses centralized API client with CSRF)
+      await apiPatch('/api/videos/batch', { videoIds, name: editGroupValue.trim() })
 
       setEditingGroupName(null)
       setEditGroupValue('')

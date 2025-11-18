@@ -5,6 +5,8 @@ import { validateRequest, updateCommentSchema } from '@/lib/validation'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
+import { sanitizeCommentHtml } from '@/lib/security/html-sanitization'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -14,6 +16,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
+
   // Rate limiting to prevent abuse
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
@@ -86,13 +92,20 @@ export async function PATCH(
 
     const { isAdmin, isAuthenticated } = accessCheck
 
+    // Prepare update data
+    const updateData: any = {
+      updatedAt: new Date(),
+    }
+
+    // SECURITY: Sanitize comment HTML before updating if content is provided (O-7 fix)
+    if (content !== undefined) {
+      updateData.content = sanitizeCommentHtml(content)
+    }
+
     // Update the comment
     await prisma.comment.update({
       where: { id },
-      data: {
-        content,
-        updatedAt: new Date(),
-      },
+      data: updateData,
     })
 
     // Return all comments for the project (to keep UI in sync)
@@ -143,6 +156,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
+
   // Rate limiting to prevent abuse
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,

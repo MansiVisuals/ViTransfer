@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { generatePasskeyRegistrationOptions } from '@/lib/passkey'
 import { isPasskeyConfigured } from '@/lib/settings'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 /**
  * Generate PassKey Registration Options
@@ -22,6 +23,10 @@ export async function POST(request: NextRequest) {
     // Require admin authentication
     const user = await requireApiAdmin(request)
     if (user instanceof Response) return user
+
+    // CSRF protection
+    const csrfCheck = await validateCsrfProtection(request)
+    if (csrfCheck) return csrfCheck
 
     // Check if PassKey is configured
     const configured = await isPasskeyConfigured()

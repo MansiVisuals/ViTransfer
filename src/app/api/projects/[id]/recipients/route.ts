@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { getProjectRecipients, addRecipient } from '@/lib/recipients'
 import { z } from 'zod'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { rateLimit } from '@/lib/rate-limit'
 
 const addRecipientSchema = z.object({
   email: z.string().email('Invalid email format').nullable().optional(),
@@ -18,6 +20,17 @@ export async function GET(
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // Rate limiting: 60 requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: 'Too many requests. Please slow down.'
+  }, 'recipients-read')
+
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {
@@ -42,6 +55,10 @@ export async function POST(
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const { id: projectId } = await params

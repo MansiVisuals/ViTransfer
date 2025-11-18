@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Users, UserPlus, Edit, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { apiDelete } from '@/lib/api-client'
 
 interface User {
   id: string
@@ -46,14 +47,7 @@ export default function UsersPage() {
     }
 
     try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to delete user')
-      }
+      await apiDelete(`/api/users/${userId}`)
 
       // Refresh user list
       fetchUsers()
@@ -80,7 +74,7 @@ export default function UsersPage() {
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage admin users and their permissions</p>
         </div>
-        <Button variant="default" size="default" onClick={() => router.push('/admin/users/new')}>
+        <Button variant="default" size="lg" onClick={() => router.push('/admin/users/new')}>
           <UserPlus className="w-4 h-4 sm:mr-2" />
           <span className="hidden sm:inline">Add New User</span>
         </Button>
@@ -123,7 +117,7 @@ export default function UsersPage() {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      size="default"
+                      size="sm"
                       onClick={() => router.push(`/admin/users/${user.id}`)}
                     >
                       <Edit className="w-4 h-4 sm:mr-2" />
@@ -131,7 +125,7 @@ export default function UsersPage() {
                     </Button>
                     <Button
                       variant="destructive"
-                      size="default"
+                      size="sm"
                       onClick={() => handleDelete(user.id, user.email)}
                     >
                       <Trash2 className="w-4 h-4 sm:mr-2" />

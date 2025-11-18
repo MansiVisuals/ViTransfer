@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,10 @@ export async function POST(request: NextRequest) {
     return authResult
   }
   const admin = authResult
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   // Rate limiting: Max 50 video uploads per hour
   const rateLimitResult = await rateLimit(request, {

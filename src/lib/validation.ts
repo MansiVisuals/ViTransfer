@@ -115,6 +115,7 @@ export const createProjectSchema = z.object({
   recipientEmail: emailSchema.optional().or(z.literal('')), // Optional recipient email (will create ProjectRecipient if provided)
   recipientName: safeStringSchema(0, 255).optional(), // Optional recipient name
   sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
+  authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),
   restrictCommentsToLatestVersion: z.boolean().optional(),
@@ -132,6 +133,7 @@ export const updateProjectSchema = z.object({
     })
     .optional(),
   sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
+  authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),
   restrictCommentsToLatestVersion: z.boolean().optional(),

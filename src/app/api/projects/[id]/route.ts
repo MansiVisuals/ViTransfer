@@ -6,6 +6,8 @@ import { encrypt, decrypt } from '@/lib/encryption'
 import { cookies } from 'next/headers'
 import { isSmtpConfigured } from '@/lib/email'
 import { invalidateProjectSessions } from '@/lib/session-invalidation'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +17,17 @@ export async function GET(
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // Rate limiting: 60 requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: 'Too many requests. Please slow down.'
+  }, 'project-read')
+
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {
@@ -100,6 +113,10 @@ export async function PATCH(
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const { id } = await params
@@ -258,7 +275,7 @@ export async function PATCH(
 
     // Handle authentication mode
     if (body.authMode !== undefined) {
-      const validAuthModes = ['PASSWORD', 'OTP', 'BOTH']
+      const validAuthModes = ['PASSWORD', 'OTP', 'BOTH', 'NONE']
       if (!validAuthModes.includes(body.authMode)) {
         return NextResponse.json({ error: 'Invalid authentication mode' }, { status: 400 })
       }
@@ -344,6 +361,10 @@ export async function DELETE(
   if (authResult instanceof Response) {
     return authResult
   }
+
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
 
   try {
     const { id } = await params

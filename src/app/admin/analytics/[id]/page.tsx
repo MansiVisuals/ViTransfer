@@ -144,7 +144,7 @@ export default async function ProjectAnalyticsPage({ params }: { params: Promise
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <Link href="/admin/analytics">
-              <Button variant="ghost" size="default" className="mb-2">
+              <Button variant="ghost" size="lg" className="mb-2">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Back to Analytics</span>
                 <span className="sm:hidden">Back</span>

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { Upload, Pause, Play, X } from 'lucide-react'
 import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
+import { apiPost, apiDelete } from '@/lib/api-client'
 
 interface VideoUploadProps {
   projectId: string
@@ -109,26 +110,14 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         throw new Error(validation.error || 'Invalid video file')
       }
 
-      // Step 1: Create video record
-      const createResponse = await fetch('/api/videos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Include cookies for authentication
-        body: JSON.stringify({
-          projectId,
-          versionLabel,
-          originalFileName: file.name,
-          originalFileSize: file.size,
-          name: videoName, // Include video name for multi-video support
-        }),
+      // Step 1: Create video record (uses centralized API client with CSRF)
+      const { videoId } = await apiPost('/api/videos', {
+        projectId,
+        versionLabel,
+        originalFileName: file.name,
+        originalFileSize: file.size,
+        name: videoName, // Include video name for multi-video support
       })
-
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json().catch(() => ({ error: 'Failed to create video record' }))
-        throw new Error(errorData.error || 'Failed to create video record')
-      }
-
-      const { videoId } = await createResponse.json()
       videoIdRef.current = videoId
 
       // Step 2: Upload with TUS protocol
@@ -218,10 +207,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
 
           if (videoIdRef.current) {
             try {
-              await fetch(`/api/videos/${videoIdRef.current}`, {
-                method: 'DELETE',
-                credentials: 'include'
-              })
+              await apiDelete(`/api/videos/${videoIdRef.current}`)
               videoIdRef.current = null
             } catch {}
           }
@@ -271,10 +257,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
     // Delete the video record from database if it was created
     if (videoIdRef.current) {
       try {
-        await fetch(`/api/videos/${videoIdRef.current}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        })
+        await apiDelete(`/api/videos/${videoIdRef.current}`)
         videoIdRef.current = null
         router.refresh()
       } catch {}

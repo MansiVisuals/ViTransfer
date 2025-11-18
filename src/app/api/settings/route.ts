@@ -4,6 +4,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+import { isSmtpConfigured } from '@/lib/email'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -58,9 +59,13 @@ export async function GET(request: NextRequest) {
       smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
     }
 
+    // Check SMTP configuration status (reuse centralized helper)
+    const smtpConfigured = await isSmtpConfigured()
+
     return NextResponse.json({
       ...decryptedSettings,
       security: securitySettings,
+      smtpConfigured,
     })
   } catch (error) {
     console.error('Error fetching settings:', error)

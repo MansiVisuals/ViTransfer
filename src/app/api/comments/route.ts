@@ -18,6 +18,17 @@ export const dynamic = 'force-dynamic'
  * Fetch all comments for a project
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting: 60 requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: 'Too many requests. Please slow down.'
+  }, 'comments-read')
+
+  if (rateLimitResult) {
+    return rateLimitResult
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId')

@@ -10,7 +10,7 @@ import { EmailSettingsSection } from '@/components/settings/EmailSettingsSection
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
 import { ProjectBehaviorSection } from '@/components/settings/ProjectBehaviorSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
-import { getCsrfToken } from '@/lib/csrf-client'
+import { apiPatch, apiPost } from '@/lib/api-client'
 
 interface Settings {
   id: string
@@ -175,20 +175,8 @@ export default function GlobalSettingsPage() {
         adminNotificationDay: adminNotificationSchedule === 'WEEKLY' ? adminNotificationDay : null,
       }
 
-      const csrfToken = await getCsrfToken()
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (csrfToken) headers['X-CSRF-Token'] = csrfToken
-
-      const response = await fetch('/api/settings', {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(updates),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to save settings')
-      }
+      // Save global settings
+      await apiPatch('/api/settings', updates)
 
       // Save security settings
       const securityUpdates = {
@@ -204,16 +192,7 @@ export default function GlobalSettingsPage() {
         viewSecurityEvents,
       }
 
-      const securityResponse = await fetch('/api/settings/security', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(securityUpdates),
-      })
-
-      if (!securityResponse.ok) {
-        const data = await securityResponse.json()
-        throw new Error(data.error || 'Failed to save security settings')
-      }
+      await apiPatch('/api/settings/security', securityUpdates)
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -294,28 +273,15 @@ export default function GlobalSettingsPage() {
         return
       }
 
-      const response = await fetch('/api/settings/test-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          testEmail: testEmailAddress,
-          smtpConfig: smtpConfig
-        }),
+      const data = await apiPost('/api/settings/test-email', {
+        testEmail: testEmailAddress,
+        smtpConfig: smtpConfig
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setTestEmailResult({
-          type: 'success',
-          message: data.message || 'Test email sent successfully! Check your inbox.'
-        })
-      } else {
-        setTestEmailResult({
-          type: 'error',
-          message: data.error || 'Failed to send test email'
-        })
-      }
+      setTestEmailResult({
+        type: 'success',
+        message: data.message || 'Test email sent successfully! Check your inbox.'
+      })
     } catch (error) {
       setTestEmailResult({
         type: 'error',

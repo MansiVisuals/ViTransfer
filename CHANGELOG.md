@@ -5,6 +5,54 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2025-11-18
+
+### Added
+- **Video Asset Management System**
+  - Upload/download functionality for approved videos
+  - Asset management UI (upload modal, list view, download modal)
+  - Per-project allowAssetDownload setting
+  - Asset download restricted to approved videos only
+  - ZIP download support for multiple assets
+- **Guest Mode**
+  - Guest access for share pages with view-only permissions
+  - Guest entry button on authentication screen
+  - Auto-entry as guest when authMode is NONE and guestMode enabled
+  - Guest sessions persist across page refreshes
+  - Guest latest-only restriction (toggle to limit guests to latest video version)
+  - Database-level filtering for guest security
+  - Guest info hidden in API responses
+  - Rate limiting on guest endpoint (20 requests/minute)
+- **Global Video Processing Settings**
+  - Default watermark enabled toggle in global settings
+  - Watermark text input shows only when watermarks enabled
+  - Settings persist and apply to new projects
+- **Authentication Mode Support**
+  - Per-project authMode setting (PASSWORD/PASSKEY/BOTH)
+  - Flexible authentication options per project
+
+### Improved
+- Mobile VideoList layout now matches desktop appearance
+- Share page authentication and access control enhanced
+- Admin UI components refactored for consistency
+- Redis handling improved with static imports (no dynamic imports)
+- API response sanitization for guest sessions
+
+### Fixed
+- Redis sismember return type handling (returns number, not boolean)
+
+### Security
+- Guest sessions marked in Redis with guest_session key
+- Automatic CSRF token handling in API client
+- CSRF validation on all state-changing API routes
+
+### Database Migration
+- Added guestMode and guestLatestOnly fields to Project schema
+- Added authMode field to Project schema
+- Added allowAssetDownload field to Project schema
+- Added defaultWatermarkEnabled to Settings table
+- Created VideoAsset model for asset management
+
 ## [0.3.6] - 2025-11-17
 
 ### Added

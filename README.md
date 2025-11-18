@@ -4,49 +4,53 @@
 
 ViTransfer is a self-hosted web application designed for video professionals to share work with clients, collect feedback, and manage approval workflows. Built with modern technologies and designed for easy self-hosting.
 
-*NOTE: Coded with Claude AI, built to achieve security and best practices.*
+NOTE: Code-assisted development with Claude AI, built with focus on security and best practices.
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/crypt010/vitransfer)](https://hub.docker.com/r/crypt010/vitransfer)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 [![GitHub](https://img.shields.io/badge/github-MansiVisuals%2FViTransfer-blue)](https://github.com/MansiVisuals/ViTransfer)
 [![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/E1E215DBM4)
 
-> **⚠️ ACTIVE DEVELOPMENT:** ViTransfer is under active development with frequent updates and changes. While fully functional and used in production, features may be replaced, modified, or removed as we work towards v1.0. We strive to avoid breaking changes, but **always maintain backups following the 3-2-1 principle** (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome!
->
-> **💖 Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development!
+ACTIVE DEVELOPMENT: ViTransfer is under active development with frequent updates. While fully functional and used in production, features may be replaced, modified, or removed as we work towards v1.0. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
 
-## ✨ Features
+Support Development: If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
+
+## Features
 
 ### Core Functionality
-- 📹 **Video Upload & Processing** - Automatic transcoding to multiple resolutions (720p/1080p)
-- 💧 **Watermarking** - Customizable watermarks for preview videos
-- 💬 **Timestamped Comments** - Collect feedback with precise video timestamps
-- ✅ **Approval Workflow** - Client approval system with revision tracking
-- 🔒 **Password Protection** - Secure projects with client passwords
-- 📧 **Email Notifications** - Automated notifications for new videos and replies
-- 🎨 **Dark Mode** - Beautiful dark/light theme support
-- 📱 **Fully Responsive** - Works perfectly on all devices
+- **Video Upload & Processing** - Automatic transcoding to multiple resolutions (720p/1080p/2160p)
+- **Watermarking** - Customizable watermarks for preview videos
+- **Timestamped Comments** - Collect feedback with precise video timestamps
+- **Approval Workflow** - Client approval system with revision tracking
+- **Password Protection** - Secure projects with client passwords
+- **Email Notifications** - Automated notifications for new videos and replies
+- **Dark Mode** - Dark/light theme support
+- **Responsive Design** - Works on desktop, tablet, and mobile devices
 
 ### Admin Features
-- 👥 **Multi-User Support** - Create multiple admin accounts
-- 📊 **Analytics Dashboard** - Track page visits, downloads, and engagement
-- 🔐 **Security Logging** - Monitor access attempts and suspicious activity
-- 🎯 **Version Management** - Hide/show specific video versions
-- 🔄 **Revision Tracking** - Limit and track project revisions
-- ⚙️ **Flexible Settings** - Per-project and global configuration options
+- **Multi-User Support** - Create multiple admin accounts
+- **Analytics Dashboard** - Track page visits, downloads, and engagement
+- **Security Logging** - Monitor access attempts and suspicious activity
+- **Version Management** - Hide/show specific video versions
+- **Revision Tracking** - Limit and track project revisions
+- **Guest Mode** - View-only access for clients without editing capabilities
+- **Video Asset Management** - Attach additional files to projects (images, audio, project files)
+- **Flexible Settings** - Per-project and global configuration options
 
 ### Technical Features
-- 🐳 **Docker-First** - Easy deployment with Docker Compose
-- 🚀 **High Performance** - Built with Next.js 16 and React 19
-- 📦 **Redis Queue** - Background video processing with BullMQ
-- 🎬 **FFmpeg Processing** - Industry-standard video transcoding
-- 🗄️ **PostgreSQL Database** - Reliable data storage with Prisma 6
-- 🔐 **JWT Authentication** - Secure session management
-- 🌐 **TUS Protocol** - Resumable uploads for large files
+- **Docker-First** - Easy deployment with Docker Compose
+- **High Performance** - Built with Next.js 16 and React 19
+- **Redis Queue** - Background video processing with BullMQ
+- **FFmpeg Processing** - Industry-standard video transcoding
+- **PostgreSQL Database** - Reliable data storage with Prisma 6
+- **JWT Authentication** - Secure session management
+- **TUS Protocol** - Resumable uploads for large files
+- **CSRF Protection** - Cross-site request forgery protection
+- **Authentication Modes** - Password-based or passwordless (guest) access
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 ### Login
 <img src="docs/screenshots/Login Page.png" alt="Login Page" width="600">
@@ -67,7 +71,7 @@ ViTransfer is a self-hosted web application designed for video professionals to 
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose installed
@@ -126,8 +130,6 @@ docker-compose up -d
 - Login with your admin credentials
 - Complete setup in admin settings
 
-That's it! 🎉
-
 ---
 
 ### Installation Method 2: Build from Source (Advanced)
@@ -153,7 +155,7 @@ The source code will be built into Docker images locally instead of pulling from
 
 ---
 
-## 🌐 Platform Support
+## Platform Support
 
 ViTransfer uses standard Docker Compose and should work on most platforms. Below are tested deployment guides for specific platforms.
 
@@ -261,31 +263,106 @@ Rootless Podman Quadlets are available in the folder quadlet.
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `APP_PORT` | No | Port to expose | `4321` |
-| `PUID` | No | User ID for file permissions | `1000` |
-| `PGID` | No | Group ID for file permissions | `1000` |
-| `POSTGRES_PASSWORD` | Yes | PostgreSQL password | Generated |
-| `REDIS_PASSWORD` | Yes | Redis password | Generated |
-| `ENCRYPTION_KEY` | Yes | Data encryption key | Generated |
-| `JWT_SECRET` | Yes | JWT signing secret | Generated |
-| `JWT_REFRESH_SECRET` | Yes | JWT refresh secret | Generated |
-| `ADMIN_EMAIL` | Yes | Initial admin email | `admin@example.com` |
-| `ADMIN_PASSWORD` | Yes | Initial admin password | Secure password |
-| `NEXT_PUBLIC_APP_URL` | No | Public URL for emails | `https://videos.example.com` |
+| Variable | Required | Description | Default | Example |
+|----------|----------|-------------|---------|---------|
+| `APP_PORT` | No | Port to expose on host | `4321` | `8080` |
+| `PUID` | No | User ID for file permissions (Linux) | `1000` | `1000` |
+| `PGID` | No | Group ID for file permissions (Linux) | `1000` | `1000` |
+| `TZ` | No | Timezone for notification schedules | `UTC` | `Europe/Amsterdam` |
+| `POSTGRES_USER` | Yes | PostgreSQL username | `vitransfer` | `vitransfer` |
+| `POSTGRES_PASSWORD` | Yes | PostgreSQL password (hex only) | - | Generated with `openssl rand -hex 32` |
+| `POSTGRES_DB` | Yes | PostgreSQL database name | `vitransfer` | `vitransfer` |
+| `REDIS_PASSWORD` | Yes | Redis password (hex only) | - | Generated with `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | Yes | Data encryption key (base64) | - | Generated with `openssl rand -base64 32` |
+| `JWT_SECRET` | Yes | JWT signing secret (base64) | - | Generated with `openssl rand -base64 64` |
+| `JWT_REFRESH_SECRET` | Yes | JWT refresh secret (base64) | - | Generated with `openssl rand -base64 64` |
+| `ADMIN_EMAIL` | Yes | Initial admin email | - | `admin@example.com` |
+| `ADMIN_PASSWORD` | Yes | Initial admin password | - | `Admin1234` (change in production) |
+| `NEXT_PUBLIC_APP_URL` | No | Public URL for emails and links | `http://localhost:4321` | `https://videos.example.com` |
+| `HTTPS_ENABLED` | No | Enable HTTPS enforcement (secure cookies, HSTS) | `true` | `false` for localhost |
 
-### SMTP Configuration (Optional)
+**Important Notes:**
+- Use `openssl rand -hex 32` for database passwords (no special characters that break URLs)
+- Use `openssl rand -base64 32/64` for encryption keys and JWT secrets
+- Avoid special characters in `ADMIN_PASSWORD` due to JSON parsing
+- `HTTPS_ENABLED` environment variable always takes precedence over database settings
+- Set `TZ` correctly for scheduled notifications to work as expected
 
-Configure email notifications in the admin panel:
-- Settings > Email Configuration
-- Add your SMTP server details
-- Test the connection before saving
-- Supports Gmail, Outlook, custom SMTP servers
+### Application Settings (Admin Panel)
+
+Configure these in the admin panel under Settings:
+
+**Company Branding:**
+- Company Name - Displayed in emails and comments (default: "Studio")
+- App Domain - Required for PassKey authentication (e.g., `https://yourdomain.com`)
+
+**Email Notifications (SMTP):**
+- SMTP Server - Mail server hostname
+- SMTP Port - Mail server port (default: 587)
+- SMTP Username - Authentication username
+- SMTP Password - Authentication password
+- From Address - Sender email address
+- Security Mode - STARTTLS (default), TLS, or NONE
+- Admin Notification Schedule - IMMEDIATE, HOURLY, DAILY, WEEKLY
+
+**Video Processing Defaults:**
+- Preview Resolution - 720p (default), 1080p, or 2160p
+- Watermark Enabled - Apply watermark to preview videos (default: true)
+- Watermark Text - Custom watermark text for previews
+
+**Project Behavior:**
+- Auto-approve Project - Automatically approve project when all videos are approved (default: true)
+
+### Security Settings (Admin Panel)
+
+Configure these in the admin panel under Settings > Security:
+
+**Access Protection:**
+- Hotlink Protection - DISABLED, LOG_ONLY (default), or BLOCK_STRICT
+- Session Timeout - Configurable value and unit (MINUTES, HOURS, DAYS, WEEKS)
+- Password Attempts - Max failed attempts before lockout (default: 5)
+
+**Rate Limiting:**
+- IP Rate Limit - Requests per minute per IP (default: 1000)
+- Session Rate Limit - Requests per minute per session (default: 600)
+
+**HTTPS Enforcement:**
+- HTTPS Enabled - Enable secure cookies and HSTS header (default: true)
+- Note: `HTTPS_ENABLED` environment variable always overrides this setting
+
+**Logging:**
+- Track Analytics - Enable page visit and download tracking (default: true)
+- Track Security Logs - Log security events and suspicious activity (default: true)
+- View Security Events - Show security dashboard in admin navigation (default: false)
+
+### Per-Project Settings
+
+Each project can override global defaults:
+
+**Video Processing:**
+- Preview Resolution - Override global setting (720p/1080p/2160p)
+- Watermark Text - Custom watermark for this project
+- Watermark Enabled - Enable/disable watermark for this project
+
+**Client Access:**
+- Authentication Mode - PASSWORD (default) or GUEST (view-only, no password)
+- Guest Mode - Allow view-only access without password or editing capabilities
+- Password - Client access password (AES-256 encrypted)
+- Custom URL - Memorable share link slug
+
+**Workflow:**
+- Revision Limit - Maximum number of revision rounds
+- Allow Comments - Enable client feedback
+- Allow Downloads - Let clients download approved videos
+- Require Approval - Client must approve before download
+
+**Notifications:**
+- Client Notification Schedule - Override global schedule (IMMEDIATE/HOURLY/DAILY/WEEKLY)
+- Recipients - Email addresses to notify on project updates
 
 ### Reverse Proxy Setup
 
@@ -293,7 +370,7 @@ Tested with Cloudflare Tunnels.
 
 ---
 
-## 📖 Usage Guide
+## Usage Guide
 
 ### Creating Your First Project
 
@@ -325,16 +402,17 @@ Tested with Cloudflare Tunnels.
 
 ---
 
-## 🔒 Security Features
+## Security Features
 
-- 🔐 **Password-Protected Projects** - Optional client passwords
-- 🔑 **JWT Authentication** - Secure admin sessions
-- 🛡️ **Rate Limiting** - Protection against brute force
-- 📝 **Security Logging** - Track all access attempts
-- 🚫 **Hotlink Protection** - Prevent unauthorized embedding
-- 🔒 **Encrypted Passwords** - AES-256 encryption at rest
-- 🌐 **HTTPS Support** - SSL/TLS for secure connections
-- ⏱️ **Session Monitoring** - 15-minute inactivity timeout with warnings
+- **Password-Protected Projects** - Optional client passwords
+- **JWT Authentication** - Secure admin sessions
+- **Rate Limiting** - Protection against brute force
+- **Security Logging** - Track all access attempts
+- **Hotlink Protection** - Prevent unauthorized embedding
+- **Encrypted Passwords** - AES-256 encryption at rest
+- **HTTPS Support** - SSL/TLS for secure connections
+- **Session Monitoring** - 15-minute inactivity timeout with warnings
+- **CSRF Protection** - Cross-site request forgery protection
 
 ### Security Notice
 
@@ -342,7 +420,7 @@ ViTransfer uses Alpine Linux and FFmpeg which may show CVEs in vulnerability sca
 
 ---
 
-## 🛠️ Maintenance
+## Maintenance
 
 ### Backup
 
@@ -400,7 +478,7 @@ docker exec -i vitransfer-postgres psql -U vitransfer vitransfer < backup.sql
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Container won't start
 ```bash
@@ -438,7 +516,7 @@ df -h
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! ViTransfer is actively developed and we're looking for help to reach v1.0.
 
@@ -452,57 +530,57 @@ We welcome contributions! ViTransfer is actively developed and we're looking for
 
 ### Areas We Need Help
 
-- 🐛 **Bug fixes** - Report or fix issues
-- 📖 **Documentation** - Improve guides and examples
-- 🌍 **Translations** - Help make ViTransfer multilingual
-- ✨ **Features** - Propose and implement new features
-- 🧪 **Testing** - Help test on different platforms
+- **Bug fixes** - Report or fix issues
+- **Documentation** - Improve guides and examples
+- **Translations** - Help make ViTransfer multilingual
+- **Features** - Propose and implement new features
+- **Testing** - Help test on different platforms
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the **GNU AFFERO GENERAL PUBLIC LICENSE Version 3 (AGPL-3.0 license)**.
+This project is licensed under the **GNU AFFERO GENERAL PUBLIC LICENSE Version 3 (AGPL-3.0)**.
 
 **This means:**
-- ✅ You can use ViTransfer for free
-- ✅ You can modify the source code
-- ✅ You can distribute your modifications
-- ⚠️ Any derivative work **must** be open-source under AGPL-3.0 license
-- ⚠️ You must include the original license and copyright notice
+- You can use ViTransfer for free
+- You can modify the source code
+- You can distribute your modifications
+- Any derivative work must be open-source under AGPL-3.0
+- You must include the original license and copyright notice
 
 See the [LICENSE](LICENSE) file for full details.
 
-**Why AGPL-3.0 license?** We believe in keeping video tools accessible to all creators while preventing commercial exploitation. If you use or modify ViTransfer, your version must remain free and open-source.
+**Why AGPL-3.0?** We believe in keeping video tools accessible to all creators while preventing commercial exploitation. If you use or modify ViTransfer, your version must remain free and open-source.
 
 ---
 
-## 💬 Support
+## Support
 
-- 🐛 **Issues:** [GitHub Issues](https://github.com/MansiVisuals/ViTransfer/issues)
-- 📖 **Documentation:** This README and inline code comments
-- 💬 **Discussions:** [GitHub Discussions](https://github.com/MansiVisuals/ViTransfer/discussions)
-- 🐳 **Docker Hub:** [crypt010/vitransfer](https://hub.docker.com/r/crypt010/vitransfer)
+- **Issues:** [GitHub Issues](https://github.com/MansiVisuals/ViTransfer/issues)
+- **Documentation:** This README and inline code comments
+- **Discussions:** [GitHub Discussions](https://github.com/MansiVisuals/ViTransfer/discussions)
+- **Docker Hub:** [crypt010/vitransfer](https://hub.docker.com/r/crypt010/vitransfer)
 
 ---
 
-## 💖 Support Development
+## Support Development
 
 If ViTransfer helps you in your work, consider supporting its development:
 
 <a href='https://ko-fi.com/E1E215DBM4' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
 Your support helps fund:
-- 🚀 New features and improvements
-- 🐛 Bug fixes and maintenance
-- 📖 Better documentation
-- 🎯 Faster development towards v1.0
+- New features and improvements
+- Bug fixes and maintenance
+- Better documentation
+- Faster development towards v1.0
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 Built with:
 - [Next.js](https://nextjs.org/) - React framework
@@ -515,4 +593,4 @@ Built with:
 
 ---
 
-**Made with ❤️ for filmmakers and video professionals**
+Made for filmmakers and video professionals

@@ -241,6 +241,10 @@ export async function PATCH(
       updateData.watermarkText = body.watermarkText || null
     }
 
+    if (body.allowAssetDownload !== undefined) {
+      updateData.allowAssetDownload = body.allowAssetDownload
+    }
+
     // Handle password update - only update if actually changed
     let passwordWasChanged = false
     if (body.sharePassword !== undefined) {

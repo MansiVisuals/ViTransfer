@@ -35,6 +35,7 @@ interface Project {
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
+  allowAssetDownload: boolean
   clientNotificationSchedule: string
   clientNotificationTime: string | null
   clientNotificationDay: number | null
@@ -70,6 +71,7 @@ export default function ProjectSettingsPage() {
   const [watermarkEnabled, setWatermarkEnabled] = useState(true)
   const [watermarkText, setWatermarkText] = useState('')
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
+  const [allowAssetDownload, setAllowAssetDownload] = useState(true)
 
   // Notification settings state
   const [clientNotificationSchedule, setClientNotificationSchedule] = useState('HOURLY')
@@ -145,6 +147,7 @@ export default function ProjectSettingsPage() {
         setWatermarkEnabled(data.watermarkEnabled ?? true)
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
+        setAllowAssetDownload(data.allowAssetDownload ?? true)
         setSharePassword(data.sharePasswordDecrypted || '')
         setAuthMode(data.authMode || 'PASSWORD')
         setGuestMode(data.guestMode || false)
@@ -236,6 +239,7 @@ export default function ProjectSettingsPage() {
         previewResolution,
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
+        allowAssetDownload,
         sharePassword: sharePassword || null,
         authMode,
         guestMode,
@@ -659,6 +663,22 @@ export default function ProjectSettingsPage() {
                     )}
                   </>
                 )}
+              </div>
+
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="allowAssetDownload">Allow Asset Downloads</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow clients to download additional project assets (images, audio, project files) when the video is approved
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowAssetDownload"
+                    checked={allowAssetDownload}
+                    onCheckedChange={setAllowAssetDownload}
+                  />
+                </div>
               </div>
             </CardContent>
             )}

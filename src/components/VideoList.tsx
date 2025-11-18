@@ -7,8 +7,10 @@ import { Progress } from './ui/progress'
 import { Button } from './ui/button'
 import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
-import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare } from 'lucide-react'
+import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare, Upload } from 'lucide-react'
 import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
+import { VideoAssetUpload } from './VideoAssetUpload'
+import { VideoAssetList } from './VideoAssetList'
 
 interface VideoListProps {
   videos: Video[]
@@ -26,6 +28,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   const [showReprocessModal, setShowReprocessModal] = useState(false)
   const [pendingVideoUpdate, setPendingVideoUpdate] = useState<{ videoId: string; newLabel: string } | null>(null)
   const [reprocessing, setReprocessing] = useState(false)
+  const [uploadingAssetsFor, setUploadingAssetsFor] = useState<string | null>(null)
+  const [assetRefreshTrigger, setAssetRefreshTrigger] = useState(0)
 
   // Poll for updates when there are processing videos
   useEffect(() => {
@@ -208,6 +212,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 <p className="text-sm text-muted-foreground break-all">{video.originalFileName}</p>
               )}
             </div>
+            {/* Action icons - right side on all screen sizes */}
             {editingId !== video.id && (
               <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Only show status badge for PROCESSING and ERROR states */}
@@ -253,6 +258,17 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                     title="Show Feedback & Discussion"
                   >
                     <MessageSquare className="w-4 h-4" />
+                  </Button>
+                )}
+                {isAdmin && video.status === 'READY' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setUploadingAssetsFor(uploadingAssetsFor === video.id ? null : video.id)}
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    title="Upload Assets"
+                  >
+                    <Upload className="w-4 h-4" />
                   </Button>
                 )}
                 {isAdmin && (
@@ -309,6 +325,37 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 <p className="text-muted-foreground">Size</p>
                 <p className="font-medium">{formatFileSize(Number(video.originalFileSize))}</p>
               </div>
+            </div>
+          )}
+
+          {/* Asset upload section */}
+          {isAdmin && uploadingAssetsFor === video.id && video.status === 'READY' && (
+            <div className="mt-4 pt-4 border-t space-y-4">
+              <div>
+                <h5 className="text-sm font-medium mb-3">Upload Additional Assets</h5>
+                <VideoAssetUpload
+                  videoId={video.id}
+                  onUploadComplete={() => {
+                    setUploadingAssetsFor(null)
+                    setAssetRefreshTrigger(prev => prev + 1) // Trigger asset list refresh
+                    onRefresh?.()
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Asset list section - always visible for READY videos if admin */}
+          {isAdmin && video.status === 'READY' && (
+            <div className="mt-4 pt-4 border-t">
+              <VideoAssetList
+                videoId={video.id}
+                onAssetDeleted={() => {
+                  setAssetRefreshTrigger(prev => prev + 1)
+                  onRefresh?.()
+                }}
+                refreshTrigger={assetRefreshTrigger}
+              />
             </div>
           )}
         </div>

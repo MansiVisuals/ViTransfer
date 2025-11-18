@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './ui/dialog'
+import { VideoAssetDownloadModal } from './VideoAssetDownloadModal'
 
 interface VideoPlayerProps {
   videos: Video[]
@@ -27,9 +28,11 @@ interface VideoPlayerProps {
   isPasswordProtected?: boolean
   watermarkEnabled?: boolean
   isAdmin?: boolean // Admin users can see all versions (default: false for clients)
+  isGuest?: boolean // Guest mode - limited view (videos only, no downloads)
   activeVideoName?: string // The video group name (for maintaining selection after reload)
   initialSeekTime?: number | null // Initial timestamp to seek to (from URL params)
   initialVideoIndex?: number // Initial video index to select (from URL params)
+  allowAssetDownload?: boolean // Allow clients to download assets
 }
 
 export default function VideoPlayer({
@@ -44,9 +47,11 @@ export default function VideoPlayer({
   isPasswordProtected,
   watermarkEnabled = true,
   isAdmin = false, // Default to false (client view)
+  isGuest = false, // Default to false (full client view)
   activeVideoName,
   initialSeekTime = null,
-  initialVideoIndex = 0
+  initialVideoIndex = 0,
+  allowAssetDownload = true
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
@@ -55,6 +60,9 @@ export default function VideoPlayer({
   const [showInfoDialog, setShowInfoDialog] = useState(false)
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [hasAssets, setHasAssets] = useState(false)
+  const [checkingAssets, setCheckingAssets] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
@@ -227,14 +235,40 @@ export default function VideoPlayer({
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     // Use secure token-based download URL
     const downloadUrl = (selectedVideo as any).downloadUrl
-    if (downloadUrl) {
-      window.open(downloadUrl, '_blank')
-    } else {
+    if (!downloadUrl) {
       alert('Download is only available for approved projects')
+      return
     }
+
+    // Check if assets are available and asset downloads are allowed
+    if (allowAssetDownload && !isGuest && !isAdmin) {
+      setCheckingAssets(true)
+      try {
+        // Check if this video has assets
+        const response = await fetch(`/api/videos/${selectedVideo.id}/assets`, {
+          credentials: 'include'
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.assets && data.assets.length > 0) {
+            setHasAssets(true)
+            setShowDownloadModal(true)
+            setCheckingAssets(false)
+            return
+          }
+        }
+      } catch (err) {
+        // If checking fails, just proceed with direct download
+      }
+      setCheckingAssets(false)
+    }
+
+    // Direct download if no assets or not allowed
+    window.open(downloadUrl, '_blank')
   }
 
   const handleApprove = async () => {
@@ -399,8 +433,8 @@ export default function VideoPlayer({
               </DialogContent>
             </Dialog>
 
-            {/* Download Button - Only show when video is approved */}
-            {isVideoApproved && (
+            {/* Download Button - Only show when video is approved and not in guest mode */}
+            {isVideoApproved && !isGuest && (
               <Button onClick={handleDownload} variant="default" size="sm">
                 <Download className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Download</span>
@@ -508,6 +542,17 @@ export default function VideoPlayer({
           </div>
         )}
       </div>
+
+      {/* Download Modal - Only for clients with assets */}
+      {showDownloadModal && hasAssets && (
+        <VideoAssetDownloadModal
+          videoId={selectedVideo.id}
+          videoName={(selectedVideo as any).name || ''}
+          versionLabel={selectedVideo.versionLabel}
+          isOpen={showDownloadModal}
+          onClose={() => setShowDownloadModal(false)}
+        />
+      )}
     </div>
   )
 }

@@ -34,27 +34,83 @@ export async function GET(
     }, `share-access:${token}`)
     if (rateLimitResult) return rateLimitResult
 
-    // Always show all ready videos, regardless of project approval status
-    // Individual videos can be approved independently
-    const videoFilter = { status: 'READY' as const }
+    // SECURITY: Check if this is a guest session BEFORE fetching videos
+    const cookieStore = await cookies()
+    let sessionId = cookieStore.get('share_session')?.value
+    const redis = await getRedis()
+    const isGuestSession = sessionId ? await redis.exists(`guest_session:${sessionId}`) : 0
+    const isGuest = isGuestSession === 1
 
-    // Fetch project with videos (comments loaded separately for security)
-    const project = await prisma.project.findUnique({
+    // First, fetch project metadata to check guestLatestOnly setting
+    const projectMeta = await prisma.project.findUnique({
       where: { slug: token },
-      include: {
-        videos: {
-          where: videoFilter,
-          orderBy: { version: 'desc' },
-        },
+      select: {
+        id: true,
+        guestLatestOnly: true,
+        sharePassword: true,
+        authMode: true,
       },
     })
+
+    if (!projectMeta) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // SECURITY: For guests with guestLatestOnly, we need to fetch only latest versions
+    // This prevents data leakage via API inspection
+    let project
+    if (isGuest && projectMeta.guestLatestOnly) {
+      // Fetch all ready videos to determine latest per name
+      const allVideos = await prisma.video.findMany({
+        where: {
+          projectId: projectMeta.id,
+          status: 'READY',
+        },
+        orderBy: { version: 'desc' },
+      })
+
+      // Group by name and get latest version ID for each
+      const latestVideoIds: string[] = []
+      const seenNames = new Set<string>()
+      for (const video of allVideos) {
+        if (!seenNames.has(video.name)) {
+          latestVideoIds.push(video.id)
+          seenNames.add(video.name)
+        }
+      }
+
+      // Now fetch full project with ONLY the latest videos
+      project = await prisma.project.findUnique({
+        where: { slug: token },
+        include: {
+          videos: {
+            where: {
+              id: { in: latestVideoIds },
+              status: 'READY',
+            },
+            orderBy: { version: 'desc' },
+          },
+        },
+      })
+    } else {
+      // For non-guests or guests without latestOnly, fetch all ready videos
+      project = await prisma.project.findUnique({
+        where: { slug: token },
+        include: {
+          videos: {
+            where: { status: 'READY' as const },
+            orderBy: { version: 'desc' },
+          },
+        },
+      })
+    }
 
     if (!project) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // Verify project access using dual auth pattern
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
+    const accessCheck = await verifyProjectAccess(request, projectMeta.id, projectMeta.sharePassword, projectMeta.authMode)
 
     if (!accessCheck.authorized) {
       // Return password required error for share page
@@ -69,8 +125,6 @@ export async function GET(
     const { isAdmin } = accessCheck
 
     // Get or create session ID for this share access
-    const cookieStore = await cookies()
-    let sessionId = cookieStore.get('share_session')?.value
     let isNewSession = false
 
     // Get configurable client session timeout and HTTPS setting
@@ -95,14 +149,10 @@ export async function GET(
     }
 
     // Store session → project mapping in Redis (always, for new or existing sessions)
-    const redis = await getRedis()
     // Add project to session's authorized projects set
     await redis.sadd(`session_projects:${sessionId}`, project.id)
     // Refresh TTL on the entire set
     await redis.expire(`session_projects:${sessionId}`, sessionTimeoutSeconds)
-
-    // Check if this is a guest session
-    const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
 
     if (isNewSession) {
       // Track page visit for new sessions only (don't count admins)
@@ -202,13 +252,8 @@ export async function GET(
       videosByName[name].sort((a: any, b: any) => b.version - a.version)
     })
 
-    // If guest mode is enabled and guest can only view latest version, filter to latest only
-    if (isGuestSession === 1 && project.guestLatestOnly) {
-      Object.keys(videosByName).forEach(name => {
-        // Keep only the first video (latest version) after sorting
-        videosByName[name] = [videosByName[name][0]]
-      })
-    }
+    // Note: For guests with guestLatestOnly, filtering already happened at DB level
+    // So videosByName and videosWithTokens already contain only allowed videos
 
     // Sort video groups by approval status (unapproved first, approved last)
     // This helps clients see which videos still need approval at the top
@@ -257,37 +302,86 @@ export async function GET(
         }))
     }
 
+    // SECURITY: Sanitize video data for guests
+    // Guests should only see minimal information required for playback
+    const sanitizedVideos = isGuest ? videosWithTokens.map(video => ({
+      id: video.id,
+      name: video.name,
+      version: video.version,
+      versionLabel: video.versionLabel,
+      duration: video.duration,
+      width: video.width,
+      height: video.height,
+      fps: video.fps,
+      status: video.status,
+      streamUrl720p: video.streamUrl720p,
+      streamUrl1080p: video.streamUrl1080p,
+      downloadUrl: video.downloadUrl,
+    })) : videosWithTokens
+
+    // SECURITY: Sanitize videosByName for guests
+    const sanitizedVideosByName = isGuest ? Object.keys(sortedVideosByName).reduce((acc: any, name: string) => {
+      acc[name] = sortedVideosByName[name].map(video => ({
+        id: video.id,
+        name: video.name,
+        version: video.version,
+        versionLabel: video.versionLabel,
+        duration: video.duration,
+        width: video.width,
+        height: video.height,
+        fps: video.fps,
+        status: video.status,
+        streamUrl720p: video.streamUrl720p,
+        streamUrl1080p: video.streamUrl1080p,
+        downloadUrl: video.downloadUrl,
+      }))
+      return acc
+    }, {}) : sortedVideosByName
+
     // SECURITY: Sanitize project data - only send required fields
     // Never expose: sharePassword, createdById, watermarkText, internal IDs
     const projectData = {
-      id: project.id,
+      // Only include project ID for non-guests (needed for admin operations)
+      ...(isGuest ? {} : { id: project.id }),
+
       title: project.title,
       description: project.description,
-      status: project.status,
+
+      // Only include status for non-guests (internal workflow info)
+      ...(isGuest ? {} : { status: project.status }),
+
       guestMode: project.guestMode || false,
-      isGuest: isGuestSession === 1, // Tell frontend if this is a guest session
+      isGuest: isGuest, // Tell frontend if this is a guest session
 
       // SECURITY: Only include clientName/clientEmail for password-protected shares OR admins (NOT for guests)
       // Rationale: Password protection implies client expects privacy
       // Non-protected shares remain anonymous for client safety
-      ...((project.sharePassword || isAdmin) && !isGuestSession ? {
+      ...((project.sharePassword || isAdmin) && !isGuest ? {
         clientName: project.companyName || primaryRecipient?.name || 'Client',
         clientEmail: primaryRecipient?.email || null,
         companyName: project.companyName || null, // Client company name for comment display
         recipients: allRecipients, // All recipients for comment author selection
       } : {}),
 
-      enableRevisions: project.enableRevisions,
-      maxRevisions: project.maxRevisions,
-      restrictCommentsToLatestVersion: project.restrictCommentsToLatestVersion,
-      hideFeedback: project.hideFeedback,
-      previewResolution: project.previewResolution,
-      watermarkEnabled: project.watermarkEnabled,
+      // Only include these settings for non-guests (internal project configuration)
+      ...(isGuest ? {} : {
+        enableRevisions: project.enableRevisions,
+        maxRevisions: project.maxRevisions,
+        restrictCommentsToLatestVersion: project.restrictCommentsToLatestVersion,
+        hideFeedback: project.hideFeedback,
+        previewResolution: project.previewResolution,
+        watermarkEnabled: project.watermarkEnabled,
+      }),
 
-      // Processed data
-      videos: videosWithTokens,
-      videosByName: sortedVideosByName,
-      smtpConfigured,
+      // Asset download setting needed for UI logic (show/hide download button)
+      allowAssetDownload: project.allowAssetDownload,
+
+      // Processed data (sanitized for guests)
+      videos: sanitizedVideos,
+      videosByName: sanitizedVideosByName,
+
+      // Only include SMTP status for non-guests (needed for notification features)
+      ...(isGuest ? {} : { smtpConfigured }),
 
       // Global settings (safe to expose publicly)
       settings: {

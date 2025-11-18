@@ -59,6 +59,9 @@ model Project {
   watermarkEnabled  Boolean @default(true) // Enable/disable watermarks for this project
   watermarkText     String? // Custom watermark text (null = use default format)
 
+  // Asset download settings
+  allowAssetDownload Boolean @default(true) // Allow clients to download video assets when project is approved
+
   // Client notification settings (per-project)
   // Note: Approval emails are always IMMEDIATE regardless of this setting
   clientNotificationSchedule String    @default("HOURLY") // IMMEDIATE, HOURLY, DAILY, WEEKLY
@@ -136,9 +139,33 @@ model Video {
 
   project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   analytics VideoAnalytics[]
+  assets    VideoAsset[]
 
   @@index([projectId, version])
   @@index([projectId, name])
+}
+
+model VideoAsset {
+  id       String @id @default(cuid())
+  videoId  String
+  video    Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // File information
+  fileName     String // Original filename (e.g., "project.prproj", "music.mp3", "photo.jpg")
+  fileSize     BigInt
+  fileType     String // MIME type (e.g., "application/octet-stream", "image/jpeg", "audio/mpeg")
+  storagePath  String // Path in storage system
+  category     String? // Optional category: "image", "audio", "project", "other"
+
+  // Upload metadata
+  uploadedBy   String? // User ID or "client" for client uploads
+  uploadedByName String? // Display name of uploader
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([videoId])
+  @@index([videoId, category])
 }
 
 enum VideoStatus {

@@ -550,8 +550,8 @@ export default function SharePage() {
               </div>
             )}
 
-            {/* Guest Entry Button */}
-            {guestMode && (
+            {/* Guest Entry Button - hide when OTP code is being entered */}
+            {guestMode && !otpSent && (
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -671,6 +671,8 @@ export default function SharePage() {
                   initialSeekTime={initialSeekTime}
                   initialVideoIndex={initialVideoIndex}
                   isAdmin={!!adminUser}
+                  isGuest={isGuest}
+                  allowAssetDownload={project.allowAssetDownload}
                 />
               </div>
 

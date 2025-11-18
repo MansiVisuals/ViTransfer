@@ -1,0 +1,168 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { getCurrentUserFromRequest, requireApiAdmin } from '@/lib/auth'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { rateLimit } from '@/lib/rate-limit'
+import { verifyProjectAccess } from '@/lib/project-access'
+
+// GET /api/videos/[id]/assets - List all assets for a video
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: videoId } = await params
+
+  // Rate limiting
+  const rateLimitResult = await rateLimit(
+    request,
+    {
+      windowMs: 60 * 1000,
+      maxRequests: 60,
+      message: 'Too many requests. Please slow down.',
+    },
+    'video-assets-list'
+  )
+  if (rateLimitResult) return rateLimitResult
+
+  try {
+    // Verify video exists
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      include: {
+        project: true,
+      },
+    })
+
+    if (!video) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
+
+    const project = video.project
+
+    // SECURITY: Verify user has access to this project (admin OR valid share session)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
+    if (!accessCheck.authorized) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // For non-admins, check if asset downloads are allowed
+    if (!accessCheck.isAdmin && !project.allowAssetDownload) {
+      return NextResponse.json(
+        { error: 'Asset downloads are not allowed for this project' },
+        { status: 403 }
+      )
+    }
+
+    // Get all assets for this video
+    const assets = await prisma.videoAsset.findMany({
+      where: { videoId },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    // Convert BigInt to string for JSON serialization
+    const serializedAssets = assets.map(asset => ({
+      ...asset,
+      fileSize: asset.fileSize.toString(),
+    }))
+
+    return NextResponse.json({ assets: serializedAssets })
+  } catch (error) {
+    console.error('Error fetching video assets:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch video assets' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/videos/[id]/assets - Create asset record for TUS upload
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: videoId } = await params
+
+  // Authentication
+  const authResult = await requireApiAdmin(request)
+  if (authResult instanceof Response) {
+    return authResult
+  }
+
+  // CSRF Protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
+
+  // Rate limiting
+  const rateLimitResult = await rateLimit(
+    request,
+    {
+      windowMs: 60 * 1000,
+      maxRequests: 50,
+      message: 'Too many upload requests. Please slow down.',
+    },
+    'video-assets-create'
+  )
+  if (rateLimitResult) return rateLimitResult
+
+  try {
+    // Verify video exists
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      include: {
+        project: true,
+      },
+    })
+
+    if (!video) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
+
+    // Get current user for tracking
+    const currentUser = await getCurrentUserFromRequest(request)
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Parse request body
+    const body = await request.json()
+    const { fileName, fileSize, category } = body
+
+    // Validate required fields
+    if (!fileName || !fileSize) {
+      return NextResponse.json(
+        { error: 'fileName and fileSize are required' },
+        { status: 400 }
+      )
+    }
+
+    // Create storage path
+    const timestamp = Date.now()
+    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 255)
+    const storagePath = `projects/${video.projectId}/videos/assets/${videoId}/asset-${timestamp}-${sanitizedFileName}`
+
+    // Create database record (TUS will upload the file later)
+    const asset = await prisma.videoAsset.create({
+      data: {
+        videoId,
+        fileName,
+        fileSize: BigInt(fileSize),
+        fileType: 'application/octet-stream', // Will be detected by file-type library
+        storagePath,
+        category: category || null,
+        uploadedBy: currentUser.id,
+        uploadedByName: currentUser.name || currentUser.email,
+      },
+    })
+
+    // Return assetId for TUS upload
+    return NextResponse.json({
+      assetId: asset.id,
+    })
+  } catch (error) {
+    console.error('Error creating video asset:', error)
+    return NextResponse.json(
+      { error: 'Failed to create video asset' },
+      { status: 500 }
+    )
+  }
+}

@@ -56,6 +56,8 @@ export async function PATCH(
             id: true,
             sharePassword: true,
             companyName: true,
+            hideFeedback: true,
+            guestMode: true,
             recipients: {
               where: { isPrimary: true },
               take: 1,
@@ -73,6 +75,34 @@ export async function PATCH(
         { error: 'Comment not found' },
         { status: 404 }
       )
+    }
+
+    // SECURITY: If feedback is hidden, reject comment updates
+    if (existingComment.project.hideFeedback) {
+      return NextResponse.json(
+        { error: 'Comments are disabled for this project' },
+        { status: 403 }
+      )
+    }
+
+    // SECURITY: Block guest comment updates (guests should only view videos)
+    if (existingComment.project.guestMode) {
+      const { cookies } = await import('next/headers')
+      const { getRedis } = await import('@/lib/redis')
+      const cookieStore = await cookies()
+      const sessionId = cookieStore.get('share_session')?.value
+
+      if (sessionId) {
+        const redis = await getRedis()
+        const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
+
+        if (isGuestSession === 1) {
+          return NextResponse.json(
+            { error: 'Comments are disabled for guest users' },
+            { status: 403 }
+          )
+        }
+      }
     }
 
     // Verify project access using dual auth pattern

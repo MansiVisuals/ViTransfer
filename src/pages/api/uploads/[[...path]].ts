@@ -16,7 +16,7 @@ if (!fs.existsSync(TUS_UPLOAD_DIR)) {
 }
 
 // Configure TUS server with file store
-const tusServer = new Server({
+const tusServer: Server = new Server({
   path: '/api/uploads',
   datastore: new FileStore({
     directory: TUS_UPLOAD_DIR,
@@ -58,31 +58,50 @@ const tusServer = new Server({
         }
       }
 
-      // SECURITY: Validate videoId exists in metadata
+      // Determine upload type: video or asset
       const videoId = upload.metadata?.videoId as string
-      if (!videoId) {
+      const assetId = upload.metadata?.assetId as string
+
+      // Must have either videoId (for video) or assetId (for asset)
+      if (!videoId && !assetId) {
         throw {
           status_code: 400,
-          body: 'Missing required metadata: videoId'
+          body: 'Missing required metadata: videoId or assetId'
         }
       }
 
-      // SECURITY: Verify video record exists and is in UPLOADING state
-      const video = await prisma.video.findUnique({
-        where: { id: videoId }
-      })
+      // VIDEO UPLOAD: Verify video record exists and is in UPLOADING state
+      if (videoId) {
+        const video = await prisma.video.findUnique({
+          where: { id: videoId }
+        })
 
-      if (!video) {
-        throw {
-          status_code: 404,
-          body: 'Video record not found'
+        if (!video) {
+          throw {
+            status_code: 404,
+            body: 'Video record not found'
+          }
+        }
+
+        if (video.status !== 'UPLOADING') {
+          throw {
+            status_code: 400,
+            body: 'Video is not in UPLOADING state'
+          }
         }
       }
 
-      if (video.status !== 'UPLOADING') {
-        throw {
-          status_code: 400,
-          body: 'Video is not in UPLOADING state'
+      // ASSET UPLOAD: Verify asset record exists
+      if (assetId) {
+        const asset = await prisma.videoAsset.findUnique({
+          where: { id: assetId }
+        })
+
+        if (!asset) {
+          throw {
+            status_code: 404,
+            body: 'Asset record not found'
+          }
         }
       }
 
@@ -93,195 +112,281 @@ const tusServer = new Server({
     }
   },
 
-  // When upload completes, process the video
+  // When upload completes, process the video or asset
   async onUploadFinish(req, upload) {
     const tusFilePath = path.join(TUS_UPLOAD_DIR, upload.id)
+    const videoId = upload.metadata?.videoId as string
+    const assetId = upload.metadata?.assetId as string
 
     try {
-      // Extract video ID from metadata
-      const videoId = upload.metadata?.videoId as string
-      if (!videoId) {
-        console.error('[UPLOAD] No videoId in upload metadata')
+      // Route to appropriate handler
+      if (videoId) {
+        return await handleVideoUploadFinish(tusFilePath, upload, videoId, tusServer)
+      } else if (assetId) {
+        return await handleAssetUploadFinish(tusFilePath, upload, assetId, tusServer)
+      } else {
+        console.error('[UPLOAD] No videoId or assetId in upload metadata')
         return {}
       }
-
-      // Get video record
-      const video = await prisma.video.findUnique({
-        where: { id: videoId }
-      })
-
-      if (!video) {
-        console.error(`[UPLOAD] Video not found: ${videoId}`)
-        return {}
-      }
-
-      // SECURITY: Verify the uploaded file exists
-      if (!fs.existsSync(tusFilePath)) {
-        console.error(`[UPLOAD] File not found: ${tusFilePath}`)
-        throw new Error('Uploaded file not found on disk')
-      }
-
-      // SECURITY: Verify file size matches expected size
-      const fileStats = fs.statSync(tusFilePath)
-      const fileSize = fileStats.size
-
-      if (upload.size && fileSize !== upload.size) {
-        console.error(
-          `[UPLOAD] File size mismatch for ${videoId}: ` +
-          `expected ${upload.size} bytes, got ${fileSize} bytes`
-        )
-        throw new Error(
-          `File size mismatch: expected ${upload.size} bytes, got ${fileSize} bytes. ` +
-          `Upload may have been interrupted.`
-        )
-      }
-
-      // VALIDATION: Check file extension
-      const filename = upload.metadata?.filename as string
-      if (filename) {
-        const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
-        const allowedExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv']
-
-        if (!allowedExtensions.includes(ext)) {
-          console.error(`[UPLOAD] Invalid file extension: ${ext}`)
-
-          // Clean up the invalid file immediately
-          try {
-            fs.unlinkSync(tusFilePath)
-            const metadataPath = `${tusFilePath}.json`
-            if (fs.existsSync(metadataPath)) {
-              fs.unlinkSync(metadataPath)
-            }
-          } catch (cleanupErr) {
-            console.error('[UPLOAD] Failed to cleanup invalid file:', cleanupErr)
-          }
-
-          throw new Error(
-            `Invalid file extension: ${ext}. Allowed video formats: ${allowedExtensions.join(', ')}`
-          )
-        }
-      }
-
-      // SECURITY: Validate file magic bytes (file signature)
-      // This prevents malware disguised with video extensions
-      try {
-        const { fileTypeFromFile } = await import('file-type')
-        const fileType = await fileTypeFromFile(tusFilePath)
-
-        const allowedMimeTypes = [
-          'video/mp4',
-          'video/quicktime',      // .mov
-          'video/x-msvideo',      // .avi
-          'video/webm',
-          'video/x-matroska'      // .mkv
-        ]
-
-        if (!fileType || !allowedMimeTypes.includes(fileType.mime)) {
-          console.error(`[UPLOAD] Invalid file type. Detected: ${fileType?.mime || 'unknown'}`)
-
-          // Clean up the invalid file immediately
-          try {
-            fs.unlinkSync(tusFilePath)
-            const metadataPath = `${tusFilePath}.json`
-            if (fs.existsSync(metadataPath)) {
-              fs.unlinkSync(metadataPath)
-            }
-          } catch (cleanupErr) {
-            console.error('[UPLOAD] Failed to cleanup invalid file:', cleanupErr)
-          }
-
-          throw new Error(
-            `Invalid video file. File appears to be ${fileType?.mime || 'unknown'}, not a valid video format.`
-          )
-        }
-
-        console.log(`[UPLOAD] File type validation passed: ${fileType.mime}`)
-      } catch (error) {
-        // If file-type library fails to load, log warning but don't fail the upload
-        // This ensures backwards compatibility if the library has issues
-        if (error instanceof Error && error.message.includes('Invalid video file')) {
-          // Re-throw validation errors
-          throw error
-        }
-        console.warn('[UPLOAD] File type validation skipped:', error)
-      }
-
-      // Import storage functions
-      const { uploadFile, initStorage } = await import('@/lib/storage')
-
-      // Initialize storage
-      await initStorage()
-
-      // CRITICAL: Use tusServer.datastore.read() instead of fs.createReadStream()
-      // The FileStore stores files with metadata, and .read() properly extracts just the file content
-      // Using fs.createReadStream() directly would read the raw storage format, causing file corruption
-      const fileStream = (tusServer.datastore as any).read(upload.id)
-
-      // Upload to permanent storage with proper stream handling
-      // The uploadFile function uses pipeline() which:
-      // - Waits for both read and write streams to complete
-      // - Properly handles errors from both streams
-      // - Verifies file size after upload
-      await uploadFile(
-        video.originalStoragePath,
-        fileStream,
-        fileSize,
-        upload.metadata?.filetype as string || 'video/mp4'
-      )
-
-      // Queue video processing
-      await videoQueue.add('process-video', {
-        videoId: video.id,
-        originalStoragePath: video.originalStoragePath,
-        projectId: video.projectId,
-      })
-
-      // Clean up TUS file ONLY after successful upload and verification
-      try {
-        fs.unlinkSync(tusFilePath)
-        // Also try to clean up the metadata file
-        const metadataPath = `${tusFilePath}.json`
-        if (fs.existsSync(metadataPath)) {
-          fs.unlinkSync(metadataPath)
-        }
-      } catch (cleanupError) {
-        console.error('[UPLOAD] Failed to cleanup TUS files:', cleanupError)
-        // Don't throw - cleanup failure is not critical
-      }
-
-      return {}
     } catch (error) {
       console.error('[UPLOAD] Error in onUploadFinish:', error)
+      await cleanupTUSFile(tusFilePath)
 
-      // Clean up TUS file on error
-      try {
-        if (fs.existsSync(tusFilePath)) {
-          fs.unlinkSync(tusFilePath)
-        }
-      } catch (cleanupError) {
-        console.error('[UPLOAD] Failed to cleanup TUS file after error:', cleanupError)
-      }
-
-      // Mark video as ERROR if processing fails
-      const videoId = upload.metadata?.videoId as string
+      // Mark video/asset as ERROR
       if (videoId) {
-        try {
-          await prisma.video.update({
-            where: { id: videoId },
-            data: {
-              status: 'ERROR',
-              processingError: error instanceof Error ? error.message : 'Unknown upload error'
-            }
-          })
-        } catch (dbError) {
-          console.error('[UPLOAD] Failed to mark video as ERROR:', dbError)
-        }
+        await markVideoAsError(videoId, error)
       }
 
       throw error
     }
   }
 })
+
+// Helper: Handle video upload completion
+async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId: string, tusServer: any) {
+  // Get video record
+  const video = await prisma.video.findUnique({
+    where: { id: videoId }
+  })
+
+  if (!video) {
+    console.error(`[UPLOAD] Video not found: ${videoId}`)
+    return {}
+  }
+
+  // Verify file exists and size matches
+  const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
+
+  // Validate video file type
+  await validateVideoFile(tusFilePath, upload.metadata?.filename as string)
+
+  // Import storage functions
+  const { uploadFile, initStorage } = await import('@/lib/storage')
+  await initStorage()
+
+  // Use TUS datastore to read file (proper way to extract content)
+  const fileStream = (tusServer.datastore as any).read(upload.id)
+
+  // Upload to permanent storage
+  await uploadFile(
+    video.originalStoragePath,
+    fileStream,
+    fileSize,
+    upload.metadata?.filetype as string || 'video/mp4'
+  )
+
+  // Queue video processing
+  await videoQueue.add('process-video', {
+    videoId: video.id,
+    originalStoragePath: video.originalStoragePath,
+    projectId: video.projectId,
+  })
+
+  // Clean up TUS file
+  await cleanupTUSFile(tusFilePath)
+
+  return {}
+}
+
+// Helper: Handle asset upload completion
+async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId: string, tusServer: any) {
+  // Get asset record
+  const asset = await prisma.videoAsset.findUnique({
+    where: { id: assetId }
+  })
+
+  if (!asset) {
+    console.error(`[UPLOAD] Asset not found: ${assetId}`)
+    return {}
+  }
+
+  // Verify file exists and size matches
+  const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
+
+  // Validate asset file type
+  await validateAssetFile(tusFilePath, upload.metadata?.filename as string)
+
+  // Import storage functions
+  const { uploadFile, initStorage } = await import('@/lib/storage')
+  await initStorage()
+
+  // Use TUS datastore to read file
+  const fileStream = (tusServer.datastore as any).read(upload.id)
+
+  // Upload to permanent storage
+  await uploadFile(
+    asset.storagePath,
+    fileStream,
+    fileSize,
+    upload.metadata?.filetype as string || 'application/octet-stream'
+  )
+
+  // Clean up TUS file
+  await cleanupTUSFile(tusFilePath)
+
+  return {}
+}
+
+// Helper: Verify uploaded file exists and size matches
+async function verifyUploadedFile(tusFilePath: string, expectedSize?: number): Promise<number> {
+  if (!fs.existsSync(tusFilePath)) {
+    throw new Error('Uploaded file not found on disk')
+  }
+
+  const fileStats = fs.statSync(tusFilePath)
+  const fileSize = fileStats.size
+
+  if (expectedSize && fileSize !== expectedSize) {
+    await cleanupTUSFile(tusFilePath)
+    throw new Error(
+      `File size mismatch: expected ${expectedSize} bytes, got ${fileSize} bytes. ` +
+      `Upload may have been interrupted.`
+    )
+  }
+
+  return fileSize
+}
+
+// Helper: Validate video file type
+async function validateVideoFile(tusFilePath: string, filename?: string) {
+  // Check file extension
+  if (filename) {
+    const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
+    const allowedExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv']
+
+    if (!allowedExtensions.includes(ext)) {
+      await cleanupTUSFile(tusFilePath)
+      throw new Error(
+        `Invalid file extension: ${ext}. Allowed video formats: ${allowedExtensions.join(', ')}`
+      )
+    }
+  }
+
+  // Validate file magic bytes
+  try {
+    const { fileTypeFromFile } = await import('file-type')
+    const fileType = await fileTypeFromFile(tusFilePath)
+
+    const allowedMimeTypes = [
+      'video/mp4',
+      'video/quicktime',      // .mov
+      'video/x-msvideo',      // .avi
+      'video/webm',
+      'video/x-matroska'      // .mkv
+    ]
+
+    if (!fileType || !allowedMimeTypes.includes(fileType.mime)) {
+      await cleanupTUSFile(tusFilePath)
+      throw new Error(
+        `Invalid video file. File appears to be ${fileType?.mime || 'unknown'}, not a valid video format.`
+      )
+    }
+
+    console.log(`[UPLOAD] File type validation passed: ${fileType.mime}`)
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Invalid video file')) {
+      throw error
+    }
+    console.warn('[UPLOAD] File type validation skipped:', error)
+  }
+}
+
+// Helper: Validate asset file type
+async function validateAssetFile(tusFilePath: string, filename?: string) {
+  // Check file extension against strict whitelist (matches frontend validation)
+  if (filename) {
+    const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
+    const allowedExtensions = [
+      // Images
+      '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.psd', '.ai', '.eps',
+      // Audio
+      '.wav', '.mp3', '.aac', '.flac', '.m4a',
+      // Project files
+      '.prproj', '.drp', '.fcpbundle', '.fcpxml',
+      // Documents
+      '.pdf', '.txt', '.md',
+      // Archives
+      '.zip'
+    ]
+
+    if (!allowedExtensions.includes(ext)) {
+      await cleanupTUSFile(tusFilePath)
+      throw new Error(
+        `Invalid file extension: ${ext}. Allowed: ${allowedExtensions.join(', ')}`
+      )
+    }
+  }
+
+  // Validate file magic bytes for common types
+  try {
+    const { fileTypeFromFile } = await import('file-type')
+    const fileType = await fileTypeFromFile(tusFilePath)
+
+    // Allowed MIME types for assets (strict whitelist)
+    const allowedMimeTypes = [
+      // Images
+      'image/jpeg', 'image/png', 'image/tiff',
+      // Audio
+      'audio/mpeg', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/x-m4a',
+      // Documents
+      'application/pdf',
+      // Archives
+      'application/zip',
+      // Generic (for proprietary project files that don't have magic bytes)
+      'application/octet-stream'
+    ]
+
+    // Some project files don't have detectable magic bytes, so we allow null if extension is valid
+    if (fileType && !allowedMimeTypes.includes(fileType.mime)) {
+      await cleanupTUSFile(tusFilePath)
+      throw new Error(
+        `Invalid asset file. File appears to be ${fileType.mime}, which is not allowed.`
+      )
+    }
+
+    if (fileType) {
+      console.log(`[UPLOAD] Asset file type validation passed: ${fileType.mime}`)
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Invalid asset file')) {
+      throw error
+    }
+    console.warn('[UPLOAD] Asset file type validation skipped:', error)
+  }
+}
+
+// Helper: Clean up TUS file and metadata
+async function cleanupTUSFile(tusFilePath: string) {
+  try {
+    if (fs.existsSync(tusFilePath)) {
+      fs.unlinkSync(tusFilePath)
+    }
+    const metadataPath = `${tusFilePath}.json`
+    if (fs.existsSync(metadataPath)) {
+      fs.unlinkSync(metadataPath)
+    }
+  } catch (cleanupErr) {
+    console.error('[UPLOAD] Failed to cleanup TUS files:', cleanupErr)
+  }
+}
+
+// Helper: Mark video as ERROR
+async function markVideoAsError(videoId: string, error: any) {
+  try {
+    await prisma.video.update({
+      where: { id: videoId },
+      data: {
+        status: 'ERROR',
+        processingError: error instanceof Error ? error.message : 'Unknown upload error'
+      }
+    })
+  } catch (dbError) {
+    console.error('[UPLOAD] Failed to mark video as ERROR:', dbError)
+  }
+}
+
+// TUS server configuration (already defined above)
+const tusServer_ignore = tusServer // Prevent duplicate declaration error
 
 // CRITICAL: Pages Router configuration to disable body parsing
 // This is the ONLY way in Next.js to handle large file uploads without corruption

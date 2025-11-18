@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
         id: true,
         sharePassword: true,
         companyName: true,
+        hideFeedback: true,
+        guestMode: true,
       }
     })
 
@@ -55,6 +57,28 @@ export async function GET(request: NextRequest) {
         { error: 'Access denied' },
         { status: 403 }
       )
+    }
+
+    // SECURITY: If feedback is hidden, return empty array (don't expose comments)
+    if (project.hideFeedback) {
+      return NextResponse.json([])
+    }
+
+    // SECURITY: Block guest access to comments (guests should only see videos)
+    if (project.guestMode) {
+      const { cookies } = await import('next/headers')
+      const { getRedis } = await import('@/lib/redis')
+      const cookieStore = await cookies()
+      const sessionId = cookieStore.get('share_session')?.value
+
+      if (sessionId) {
+        const redis = await getRedis()
+        const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
+
+        if (isGuestSession === 1) {
+          return NextResponse.json([])
+        }
+      }
     }
 
     // Verify project access using dual auth pattern
@@ -177,6 +201,8 @@ export async function POST(request: NextRequest) {
         id: true,
         sharePassword: true,
         companyName: true,
+        hideFeedback: true,
+        guestMode: true,
       }
     })
 
@@ -185,6 +211,34 @@ export async function POST(request: NextRequest) {
         { error: 'Access denied' },
         { status: 403 }
       )
+    }
+
+    // SECURITY: If feedback is hidden, reject comment creation
+    if (project.hideFeedback) {
+      return NextResponse.json(
+        { error: 'Comments are disabled for this project' },
+        { status: 403 }
+      )
+    }
+
+    // SECURITY: Block guest comment creation (guests should only view videos)
+    if (project.guestMode) {
+      const { cookies } = await import('next/headers')
+      const { getRedis } = await import('@/lib/redis')
+      const cookieStore = await cookies()
+      const sessionId = cookieStore.get('share_session')?.value
+
+      if (sessionId) {
+        const redis = await getRedis()
+        const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
+
+        if (isGuestSession === 1) {
+          return NextResponse.json(
+            { error: 'Comments are disabled for guest users' },
+            { status: 403 }
+          )
+        }
+      }
     }
 
     // Get primary recipient for author name

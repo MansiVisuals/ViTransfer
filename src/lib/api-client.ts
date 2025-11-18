@@ -45,14 +45,16 @@ export async function apiFetch(
     const response = await fetch(input, options)
 
     // Handle authentication errors (session expired/revoked)
+    // Only redirect for admin panel - share pages handle their own auth
     if ((response.status === 401 || response.status === 403) && !isRedirecting) {
-      // Check if this is an auth endpoint (don't redirect on login failures)
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      const isSharePage = typeof window !== 'undefined' && window.location.pathname.startsWith('/share/')
       const isAuthEndpoint = url.includes('/api/auth/login') ||
                             url.includes('/api/auth/session') ||
                             url.includes('/api/share/')
 
-      if (!isAuthEndpoint) {
+      // Only redirect if we're in admin context, not on share pages or auth endpoints
+      if (!isAuthEndpoint && !isSharePage) {
         handleSessionExpired()
       }
     }

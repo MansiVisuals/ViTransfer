@@ -37,11 +37,35 @@ export async function GET(
         id: true,
         sharePassword: true,
         companyName: true,
+        hideFeedback: true,
+        guestMode: true,
       }
     })
 
     if (!project) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // SECURITY: If feedback is hidden, return empty array (don't expose comments)
+    if (project.hideFeedback) {
+      return NextResponse.json([])
+    }
+
+    // SECURITY: Block guest access to comments (guests should only see videos)
+    if (project.guestMode) {
+      const { cookies } = await import('next/headers')
+      const { getRedis } = await import('@/lib/redis')
+      const cookieStore = await cookies()
+      const sessionId = cookieStore.get('share_session')?.value
+
+      if (sessionId) {
+        const redis = await getRedis()
+        const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
+
+        if (isGuestSession === 1) {
+          return NextResponse.json([])
+        }
+      }
     }
 
     // Get primary recipient for author name

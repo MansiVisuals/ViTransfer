@@ -11,9 +11,9 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 [![GitHub](https://img.shields.io/badge/github-MansiVisuals%2FViTransfer-blue)](https://github.com/MansiVisuals/ViTransfer)
 [![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/E1E215DBM4)
 
-ACTIVE DEVELOPMENT: ViTransfer is under active development with frequent updates. While fully functional and used in production, features may be replaced, modified, or removed as we work towards v1.0. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
+⚠️ **ACTIVE DEVELOPMENT:** ViTransfer is under active development with frequent updates. While fully functional and used in production, features may be replaced, modified, or removed as we work towards v1.0. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
 
-Support Development: If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
+💖 **Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
 
 ## Features
 
@@ -71,7 +71,7 @@ Support Development: If you find ViTransfer useful, consider [supporting on Ko-f
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose installed
@@ -263,7 +263,7 @@ Rootless Podman Quadlets are available in the folder quadlet.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 ### Environment Variables
 
@@ -402,7 +402,7 @@ Tested with Cloudflare Tunnels.
 
 ---
 
-## Security Features
+## 🔒 Security Features
 
 - **Password-Protected Projects** - Optional client passwords
 - **JWT Authentication** - Secure admin sessions
@@ -420,7 +420,7 @@ ViTransfer uses Alpine Linux and FFmpeg which may show CVEs in vulnerability sca
 
 ---
 
-## Maintenance
+## 🛠️ Maintenance
 
 ### Backup
 
@@ -478,7 +478,7 @@ docker exec -i vitransfer-postgres psql -U vitransfer vitransfer < backup.sql
 
 ---
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Container won't start
 ```bash
@@ -516,7 +516,7 @@ df -h
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 We welcome contributions! ViTransfer is actively developed and we're looking for help to reach v1.0.
 
@@ -540,7 +540,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
-## License
+## 📄 License
 
 This project is licensed under the **GNU AFFERO GENERAL PUBLIC LICENSE Version 3 (AGPL-3.0)**.
 
@@ -557,26 +557,12 @@ See the [LICENSE](LICENSE) file for full details.
 
 ---
 
-## Support
+## 💬 Support
 
 - **Issues:** [GitHub Issues](https://github.com/MansiVisuals/ViTransfer/issues)
 - **Documentation:** This README and inline code comments
 - **Discussions:** [GitHub Discussions](https://github.com/MansiVisuals/ViTransfer/discussions)
 - **Docker Hub:** [crypt010/vitransfer](https://hub.docker.com/r/crypt010/vitransfer)
-
----
-
-## Support Development
-
-If ViTransfer helps you in your work, consider supporting its development:
-
-<a href='https://ko-fi.com/E1E215DBM4' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
-
-Your support helps fund:
-- New features and improvements
-- Bug fixes and maintenance
-- Better documentation
-- Faster development towards v1.0
 
 ---
 

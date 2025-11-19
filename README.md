@@ -310,7 +310,7 @@ Configure these in the admin panel under Settings:
 - Admin Notification Schedule - IMMEDIATE, HOURLY, DAILY, WEEKLY
 
 **Video Processing Defaults:**
-- Preview Resolution - 720p (default), 1080p, or 2160p
+- Preview Resolution - 720p (default) or 1080p
 - Watermark Enabled - Apply watermark to preview videos (default: true)
 - Watermark Text - Custom watermark text for previews
 

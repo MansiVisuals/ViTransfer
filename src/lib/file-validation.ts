@@ -20,6 +20,30 @@ export const FILE_LIMITS = {
   ALLOWED_EXTENSIONS: ['.mp4', '.mov', '.avi', '.webm', '.mkv']
 }
 
+// Allowed asset types by category
+export const ALLOWED_ASSET_TYPES = {
+  image: {
+    extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'],
+    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml']
+  },
+  audio: {
+    extensions: ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma'],
+    mimeTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/aac', 'audio/flac', 'audio/ogg', 'audio/mp4', 'audio/x-ms-wma']
+  },
+  project: {
+    extensions: ['.prproj', '.aep', '.fcp', '.davinci', '.zip', '.rar', '.7z'],
+    mimeTypes: ['application/octet-stream', 'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed']
+  },
+  document: {
+    extensions: ['.pdf', '.doc', '.docx', '.txt', '.rtf'],
+    mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/rtf']
+  },
+  other: {
+    extensions: ['.zip', '.rar', '.7z', '.tar', '.gz'],
+    mimeTypes: ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed', 'application/x-tar', 'application/gzip']
+  }
+}
+
 /**
  * Validate file extension
  */
@@ -209,6 +233,138 @@ export async function validateVideoMagicBytes(filePath: string): Promise<{
     return {
       valid: false,
       error: 'Failed to validate file content'
+    }
+  }
+}
+
+/**
+ * Validate asset file (images, audio, documents, etc.)
+ */
+export function validateAssetFile(
+  filename: string,
+  mimeType: string,
+  category?: string
+): { valid: boolean; error?: string; sanitizedFilename?: string; detectedCategory?: string } {
+  // Sanitize filename first
+  const sanitizedFilename = sanitizeFilename(filename)
+
+  // Check for suspicious filenames
+  if (isSuspiciousFilename(filename)) {
+    return {
+      valid: false,
+      error: 'Filename contains suspicious patterns'
+    }
+  }
+
+  const ext = sanitizedFilename.toLowerCase().slice(sanitizedFilename.lastIndexOf('.'))
+
+  // If category specified, validate against that category
+  if (category && category in ALLOWED_ASSET_TYPES) {
+    const categoryConfig = ALLOWED_ASSET_TYPES[category as keyof typeof ALLOWED_ASSET_TYPES]
+
+    if (!categoryConfig.extensions.includes(ext)) {
+      return {
+        valid: false,
+        error: `Invalid file type for ${category}. Allowed: ${categoryConfig.extensions.join(', ')}`
+      }
+    }
+
+    if (!categoryConfig.mimeTypes.includes(mimeType.toLowerCase())) {
+      return {
+        valid: false,
+        error: `Invalid MIME type for ${category}. Allowed: ${categoryConfig.mimeTypes.join(', ')}`
+      }
+    }
+
+    return {
+      valid: true,
+      sanitizedFilename,
+      detectedCategory: category
+    }
+  }
+
+  // If no category, detect from extension
+  for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
+    if (config.extensions.includes(ext) && config.mimeTypes.includes(mimeType.toLowerCase())) {
+      return {
+        valid: true,
+        sanitizedFilename,
+        detectedCategory: cat
+      }
+    }
+  }
+
+  // No category matched
+  return {
+    valid: false,
+    error: `Unsupported file type: ${ext}. Please upload images, audio, documents, or project files.`
+  }
+}
+
+/**
+ * Validate asset file by magic bytes
+ * Similar to validateVideoMagicBytes but for various asset types
+ */
+export async function validateAssetMagicBytes(filePath: string, expectedCategory?: string): Promise<{
+  valid: boolean
+  error?: string
+  detectedType?: string
+  detectedCategory?: string
+}> {
+  try {
+    const type = await fileTypeFromFile(filePath)
+
+    if (!type) {
+      // Some files (like .prproj, .txt) don't have magic bytes
+      // Allow them but log warning
+      console.warn('[ASSET VALIDATION] Could not detect magic bytes for:', filePath)
+      return {
+        valid: true,
+        detectedType: 'unknown',
+        detectedCategory: expectedCategory
+      }
+    }
+
+    // Detect category from MIME type
+    let detectedCategory: string | undefined
+
+    for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
+      if (config.mimeTypes.includes(type.mime)) {
+        detectedCategory = cat
+        break
+      }
+    }
+
+    if (!detectedCategory) {
+      return {
+        valid: false,
+        error: `File content does not match any allowed asset type. Detected: ${type.mime}`,
+        detectedType: type.mime
+      }
+    }
+
+    // If expected category provided, verify it matches
+    if (expectedCategory && expectedCategory !== detectedCategory && expectedCategory !== 'other') {
+      return {
+        valid: false,
+        error: `File content (${detectedCategory}) does not match expected category (${expectedCategory})`,
+        detectedType: type.mime,
+        detectedCategory
+      }
+    }
+
+    return {
+      valid: true,
+      detectedType: type.mime,
+      detectedCategory
+    }
+  } catch (error) {
+    console.error('Asset magic byte validation error:', error)
+    // Allow files that can't be validated (some project files)
+    return {
+      valid: true,
+      detectedType: 'unknown',
+      detectedCategory: expectedCategory
     }
   }
 }

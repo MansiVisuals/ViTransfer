@@ -4,6 +4,7 @@ import { getCurrentUserFromRequest, requireApiAdmin } from '@/lib/auth'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { validateAssetFile } from '@/lib/file-validation'
 
 // GET /api/videos/[id]/assets - List all assets for a video
 export async function GET(
@@ -125,7 +126,7 @@ export async function POST(
 
     // Parse request body
     const body = await request.json()
-    const { fileName, fileSize, category } = body
+    const { fileName, fileSize, category, mimeType } = body
 
     // Validate required fields
     if (!fileName || !fileSize) {
@@ -135,20 +136,37 @@ export async function POST(
       )
     }
 
-    // Create storage path
+    // Validate asset file
+    const assetValidation = validateAssetFile(
+      fileName,
+      mimeType || 'application/octet-stream',
+      category
+    )
+
+    if (!assetValidation.valid) {
+      return NextResponse.json(
+        { error: assetValidation.error || 'Invalid asset file' },
+        { status: 400 }
+      )
+    }
+
+    // Create storage path (use sanitized filename from validation)
     const timestamp = Date.now()
-    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 255)
+    const sanitizedFileName = assetValidation.sanitizedFilename || fileName.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 255)
     const storagePath = `projects/${video.projectId}/videos/assets/${videoId}/asset-${timestamp}-${sanitizedFileName}`
+
+    // Use detected category if not provided
+    const finalCategory = category || assetValidation.detectedCategory || 'other'
 
     // Create database record (TUS will upload the file later)
     const asset = await prisma.videoAsset.create({
       data: {
         videoId,
-        fileName,
+        fileName: sanitizedFileName,
         fileSize: BigInt(fileSize),
-        fileType: 'application/octet-stream', // Will be detected by file-type library
+        fileType: mimeType || 'application/octet-stream',
         storagePath,
-        category: category || null,
+        category: finalCategory,
         uploadedBy: currentUser.id,
         uploadedByName: currentUser.name || currentUser.email,
       },

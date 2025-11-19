@@ -18,7 +18,7 @@ Support Development: If you find ViTransfer useful, consider [supporting on Ko-f
 ## Features
 
 ### Core Functionality
-- **Video Upload & Processing** - Automatic transcoding to multiple resolutions (720p/1080p/2160p)
+- **Video Upload & Processing** - Automatic transcoding to multiple resolutions (720p/1080p)
 - **Watermarking** - Customizable watermarks for preview videos
 - **Timestamped Comments** - Collect feedback with precise video timestamps
 - **Approval Workflow** - Client approval system with revision tracking

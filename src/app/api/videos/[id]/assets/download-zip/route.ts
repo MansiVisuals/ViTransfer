@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { rateLimit } from '@/lib/rate-limit'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import archiver from 'archiver'
@@ -12,18 +11,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: videoId } = await params
-
-  // Rate limiting
-  const rateLimitResult = await rateLimit(
-    request,
-    {
-      windowMs: 60 * 1000,
-      maxRequests: 10,
-      message: 'Too many download requests. Please slow down.',
-    },
-    'video-assets-zip-download'
-  )
-  if (rateLimitResult) return rateLimitResult
 
   try {
     // Parse request body for selected asset IDs
@@ -52,7 +39,7 @@ export async function POST(
     const project = video.project
 
     // SECURITY: Verify user has access to this project (admin OR valid share session)
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
     if (!accessCheck.authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }

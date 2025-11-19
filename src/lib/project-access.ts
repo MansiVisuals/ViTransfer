@@ -3,6 +3,7 @@ import { getCurrentUserFromRequest } from '@/lib/auth'
 import { cookies } from 'next/headers'
 import { getRedis } from '@/lib/redis'
 import { prisma } from '@/lib/db'
+import type { Project, Video } from '@prisma/client'
 
 /**
  * Verify project access using dual authentication pattern
@@ -138,4 +139,53 @@ export async function verifyProjectAccess(
     isAdmin: false,
     isAuthenticated: true
   }
+}
+
+export async function fetchProjectWithVideos(
+  token: string,
+  isGuest: boolean,
+  guestLatestOnly: boolean,
+  projectId: string
+) {
+  if (isGuest && guestLatestOnly) {
+    const allVideos = await prisma.video.findMany({
+      where: {
+        projectId,
+        status: 'READY',
+      },
+      orderBy: { version: 'desc' },
+    })
+
+    const latestVideoIds: string[] = []
+    const seenNames = new Set<string>()
+    for (const video of allVideos) {
+      if (!seenNames.has(video.name)) {
+        latestVideoIds.push(video.id)
+        seenNames.add(video.name)
+      }
+    }
+
+    return prisma.project.findUnique({
+      where: { slug: token },
+      include: {
+        videos: {
+          where: {
+            id: { in: latestVideoIds },
+            status: 'READY',
+          },
+          orderBy: { version: 'desc' },
+        },
+      },
+    })
+  }
+
+  return prisma.project.findUnique({
+    where: { slug: token },
+    include: {
+      videos: {
+        where: { status: 'READY' as const },
+        orderBy: { version: 'desc' },
+      },
+    },
+  })
 }

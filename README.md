@@ -213,6 +213,10 @@ ViTransfer uses standard Docker Compose and should work on most platforms. Below
 
 **Tested and verified on TrueNAS Scale 25.10**
 
+**Quick Install:** ViTransfer is available in the TrueNAS Apps catalog. Search for "ViTransfer" in **Apps > Discover Apps** for easy installation.
+
+**Manual Installation:**
+
 1. **Create Datasets**
    - Create three datasets using TrueNAS GUI or your preferred method:
      - `postgres`

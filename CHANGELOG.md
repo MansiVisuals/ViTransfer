@@ -5,6 +5,28 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-11-19
+
+### Why 0.4.0?
+Previous releases (0.3.5-0.3.7) added major features using patch increments. Now that features are complete and stable, bumping to 0.4.0 reflects the accumulated feature additions. This release focuses on bug fixes and quality-of-life improvements to make the feature-complete 0.3.7 release production-ready.
+
+### Fixed
+- Guest mode settings now persist correctly when disabled
+- Guest mode properly enforces restricted access when enabled
+- Authentication logic refactored for reliability and maintainability
+- Global watermark settings now inherited by new projects
+- Password validation for PASSWORD/BOTH authentication modes
+- Mobile UI layout issues with video titles and action buttons
+- Video metadata display on mobile (duration/resolution/size)
+- Version label truncation on long names
+
+### Improved
+- Back buttons now left-aligned and more compact
+- Video list layout consistent across desktop and mobile
+- Info button hidden for guests
+- Security recommendation when disabling guest mode
+- Cleaner authentication flow following best practices
+
 ## [0.3.7] - 2025-11-18
 
 ### Added

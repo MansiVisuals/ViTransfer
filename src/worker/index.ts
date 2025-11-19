@@ -2,6 +2,7 @@ import { Worker, Queue } from 'bullmq'
 import { getConnection, VideoProcessingJob } from '../lib/queue'
 import { initStorage } from '../lib/storage'
 import { runCleanup } from '../lib/upload-cleanup'
+import { closeRedisConnection } from '../lib/redis'
 import os from 'os'
 import { processVideo } from './video-processor'
 import { processAdminNotifications } from './admin-notifications'
@@ -181,6 +182,8 @@ async function main() {
       notificationWorker.close(),
       notificationQueue.close(),
     ])
+    await closeRedisConnection()
+    console.log('Redis connection closed')
     process.exit(0)
   })
 
@@ -193,6 +196,8 @@ async function main() {
       notificationWorker.close(),
       notificationQueue.close(),
     ])
+    await closeRedisConnection()
+    console.log('Redis connection closed')
     process.exit(0)
   })
 }

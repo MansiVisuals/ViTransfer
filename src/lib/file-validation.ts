@@ -3,6 +3,8 @@
  * Validates file types and sizes to prevent malicious uploads
  */
 
+import { fileTypeFromFile } from 'file-type'
+
 // Allowed video MIME types
 export const ALLOWED_VIDEO_TYPES = [
   'video/mp4',
@@ -156,3 +158,57 @@ export function validateUploadedFile(
   }
 }
 
+/**
+ * Validate video file by magic bytes (actual file content)
+ * This prevents spoofed files (e.g., malware.exe renamed to malware.mp4)
+ *
+ * IMPORTANT: This must be called AFTER the file has been written to disk
+ * Call this in the TUS upload completion handler
+ */
+export async function validateVideoMagicBytes(filePath: string): Promise<{
+  valid: boolean
+  error?: string
+  detectedType?: string
+}> {
+  try {
+    const type = await fileTypeFromFile(filePath)
+
+    if (!type) {
+      return {
+        valid: false,
+        error: 'Could not determine file type from content'
+      }
+    }
+
+    // Check if detected MIME type is in allowed list
+    const validTypes = [
+      'video/mp4',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/webm',
+      'video/x-matroska',
+      'video/avi',
+      'video/x-ms-wmv',
+      'video/mpeg'
+    ]
+
+    if (!validTypes.includes(type.mime)) {
+      return {
+        valid: false,
+        error: `File content does not match a valid video format. Detected: ${type.mime}`,
+        detectedType: type.mime
+      }
+    }
+
+    return {
+      valid: true,
+      detectedType: type.mime
+    }
+  } catch (error) {
+    console.error('Magic byte validation error:', error)
+    return {
+      valid: false,
+      error: 'Failed to validate file content'
+    }
+  }
+}

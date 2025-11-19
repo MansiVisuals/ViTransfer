@@ -3,6 +3,7 @@ import { VideoProcessingJob } from '../lib/queue'
 import { prisma } from '../lib/db'
 import { downloadFile, uploadFile } from '../lib/storage'
 import { transcodeVideo, generateThumbnail, getVideoMetadata } from '../lib/ffmpeg'
+import { validateVideoMagicBytes } from '../lib/file-validation'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
@@ -67,6 +68,23 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
     if (DEBUG) {
       console.log('[WORKER DEBUG] File verification passed')
       console.log('[WORKER DEBUG] Download speed:', (stats.size / 1024 / 1024 / (downloadTime / 1000)).toFixed(2), 'MB/s')
+    }
+
+    // Validate file content (magic bytes) to prevent spoofed files
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] Validating file content (magic bytes)...')
+    }
+
+    const magicByteValidation = await validateVideoMagicBytes(tempInputPath)
+    if (!magicByteValidation.valid) {
+      console.error(`[WORKER ERROR] Magic byte validation failed: ${magicByteValidation.error}`)
+      throw new Error(`Invalid video file: ${magicByteValidation.error}`)
+    }
+
+    console.log(`[WORKER] Magic byte validation passed - detected type: ${magicByteValidation.detectedType}`)
+
+    if (DEBUG) {
+      console.log('[WORKER DEBUG] File is a valid video format')
     }
 
     // Get video metadata

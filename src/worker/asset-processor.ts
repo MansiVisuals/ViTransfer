@@ -1,7 +1,8 @@
 import { Job } from 'bullmq'
 import { prisma } from '../lib/db'
 import { downloadFile } from '../lib/storage'
-import { validateAssetMagicBytes } from '../lib/file-validation'
+import { ALLOWED_ASSET_TYPES } from '../lib/file-validation'
+import { fileTypeFromFile } from 'file-type'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
@@ -55,30 +56,69 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       console.log('[WORKER DEBUG] Validating asset magic bytes...')
     }
 
-    const magicByteValidation = await validateAssetMagicBytes(tempFilePath, expectedCategory)
+    const fileType = await fileTypeFromFile(tempFilePath)
 
-    if (!magicByteValidation.valid) {
-      console.error(`[WORKER ERROR] Asset magic byte validation failed: ${magicByteValidation.error}`)
+    if (!fileType) {
+      // Some files (like .prproj, .txt) don't have magic bytes
+      console.warn('[ASSET VALIDATION] Could not detect magic bytes for:', tempFilePath)
 
-      // Update asset record to mark as invalid
       await prisma.videoAsset.update({
         where: { id: assetId },
         data: {
-          fileType: 'INVALID - ' + (magicByteValidation.detectedType || 'unknown')
+          fileType: 'unknown',
+          category: expectedCategory || 'other'
         }
       })
 
-      throw new Error(`Invalid asset file: ${magicByteValidation.error}`)
+      console.log(`[WORKER] Asset ${assetId} processed (no magic bytes detected)`)
+      return
     }
 
-    console.log(`[WORKER] Asset magic byte validation passed - type: ${magicByteValidation.detectedType}`)
+    // Detect category from MIME type
+    let detectedCategory: string | undefined
+
+    for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
+      if (config.mimeTypes.includes(fileType.mime)) {
+        detectedCategory = cat
+        break
+      }
+    }
+
+    if (!detectedCategory) {
+      console.error(`[WORKER ERROR] File content does not match any allowed asset type. Detected: ${fileType.mime}`)
+
+      await prisma.videoAsset.update({
+        where: { id: assetId },
+        data: {
+          fileType: 'INVALID - ' + fileType.mime
+        }
+      })
+
+      throw new Error(`File content does not match any allowed asset type. Detected: ${fileType.mime}`)
+    }
+
+    // If expected category provided, verify it matches
+    if (expectedCategory && expectedCategory !== detectedCategory && expectedCategory !== 'other') {
+      console.error(`[WORKER ERROR] File content (${detectedCategory}) does not match expected category (${expectedCategory})`)
+
+      await prisma.videoAsset.update({
+        where: { id: assetId },
+        data: {
+          fileType: 'INVALID - ' + fileType.mime
+        }
+      })
+
+      throw new Error(`File content (${detectedCategory}) does not match expected category (${expectedCategory})`)
+    }
+
+    console.log(`[WORKER] Asset magic byte validation passed - type: ${fileType.mime}`)
 
     // Update asset with detected file type and category
     await prisma.videoAsset.update({
       where: { id: assetId },
       data: {
-        fileType: magicByteValidation.detectedType || 'application/octet-stream',
-        category: magicByteValidation.detectedCategory || expectedCategory || 'other'
+        fileType: fileType.mime,
+        category: detectedCategory || expectedCategory || 'other'
       }
     })
 

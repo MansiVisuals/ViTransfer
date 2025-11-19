@@ -3,11 +3,11 @@ import { VideoProcessingJob } from '../lib/queue'
 import { prisma } from '../lib/db'
 import { downloadFile, uploadFile } from '../lib/storage'
 import { transcodeVideo, generateThumbnail, getVideoMetadata } from '../lib/ffmpeg'
-import { validateVideoMagicBytes } from '../lib/file-validation'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import { TEMP_DIR } from './cleanup'
+import { fileTypeFromFile } from 'file-type'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
 
@@ -75,13 +75,27 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
       console.log('[WORKER DEBUG] Validating file content (magic bytes)...')
     }
 
-    const magicByteValidation = await validateVideoMagicBytes(tempInputPath)
-    if (!magicByteValidation.valid) {
-      console.error(`[WORKER ERROR] Magic byte validation failed: ${magicByteValidation.error}`)
-      throw new Error(`Invalid video file: ${magicByteValidation.error}`)
+    const fileType = await fileTypeFromFile(tempInputPath)
+    if (!fileType) {
+      throw new Error('Could not determine file type from content')
     }
 
-    console.log(`[WORKER] Magic byte validation passed - detected type: ${magicByteValidation.detectedType}`)
+    const validVideoTypes = [
+      'video/mp4',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/webm',
+      'video/x-matroska',
+      'video/avi',
+      'video/x-ms-wmv',
+      'video/mpeg'
+    ]
+
+    if (!validVideoTypes.includes(fileType.mime)) {
+      throw new Error(`File content does not match a valid video format. Detected: ${fileType.mime}`)
+    }
+
+    console.log(`[WORKER] Magic byte validation passed - detected type: ${fileType.mime}`)
 
     if (DEBUG) {
       console.log('[WORKER DEBUG] File is a valid video format')

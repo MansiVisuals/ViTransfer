@@ -3,8 +3,6 @@
  * Validates file types and sizes to prevent malicious uploads
  */
 
-import { fileTypeFromFile } from 'file-type'
-
 // Allowed video MIME types
 export const ALLOWED_VIDEO_TYPES = [
   'video/mp4',
@@ -195,6 +193,8 @@ export async function validateVideoMagicBytes(filePath: string): Promise<{
   detectedType?: string
 }> {
   try {
+    // Dynamic import for ESM module compatibility
+    const { fileTypeFromFile } = await import('file-type')
     const type = await fileTypeFromFile(filePath)
 
     if (!type) {
@@ -312,6 +312,8 @@ export async function validateAssetMagicBytes(filePath: string, expectedCategory
   detectedCategory?: string
 }> {
   try {
+    // Dynamic import for ESM module compatibility
+    const { fileTypeFromFile } = await import('file-type')
     const type = await fileTypeFromFile(filePath)
 
     if (!type) {

@@ -219,6 +219,7 @@ async function verifyUploadedFile(tusFilePath: string, expectedSize?: number): P
 }
 
 async function validateVideoFile(tusFilePath: string, filename?: string) {
+  // Validate file extension
   if (filename) {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
     const allowedExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv']
@@ -231,35 +232,14 @@ async function validateVideoFile(tusFilePath: string, filename?: string) {
     }
   }
 
-  try {
-    const { fileTypeFromFile } = await import('file-type')
-    const fileType = await fileTypeFromFile(tusFilePath)
-
-    const allowedMimeTypes = [
-      'video/mp4',
-      'video/quicktime',
-      'video/x-msvideo',
-      'video/webm',
-      'video/x-matroska'
-    ]
-
-    if (!fileType || !allowedMimeTypes.includes(fileType.mime)) {
-      await cleanupTUSFile(tusFilePath)
-      throw new Error(
-        `Invalid video file. File appears to be ${fileType?.mime || 'unknown'}, not a valid video format.`
-      )
-    }
-
-    console.log(`[UPLOAD] File type validation passed: ${fileType.mime}`)
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Invalid video file')) {
-      throw error
-    }
-    console.warn('[UPLOAD] File type validation skipped:', error)
-  }
+  // NOTE: Magic byte validation is performed in the video-processor worker
+  // This ensures proper file content validation happens during processing
+  // without causing Next.js build issues with the file-type ESM module
+  console.log(`[UPLOAD] File extension validation passed, magic byte check will run in worker`)
 }
 
 async function validateAssetFile(tusFilePath: string, filename?: string) {
+  // Validate file extension
   if (filename) {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
     if (!ALL_ALLOWED_EXTENSIONS.includes(ext)) {
@@ -270,36 +250,10 @@ async function validateAssetFile(tusFilePath: string, filename?: string) {
     }
   }
 
-  try {
-    const { fileTypeFromFile } = await import('file-type')
-    const fileType = await fileTypeFromFile(tusFilePath)
-
-    const allowedMimeTypes = [
-      'image/jpeg', 'image/png', 'image/tiff',
-      'audio/mpeg', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/x-m4a',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/zip', 'application/gzip', 'application/x-gzip',
-      'application/octet-stream'
-    ]
-
-    if (fileType && !allowedMimeTypes.includes(fileType.mime)) {
-      await cleanupTUSFile(tusFilePath)
-      throw new Error(
-        `Invalid asset file. File appears to be ${fileType.mime}, which is not allowed.`
-      )
-    }
-
-    if (fileType) {
-      console.log(`[UPLOAD] Asset file type validation passed: ${fileType.mime}`)
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Invalid asset file')) {
-      throw error
-    }
-    console.warn('[UPLOAD] Asset file type validation skipped:', error)
-  }
+  // NOTE: Magic byte validation is performed in the asset-processor worker
+  // This ensures proper file content validation happens during processing
+  // without causing Next.js build issues with the file-type ESM module
+  console.log(`[UPLOAD] Asset extension validation passed, magic byte check will run in worker`)
 }
 
 async function cleanupTUSFile(tusFilePath: string) {

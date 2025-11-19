@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { validateUploadedFile } from '@/lib/file-validation'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { projectId, versionLabel, originalFileName, originalFileSize, name } = body
+    const { projectId, versionLabel, originalFileName, originalFileSize, name, mimeType } = body
 
     // Validate required fields
     if (!name || !name.trim()) {
@@ -37,6 +38,20 @@ export async function POST(request: NextRequest) {
     }
 
     const videoName = name.trim()
+
+    // Validate uploaded file
+    const fileValidation = validateUploadedFile(
+      originalFileName || 'upload.mp4',
+      mimeType || 'video/mp4',
+      originalFileSize || 0
+    )
+
+    if (!fileValidation.valid) {
+      return NextResponse.json(
+        { error: fileValidation.error || 'Invalid file' },
+        { status: 400 }
+      )
+    }
 
     // Get the project and existing videos with the same name
     const project = await prisma.project.findUnique({

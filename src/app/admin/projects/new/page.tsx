@@ -85,7 +85,7 @@ export default function NewProjectPage() {
       recipientName: formData.get('recipientName') as string,
       recipientEmail: formData.get('recipientEmail') as string,
       sharePassword: (authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected ? sharePassword : '',
-      authMode: passwordProtected ? authMode : 'PASSWORD',
+      authMode: passwordProtected ? authMode : 'NONE',
       isShareOnly: isShareOnlyValue,
     }
 

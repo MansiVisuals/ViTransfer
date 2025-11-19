@@ -372,66 +372,75 @@ export default function VideoPlayer({
 
       {/* Video & Project Information */}
       <div className={`rounded-lg p-4 text-card-foreground flex-shrink-0 ${!isVideoApproved ? 'bg-accent/50 border-2 border-primary/20' : 'bg-card border border-border'}`}>
-        {/* Header: Video Name + Action Buttons */}
-        <div className="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-border">
-          <h3 className="text-lg font-bold text-foreground truncate">{(selectedVideo as any).name}</h3>
-          <div className="flex gap-2 flex-shrink-0">
-            {/* Info Dialog Button */}
-            <Dialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Info className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Info</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Video Information</DialogTitle>
-                  <DialogDescription className="text-muted-foreground">
-                    Detailed metadata for the original video
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3 text-xs sm:text-sm">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">Filename:</span>
-                    <span className="font-medium break-all text-xs sm:text-sm">{selectedVideo.originalFileName}</span>
+        {/* Header: Version + Action Buttons, then Filename below */}
+        <div className="space-y-3 mb-3 pb-3 border-b border-border">
+          {/* Top row: Approved Badge + Version Label + Action Buttons */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              {isVideoApproved && (
+                <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+              )}
+              <span className="text-base font-semibold text-foreground whitespace-nowrap">{displayLabel}</span>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+            {/* Info Dialog Button - Hide in guest mode */}
+            {!isGuest && (
+              <Dialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Info className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Info</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Video Information</DialogTitle>
+                    <DialogDescription className="text-muted-foreground">
+                      Detailed metadata for the original video
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 text-xs sm:text-sm">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Filename:</span>
+                      <span className="font-medium break-all text-xs sm:text-sm">{selectedVideo.originalFileName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Resolution:</span>
+                      <span className="font-medium">{selectedVideo.width}x{selectedVideo.height}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Codec:</span>
+                      <span className="font-medium">{selectedVideo.codec || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="font-medium">{formatTimestamp(selectedVideo.duration)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">FPS:</span>
+                      <span className="font-medium">{selectedVideo.fps ? selectedVideo.fps.toFixed(2) : 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">File Size:</span>
+                      <span className="font-medium">{formatFileSize(Number(selectedVideo.originalFileSize))}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Upload Date:</span>
+                      <span className="font-medium">{formatDate(selectedVideo.createdAt)}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className="font-medium break-words">
+                        {isVideoApproved
+                          ? 'Approved - Original Quality'
+                          : `Downscaled Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
+                        }
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Resolution:</span>
-                    <span className="font-medium">{selectedVideo.width}x{selectedVideo.height}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Codec:</span>
-                    <span className="font-medium">{selectedVideo.codec || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration:</span>
-                    <span className="font-medium">{formatTimestamp(selectedVideo.duration)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">FPS:</span>
-                    <span className="font-medium">{selectedVideo.fps ? selectedVideo.fps.toFixed(2) : 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">File Size:</span>
-                    <span className="font-medium">{formatFileSize(Number(selectedVideo.originalFileSize))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Upload Date:</span>
-                    <span className="font-medium">{formatDate(selectedVideo.createdAt)}</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className="font-medium break-words">
-                      {isVideoApproved
-                        ? 'Approved - Original Quality'
-                        : `Downscaled Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
-                      }
-                    </span>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            )}
 
             {/* Download Button - Only show when video is approved and not in guest mode */}
             {isVideoApproved && !isGuest && (
@@ -440,17 +449,17 @@ export default function VideoPlayer({
                 <span className="hidden sm:inline">Download</span>
               </Button>
             )}
+            </div>
+          </div>
+
+          {/* Bottom row: Filename */}
+          <div>
+            <h3 className="text-lg font-bold text-foreground break-words">{(selectedVideo as any).name}</h3>
           </div>
         </div>
 
         {/* Information Grid - Compact 2 column layout */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          {/* Version */}
-          <div>
-            <span className="text-xs text-muted-foreground">Version:</span>
-            <span className="ml-2 font-medium text-foreground">{displayLabel}</span>
-          </div>
-
           {/* Project */}
           {projectTitle && (
             <div className="col-span-2">

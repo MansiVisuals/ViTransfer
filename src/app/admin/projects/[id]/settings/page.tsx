@@ -172,6 +172,9 @@ export default function ProjectSettingsPage() {
         setClientNotificationSchedule(data.clientNotificationSchedule || 'HOURLY')
         setClientNotificationTime(data.clientNotificationTime || '09:00')
         setClientNotificationDay(data.clientNotificationDay ?? 1)
+
+        // Mark initial load as complete
+        setInitialLoadComplete(true)
       } catch (err) {
         setError('Failed to load project settings')
       } finally {
@@ -182,13 +185,15 @@ export default function ProjectSettingsPage() {
     loadProject()
   }, [projectId])
 
-  // Auto-enable guest mode when No Authentication is selected
+  // Track if initial load is complete
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
+
+  // Clear password when switching to NONE mode
   useEffect(() => {
-    if (authMode === 'NONE') {
+    if (initialLoadComplete && authMode === 'NONE') {
       setSharePassword('')
-      setGuestMode(true)
     }
-  }, [authMode])
+  }, [authMode, initialLoadComplete])
 
   async function handleSave() {
     setSaving(true)
@@ -362,7 +367,7 @@ export default function ProjectSettingsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <Link href={`/admin/projects/${projectId}`}>
-                <Button variant="ghost" size="lg">
+                <Button variant="ghost" size="default" className="justify-start px-3">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">Back to Project</span>
                   <span className="sm:hidden">Back</span>
@@ -901,8 +906,18 @@ export default function ProjectSettingsPage() {
                     id="guestMode"
                     checked={guestMode}
                     onCheckedChange={setGuestMode}
+                    disabled={authMode !== 'NONE'}
                   />
                 </div>
+
+                {authMode === 'NONE' && !guestMode && (
+                  <div className="flex items-start gap-2 p-3 bg-primary-visible border border-primary-visible rounded-md">
+                    <span className="text-primary text-sm font-bold">i</span>
+                    <p className="text-sm text-primary">
+                      <strong>Recommended:</strong> Enable Guest Mode for better security. Without it, anyone with the link can comment and approve videos.
+                    </p>
+                  </div>
+                )}
 
                 {guestMode && (
                   <div className="flex items-center justify-between gap-4 pt-2 mt-2 border-t border-border">

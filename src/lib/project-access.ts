@@ -27,6 +27,7 @@ export async function verifyProjectAccess(
   authorized: boolean
   isAdmin: boolean
   isAuthenticated: boolean
+  isGuest?: boolean
   errorResponse?: NextResponse
 }> {
   // Check if user is admin (admins bypass password protection)
@@ -34,15 +35,53 @@ export async function verifyProjectAccess(
   const isAdmin = currentUser?.role === 'ADMIN'
   let isAuthenticated = isAdmin
 
-  // Determine if authentication is required
-  const requiresAuth = sharePassword !== null || authMode === 'OTP' || authMode === 'BOTH'
-
-  // If no auth required OR user is admin, grant access
-  if (!requiresAuth || isAdmin) {
+  // Admins bypass all authentication
+  if (isAdmin) {
     return {
       authorized: true,
-      isAdmin,
-      isAuthenticated
+      isAdmin: true,
+      isAuthenticated: true
+    }
+  }
+
+  // Determine authentication requirements based on auth mode
+  const requiresPassword = (authMode === 'PASSWORD' || authMode === 'BOTH') && sharePassword
+  const requiresOTP = authMode === 'OTP' || authMode === 'BOTH'
+  const isUnauthenticated = authMode === 'NONE'
+
+  // Handle unauthenticated mode (NONE)
+  if (isUnauthenticated) {
+    // Always allow access for NONE mode - no authentication required
+    return {
+      authorized: true,
+      isAdmin: false,
+      isAuthenticated: true,
+      isGuest: false  // Guest status determined by share API based on project.guestMode
+    }
+  }
+
+  // For PASSWORD/OTP/BOTH modes, authentication is required
+  const requiresAuth = requiresPassword || requiresOTP
+
+  // Validate that password modes have a password set
+  if ((authMode === 'PASSWORD' || authMode === 'BOTH') && !sharePassword) {
+    return {
+      authorized: false,
+      isAdmin: false,
+      isAuthenticated: false,
+      errorResponse: NextResponse.json(
+        { error: 'Password authentication mode requires a password to be set' },
+        { status: 500 }
+      )
+    }
+  }
+
+  // If authentication is required, verify session
+  if (!requiresAuth) {
+    return {
+      authorized: true,
+      isAdmin: false,
+      isAuthenticated: true
     }
   }
 

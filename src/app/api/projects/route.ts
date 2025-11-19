@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       where: { id: 'default' },
       select: {
         defaultPreviewResolution: true,
+        defaultWatermarkEnabled: true,
         defaultWatermarkText: true,
       },
     })
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
           hideFeedback: isShareOnly ? true : false,
           approvedAt: isShareOnly ? new Date() : null,
           previewResolution: settings?.defaultPreviewResolution || '720p',
+          watermarkEnabled: settings?.defaultWatermarkEnabled ?? true,
           watermarkText: settings?.defaultWatermarkText || null,
           createdById: admin.id,
         },

@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         sharePassword: true,
+        authMode: true,
         companyName: true,
         hideFeedback: true,
         guestMode: true,
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify project access using dual auth pattern
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
 
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse!
@@ -200,6 +201,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         sharePassword: true,
+        authMode: true,
         companyName: true,
         hideFeedback: true,
         guestMode: true,
@@ -247,7 +249,7 @@ export async function POST(request: NextRequest) {
     const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
     // Verify project access using dual auth pattern
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
 
     if (!accessCheck.authorized) {
       // Don't reveal if project exists - return generic error

@@ -36,6 +36,7 @@ export async function GET(
       select: {
         id: true,
         sharePassword: true,
+        authMode: true,
         companyName: true,
         hideFeedback: true,
         guestMode: true,
@@ -74,7 +75,7 @@ export async function GET(
     const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
     // Verify project access using dual auth pattern (admin JWT or share_auth cookie)
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
 
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse!

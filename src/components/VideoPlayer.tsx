@@ -350,6 +350,7 @@ export default function VideoPlayer({
           <video
             ref={videoRef}
             src={videoUrl}
+            poster={(selectedVideo as any).thumbnailUrl || undefined}
             className="w-full h-full"
             onTimeUpdate={handleTimeUpdate}
             onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}

@@ -55,6 +55,7 @@ export async function PATCH(
           select: {
             id: true,
             sharePassword: true,
+            authMode: true,
             companyName: true,
             hideFeedback: true,
             guestMode: true,
@@ -109,7 +110,8 @@ export async function PATCH(
     const accessCheck = await verifyProjectAccess(
       request,
       existingComment.project.id,
-      existingComment.project.sharePassword
+      existingComment.project.sharePassword,
+      existingComment.project.authMode
     )
 
     if (!accessCheck.authorized) {

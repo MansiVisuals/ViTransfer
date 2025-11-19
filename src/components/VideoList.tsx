@@ -350,6 +350,9 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
             <div className="mt-4 pt-4 border-t">
               <VideoAssetList
                 videoId={video.id}
+                videoName={video.name}
+                versionLabel={video.versionLabel}
+                projectId={video.projectId}
                 onAssetDeleted={() => {
                   setAssetRefreshTrigger(prev => prev + 1)
                   onRefresh?.()

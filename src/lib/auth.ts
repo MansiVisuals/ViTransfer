@@ -349,14 +349,41 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
     const payload = await verifyAccessToken(accessToken.value)
     if (!payload) {
-      // Token expired or invalid, try to refresh
+      // Token expired or invalid, try to refresh (max 1 retry)
       const refreshed = await refreshAccessToken()
       if (!refreshed) {
         return null
       }
 
-      // Recursively get user with new token
-      return getCurrentUser()
+      // Get the new access token after refresh
+      const newAccessToken = cookieStore.get(SESSION_COOKIE_NAME)
+      if (!newAccessToken?.value) {
+        return null
+      }
+
+      // Verify new token (no further retries)
+      const newPayload = await verifyAccessToken(newAccessToken.value)
+      if (!newPayload) {
+        return null
+      }
+
+      // Fetch user from database with refreshed token
+      const user = await prisma.user.findUnique({
+        where: { id: newPayload.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+        },
+      })
+
+      if (user) {
+        // Set RLS context for this database session
+        await setDatabaseUserContext(user.id, user.role)
+      }
+
+      return user
     }
 
     // Fetch user from database

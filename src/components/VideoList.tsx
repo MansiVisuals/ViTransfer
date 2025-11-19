@@ -173,43 +173,36 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     <div className="space-y-4">
       {videos.map((video) => (
         <div key={video.id} className="border rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
-          <div className="flex justify-between items-start gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                {editingId === video.id ? (
-                  <InlineEdit
-                    value={editValue}
-                    onChange={setEditValue}
-                    onSave={() => handleSaveEdit(video.id)}
-                    onCancel={handleCancelEdit}
-                    disabled={savingId === video.id}
-                    inputClassName="h-8 w-full sm:w-48"
-                  />
-                ) : (
-                  <>
-                    <h4 className="font-medium break-words">{video.versionLabel}</h4>
-                    {isAdmin && video.status === 'READY' && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
-                        onClick={() => handleStartEdit(video.id, video.versionLabel)}
-                        title="Edit version label"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                    )}
-                    {(video as any).approved && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible whitespace-nowrap flex-shrink-0">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Approved
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-              {editingId !== video.id && (
-                <p className="text-sm text-muted-foreground break-all">{video.originalFileName}</p>
+          {/* Top row: Approved badge + Version label + Action buttons */}
+          <div className="flex justify-between items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {editingId === video.id ? (
+                <InlineEdit
+                  value={editValue}
+                  onChange={setEditValue}
+                  onSave={() => handleSaveEdit(video.id)}
+                  onCancel={handleCancelEdit}
+                  disabled={savingId === video.id}
+                  inputClassName="h-8 w-full sm:w-48"
+                />
+              ) : (
+                <>
+                  {(video as any).approved && (
+                    <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+                  )}
+                  <h4 className="font-medium truncate">{video.versionLabel}</h4>
+                  {isAdmin && video.status === 'READY' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
+                      onClick={() => handleStartEdit(video.id, video.versionLabel)}
+                      title="Edit version label"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
             {/* Action icons - right side on all screen sizes */}
@@ -287,6 +280,13 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
             )}
           </div>
 
+          {/* Bottom row: Filename */}
+          {editingId !== video.id && (
+            <div>
+              <p className="text-sm text-muted-foreground break-all">{video.originalFileName}</p>
+            </div>
+          )}
+
           {video.status === 'PROCESSING' && (
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
@@ -310,7 +310,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
           )}
 
           {video.status === 'READY' && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
               <div>
                 <p className="text-muted-foreground">Duration</p>
                 <p className="font-medium">{formatDuration(video.duration)}</p>

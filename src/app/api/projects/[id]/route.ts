@@ -283,12 +283,54 @@ export async function PATCH(
       if (!validAuthModes.includes(body.authMode)) {
         return NextResponse.json({ error: 'Invalid authentication mode' }, { status: 400 })
       }
+
+      // Validate that password modes have a password when being set
+      const newAuthMode = body.authMode
+      const newPassword = body.sharePassword !== undefined ? body.sharePassword : undefined
+
+      // Get current password if not being changed
+      if (newPassword === undefined && (newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH')) {
+        const currentProject = await prisma.project.findUnique({
+          where: { id },
+          select: { sharePassword: true }
+        })
+        const currentPassword = currentProject?.sharePassword ? decrypt(currentProject.sharePassword) : null
+
+        if (!currentPassword) {
+          return NextResponse.json(
+            { error: 'Password authentication mode requires a password' },
+            { status: 400 }
+          )
+        }
+      } else if ((newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH') && (!newPassword || newPassword === '')) {
+        return NextResponse.json(
+          { error: 'Password authentication mode requires a password' },
+          { status: 400 }
+        )
+      }
+
       updateData.authMode = body.authMode
     }
 
     // Handle guest mode
     if (body.guestMode !== undefined) {
       updateData.guestMode = body.guestMode
+    }
+
+    // Separate validation when only password is being cleared without authMode change
+    if (body.sharePassword !== undefined && body.authMode === undefined) {
+      const currentProject = await prisma.project.findUnique({
+        where: { id },
+        select: { authMode: true }
+      })
+
+      if ((currentProject?.authMode === 'PASSWORD' || currentProject?.authMode === 'BOTH') &&
+          (body.sharePassword === null || body.sharePassword === '')) {
+        return NextResponse.json(
+          { error: 'Cannot remove password when using password authentication mode. Switch to "No Authentication" first.' },
+          { status: 400 }
+        )
+      }
     }
 
     // Handle guest latest only restriction

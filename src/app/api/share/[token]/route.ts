@@ -34,18 +34,12 @@ export async function GET(
     }, `share-access:${token}`)
     if (rateLimitResult) return rateLimitResult
 
-    // SECURITY: Check if this is a guest session BEFORE fetching videos
-    const cookieStore = await cookies()
-    let sessionId = cookieStore.get('share_session')?.value
-    const redis = await getRedis()
-    const isGuestSession = sessionId ? await redis.exists(`guest_session:${sessionId}`) : 0
-    const isGuest = isGuestSession === 1
-
-    // First, fetch project metadata to check guestLatestOnly setting
+    // First, fetch project metadata
     const projectMeta = await prisma.project.findUnique({
       where: { slug: token },
       select: {
         id: true,
+        guestMode: true,
         guestLatestOnly: true,
         sharePassword: true,
         authMode: true,
@@ -55,6 +49,17 @@ export async function GET(
     if (!projectMeta) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
+
+    // SECURITY: Determine if this is a guest session
+    const cookieStore = await cookies()
+    let sessionId = cookieStore.get('share_session')?.value
+    const redis = await getRedis()
+
+    // User is a guest if:
+    // 1. Project has guestMode enabled, AND
+    // 2. User has an active guest_session in Redis
+    const isGuestSession = sessionId ? await redis.exists(`guest_session:${sessionId}`) : 0
+    const isGuest = projectMeta.guestMode && isGuestSession === 1
 
     // SECURITY: For guests with guestLatestOnly, we need to fetch only latest versions
     // This prevents data leakage via API inspection
@@ -123,6 +128,17 @@ export async function GET(
     }
 
     const { isAdmin } = accessCheck
+
+    // If guestMode is enabled and user is not admin, require guest session entry
+    if (projectMeta.guestMode && !isAdmin && !isGuest) {
+      // User needs to explicitly enter as guest
+      return NextResponse.json({
+        error: 'Guest entry required',
+        requiresPassword: false,
+        authMode: projectMeta.authMode,
+        guestMode: true
+      }, { status: 401 })
+    }
 
     // Get or create session ID for this share access
     let isNewSession = false

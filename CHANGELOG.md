@@ -5,6 +5,44 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-11-20
+
+### Why 0.5.0?
+Major codebase refactoring with security hardening and architecture improvements. Total changes: 2,350 lines added, 1,353 lines removed across 41 files.
+
+### Added
+- Project password API endpoint for authenticated admins
+- Asset copy/move between video versions with batch operations
+- Asset thumbnail management (set any image as video thumbnail)
+- Comprehensive asset validation with category-based rules
+- Separate asset processor worker with magic byte validation
+
+### Fixed
+- Asset worker integration (assets now properly queued for processing)
+- File validation rejecting valid uploads (relaxed MIME validation at API level)
+- Missing security-events module import
+- TypeScript null to undefined type conversions
+
+### Refactored
+- **Video Processor**: 406 → 96 lines (76% reduction)
+  - Extracted 8 helper functions to video-processor-helpers.ts
+  - Eliminated magic numbers with named constants
+  - Reduced nesting depth from 5 to 2 levels
+- **Comments API**: 340 → 189 lines (44% reduction)
+  - Extracted 5 helper functions to comment-helpers.ts
+  - Separated validation, sanitization, and notification logic
+- Share/Content API consolidated with reduced duplication
+
+### Security
+- Enhanced FFmpeg watermark validation (strict whitelist, 100 char limit)
+- Two-layer asset validation (API extension check + worker magic bytes)
+- Defense-in-depth: lenient API validation + strict worker validation
+
+### Improved
+- Worker architecture (excluded from Next.js build, cleaner separation)
+- Asset management UX (redesigned components with better feedback)
+- Centralized project access control logic
+
 ## [0.4.0] - 2025-11-19
 
 ### Why 0.4.0?

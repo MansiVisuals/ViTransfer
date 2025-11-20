@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
-import { logSecurityEvent } from '@/lib/security-events'
+import { logSecurityEvent } from '@/lib/video-access'
 
 /**
  * GET /api/projects/[id]/password
@@ -62,13 +62,14 @@ export async function GET(
 
     // Log security event
     await logSecurityEvent({
-      eventType: 'PASSWORD_ACCESS',
-      userId: admin.id,
+      type: 'PASSWORD_ACCESS',
+      severity: 'INFO',
+      projectId: project.id,
       ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-      userAgent: request.headers.get('user-agent') || 'unknown',
       details: {
-        projectId: project.id,
+        userId: admin.id,
         projectTitle: project.title,
+        userAgent: request.headers.get('user-agent') || 'unknown',
       },
     })
 

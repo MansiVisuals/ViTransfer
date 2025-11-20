@@ -2,41 +2,30 @@ import { Server } from '@tus/server'
 import { FileStore } from '@tus/file-store'
 import { prisma } from '@/lib/db'
 import { videoQueue } from '@/lib/queue'
+import { ALL_ALLOWED_EXTENSIONS } from '@/lib/asset-validation'
 import path from 'path'
 import fs from 'fs'
 import { Readable } from 'stream'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-// TUS upload directory
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
 
-// Ensure upload directory exists
 if (!fs.existsSync(TUS_UPLOAD_DIR)) {
   fs.mkdirSync(TUS_UPLOAD_DIR, { recursive: true })
 }
 
-// Configure TUS server with file store
 const tusServer: Server = new Server({
   path: '/api/uploads',
   datastore: new FileStore({
     directory: TUS_UPLOAD_DIR,
   }),
 
-  // No file size limit - self-hosted platform
   maxSize: Infinity,
-
-  // Respect forwarded headers for HTTPS/proxy setups
   respectForwardedHeaders: true,
-
-  // IMPORTANT: Disable body parsing to let TUS handle raw streams
-  // This ensures the request body isn't consumed before TUS can read it
   relativeLocation: true,
 
-  // Security: Validate file size and videoId before upload starts
   async onUploadCreate(req, upload) {
     try {
-      // SECURITY: Require admin authentication for all TUS operations
-      // Extract session cookie from request headers
       const cookieHeader = req.headers.get('cookie')
       const sessionCookie = cookieHeader?.split(';').find(c => c.trim().startsWith('vitransfer_session='))?.split('=')[1]
 
@@ -47,7 +36,6 @@ const tusServer: Server = new Server({
         }
       }
 
-      // Verify the session token
       const { verifyAccessToken } = await import('@/lib/auth')
       const payload = await verifyAccessToken(sessionCookie)
 
@@ -58,11 +46,9 @@ const tusServer: Server = new Server({
         }
       }
 
-      // Determine upload type: video or asset
       const videoId = upload.metadata?.videoId as string
       const assetId = upload.metadata?.assetId as string
 
-      // Must have either videoId (for video) or assetId (for asset)
       if (!videoId && !assetId) {
         throw {
           status_code: 400,
@@ -70,7 +56,6 @@ const tusServer: Server = new Server({
         }
       }
 
-      // VIDEO UPLOAD: Verify video record exists and is in UPLOADING state
       if (videoId) {
         const video = await prisma.video.findUnique({
           where: { id: videoId }
@@ -91,7 +76,6 @@ const tusServer: Server = new Server({
         }
       }
 
-      // ASSET UPLOAD: Verify asset record exists
       if (assetId) {
         const asset = await prisma.videoAsset.findUnique({
           where: { id: assetId }
@@ -112,14 +96,12 @@ const tusServer: Server = new Server({
     }
   },
 
-  // When upload completes, process the video or asset
   async onUploadFinish(req, upload) {
     const tusFilePath = path.join(TUS_UPLOAD_DIR, upload.id)
     const videoId = upload.metadata?.videoId as string
     const assetId = upload.metadata?.assetId as string
 
     try {
-      // Route to appropriate handler
       if (videoId) {
         return await handleVideoUploadFinish(tusFilePath, upload, videoId, tusServer)
       } else if (assetId) {
@@ -132,7 +114,6 @@ const tusServer: Server = new Server({
       console.error('[UPLOAD] Error in onUploadFinish:', error)
       await cleanupTUSFile(tusFilePath)
 
-      // Mark video/asset as ERROR
       if (videoId) {
         await markVideoAsError(videoId, error)
       }
@@ -142,9 +123,7 @@ const tusServer: Server = new Server({
   }
 })
 
-// Helper: Handle video upload completion
 async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId: string, tusServer: any) {
-  // Get video record
   const video = await prisma.video.findUnique({
     where: { id: videoId }
   })
@@ -154,20 +133,15 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     return {}
   }
 
-  // Verify file exists and size matches
   const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
 
-  // Validate video file type
   await validateVideoFile(tusFilePath, upload.metadata?.filename as string)
 
-  // Import storage functions
   const { uploadFile, initStorage } = await import('@/lib/storage')
   await initStorage()
 
-  // Use TUS datastore to read file (proper way to extract content)
   const fileStream = (tusServer.datastore as any).read(upload.id)
 
-  // Upload to permanent storage
   await uploadFile(
     video.originalStoragePath,
     fileStream,
@@ -175,22 +149,18 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     upload.metadata?.filetype as string || 'video/mp4'
   )
 
-  // Queue video processing
   await videoQueue.add('process-video', {
     videoId: video.id,
     originalStoragePath: video.originalStoragePath,
     projectId: video.projectId,
   })
 
-  // Clean up TUS file
   await cleanupTUSFile(tusFilePath)
 
   return {}
 }
 
-// Helper: Handle asset upload completion
 async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId: string, tusServer: any) {
-  // Get asset record
   const asset = await prisma.videoAsset.findUnique({
     where: { id: assetId }
   })
@@ -200,34 +170,47 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
     return {}
   }
 
-  // Verify file exists and size matches
   const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
 
-  // Validate asset file type
   await validateAssetFile(tusFilePath, upload.metadata?.filename as string)
 
-  // Import storage functions
   const { uploadFile, initStorage } = await import('@/lib/storage')
   await initStorage()
 
-  // Use TUS datastore to read file
   const fileStream = (tusServer.datastore as any).read(upload.id)
 
-  // Upload to permanent storage
+  const actualFileType = upload.metadata?.filetype as string || 'application/octet-stream'
   await uploadFile(
     asset.storagePath,
     fileStream,
     fileSize,
-    upload.metadata?.filetype as string || 'application/octet-stream'
+    actualFileType
   )
 
-  // Clean up TUS file
+  await prisma.videoAsset.update({
+    where: { id: assetId },
+    data: {
+      fileType: actualFileType,
+    },
+  })
+
+  // Queue asset for magic byte validation in worker
+  const { getAssetQueue } = await import('@/lib/queue')
+  const assetQueue = getAssetQueue()
+
+  await assetQueue.add('process-asset', {
+    assetId: asset.id,
+    storagePath: asset.storagePath,
+    expectedCategory: asset.category ?? undefined,
+  })
+
+  console.log(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
+
   await cleanupTUSFile(tusFilePath)
 
   return {}
 }
 
-// Helper: Verify uploaded file exists and size matches
 async function verifyUploadedFile(tusFilePath: string, expectedSize?: number): Promise<number> {
   if (!fs.existsSync(tusFilePath)) {
     throw new Error('Uploaded file not found on disk')
@@ -247,9 +230,8 @@ async function verifyUploadedFile(tusFilePath: string, expectedSize?: number): P
   return fileSize
 }
 
-// Helper: Validate video file type
 async function validateVideoFile(tusFilePath: string, filename?: string) {
-  // Check file extension
+  // Validate file extension
   if (filename) {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
     const allowedExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv']
@@ -262,100 +244,30 @@ async function validateVideoFile(tusFilePath: string, filename?: string) {
     }
   }
 
-  // Validate file magic bytes
-  try {
-    const { fileTypeFromFile } = await import('file-type')
-    const fileType = await fileTypeFromFile(tusFilePath)
-
-    const allowedMimeTypes = [
-      'video/mp4',
-      'video/quicktime',      // .mov
-      'video/x-msvideo',      // .avi
-      'video/webm',
-      'video/x-matroska'      // .mkv
-    ]
-
-    if (!fileType || !allowedMimeTypes.includes(fileType.mime)) {
-      await cleanupTUSFile(tusFilePath)
-      throw new Error(
-        `Invalid video file. File appears to be ${fileType?.mime || 'unknown'}, not a valid video format.`
-      )
-    }
-
-    console.log(`[UPLOAD] File type validation passed: ${fileType.mime}`)
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Invalid video file')) {
-      throw error
-    }
-    console.warn('[UPLOAD] File type validation skipped:', error)
-  }
+  // NOTE: Magic byte validation is performed in the video-processor worker
+  // This ensures proper file content validation happens during processing
+  // without causing Next.js build issues with the file-type ESM module
+  console.log(`[UPLOAD] File extension validation passed, magic byte check will run in worker`)
 }
 
-// Helper: Validate asset file type
 async function validateAssetFile(tusFilePath: string, filename?: string) {
-  // Check file extension against strict whitelist (matches frontend validation)
+  // Validate file extension
   if (filename) {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
-    const allowedExtensions = [
-      // Images
-      '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.psd', '.ai', '.eps',
-      // Audio
-      '.wav', '.mp3', '.aac', '.flac', '.m4a',
-      // Project files
-      '.prproj', '.drp', '.fcpbundle', '.fcpxml',
-      // Documents
-      '.pdf', '.txt', '.md',
-      // Archives
-      '.zip'
-    ]
-
-    if (!allowedExtensions.includes(ext)) {
+    if (!ALL_ALLOWED_EXTENSIONS.includes(ext)) {
       await cleanupTUSFile(tusFilePath)
       throw new Error(
-        `Invalid file extension: ${ext}. Allowed: ${allowedExtensions.join(', ')}`
+        `Invalid file extension: ${ext}. Allowed: ${ALL_ALLOWED_EXTENSIONS.join(', ')}`
       )
     }
   }
 
-  // Validate file magic bytes for common types
-  try {
-    const { fileTypeFromFile } = await import('file-type')
-    const fileType = await fileTypeFromFile(tusFilePath)
-
-    // Allowed MIME types for assets (strict whitelist)
-    const allowedMimeTypes = [
-      // Images
-      'image/jpeg', 'image/png', 'image/tiff',
-      // Audio
-      'audio/mpeg', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/x-m4a',
-      // Documents
-      'application/pdf',
-      // Archives
-      'application/zip',
-      // Generic (for proprietary project files that don't have magic bytes)
-      'application/octet-stream'
-    ]
-
-    // Some project files don't have detectable magic bytes, so we allow null if extension is valid
-    if (fileType && !allowedMimeTypes.includes(fileType.mime)) {
-      await cleanupTUSFile(tusFilePath)
-      throw new Error(
-        `Invalid asset file. File appears to be ${fileType.mime}, which is not allowed.`
-      )
-    }
-
-    if (fileType) {
-      console.log(`[UPLOAD] Asset file type validation passed: ${fileType.mime}`)
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Invalid asset file')) {
-      throw error
-    }
-    console.warn('[UPLOAD] Asset file type validation skipped:', error)
-  }
+  // NOTE: Magic byte validation is performed in the asset-processor worker
+  // This ensures proper file content validation happens during processing
+  // without causing Next.js build issues with the file-type ESM module
+  console.log(`[UPLOAD] Asset extension validation passed, magic byte check will run in worker`)
 }
 
-// Helper: Clean up TUS file and metadata
 async function cleanupTUSFile(tusFilePath: string) {
   try {
     if (fs.existsSync(tusFilePath)) {
@@ -370,7 +282,6 @@ async function cleanupTUSFile(tusFilePath: string) {
   }
 }
 
-// Helper: Mark video as ERROR
 async function markVideoAsError(videoId: string, error: any) {
   try {
     await prisma.video.update({
@@ -385,27 +296,20 @@ async function markVideoAsError(videoId: string, error: any) {
   }
 }
 
-// TUS server configuration (already defined above)
-const tusServer_ignore = tusServer // Prevent duplicate declaration error
-
-// CRITICAL: Pages Router configuration to disable body parsing
-// This is the ONLY way in Next.js to handle large file uploads without corruption
 export const config = {
   api: {
-    bodyParser: false, // Disable body parsing - TUS handles raw streams
-    sizeLimit: '1000mb', // Allow large request bodies (up to 1GB)
-    responseLimit: false, // No response size limit
+    bodyParser: false,
+    sizeLimit: '1000mb',
+    responseLimit: false,
   },
-  maxDuration: 3600, // 1 hour timeout for large uploads
+  maxDuration: 3600,
 }
 
-// Convert NextApiRequest to Web Request for TUS server
 function toWebRequest(req: NextApiRequest): Request {
   const protocol = req.headers['x-forwarded-proto'] || 'http'
   const host = req.headers['x-forwarded-host'] || req.headers.host
   const url = `${protocol}://${host}${req.url}`
 
-  // Convert headers
   const headers = new Headers()
   Object.entries(req.headers).forEach(([key, value]) => {
     if (value) {
@@ -413,12 +317,9 @@ function toWebRequest(req: NextApiRequest): Request {
     }
   })
 
-  // Convert Node.js stream to Web ReadableStream for proper binary handling
-  // CRITICAL: Passing IncomingMessage directly causes data corruption with large binary uploads
-  // Use Readable.toWeb() to properly convert Node.js stream to Web stream
   let body: ReadableStream | undefined
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    // @ts-ignore - Node.js 16.5+ provides Readable.toWeb()
+    // @ts-ignore
     body = Readable.toWeb(req)
   }
 
@@ -426,22 +327,18 @@ function toWebRequest(req: NextApiRequest): Request {
     method: req.method || 'GET',
     headers,
     body,
-    // @ts-ignore - duplex is required for streaming requests
+    // @ts-ignore
     duplex: 'half',
   })
 }
 
-// Convert Web Response to NextApiResponse
 async function fromWebResponse(webRes: Response, res: NextApiResponse): Promise<void> {
-  // Set status
   res.status(webRes.status)
 
-  // Set headers
   webRes.headers.forEach((value, key) => {
     res.setHeader(key, value)
   })
 
-  // Set body
   if (webRes.body) {
     const reader = webRes.body.getReader()
     try {
@@ -458,16 +355,10 @@ async function fromWebResponse(webRes: Response, res: NextApiResponse): Promise<
   res.end()
 }
 
-// Main handler - delegates to TUS server
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Convert Next.js API request to Web Request
     const webRequest = toWebRequest(req)
-
-    // Handle with TUS server
     const webResponse = await tusServer.handleWeb(webRequest)
-
-    // Convert Web Response back to Next.js API response
     await fromWebResponse(webResponse, res)
   } catch (error) {
     console.error('[UPLOAD] Pages Router Error:', error)

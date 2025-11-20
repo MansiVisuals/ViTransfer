@@ -22,7 +22,7 @@ const nextConfig = {
       },
       {
         key: 'X-Frame-Options',
-        value: 'SAMEORIGIN'
+        value: 'DENY'
       },
       {
         key: 'X-Content-Type-Options',
@@ -53,7 +53,8 @@ const nextConfig = {
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'self'",
-          "frame-ancestors 'self'"
+          "frame-ancestors 'none'",
+          "upgrade-insecure-requests"
         ].join('; ')
       }
     ];
@@ -72,12 +73,12 @@ const nextConfig = {
         headers: securityHeaders,
       },
       {
-        // Allow iframes for share links
+        // Share links - still deny framing for security
         source: '/share/:path*',
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
+            value: 'DENY'
           }
         ]
       }

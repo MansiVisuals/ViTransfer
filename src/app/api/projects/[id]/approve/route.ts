@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Verify project access using dual auth pattern (clients can approve via share link)
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
 
     if (!accessCheck.authorized) {
       return NextResponse.json({

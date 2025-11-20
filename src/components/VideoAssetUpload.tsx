@@ -8,36 +8,16 @@ import { Upload, Pause, Play, X } from 'lucide-react'
 import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
+import { ALLOWED_ASSET_EXTENSIONS, ALL_ALLOWED_EXTENSIONS, validateAssetExtension, detectAssetCategory } from '@/lib/asset-validation'
 
 interface VideoAssetUploadProps {
   videoId: string
   onUploadComplete?: () => void
 }
 
-// Allowed asset file types for video production
-const ALLOWED_EXTENSIONS = {
-  // Images
-  image: ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.psd', '.ai', '.eps'],
-  // Audio
-  audio: ['.wav', '.mp3', '.aac', '.flac', '.m4a'],
-  // Project files
-  project: ['.prproj', '.drp', '.fcpbundle', '.fcpxml'],
-  // Documents
-  document: ['.pdf', '.txt', '.md'],
-  // Archives
-  archive: ['.zip']
-}
-
-const ALL_ALLOWED_EXTENSIONS = [
-  ...ALLOWED_EXTENSIONS.image,
-  ...ALLOWED_EXTENSIONS.audio,
-  ...ALLOWED_EXTENSIONS.project,
-  ...ALLOWED_EXTENSIONS.document,
-  ...ALLOWED_EXTENSIONS.archive
-]
-
 const CATEGORY_OPTIONS = [
   { value: '', label: 'Other' },
+  { value: 'thumbnail', label: 'Thumbnail (JPG, PNG only)' },
   { value: 'image', label: 'Image' },
   { value: 'audio', label: 'Audio/Music' },
   { value: 'project', label: 'Project File (Premiere, DaVinci, Final Cut)' },
@@ -52,32 +32,28 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
   const [file, setFile] = useState<File | null>(null)
   const [category, setCategory] = useState('')
   const [uploading, setUploading] = useState(false)
+
+  const handleFileSelect = (selectedFile: File | null) => {
+    setFile(selectedFile)
+    if (selectedFile) {
+      const detectedCategory = detectAssetCategory(selectedFile.name)
+      setCategory(detectedCategory)
+    } else {
+      setCategory('')
+    }
+  }
   const [paused, setPaused] = useState(false)
   const [progress, setProgress] = useState(0)
   const [uploadSpeed, setUploadSpeed] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  // Validate asset file type
   function validateAssetFile(file: File): { valid: boolean; error?: string } {
-    // Check file size is not zero
     if (file.size === 0) {
       return { valid: false, error: 'File is empty' }
     }
 
-    // Check file extension against whitelist
-    const fileName = file.name.toLowerCase()
-    const extension = fileName.substring(fileName.lastIndexOf('.'))
-
-    if (!ALL_ALLOWED_EXTENSIONS.includes(extension)) {
-      const allowed = ALL_ALLOWED_EXTENSIONS.join(', ')
-      return {
-        valid: false,
-        error: `File type "${extension}" is not allowed. Allowed types: ${allowed}`
-      }
-    }
-
-    return { valid: true }
+    return validateAssetExtension(file.name, category)
   }
 
   async function handleUpload() {
@@ -249,7 +225,7 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
 
     if (!uploading && e.dataTransfer.files.length > 0) {
       const droppedFile = e.dataTransfer.files[0]
-      setFile(droppedFile)
+      handleFileSelect(droppedFile)
     }
   }
 
@@ -299,7 +275,7 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
             ref={fileInputRef}
             id={`asset-file-${videoId}`}
             type="file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
             disabled={uploading}
             className="hidden"
           />

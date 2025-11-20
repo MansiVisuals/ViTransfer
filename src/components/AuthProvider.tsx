@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { clearCsrfToken } from '@/lib/csrf-client'
 
 interface User {
   id: string
@@ -110,9 +111,12 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
     // Step 3: Clear any client-side storage (defense in depth)
     // Even though we use HttpOnly cookies, clear any other stored data
     try {
+      // Clear CSRF token cache
+      clearCsrfToken()
+
       // Clear localStorage (if any app data is stored there)
       localStorage.removeItem('vitransfer_preferences') // Example
-      
+
       // Clear sessionStorage
       sessionStorage.clear()
     } catch (storageError) {

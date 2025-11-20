@@ -89,8 +89,8 @@ export async function GET(
         ...video,
         originalFileSize: video.originalFileSize.toString(),
       })),
-      // Decrypt password for admin viewing (only sent to authenticated admins)
-      sharePasswordDecrypted: project.sharePassword ? decrypt(project.sharePassword) : null,
+      // Password decryption moved to separate endpoint: GET /api/projects/[id]/password
+      // This reduces XSS attack surface and prevents password exposure in DevTools
       // Include SMTP status for frontend to disable/enable notification features
       smtpConfigured,
     }

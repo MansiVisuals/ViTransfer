@@ -18,6 +18,30 @@ export const FILE_LIMITS = {
   ALLOWED_EXTENSIONS: ['.mp4', '.mov', '.avi', '.webm', '.mkv']
 }
 
+// Allowed asset types by category
+export const ALLOWED_ASSET_TYPES = {
+  image: {
+    extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'],
+    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml']
+  },
+  audio: {
+    extensions: ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma'],
+    mimeTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/aac', 'audio/flac', 'audio/ogg', 'audio/mp4', 'audio/x-ms-wma']
+  },
+  project: {
+    extensions: ['.prproj', '.aep', '.fcp', '.davinci', '.zip', '.rar', '.7z'],
+    mimeTypes: ['application/octet-stream', 'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed']
+  },
+  document: {
+    extensions: ['.pdf', '.doc', '.docx', '.txt', '.rtf'],
+    mimeTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/rtf']
+  },
+  other: {
+    extensions: ['.zip', '.rar', '.7z', '.tar', '.gz'],
+    mimeTypes: ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed', 'application/x-tar', 'application/gzip']
+  }
+}
+
 /**
  * Validate file extension
  */
@@ -153,6 +177,98 @@ export function validateUploadedFile(
   return {
     valid: true,
     sanitizedFilename
+  }
+}
+
+/**
+ * Validate asset file (images, audio, documents, etc.)
+ */
+export function validateAssetFile(
+  filename: string,
+  mimeType: string,
+  category?: string
+): { valid: boolean; error?: string; sanitizedFilename?: string; detectedCategory?: string } {
+  // Sanitize filename first
+  const sanitizedFilename = sanitizeFilename(filename)
+
+  // Check for suspicious filenames
+  if (isSuspiciousFilename(filename)) {
+    return {
+      valid: false,
+      error: 'Filename contains suspicious patterns'
+    }
+  }
+
+  const ext = sanitizedFilename.toLowerCase().slice(sanitizedFilename.lastIndexOf('.'))
+
+  // If category specified, validate against that category
+  if (category && category in ALLOWED_ASSET_TYPES) {
+    const categoryConfig = ALLOWED_ASSET_TYPES[category as keyof typeof ALLOWED_ASSET_TYPES]
+
+    // Check extension
+    if (!categoryConfig.extensions.includes(ext)) {
+      return {
+        valid: false,
+        error: `Invalid file type for ${category}. Allowed: ${categoryConfig.extensions.join(', ')}`
+      }
+    }
+
+    // Check MIME type - accept if it matches OR if it's a generic binary type
+    // SECURITY: We allow generic MIME types here because:
+    // 1. Browser MIME detection can be unreliable
+    // 2. Worker performs strict magic byte validation (defense-in-depth)
+    // 3. Suspicious extensions are still blocked above
+    const normalizedMime = mimeType.toLowerCase()
+    if (!categoryConfig.mimeTypes.includes(normalizedMime) &&
+        normalizedMime !== 'application/octet-stream') {
+      // Log the actual MIME type for debugging
+      console.log(`[FILE-VALIDATION] Extension ${ext} matched ${category}, but MIME type ${mimeType} did not match. Worker will validate via magic bytes.`)
+      console.log(`[FILE-VALIDATION] Allowed MIME types: ${categoryConfig.mimeTypes.join(', ')}`)
+      return {
+        valid: false,
+        error: `Invalid MIME type for ${category}. Received: ${mimeType}. Allowed: ${categoryConfig.mimeTypes.join(', ')}`
+      }
+    }
+
+    return {
+      valid: true,
+      sanitizedFilename,
+      detectedCategory: category
+    }
+  }
+
+  // If no category, detect from extension OR MIME type
+  // First try to find by extension (most reliable)
+  // SECURITY: Extension-based detection is acceptable here because:
+  // 1. Worker performs strict magic byte validation (defense-in-depth)
+  // 2. Suspicious extensions (.exe, .sh, etc.) are blocked above
+  for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
+    if (config.extensions.includes(ext)) {
+      // Extension matches, accept it
+      // Worker will validate actual file content via magic bytes
+      return {
+        valid: true,
+        sanitizedFilename,
+        detectedCategory: cat
+      }
+    }
+  }
+
+  // If extension didn't match, try MIME type
+  for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
+    if (config.mimeTypes.includes(mimeType.toLowerCase())) {
+      return {
+        valid: true,
+        sanitizedFilename,
+        detectedCategory: cat
+      }
+    }
+  }
+
+  // No category matched
+  return {
+    valid: false,
+    error: `Unsupported file type: ${ext}. Please upload images, audio, documents, or project files.`
   }
 }
 

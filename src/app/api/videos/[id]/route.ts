@@ -4,6 +4,7 @@ import { deleteFile } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { getAutoApproveProject } from '@/lib/settings'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Helper: Check if all videos have at least one approved version
 async function checkAllVideosApproved(projectId: string): Promise<boolean> {
@@ -73,6 +74,14 @@ export async function PATCH(
   // CSRF protection
   const csrfCheck = await validateCsrfProtection(request)
   if (csrfCheck) return csrfCheck
+
+  // Rate limit admin toggles
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: 'Too many video update requests. Please slow down.',
+  }, 'video-update')
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const { id } = await params
@@ -189,6 +198,13 @@ export async function DELETE(
   // CSRF protection
   const csrfCheck = await validateCsrfProtection(request)
   if (csrfCheck) return csrfCheck
+
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 30,
+    message: 'Too many video delete requests. Please slow down.',
+  }, 'video-delete')
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const { id } = await params

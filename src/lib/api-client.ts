@@ -14,7 +14,7 @@
  *   const data = await apiPost('/api/projects', { name: 'Project 1' })
  */
 
-import { getCsrfToken } from './csrf-client'
+import { getCsrfToken, clearCsrfToken } from './csrf-client'
 
 // Track if we're already redirecting to prevent multiple redirects
 let isRedirecting = false
@@ -70,6 +70,7 @@ export async function apiFetch(
 /**
  * Handle session expiration/revocation
  * - Clear local storage and session storage
+ * - Clear CSRF token cache
  * - Redirect to login page
  * - Prevent multiple simultaneous redirects
  */
@@ -79,6 +80,7 @@ function handleSessionExpired() {
 
   // Clear any client-side storage (defense in depth)
   try {
+    clearCsrfToken() // Clear cached CSRF token
     localStorage.removeItem('vitransfer_preferences')
     sessionStorage.clear()
   } catch (error) {

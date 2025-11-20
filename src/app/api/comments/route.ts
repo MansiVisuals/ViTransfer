@@ -7,6 +7,15 @@ import { getPrimaryRecipient } from '@/lib/recipients'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import {
+  validateCommentPermissions,
+  resolveCommentAuthor,
+  sanitizeAndValidateContent,
+  handleCommentNotifications,
+  fetchProjectComments
+} from '@/lib/comment-helpers'
+import { cookies } from 'next/headers'
+import { getRedis } from '@/lib/redis'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -65,8 +74,6 @@ export async function GET(request: NextRequest) {
 
     // SECURITY: Block guest access to comments (guests should only see videos)
     if (project.guestMode) {
-      const { cookies } = await import('next/headers')
-      const { getRedis } = await import('@/lib/redis')
       const cookieStore = await cookies()
       const sessionId = cookieStore.get('share_session')?.value
 
@@ -184,14 +191,6 @@ export async function POST(request: NextRequest) {
     const currentUser = await getCurrentUserFromRequest(request)
 
     // Validate comment permissions
-    const {
-      validateCommentPermissions,
-      resolveCommentAuthor,
-      sanitizeAndValidateContent,
-      handleCommentNotifications,
-      fetchProjectComments
-    } = await import('@/lib/comment-helpers')
-
     const permissionCheck = await validateCommentPermissions({
       projectId,
       isInternal: isInternal || false,

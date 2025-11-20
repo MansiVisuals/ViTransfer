@@ -248,13 +248,16 @@ export async function GET(
         },
       })
 
+      // Determine correct Content-Type based on file type
+      const contentType = verifiedToken.quality === 'thumbnail' ? 'image/jpeg' : 'video/mp4'
+
       return new NextResponse(readableStream, {
         status: 206,
         headers: {
           'Content-Range': `bytes ${start}-${end}/${stat.size}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize.toString(),
-          'Content-Type': 'video/mp4',
+          'Content-Type': contentType,
           'Cache-Control': 'public, max-age=3600',
           'X-Content-Type-Options': 'nosniff',
           'X-Frame-Options': 'SAMEORIGIN',
@@ -277,9 +280,12 @@ export async function GET(
       },
     })
 
+    // Determine correct Content-Type based on file type
+    const contentType = verifiedToken.quality === 'thumbnail' ? 'image/jpeg' : 'video/mp4'
+
     return new NextResponse(readableStream, {
       headers: {
-        'Content-Type': 'video/mp4',
+        'Content-Type': contentType,
         'Content-Length': stat.size.toString(),
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'public, max-age=3600',

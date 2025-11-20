@@ -1,3 +1,5 @@
+import { ensureDefaultAdmin } from './lib/seed'
+import { initializeSecuritySettings } from './lib/settings'
 /**
  * Next.js Instrumentation Hook
  *
@@ -13,11 +15,9 @@ export async function register() {
     console.log('[INIT] Running server initialization...')
 
     try {
-      const { ensureDefaultAdmin } = await import('./lib/seed')
       await ensureDefaultAdmin()
 
       // Initialize security settings from environment variables
-      const { initializeSecuritySettings } = await import('./lib/settings')
       await initializeSecuritySettings()
 
       console.log('[INIT] Server initialization complete')

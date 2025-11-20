@@ -4,6 +4,7 @@ import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-l
 import { validateRequest, loginSchema } from '@/lib/validation'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
+import { getRedis } from '@/lib/redis'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -123,7 +124,6 @@ async function storeTokenFingerprint(
   fingerprintHash: string
 ): Promise<void> {
   try {
-    const { getRedis } = await import('@/lib/redis')
     const redis = getRedis()
 
     // Use full hash (256 bits) - no truncation for better collision resistance

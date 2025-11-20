@@ -41,11 +41,27 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // For approved projects, serve the original file
-    // For non-approved projects, you might want to restrict this or serve preview
-    const filePath = video.project.status === 'APPROVED' 
-      ? video.originalStoragePath 
-      : video.originalStoragePath // Or restrict access
+    if (!accessCheck.isAdmin) {
+      if (!video.project.allowAssetDownload) {
+        return NextResponse.json({ error: 'Downloads are disabled for this project' }, { status: 403 })
+      }
+
+      if (!video.approved) {
+        return NextResponse.json({ error: 'Downloads available after approval' }, { status: 403 })
+      }
+    }
+
+    // Choose safest available file based on role/approval
+    let filePath: string | null = null
+    if (accessCheck.isAdmin) {
+      filePath = video.originalStoragePath || video.preview1080Path || video.preview720Path || null
+    } else {
+      filePath = video.originalStoragePath || null
+    }
+
+    if (!filePath) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+    }
 
     // Get the full file path
     const fullPath = getFilePath(filePath)
@@ -56,8 +72,8 @@ export async function GET(
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    // Use the original filename from the database
-    const originalFilename = video.originalFileName
+    // Use the original filename from the database, guard against missing values
+    const originalFilename = video.originalFileName || 'video.mp4'
     const safeFilename = sanitizeFilenameForHeader(originalFilename)
 
     // CRITICAL FIX: Stream file instead of loading into memory

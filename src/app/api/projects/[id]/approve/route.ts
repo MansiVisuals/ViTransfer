@@ -7,6 +7,14 @@ import { generateShareUrl } from '@/lib/url'
 import { getAutoApproveProject } from '@/lib/settings'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { z } from 'zod'
+
+const approveSchema = z.object({
+  authorName: z.string().trim().max(100, 'Name too long').optional().nullable(),
+  authorEmail: z.string().email().max(255, 'Email too long').optional().nullable(),
+  selectedVideoId: z.string().min(1, 'Selected video is required'),
+})
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Rate limiting: 20 approval actions per minute
@@ -23,7 +31,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { id: projectId } = await params
     const body = await request.json()
-    const { authorName, authorEmail, selectedVideoId } = body
+    const parsed = approveSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
+    }
+
+    const { authorName, authorEmail, selectedVideoId } = parsed.data
 
     console.log('[APPROVAL] Starting approval process for project:', projectId)
     console.log('[APPROVAL] Selected video:', selectedVideoId)
@@ -43,6 +57,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Verify project access using dual auth pattern (clients can approve via share link)
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
+
+    // CSRF: enforce token for admins, origin-check for client approvals
+    const csrfCheck = accessCheck.isAdmin
+      ? await validateCsrfProtection(request)
+      : await validateCsrfProtection(request, { requireToken: false })
+    if (csrfCheck) return csrfCheck
 
     if (!accessCheck.authorized) {
       return NextResponse.json({
@@ -144,6 +164,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const isCompleteProjectApproval = allApproved && autoApprove
 
         // Use new unified notification system
+        const safeAuthorName = authorName || undefined
+        const safeAuthorEmail = authorEmail || undefined
+
         await handleApprovalNotification({
           project: {
             id: project.id,
@@ -153,8 +176,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           },
           approvedVideos: approvedVideosList,
           approved: true,
-          authorName,
-          authorEmail,
+          authorName: safeAuthorName,
+          authorEmail: safeAuthorEmail,
           isComplete: isCompleteProjectApproval, // Pass whether ALL videos are approved
         })
       }

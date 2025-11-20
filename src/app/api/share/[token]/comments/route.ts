@@ -4,6 +4,8 @@ import { getPrimaryRecipient } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
+import { cookies } from 'next/headers'
+import { getRedis } from '@/lib/redis'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -53,9 +55,7 @@ export async function GET(
     }
 
     // SECURITY: Block guest access to comments (guests should only see videos)
-    if (project.guestMode) {
-      const { cookies } = await import('next/headers')
-      const { getRedis } = await import('@/lib/redis')
+  if (project.guestMode) {
       const cookieStore = await cookies()
       const sessionId = cookieStore.get('share_session')?.value
 

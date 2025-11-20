@@ -5,6 +5,18 @@ import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile } from '@/lib/file-validation'
+import { z } from 'zod'
+
+const createAssetSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  fileSize: z.union([z.number(), z.string()])
+    .transform(val => Number(val))
+    .refine(val => Number.isFinite(val) && Number.isInteger(val) && val > 0 && val <= Number.MAX_SAFE_INTEGER, {
+      message: 'fileSize must be a positive integer',
+    }),
+  category: z.string().max(100).nullable().optional(),
+  mimeType: z.string().max(255).optional(),
+})
 
 // GET /api/videos/[id]/assets - List all assets for a video
 export async function GET(
@@ -50,6 +62,13 @@ export async function GET(
     if (!accessCheck.isAdmin && !project.allowAssetDownload) {
       return NextResponse.json(
         { error: 'Asset downloads are not allowed for this project' },
+        { status: 403 }
+      )
+    }
+
+    if (!accessCheck.isAdmin && !video.approved) {
+      return NextResponse.json(
+        { error: 'Assets are only available for approved videos' },
         { status: 403 }
       )
     }
@@ -126,7 +145,12 @@ export async function POST(
 
     // Parse request body
     const body = await request.json()
-    const { fileName, fileSize, category, mimeType } = body
+    const parsed = createAssetSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
+    }
+    const { fileName, fileSize, category, mimeType } = parsed.data
+    const normalizedCategory = category ?? undefined
 
     // Validate required fields
     if (!fileName || !fileSize) {
@@ -137,11 +161,7 @@ export async function POST(
     }
 
     // Validate asset file
-    const assetValidation = validateAssetFile(
-      fileName,
-      mimeType || 'application/octet-stream',
-      category
-    )
+    const assetValidation = validateAssetFile(fileName, mimeType || 'application/octet-stream', normalizedCategory)
 
     if (!assetValidation.valid) {
       return NextResponse.json(
@@ -156,7 +176,7 @@ export async function POST(
     const storagePath = `projects/${video.projectId}/videos/assets/${videoId}/asset-${timestamp}-${sanitizedFileName}`
 
     // Use detected category if not provided
-    const finalCategory = category || assetValidation.detectedCategory || 'other'
+    const finalCategory = normalizedCategory || assetValidation.detectedCategory || 'other'
 
     // Create database record (TUS will upload the file later)
     const asset = await prisma.videoAsset.create({

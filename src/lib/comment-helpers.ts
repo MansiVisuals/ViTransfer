@@ -1,9 +1,10 @@
-import { NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
-import { getCurrentUserFromRequest } from '@/lib/auth'
 import { getPrimaryRecipient } from '@/lib/recipients'
-import { verifyProjectAccess } from '@/lib/project-access'
 import { isSmtpConfigured } from '@/lib/settings'
+import { getRedis } from '@/lib/redis'
+import { validateCommentLength, containsSuspiciousPatterns, sanitizeCommentHtml } from '@/lib/security/html-sanitization'
+import { sendImmediateNotification, queueNotification } from '@/lib/notifications'
 
 /**
  * Validate comment permissions
@@ -46,8 +47,6 @@ export async function validateCommentPermissions(params: {
 
   // SECURITY: Block guest comment creation (guests should only view videos)
   if (project.guestMode) {
-    const { cookies } = await import('next/headers')
-    const { getRedis } = await import('@/lib/redis')
     const cookieStore = await cookies()
     const sessionId = cookieStore.get('share_session')?.value
 
@@ -118,9 +117,6 @@ export async function sanitizeAndValidateContent(params: {
   errorStatus?: number
 }> {
   const { content, authorName } = params
-
-  const { validateCommentLength, containsSuspiciousPatterns, sanitizeCommentHtml } =
-    await import('@/lib/security/html-sanitization')
 
   // Validate content length
   if (!validateCommentLength(content)) {
@@ -246,11 +242,9 @@ export async function handleCommentNotifications(params: {
     // Handle notification based on schedule
     if (schedule === 'IMMEDIATE') {
       console.log('[COMMENT-NOTIFICATION] Sending immediately...')
-      const { sendImmediateNotification } = await import('@/lib/notifications')
       await sendImmediateNotification(context)
     } else {
       console.log(`[COMMENT-NOTIFICATION] Queuing for later (${schedule})...`)
-      const { queueNotification } = await import('@/lib/notifications')
       await queueNotification(context)
     }
   } catch (emailError) {

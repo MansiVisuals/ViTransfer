@@ -74,51 +74,65 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       return
     }
 
-    // Detect category from MIME type
-    let detectedCategory: string | undefined
+    // If expected category is provided, verify the MIME type is compatible with it
+    let finalCategory: string
 
-    for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
-      if (config.mimeTypes.includes(fileType.mime)) {
-        detectedCategory = cat
-        break
+    if (expectedCategory && expectedCategory !== 'other') {
+      // Check if the expected category supports this MIME type
+      const expectedConfig = ALLOWED_ASSET_TYPES[expectedCategory as keyof typeof ALLOWED_ASSET_TYPES]
+
+      if (expectedConfig && expectedConfig.mimeTypes.includes(fileType.mime)) {
+        // Expected category is valid and compatible - use it (preserve manual selection)
+        finalCategory = expectedCategory
+        console.log(`[WORKER] Asset MIME type ${fileType.mime} is compatible with expected category '${expectedCategory}'`)
+      } else {
+        // Expected category doesn't support this MIME type - validation failed
+        console.error(`[WORKER ERROR] File MIME type '${fileType.mime}' is not compatible with expected category '${expectedCategory}'`)
+
+        await prisma.videoAsset.update({
+          where: { id: assetId },
+          data: {
+            fileType: 'INVALID - ' + fileType.mime
+          }
+        })
+
+        throw new Error(`File MIME type '${fileType.mime}' is not compatible with expected category '${expectedCategory}'`)
       }
-    }
+    } else {
+      // No expected category - auto-detect from MIME type
+      let detectedCategory: string | undefined
 
-    if (!detectedCategory) {
-      console.error(`[WORKER ERROR] File content does not match any allowed asset type. Detected: ${fileType.mime}`)
-
-      await prisma.videoAsset.update({
-        where: { id: assetId },
-        data: {
-          fileType: 'INVALID - ' + fileType.mime
+      for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
+        if (config.mimeTypes.includes(fileType.mime)) {
+          detectedCategory = cat
+          break
         }
-      })
+      }
 
-      throw new Error(`File content does not match any allowed asset type. Detected: ${fileType.mime}`)
+      if (!detectedCategory) {
+        console.error(`[WORKER ERROR] File content does not match any allowed asset type. Detected: ${fileType.mime}`)
+
+        await prisma.videoAsset.update({
+          where: { id: assetId },
+          data: {
+            fileType: 'INVALID - ' + fileType.mime
+          }
+        })
+
+        throw new Error(`File content does not match any allowed asset type. Detected: ${fileType.mime}`)
+      }
+
+      finalCategory = detectedCategory
     }
 
-    // If expected category provided, verify it matches
-    if (expectedCategory && expectedCategory !== detectedCategory && expectedCategory !== 'other') {
-      console.error(`[WORKER ERROR] File content (${detectedCategory}) does not match expected category (${expectedCategory})`)
+    console.log(`[WORKER] Asset magic byte validation passed - type: ${fileType.mime}, category: ${finalCategory}`)
 
-      await prisma.videoAsset.update({
-        where: { id: assetId },
-        data: {
-          fileType: 'INVALID - ' + fileType.mime
-        }
-      })
-
-      throw new Error(`File content (${detectedCategory}) does not match expected category (${expectedCategory})`)
-    }
-
-    console.log(`[WORKER] Asset magic byte validation passed - type: ${fileType.mime}`)
-
-    // Update asset with detected file type and category
+    // Update asset with detected file type and final category
     await prisma.videoAsset.update({
       where: { id: assetId },
       data: {
         fileType: fileType.mime,
-        category: detectedCategory || expectedCategory || 'other'
+        category: finalCategory
       }
     })
 

@@ -56,6 +56,34 @@ export async function POST(request: NextRequest) {
       isShareOnly
     } = validation.data
 
+    // Normalize auth/password inputs
+    const trimmedPassword = sharePassword?.trim()
+    const resolvedAuthMode = authMode || 'PASSWORD'
+
+    // Enforce password presence for password-based modes
+    if (resolvedAuthMode === 'PASSWORD' || resolvedAuthMode === 'BOTH') {
+      if (!trimmedPassword) {
+        return NextResponse.json(
+          { error: 'Password authentication mode requires a share password.' },
+          { status: 400 }
+        )
+      }
+      // Basic strength: at least 8 chars (schema already enforces), check at least one letter/number
+      const hasLetter = /[A-Za-z]/.test(trimmedPassword)
+      const hasNumber = /[0-9]/.test(trimmedPassword)
+      if (!hasLetter || !hasNumber) {
+        return NextResponse.json(
+          { error: 'Share password must include at least one letter and one number.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Clear password for modes that don’t use it
+    const passwordForStorage = (resolvedAuthMode === 'OTP' || resolvedAuthMode === 'NONE')
+      ? null
+      : (trimmedPassword || null)
+
     // Fetch default settings for watermark and preview resolution
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
@@ -70,9 +98,7 @@ export async function POST(request: NextRequest) {
     const slug = await generateUniqueSlug(title, prisma)
 
     // Encrypt share password if provided (so we can decrypt it later for email notifications)
-    const encryptedSharePassword = sharePassword
-      ? encrypt(sharePassword)
-      : null
+    const encryptedSharePassword = passwordForStorage ? encrypt(passwordForStorage) : null
 
     // Use transaction to ensure atomicity: if recipient creation fails, project creation is rolled back
     const project = await prisma.$transaction(async (tx) => {
@@ -83,7 +109,7 @@ export async function POST(request: NextRequest) {
           description,
           companyName: companyName || null,
           sharePassword: encryptedSharePassword,
-          authMode: authMode || 'PASSWORD',
+          authMode: resolvedAuthMode,
           enableRevisions: isShareOnly ? false : (enableRevisions || false),
           maxRevisions: isShareOnly ? 0 : (enableRevisions ? (maxRevisions || 3) : 0),
           restrictCommentsToLatestVersion: isShareOnly ? false : (restrictCommentsToLatestVersion || false),

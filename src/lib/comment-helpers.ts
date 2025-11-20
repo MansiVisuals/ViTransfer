@@ -109,7 +109,7 @@ export async function resolveCommentAuthor(params: {
  */
 export async function sanitizeAndValidateContent(params: {
   content: string
-  authorName?: string
+  authorName?: string | null | undefined
 }): Promise<{
   valid: boolean
   sanitizedContent?: string

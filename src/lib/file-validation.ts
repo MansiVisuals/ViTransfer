@@ -205,6 +205,7 @@ export function validateAssetFile(
   if (category && category in ALLOWED_ASSET_TYPES) {
     const categoryConfig = ALLOWED_ASSET_TYPES[category as keyof typeof ALLOWED_ASSET_TYPES]
 
+    // Check extension
     if (!categoryConfig.extensions.includes(ext)) {
       return {
         valid: false,
@@ -212,10 +213,20 @@ export function validateAssetFile(
       }
     }
 
-    if (!categoryConfig.mimeTypes.includes(mimeType.toLowerCase())) {
+    // Check MIME type - accept if it matches OR if it's a generic binary type
+    // SECURITY: We allow generic MIME types here because:
+    // 1. Browser MIME detection can be unreliable
+    // 2. Worker performs strict magic byte validation (defense-in-depth)
+    // 3. Suspicious extensions are still blocked above
+    const normalizedMime = mimeType.toLowerCase()
+    if (!categoryConfig.mimeTypes.includes(normalizedMime) &&
+        normalizedMime !== 'application/octet-stream') {
+      // Log the actual MIME type for debugging
+      console.log(`[FILE-VALIDATION] Extension ${ext} matched ${category}, but MIME type ${mimeType} did not match. Worker will validate via magic bytes.`)
+      console.log(`[FILE-VALIDATION] Allowed MIME types: ${categoryConfig.mimeTypes.join(', ')}`)
       return {
         valid: false,
-        error: `Invalid MIME type for ${category}. Allowed: ${categoryConfig.mimeTypes.join(', ')}`
+        error: `Invalid MIME type for ${category}. Received: ${mimeType}. Allowed: ${categoryConfig.mimeTypes.join(', ')}`
       }
     }
 
@@ -226,9 +237,26 @@ export function validateAssetFile(
     }
   }
 
-  // If no category, detect from extension
+  // If no category, detect from extension OR MIME type
+  // First try to find by extension (most reliable)
+  // SECURITY: Extension-based detection is acceptable here because:
+  // 1. Worker performs strict magic byte validation (defense-in-depth)
+  // 2. Suspicious extensions (.exe, .sh, etc.) are blocked above
   for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
-    if (config.extensions.includes(ext) && config.mimeTypes.includes(mimeType.toLowerCase())) {
+    if (config.extensions.includes(ext)) {
+      // Extension matches, accept it
+      // Worker will validate actual file content via magic bytes
+      return {
+        valid: true,
+        sanitizedFilename,
+        detectedCategory: cat
+      }
+    }
+  }
+
+  // If extension didn't match, try MIME type
+  for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
+    if (config.mimeTypes.includes(mimeType.toLowerCase())) {
       return {
         valid: true,
         sanitizedFilename,

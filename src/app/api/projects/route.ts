@@ -68,18 +68,10 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-      // Basic strength: at least 8 chars (schema already enforces), check at least one letter/number
-      const hasLetter = /[A-Za-z]/.test(trimmedPassword)
-      const hasNumber = /[0-9]/.test(trimmedPassword)
-      if (!hasLetter || !hasNumber) {
-        return NextResponse.json(
-          { error: 'Share password must include at least one letter and one number.' },
-          { status: 400 }
-        )
-      }
+      // Password strength validation (8+ chars, letter, number) is handled by Zod schema
     }
 
-    // Clear password for modes that don’t use it
+    // Clear password for modes that don't use it
     const passwordForStorage = (resolvedAuthMode === 'OTP' || resolvedAuthMode === 'NONE')
       ? null
       : (trimmedPassword || null)

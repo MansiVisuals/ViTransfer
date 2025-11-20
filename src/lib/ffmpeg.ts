@@ -248,26 +248,32 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   filters.push(`scale=${width}:${height}`)
 
   // Add watermark if specified
+  let watermarkTextFile: string | null = null
   if (watermarkText) {
     // Validate and sanitize watermark text (defense-in-depth)
-    const escapedText = validateAndSanitizeWatermarkText(watermarkText)
+    const validatedText = validateAndSanitizeWatermarkText(watermarkText)
+
+    // SECURITY: Write watermark to temp file instead of inline
+    // This eliminates command injection risk even with complex escaping
+    watermarkTextFile = path.join(os.tmpdir(), `watermark-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`)
+    fs.writeFileSync(watermarkTextFile, validatedText, 'utf-8')
 
     const isVertical = height > width
     const centerFontSize = isVertical ? Math.round(width * 0.08) : Math.round(width * 0.04)
     const cornerFontSize = isVertical ? Math.round(width * 0.05) : Math.round(width * 0.025)
 
-    // Center watermark
+    // Center watermark - use textfile instead of inline text
     filters.push(
-      `drawtext=text='${escapedText}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${centerFontSize}:fontcolor=white@0.3:x=(w-text_w)/2:y=(h-text_h)/2:shadowcolor=black@0.5:shadowx=2:shadowy=2`
+      `drawtext=textfile='${watermarkTextFile}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${centerFontSize}:fontcolor=white@0.3:x=(w-text_w)/2:y=(h-text_h)/2:shadowcolor=black@0.5:shadowx=2:shadowy=2`
     )
 
     // Corner watermarks
     const spacing = isVertical ? 30 : 50
     filters.push(
-      `drawtext=text='${escapedText}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${cornerFontSize}:fontcolor=white@0.2:x=${spacing}:y=${spacing}:shadowcolor=black@0.3:shadowx=1:shadowy=1`
+      `drawtext=textfile='${watermarkTextFile}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${cornerFontSize}:fontcolor=white@0.2:x=${spacing}:y=${spacing}:shadowcolor=black@0.3:shadowx=1:shadowy=1`
     )
     filters.push(
-      `drawtext=text='${escapedText}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${cornerFontSize}:fontcolor=white@0.2:x=w-text_w-${spacing}:y=h-text_h-${spacing}:shadowcolor=black@0.3:shadowx=1:shadowy=1`
+      `drawtext=textfile='${watermarkTextFile}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${cornerFontSize}:fontcolor=white@0.2:x=w-text_w-${spacing}:y=h-text_h-${spacing}:shadowcolor=black@0.3:shadowx=1:shadowy=1`
     )
   }
 
@@ -348,6 +354,18 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
 
     ffmpeg.on('close', (code) => {
+      // Cleanup watermark temp file
+      if (watermarkTextFile && fs.existsSync(watermarkTextFile)) {
+        try {
+          fs.unlinkSync(watermarkTextFile)
+          if (DEBUG) {
+            console.log('[FFMPEG DEBUG] Cleaned up watermark temp file:', watermarkTextFile)
+          }
+        } catch (cleanupErr) {
+          console.error('Failed to cleanup watermark temp file:', cleanupErr)
+        }
+      }
+
       if (DEBUG) {
         console.log('[FFMPEG DEBUG] Process exited with code:', code)
       }
@@ -367,6 +385,15 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
 
     ffmpeg.on('error', (err) => {
+      // Cleanup watermark temp file on error
+      if (watermarkTextFile && fs.existsSync(watermarkTextFile)) {
+        try {
+          fs.unlinkSync(watermarkTextFile)
+        } catch (cleanupErr) {
+          console.error('Failed to cleanup watermark temp file:', cleanupErr)
+        }
+      }
+
       if (DEBUG) {
         console.error('[FFMPEG DEBUG] Failed to spawn FFmpeg:', err)
       }

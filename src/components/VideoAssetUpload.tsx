@@ -36,8 +36,11 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
   const handleFileSelect = (selectedFile: File | null) => {
     setFile(selectedFile)
     if (selectedFile) {
-      const detectedCategory = detectAssetCategory(selectedFile.name)
-      setCategory(detectedCategory)
+      // Only auto-detect category if user hasn't manually selected one
+      if (!category) {
+        const detectedCategory = detectAssetCategory(selectedFile.name)
+        setCategory(detectedCategory)
+      }
     } else {
       setCategory('')
     }

@@ -6,11 +6,19 @@ import { Button } from './button'
 export interface PasswordInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
   showToggle?: boolean
+  onReveal?: () => void
 }
 
 const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ className, showToggle = true, ...props }, ref) => {
+  ({ className, showToggle = true, onReveal, ...props }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false)
+
+    const handleToggle = () => {
+      if (!showPassword && onReveal) {
+        onReveal()
+      }
+      setShowPassword(!showPassword)
+    }
 
     return (
       <div className="relative w-full">
@@ -30,7 +38,7 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={handleToggle}
               className="h-7 w-7 p-0"
               tabIndex={-1}
               title={showPassword ? 'Hide password' : 'Show password'}

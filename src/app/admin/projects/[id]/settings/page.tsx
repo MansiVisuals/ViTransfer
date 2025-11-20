@@ -973,7 +973,7 @@ export default function ProjectSettingsPage() {
                       id="password"
                       value={passwordLoading ? 'Loading...' : sharePassword}
                       onChange={(e) => setSharePassword(e.target.value)}
-                      placeholder="Leave empty to disable password protection"
+                      placeholder="Enter password for share page"
                       className="flex-1"
                       onReveal={loadPassword}
                       disabled={passwordLoading}
@@ -1006,9 +1006,7 @@ export default function ProjectSettingsPage() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {sharePassword
-                      ? 'Password will be required to access the share page'
-                      : 'Leave empty to allow anyone with the link to access'}
+                    Clients will need this password to access the share page
                   </p>
                 </div>
               </div>

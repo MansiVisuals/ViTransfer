@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { rateLimit } from '@/lib/rate-limit'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import archiver from 'archiver'
 import { Readable } from 'stream'
+import { z } from 'zod'
+
+const downloadZipSchema = z.object({
+  assetIds: z.array(z.string().min(1)).min(1, 'No assets selected').max(50, 'Too many assets requested'),
+})
 
 // POST /api/videos/[id]/assets/download-zip - Download selected assets as zip
 export async function POST(
@@ -12,17 +19,22 @@ export async function POST(
 ) {
   const { id: videoId } = await params
 
+  // Guard against abuse of heavy zip creation
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 10,
+    message: 'Too many asset downloads. Please slow down.',
+  }, `asset-zip:${videoId}`)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     // Parse request body for selected asset IDs
     const body = await request.json()
-    const { assetIds } = body
-
-    if (!assetIds || !Array.isArray(assetIds) || assetIds.length === 0) {
-      return NextResponse.json(
-        { error: 'No assets selected for download' },
-        { status: 400 }
-      )
+    const parsed = downloadZipSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
     }
+    const { assetIds } = parsed.data
 
     // Get video with project info
     const video = await prisma.video.findUnique({
@@ -43,6 +55,12 @@ export async function POST(
     if (!accessCheck.authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
+
+    // CSRF: token for admins, origin validation for share clients
+    const csrfCheck = accessCheck.isAdmin
+      ? await validateCsrfProtection(request)
+      : await validateCsrfProtection(request, { requireToken: false })
+    if (csrfCheck) return csrfCheck
 
     // For non-admins, verify asset download settings and video approval
     if (!accessCheck.isAdmin) {

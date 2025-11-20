@@ -10,7 +10,7 @@ let tokenExpiry: number = 0
 
 /**
  * Get CSRF token (cached for performance)
- * Token cached for 50 minutes (expires in 60)
+ * Token cached for 10 minutes to minimize stale token usage after session rotations
  */
 export async function getCsrfToken(): Promise<string | null> {
   // Return cached token if still valid
@@ -24,8 +24,8 @@ export async function getCsrfToken(): Promise<string | null> {
 
     const data = await response.json()
     cachedToken = data.csrfToken
-    // Cache for 50 minutes (token expires in 60)
-    tokenExpiry = Date.now() + 50 * 60 * 1000
+    // Cache for 10 minutes (shorter window reduces stale token risk after session refresh)
+    tokenExpiry = Date.now() + 10 * 60 * 1000
 
     return cachedToken
   } catch {

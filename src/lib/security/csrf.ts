@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
 import crypto from 'crypto'
 import { getRedis } from '@/lib/redis'
 
@@ -21,9 +22,12 @@ export async function generateCsrfToken(sessionIdentifier: string): Promise<stri
 
   const redis = getRedis()
   const tokenKey = `csrf:${sessionIdentifier}:${token}`
+  const tokenOnlyKey = `csrf:${token}`
 
   // Store token in Redis with TTL
   await redis.setex(tokenKey, CSRF_TOKEN_TTL, '1')
+  // Also store token-only key to tolerate session rotation while keeping TTL-bound validation
+  await redis.setex(tokenOnlyKey, CSRF_TOKEN_TTL, '1')
 
   return token
 }
@@ -43,10 +47,15 @@ export async function verifyCsrfToken(
   const redis = getRedis()
   const tokenKey = `csrf:${sessionIdentifier}:${token}`
 
-  // Check if token exists in Redis
+  // Check if token exists in Redis (session-bound)
   const exists = await redis.get(tokenKey)
 
-  return exists === '1'
+  if (exists === '1') return true
+
+  // Fallback: accept token-only record to handle session rotation without forcing users to re-fetch token
+  const tokenOnlyKey = `csrf:${token}`
+  const tokenOnly = await redis.get(tokenOnlyKey)
+  return tokenOnly === '1'
 }
 
 /**
@@ -74,7 +83,6 @@ export function getCsrfTokenFromRequest(request: NextRequest): string | null {
  * Uses admin JWT session or share session
  */
 export async function getCsrfSessionIdentifier(request: NextRequest): Promise<string | null> {
-  const { cookies } = await import('next/headers')
   const cookieStore = await cookies()
 
   // Check admin session first

@@ -16,8 +16,8 @@ interface ApprovalNotificationContext {
   video?: { id: string; name: string; versionLabel?: string | null }
   approvedVideos?: Array<{ id: string; name: string }>
   approved: boolean // true = approved, false = unapproved
-  authorName?: string
-  authorEmail?: string
+  authorName?: string | null
+  authorEmail?: string | null
   isComplete?: boolean // true = all videos approved, false = partial approval
 }
 

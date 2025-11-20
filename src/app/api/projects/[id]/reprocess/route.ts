@@ -4,6 +4,12 @@ import { requireApiAdmin } from '@/lib/auth'
 import { getVideoQueue } from '@/lib/queue'
 import { deleteFile } from '@/lib/storage'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { rateLimit } from '@/lib/rate-limit'
+import { z } from 'zod'
+
+const reprocessSchema = z.object({
+  videoIds: z.array(z.string().min(1)).max(50).optional(),
+})
 
 export async function POST(
   request: NextRequest,
@@ -19,10 +25,22 @@ export async function POST(
   const csrfCheck = await validateCsrfProtection(request)
   if (csrfCheck) return csrfCheck
 
+  // Rate limit to avoid enqueue abuse
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 10,
+    message: 'Too many reprocess requests. Please slow down.',
+  }, 'project-reprocess')
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const { id: projectId } = await params
     const body = await request.json().catch(() => ({}))
-    const { videoIds } = body
+    const parsed = reprocessSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
+    }
+    const { videoIds } = parsed.data
 
     // Get project with videos
     const project = await prisma.project.findUnique({

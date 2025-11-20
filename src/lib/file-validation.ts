@@ -20,6 +20,10 @@ export const FILE_LIMITS = {
 
 // Allowed asset types by category
 export const ALLOWED_ASSET_TYPES = {
+  thumbnail: {
+    extensions: ['.jpg', '.jpeg', '.png'],
+    mimeTypes: ['image/jpeg', 'image/png']
+  },
   image: {
     extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'],
     mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml']

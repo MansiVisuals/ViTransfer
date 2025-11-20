@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { z } from 'zod'
+
+const unapproveSchema = z.object({
+  unapproveVideos: z.boolean().optional(),
+})
 
 export async function POST(
   request: NextRequest,
@@ -24,12 +30,20 @@ export async function POST(
     return rateLimitResult
   }
 
+  // CSRF protection
+  const csrfCheck = await validateCsrfProtection(request)
+  if (csrfCheck) return csrfCheck
+
   try {
     const { id: projectId } = await params
 
     // Parse request body to get unapprove options
     const body = await request.json().catch(() => ({}))
-    const { unapproveVideos = true } = body // Default to true for backward compatibility
+    const parsed = unapproveSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
+    }
+    const { unapproveVideos = true } = parsed.data // Default to true for backward compatibility
 
     // Get project details
     const project = await prisma.project.findUnique({

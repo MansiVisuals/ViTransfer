@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyRefreshToken, createSession, deleteSession } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { revokeToken } from '@/lib/token-revocation'
+import { revokeToken, revokeAllUserTokens as revokeAllUserTokensLib } from '@/lib/token-revocation'
+import { rateLimit } from '@/lib/rate-limit'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { getRedis } from '@/lib/redis'
+import { generateCsrfToken, getCsrfSessionIdentifier } from '@/lib/security/csrf'
+import { isHttpsEnabled } from '@/lib/settings'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 
@@ -50,7 +55,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const csrfCheck = await validateCsrfProtection(request, {
+      requireToken: false,
+      requireOrigin: true,
+    })
+    if (csrfCheck) return csrfCheck
+
     const refreshToken = refreshTokenCookie.value
+    const tokenHash = hashToken(refreshToken)
+
+    // Rate limit per refresh token hash to reduce brute-force/rotation abuse
+    const rateLimitResult = await rateLimit(request, {
+      windowMs: 60 * 1000,
+      maxRequests: 8,
+      message: 'Too many refresh attempts. Please wait a moment.',
+    }, `auth-refresh:${tokenHash}`)
+    if (rateLimitResult) return rateLimitResult
 
     // SECURITY: Verify refresh token signature and expiration
     const payload = await verifyRefreshToken(refreshToken)
@@ -75,7 +95,7 @@ export async function POST(request: NextRequest) {
       console.error(`[SECURITY] Refresh token fingerprint mismatch for user ${payload.userId}`)
 
       // Revoke ALL user tokens to force re-authentication everywhere
-      await revokeAllUserTokens(payload.userId)
+      await revokeAllUserTokensLib(payload.userId)
       await deleteSession()
 
       return NextResponse.json(
@@ -127,7 +147,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -136,6 +156,24 @@ export async function POST(request: NextRequest) {
         role: user.role,
       }
     })
+
+    // Issue fresh CSRF token aligned with the new session
+    const sessionIdentifier = await getCsrfSessionIdentifier(request)
+    if (sessionIdentifier) {
+      const csrfToken = await generateCsrfToken(sessionIdentifier)
+      const httpsEnabled = await isHttpsEnabled()
+      response.cookies.set({
+        name: 'csrf_token',
+        value: csrfToken,
+        path: '/',
+        httpOnly: true,
+        secure: httpsEnabled,
+        sameSite: 'strict',
+        maxAge: 3600,
+      })
+    }
+
+    return response
   } catch (error) {
     console.error('[AUTH] Token refresh error:', error)
     await deleteSession()
@@ -166,8 +204,6 @@ async function storeTokenFingerprint(
   fingerprintHash: string
 ): Promise<void> {
   try {
-    // Use Redis from centralized module
-    const { getRedis } = await import('@/lib/redis')
     const redis = getRedis()
 
     const key = `token_fingerprint:${userId}:${hashToken(refreshToken)}`
@@ -188,7 +224,6 @@ async function getTokenFingerprint(
   refreshToken: string
 ): Promise<string | null> {
   try {
-    const { getRedis } = await import('@/lib/redis')
     const redis = getRedis()
 
     const key = `token_fingerprint:${userId}:${hashToken(refreshToken)}`
@@ -210,16 +245,4 @@ function hashToken(token: string): string {
     .createHash('sha256')
     .update(token)
     .digest('base64url')
-}
-
-/**
- * Revoke all tokens for a user (emergency security measure)
- */
-async function revokeAllUserTokens(userId: string): Promise<void> {
-  try {
-    const { revokeAllUserTokens } = await import('@/lib/token-revocation')
-    await revokeAllUserTokens(userId)
-  } catch (error) {
-    console.error('[SECURITY] Failed to revoke all user tokens:', error)
-  }
 }

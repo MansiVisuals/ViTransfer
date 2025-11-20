@@ -3,6 +3,12 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+import { z } from 'zod'
+
+const copyAssetsSchema = z.object({
+  assetIds: z.array(z.string().min(1)).min(1, 'No assets selected for copying').max(50, 'Too many assets selected'),
+  targetVideoId: z.string().min(1, 'Target video version not specified'),
+})
 
 // POST /api/videos/[id]/assets/copy-to-version - Copy assets to another video version
 export async function POST(
@@ -35,21 +41,14 @@ export async function POST(
 
   try {
     const body = await request.json()
-    const { assetIds, targetVideoId } = body
-
-    if (!assetIds || !Array.isArray(assetIds) || assetIds.length === 0) {
+    const parsed = copyAssetsSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'No assets selected for copying' },
+        { error: parsed.error.errors[0].message },
         { status: 400 }
       )
     }
-
-    if (!targetVideoId) {
-      return NextResponse.json(
-        { error: 'Target video version not specified' },
-        { status: 400 }
-      )
-    }
+    const { assetIds, targetVideoId } = parsed.data
 
     // Verify source video exists
     const sourceVideo = await prisma.video.findUnique({

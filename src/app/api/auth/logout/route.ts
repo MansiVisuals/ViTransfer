@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { deleteSession } from '@/lib/auth'
 import { isHttpsEnabled } from '@/lib/settings'
+import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
+    const csrfCheck = await validateCsrfProtection(request, { requireToken: false })
+    if (csrfCheck) return csrfCheck
+
     // CSRF Protection: Verify request origin
     // Only allow logout from same origin to prevent cross-site logout attacks
     const origin = request.headers.get('origin')
@@ -98,11 +102,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
     
-    // Still delete cookies on error
+    // Still delete cookies on error (mirror secure attributes)
+    const httpsEnabled = await isHttpsEnabled()
+
     response.cookies.set({
       name: 'vitransfer_session',
       value: '',
       path: '/',
+      httpOnly: true,
+      secure: httpsEnabled,
+      sameSite: 'strict',
       maxAge: 0,
     })
 
@@ -110,6 +119,9 @@ export async function POST(request: NextRequest) {
       name: 'vitransfer_refresh',
       value: '',
       path: '/',
+      httpOnly: true,
+      secure: httpsEnabled,
+      sameSite: 'strict',
       maxAge: 0,
     })
     

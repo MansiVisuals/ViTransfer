@@ -8,6 +8,30 @@ import { isSmtpConfigured } from '@/lib/email'
 import { invalidateProjectSessions } from '@/lib/session-invalidation'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+import { z } from 'zod'
+
+const updateProjectSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  slug: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  companyName: z.string().max(200).nullable().optional(),
+  status: z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY']).optional(),
+  enableRevisions: z.boolean().optional(),
+  maxRevisions: z.number().int().min(0).max(50).optional(),
+  restrictCommentsToLatestVersion: z.boolean().optional(),
+  hideFeedback: z.boolean().optional(),
+  previewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
+  watermarkEnabled: z.boolean().optional(),
+  watermarkText: z.string().max(100).nullable().optional(),
+  allowAssetDownload: z.boolean().optional(),
+  sharePassword: z.string().max(200).nullable().optional(),
+  authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
+  guestMode: z.boolean().optional(),
+  guestLatestOnly: z.boolean().optional(),
+  clientNotificationSchedule: z.enum(['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']).optional(),
+  clientNotificationTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/).nullable().optional(),
+  clientNotificationDay: z.number().int().min(0).max(6).nullable().optional(),
+})
 
 export async function GET(
   request: NextRequest,
@@ -118,22 +142,35 @@ export async function PATCH(
   const csrfCheck = await validateCsrfProtection(request)
   if (csrfCheck) return csrfCheck
 
+  // Rate limiting: mutation throttle
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 30,
+    message: 'Too many project update requests. Please slow down.',
+  }, 'project-update')
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const { id } = await params
     const body = await request.json()
+    const parsed = updateProjectSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
+    }
+    const validatedBody = parsed.data
 
     // Build update data object
     const updateData: any = {}
 
     // Handle basic project details
-    if (body.title !== undefined) {
-      updateData.title = body.title
+    if (validatedBody.title !== undefined) {
+      updateData.title = validatedBody.title
     }
-    if (body.slug !== undefined) {
+    if (validatedBody.slug !== undefined) {
       // Check if slug is unique (excluding current project)
       const existingProject = await prisma.project.findFirst({
         where: {
-          slug: body.slug,
+          slug: validatedBody.slug,
           NOT: { id }
         }
       })
@@ -145,76 +182,68 @@ export async function PATCH(
         )
       }
       
-      updateData.slug = body.slug
+      updateData.slug = validatedBody.slug
     }
-    if (body.description !== undefined) {
-      updateData.description = body.description || null
+    if (validatedBody.description !== undefined) {
+      updateData.description = validatedBody.description || null
     }
-    if (body.companyName !== undefined) {
+    if (validatedBody.companyName !== undefined) {
       // Validate companyName (CRLF protection)
-      if (body.companyName && /[\r\n]/.test(body.companyName)) {
+      if (validatedBody.companyName && /[\r\n]/.test(validatedBody.companyName)) {
         return NextResponse.json(
           { error: 'Company name cannot contain line breaks' },
           { status: 400 }
         )
       }
-      updateData.companyName = body.companyName || null
+      updateData.companyName = validatedBody.companyName || null
     }
 
     // Handle status update (for approval)
-    if (body.status !== undefined) {
-      const validStatuses = ['IN_REVIEW', 'APPROVED', 'SHARE_ONLY']
-      if (!validStatuses.includes(body.status)) {
-        return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
-      }
-      updateData.status = body.status
+    if (validatedBody.status !== undefined) {
+      updateData.status = validatedBody.status
 
       // When approving project, just set the status and timestamp
       // Video approvals are handled separately by the admin
-      if (body.status === 'APPROVED') {
+      if (validatedBody.status === 'APPROVED') {
         updateData.approvedAt = new Date()
       }
 
       // When changing status away from APPROVED, clear approval metadata
-      if (body.status !== 'APPROVED') {
+      if (validatedBody.status !== 'APPROVED') {
         updateData.approvedAt = null
       }
     }
 
     // Handle revision settings
-    if (body.enableRevisions !== undefined) {
-      updateData.enableRevisions = body.enableRevisions
+    if (validatedBody.enableRevisions !== undefined) {
+      updateData.enableRevisions = validatedBody.enableRevisions
     }
-    if (body.maxRevisions !== undefined) {
-      updateData.maxRevisions = body.maxRevisions
+    if (validatedBody.maxRevisions !== undefined) {
+      updateData.maxRevisions = validatedBody.maxRevisions
     }
 
     // Handle comment restrictions
-    if (body.restrictCommentsToLatestVersion !== undefined) {
-      updateData.restrictCommentsToLatestVersion = body.restrictCommentsToLatestVersion
+    if (validatedBody.restrictCommentsToLatestVersion !== undefined) {
+      updateData.restrictCommentsToLatestVersion = validatedBody.restrictCommentsToLatestVersion
     }
-    if (body.hideFeedback !== undefined) {
-      updateData.hideFeedback = body.hideFeedback
+    if (validatedBody.hideFeedback !== undefined) {
+      updateData.hideFeedback = validatedBody.hideFeedback
     }
 
     // Handle video processing settings
-    if (body.previewResolution !== undefined) {
-      const validResolutions = ['720p', '1080p', '2160p']
-      if (!validResolutions.includes(body.previewResolution)) {
-        return NextResponse.json({ error: 'Invalid resolution' }, { status: 400 })
-      }
-      updateData.previewResolution = body.previewResolution
+    if (validatedBody.previewResolution !== undefined) {
+      updateData.previewResolution = validatedBody.previewResolution
     }
 
-    if (body.watermarkEnabled !== undefined) {
-      updateData.watermarkEnabled = body.watermarkEnabled
+    if (validatedBody.watermarkEnabled !== undefined) {
+      updateData.watermarkEnabled = validatedBody.watermarkEnabled
     }
 
-    if (body.watermarkText !== undefined) {
+    if (validatedBody.watermarkText !== undefined) {
       // SECURITY: Validate watermark text (same rules as FFmpeg sanitization)
       // Only allow alphanumeric, spaces, and safe punctuation: - _ . ( )
-      if (body.watermarkText) {
-        const invalidChars = body.watermarkText.match(/[^a-zA-Z0-9\s\-_.()]/g)
+      if (validatedBody.watermarkText) {
+        const invalidChars = validatedBody.watermarkText.match(/[^a-zA-Z0-9\s\-_.()]/g)
         if (invalidChars) {
           const uniqueInvalid = [...new Set(invalidChars)].join(', ')
           return NextResponse.json(
@@ -227,7 +256,7 @@ export async function PATCH(
         }
 
         // Additional length check (prevent excessively long watermarks)
-        if (body.watermarkText.length > 100) {
+        if (validatedBody.watermarkText.length > 100) {
           return NextResponse.json(
             {
               error: 'Watermark text too long',
@@ -238,16 +267,16 @@ export async function PATCH(
         }
       }
 
-      updateData.watermarkText = body.watermarkText || null
+      updateData.watermarkText = validatedBody.watermarkText || null
     }
 
-    if (body.allowAssetDownload !== undefined) {
-      updateData.allowAssetDownload = body.allowAssetDownload
+    if (validatedBody.allowAssetDownload !== undefined) {
+      updateData.allowAssetDownload = validatedBody.allowAssetDownload
     }
 
     // Handle password update - only update if actually changed
     let passwordWasChanged = false
-    if (body.sharePassword !== undefined) {
+    if (validatedBody.sharePassword !== undefined) {
       // Get current project to compare password
       const currentProject = await prisma.project.findUnique({
         where: { id },
@@ -262,7 +291,7 @@ export async function PATCH(
       const currentPassword = currentProject.sharePassword ? decrypt(currentProject.sharePassword) : null
 
       // Only update if password actually changed
-      if (body.sharePassword === null || body.sharePassword === '') {
+      if (validatedBody.sharePassword === null || validatedBody.sharePassword === '') {
         // Clearing password
         if (currentPassword !== null) {
           updateData.sharePassword = null
@@ -270,23 +299,18 @@ export async function PATCH(
         }
       } else {
         // Setting/updating password - only if different from current
-        if (body.sharePassword !== currentPassword) {
-          updateData.sharePassword = encrypt(body.sharePassword)
+        if (validatedBody.sharePassword !== currentPassword) {
+          updateData.sharePassword = encrypt(validatedBody.sharePassword)
           passwordWasChanged = true
         }
       }
     }
 
     // Handle authentication mode
-    if (body.authMode !== undefined) {
-      const validAuthModes = ['PASSWORD', 'OTP', 'BOTH', 'NONE']
-      if (!validAuthModes.includes(body.authMode)) {
-        return NextResponse.json({ error: 'Invalid authentication mode' }, { status: 400 })
-      }
-
+    if (validatedBody.authMode !== undefined) {
       // Validate that password modes have a password when being set
-      const newAuthMode = body.authMode
-      const newPassword = body.sharePassword !== undefined ? body.sharePassword : undefined
+      const newAuthMode = validatedBody.authMode
+      const newPassword = validatedBody.sharePassword !== undefined ? validatedBody.sharePassword : undefined
 
       // Get current password if not being changed
       if (newPassword === undefined && (newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH')) {
@@ -309,23 +333,23 @@ export async function PATCH(
         )
       }
 
-      updateData.authMode = body.authMode
+      updateData.authMode = validatedBody.authMode
     }
 
     // Handle guest mode
-    if (body.guestMode !== undefined) {
-      updateData.guestMode = body.guestMode
+    if (validatedBody.guestMode !== undefined) {
+      updateData.guestMode = validatedBody.guestMode
     }
 
     // Separate validation when only password is being cleared without authMode change
-    if (body.sharePassword !== undefined && body.authMode === undefined) {
+    if (validatedBody.sharePassword !== undefined && validatedBody.authMode === undefined) {
       const currentProject = await prisma.project.findUnique({
         where: { id },
         select: { authMode: true }
       })
 
       if ((currentProject?.authMode === 'PASSWORD' || currentProject?.authMode === 'BOTH') &&
-          (body.sharePassword === null || body.sharePassword === '')) {
+          (validatedBody.sharePassword === null || validatedBody.sharePassword === '')) {
         return NextResponse.json(
           { error: 'Cannot remove password when using password authentication mode. Switch to "No Authentication" first.' },
           { status: 400 }
@@ -334,43 +358,19 @@ export async function PATCH(
     }
 
     // Handle guest latest only restriction
-    if (body.guestLatestOnly !== undefined) {
-      updateData.guestLatestOnly = body.guestLatestOnly
+    if (validatedBody.guestLatestOnly !== undefined) {
+      updateData.guestLatestOnly = validatedBody.guestLatestOnly
     }
 
     // Handle client notification schedule
-    if (body.clientNotificationSchedule !== undefined) {
-      const validSchedules = ['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']
-      if (!validSchedules.includes(body.clientNotificationSchedule)) {
-        return NextResponse.json(
-          { error: 'Invalid notification schedule. Must be IMMEDIATE, HOURLY, DAILY, or WEEKLY.' },
-          { status: 400 }
-        )
-      }
-      updateData.clientNotificationSchedule = body.clientNotificationSchedule
+    if (validatedBody.clientNotificationSchedule !== undefined) {
+      updateData.clientNotificationSchedule = validatedBody.clientNotificationSchedule
     }
-    if (body.clientNotificationTime !== undefined) {
-      if (body.clientNotificationTime !== null) {
-        const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
-        if (!timeRegex.test(body.clientNotificationTime)) {
-          return NextResponse.json(
-            { error: 'Invalid time format. Must be HH:MM (24-hour format).' },
-            { status: 400 }
-          )
-        }
-      }
-      updateData.clientNotificationTime = body.clientNotificationTime
+    if (validatedBody.clientNotificationTime !== undefined) {
+      updateData.clientNotificationTime = validatedBody.clientNotificationTime
     }
-    if (body.clientNotificationDay !== undefined) {
-      if (body.clientNotificationDay !== null) {
-        if (!Number.isInteger(body.clientNotificationDay) || body.clientNotificationDay < 0 || body.clientNotificationDay > 6) {
-          return NextResponse.json(
-            { error: 'Invalid day. Must be 0-6 (Sunday-Saturday).' },
-            { status: 400 }
-          )
-        }
-      }
-      updateData.clientNotificationDay = body.clientNotificationDay
+    if (validatedBody.clientNotificationDay !== undefined) {
+      updateData.clientNotificationDay = validatedBody.clientNotificationDay
     }
 
     // Update the project in database FIRST (before invalidating sessions)
@@ -421,6 +421,13 @@ export async function DELETE(
   // CSRF protection
   const csrfCheck = await validateCsrfProtection(request)
   if (csrfCheck) return csrfCheck
+
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: 'Too many project delete requests. Please slow down.',
+  }, 'project-delete')
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const { id } = await params

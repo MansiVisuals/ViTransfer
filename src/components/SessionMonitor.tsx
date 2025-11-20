@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { clearCsrfToken } from '@/lib/csrf-client'
 
 /**
  * Secure Session Monitor - JWT Best Practices
@@ -70,6 +71,8 @@ export default function SessionMonitor() {
           })
 
           if (response.ok) {
+            // Clear cached CSRF token so next state-changing request fetches the fresh token
+            clearCsrfToken()
             lastRefresh = Date.now()
           } else if (response.status === 401 || response.status === 403) {
             // Refresh token invalid/expired or security violation
@@ -96,6 +99,7 @@ export default function SessionMonitor() {
         const timeSinceRefresh = Date.now() - lastRefresh
         // Only refresh if haven't refreshed very recently (prevent spam)
         if (timeSinceRefresh >= 30 * 1000) { // 30 seconds minimum between refreshes
+          // Note: refreshToken() already calls clearCsrfToken() on success
           await refreshToken()
         }
       }

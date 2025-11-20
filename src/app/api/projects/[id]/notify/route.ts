@@ -2,24 +2,33 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail, isSmtpConfigured } from '@/lib/email'
 import { generateShareUrl } from '@/lib/url'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { requireApiAdmin } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
 import { getProjectRecipients } from '@/lib/recipients'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Check if user is authenticated
-    const user = await getCurrentUserFromRequest(request)
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Require admin
+    const authResult = await requireApiAdmin(request)
+    if (authResult instanceof Response) {
+      return authResult
     }
 
     // CSRF protection
     const csrfCheck = await validateCsrfProtection(request)
     if (csrfCheck) return csrfCheck
+
+    // Throttle to prevent email spam
+    const rateLimitResult = await rateLimit(request, {
+      windowMs: 60 * 1000,
+      maxRequests: 20,
+      message: 'Too many notification requests. Please slow down.',
+    }, 'project-notify')
+    if (rateLimitResult) return rateLimitResult
 
     // Check if SMTP is configured
     const smtpConfigured = await isSmtpConfigured()

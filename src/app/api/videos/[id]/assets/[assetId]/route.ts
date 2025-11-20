@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { requireApiAdmin } from '@/lib/auth'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { getFilePath, deleteFile, sanitizeFilenameForHeader } from '@/lib/storage'
@@ -121,9 +121,9 @@ export async function DELETE(
   const { id: videoId, assetId } = await params
 
   // Authentication - admin only
-  const currentUser = await getCurrentUserFromRequest(request)
-  if (!currentUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = await requireApiAdmin(request)
+  if (authResult instanceof Response) {
+    return authResult
   }
 
   // CSRF Protection

@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, updateCommentSchema } from '@/lib/validation'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { requireApiAdmin } from '@/lib/auth'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { sanitizeCommentHtml } from '@/lib/security/html-sanitization'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+import { cookies } from 'next/headers'
+import { getRedis } from '@/lib/redis'
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
@@ -88,8 +90,6 @@ export async function PATCH(
 
     // SECURITY: Block guest comment updates (guests should only view videos)
     if (existingComment.project.guestMode) {
-      const { cookies } = await import('next/headers')
-      const { getRedis } = await import('@/lib/redis')
       const cookieStore = await cookies()
       const sessionId = cookieStore.get('share_session')?.value
 
@@ -188,6 +188,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Authentication - admin only
+  const authResult = await requireApiAdmin(request)
+  if (authResult instanceof Response) {
+    return authResult
+  }
+
   // CSRF protection
   const csrfCheck = await validateCsrfProtection(request)
   if (csrfCheck) return csrfCheck
@@ -205,17 +211,6 @@ export async function DELETE(
 
   try {
     const { id } = await params
-
-    // SECURITY: Only admins can delete comments
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
-
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Only admins can delete comments.' },
-        { status: 401 }
-      )
-    }
 
     // Get the comment to find its project
     const existingComment = await prisma.comment.findUnique({

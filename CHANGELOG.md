@@ -5,6 +5,18 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2025-11-20
+
+### Fixed
+- Password visibility in project settings (broken after password API refactor)
+- Password field now loads on-demand when eye icon clicked
+- Uses secure /api/projects/[id]/password endpoint with rate limiting
+
+### Improved
+- Password field UI text clarity
+- Placeholder changed to "Enter password for share page"
+- Help text updated to "Clients will need this password to access"
+
 ## [0.5.0] - 2025-11-20
 
 ### Why 0.5.0?

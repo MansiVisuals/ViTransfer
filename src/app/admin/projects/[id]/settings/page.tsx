@@ -62,6 +62,8 @@ export default function ProjectSettingsPage() {
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
   const [hideFeedback, setHideFeedback] = useState(false)
   const [sharePassword, setSharePassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordLoaded, setPasswordLoaded] = useState(false)
   const [authMode, setAuthMode] = useState('PASSWORD')
   const [guestMode, setGuestMode] = useState(false)
   const [guestLatestOnly, setGuestLatestOnly] = useState(true)
@@ -113,6 +115,24 @@ export default function ProjectSettingsPage() {
   // Sanitize slug for live preview
   const sanitizedSlug = sanitizeSlug(slug)
 
+  const loadPassword = async () => {
+    if (passwordLoaded || passwordLoading) return
+
+    setPasswordLoading(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/password`)
+      if (response.ok) {
+        const data = await response.json()
+        setSharePassword(data.password || '')
+        setPasswordLoaded(true)
+      }
+    } catch (error) {
+      console.error('Failed to load password:', error)
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
   const copyPassword = async () => {
     if (sharePassword) {
       await navigator.clipboard.writeText(sharePassword)
@@ -148,7 +168,6 @@ export default function ProjectSettingsPage() {
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
         setAllowAssetDownload(data.allowAssetDownload ?? true)
-        setSharePassword(data.sharePasswordDecrypted || '')
         setAuthMode(data.authMode || 'PASSWORD')
         setGuestMode(data.guestMode || false)
         setGuestLatestOnly(data.guestLatestOnly ?? true)
@@ -952,10 +971,12 @@ export default function ProjectSettingsPage() {
                   <div className="flex gap-2 w-full">
                     <PasswordInput
                       id="password"
-                      value={sharePassword}
+                      value={passwordLoading ? 'Loading...' : sharePassword}
                       onChange={(e) => setSharePassword(e.target.value)}
                       placeholder="Leave empty to disable password protection"
                       className="flex-1"
+                      onReveal={loadPassword}
+                      disabled={passwordLoading}
                     />
                     <Button
                       type="button"

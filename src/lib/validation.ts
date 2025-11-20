@@ -114,7 +114,13 @@ export const createProjectSchema = z.object({
     .optional(),
   recipientEmail: emailSchema.optional().or(z.literal('')), // Optional recipient email (will create ProjectRecipient if provided)
   recipientName: safeStringSchema(0, 255).optional(), // Optional recipient name
-  sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
+  sharePassword: z.string()
+    .min(8, 'Share password must be at least 8 characters')
+    .max(255, 'Share password must not exceed 255 characters')
+    .regex(/[A-Za-z]/, 'Share password must contain at least one letter')
+    .regex(/[0-9]/, 'Share password must contain at least one number')
+    .optional()
+    .or(z.literal('')),
   authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),
@@ -132,7 +138,13 @@ export const updateProjectSchema = z.object({
       message: 'Company name cannot contain line breaks'
     })
     .optional(),
-  sharePassword: z.string().min(8).max(255).optional().or(z.literal('')),
+  sharePassword: z.string()
+    .min(8, 'Share password must be at least 8 characters')
+    .max(255, 'Share password must not exceed 255 characters')
+    .regex(/[A-Za-z]/, 'Share password must contain at least one letter')
+    .regex(/[0-9]/, 'Share password must contain at least one number')
+    .optional()
+    .or(z.literal('')),
   authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),

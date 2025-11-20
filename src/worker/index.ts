@@ -1,9 +1,11 @@
 import { Worker, Queue } from 'bullmq'
-import { getConnection, VideoProcessingJob } from '../lib/queue'
+import { getConnection, VideoProcessingJob, AssetProcessingJob } from '../lib/queue'
 import { initStorage } from '../lib/storage'
 import { runCleanup } from '../lib/upload-cleanup'
+import { closeRedisConnection } from '../lib/redis'
 import os from 'os'
 import { processVideo } from './video-processor'
+import { processAsset } from './asset-processor'
 import { processAdminNotifications } from './admin-notifications'
 import { processClientNotifications } from './client-notifications'
 import { cleanupOldTempFiles, ensureTempDir } from './cleanup'
@@ -98,6 +100,29 @@ async function main() {
 
   console.log('[WORKER] Video processing worker started')
 
+  // Create asset processing worker
+  const assetWorker = new Worker<AssetProcessingJob>('asset-processing', processAsset, {
+    connection: getConnection(),
+    concurrency: concurrency * 2, // Assets are lighter than videos
+  })
+
+  assetWorker.on('completed', (job) => {
+    console.log(`[WORKER] Asset job ${job.id} completed successfully`)
+  })
+
+  assetWorker.on('failed', (job, err) => {
+    console.error(`[WORKER ERROR] Asset job ${job?.id} failed:`, err)
+    if (DEBUG) {
+      console.error('[WORKER DEBUG] Asset job failure details:', {
+        jobId: job?.id,
+        jobData: job?.data,
+        error: err instanceof Error ? err.stack : err
+      })
+    }
+  })
+
+  console.log('[WORKER] Asset processing worker started')
+
   // Create notification processing queue with repeatable job
   console.log('Setting up notification processing...')
   const notificationQueue = new Queue('notification-processing', {
@@ -178,9 +203,12 @@ async function main() {
     clearInterval(tempCleanupInterval)
     await Promise.all([
       worker.close(),
+      assetWorker.close(),
       notificationWorker.close(),
       notificationQueue.close(),
     ])
+    await closeRedisConnection()
+    console.log('Redis connection closed')
     process.exit(0)
   })
 
@@ -190,9 +218,12 @@ async function main() {
     clearInterval(tempCleanupInterval)
     await Promise.all([
       worker.close(),
+      assetWorker.close(),
       notificationWorker.close(),
       notificationQueue.close(),
     ])
+    await closeRedisConnection()
+    console.log('Redis connection closed')
     process.exit(0)
   })
 }

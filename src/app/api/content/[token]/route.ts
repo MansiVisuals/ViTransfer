@@ -12,20 +12,6 @@ import { getCurrentUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-/**
- * Secure Token-Based Video Streaming Endpoint
- * 
- * URL: /api/content/{token}
- * 
- * Security Features:
- * - Cryptographically random tokens (128-bit entropy)
- * - Session-bound access (prevents token sharing)
- * - Time-limited (15 min expiry)
- * - Multi-tier rate limiting
- * - Hotlink detection and blocking
- * - Full analytics tracking
- * - Admin-configurable security settings
- */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -35,14 +21,11 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const isDownload = searchParams.get('download') === 'true'
 
-    // Get security settings for rate limits
     const securitySettings = await getSecuritySettings()
 
-    // TIER 1: Per-IP Rate Limiting (Very generous for video streaming with chunking)
-    // Video players make MANY rapid HTTP Range requests for buffering/seeking
     const ipRateLimitResult = await rateLimit(request, {
-      windowMs: 60 * 1000, // 1 minute
-      maxRequests: securitySettings.ipRateLimit, // Use global setting
+      windowMs: 60 * 1000,
+      maxRequests: securitySettings.ipRateLimit,
       message: 'Too many requests from your network. Please slow down and try again later.'
     }, 'content-stream-ip')
 
@@ -57,10 +40,6 @@ export async function GET(
 
       return ipRateLimitResult
     }
-    
-    // SECURITY: Check authentication - TWO paths:
-    // Path 1: Admin with valid JWT (vitransfer_session)
-    // Path 2: Regular user with share session
 
     const currentUser = await getCurrentUserFromRequest(request)
     const isAdmin = currentUser?.role === 'ADMIN'
@@ -75,13 +54,10 @@ export async function GET(
 
     const preliminaryTokenData = JSON.parse(rawTokenData)
 
-    // Get share session cookie
     const cookieStore = await cookies()
     let sessionId = cookieStore.get('share_session')?.value
 
-    // ADMIN PATH: Admins authenticated via JWT, no share session needed
     if (isAdmin) {
-      // Verify token belongs to a real project (security check)
       const project = await prisma.project.findUnique({
         where: { id: preliminaryTokenData.projectId },
         select: { id: true }
@@ -91,19 +67,18 @@ export async function GET(
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
 
-      // Admin verified - use special admin session marker for logging
-      sessionId = `admin:${currentUser.id}`
+      // Admins can access any valid token, use token's sessionId if no cookie present
+      if (!sessionId) {
+        sessionId = preliminaryTokenData.sessionId
+      }
     } else {
-      // REGULAR USER PATH: Verify share session exists and matches project
       if (!sessionId) {
         return NextResponse.json({ error: 'Access denied' }, { status: 401 })
       }
 
-      // Verify session includes this project in Redis
       const hasAccess = await redis.sismember(`session_projects:${sessionId}`, preliminaryTokenData.projectId)
 
       if (!hasAccess) {
-        // Session doesn't have access to this project - possible attack
         await logSecurityEvent({
           type: 'SESSION_PROJECT_MISMATCH',
           severity: 'WARNING',
@@ -116,13 +91,14 @@ export async function GET(
         return NextResponse.json({ error: 'Access denied' }, { status: 401 })
       }
     }
-    
-    // TIER 2: Per-Session Rate Limiting (Very generous for video streaming with chunking)
-    // Video players make rapid HTTP Range requests when seeking, buffering, or loading multiple videos
-    // Typical usage: 5-10 chunks per second during active viewing, more during seeking
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 401 })
+    }
+
     const sessionRateLimitResult = await rateLimit(request, {
-      windowMs: 60 * 1000, // 1 minute
-      maxRequests: securitySettings.sessionRateLimit, // Use global setting
+      windowMs: 60 * 1000,
+      maxRequests: securitySettings.sessionRateLimit,
       message: 'Video streaming rate limit exceeded. Please wait a moment.'
     }, `content-stream-session:${sessionId}`)
 
@@ -139,24 +115,21 @@ export async function GET(
 
       return sessionRateLimitResult
     }
-    
-    // Now verify token WITH proper session ID validation
+
     const verifiedToken = await verifyVideoAccessToken(token, request, sessionId)
 
     if (!verifiedToken) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
-    
-    // TIER 3: Hotlink Detection & Blocking
+
     const hotlinkCheck = await detectHotlinking(
       request,
       sessionId,
       verifiedToken.videoId,
       verifiedToken.projectId
     )
-    
+
     if (hotlinkCheck.isHotlinking) {
-      // Check protection mode
       if (securitySettings.hotlinkProtection === 'BLOCK_STRICT') {
         await logSecurityEvent({
           type: 'HOTLINK_BLOCKED',
@@ -170,16 +143,12 @@ export async function GET(
           wasBlocked: true
         })
         
-        return NextResponse.json({ 
-          error: 'Access denied' 
+        return NextResponse.json({
+          error: 'Access denied'
         }, { status: 403 })
-      } else if (securitySettings.hotlinkProtection === 'LOG_ONLY') {
-        // Log but allow (monitoring mode)
       }
-      // If DISABLED, do nothing
     }
-    
-    // Load video and project from database
+
     const video = await prisma.video.findUnique({
       where: { id: verifiedToken.videoId },
       include: { project: true }
@@ -189,15 +158,13 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
 
-    // Determine which file to serve based on video approval status
     let filePath: string | null = null
 
-    // Check if THIS SPECIFIC VIDEO is approved (per-video approval)
-    if (video.approved) {
-      // Approved videos get original file without watermark
+    if (verifiedToken.quality === 'thumbnail') {
+      filePath = video.thumbnailPath
+    } else if (video.approved) {
       filePath = video.originalStoragePath
     } else {
-      // Non-approved videos get watermarked preview (whichever resolution was generated)
       filePath = video.preview1080Path || video.preview720Path
     }
 
@@ -210,19 +177,19 @@ export async function GET(
     if (!existsSync(fullPath)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
-    
+
     const stat = statSync(fullPath)
 
-    // If download requested, return full file with download headers
-    // OPTIMIZATION: Use streaming instead of loading entire file into memory
+    if (isDownload && verifiedToken.quality === 'thumbnail') {
+      return NextResponse.json({ error: 'Thumbnails cannot be downloaded directly' }, { status: 403 })
+    }
+
     if (isDownload) {
-      // Use original filename for approved videos, generic name for others
       const rawFilename = video.approved
         ? video.originalFileName
         : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`
       const filename = sanitizeFilenameForHeader(rawFilename)
 
-      // Track full file download bandwidth
       await trackVideoAccess({
         videoId: verifiedToken.videoId,
         projectId: verifiedToken.projectId,
@@ -234,7 +201,6 @@ export async function GET(
         eventType: 'DOWNLOAD_COMPLETE'
       })
 
-      // Stream the file instead of loading into memory (prevents OOM on large files)
       const fileStream = createReadStream(fullPath)
 
       const readableStream = new ReadableStream({
@@ -253,25 +219,19 @@ export async function GET(
           'Content-Type': 'video/mp4',
           'Content-Disposition': `attachment; filename="${filename}"`,
           'Content-Length': stat.size.toString(),
-          // Security headers
           'X-Content-Type-Options': 'nosniff',
           'Cache-Control': 'private, no-cache',
         },
       })
     }
 
-    // Otherwise handle HTTP Range Requests (for video seeking/buffering)
-    // CLOUDFLARE NOTE: Free tier has 100MB response limit, but chunked responses
-    // via HTTP Range requests bypass this. Each chunk is a separate response.
-    // Video players request small chunks (typically 64KB-2MB), well under limits.
     const range = request.headers.get('range')
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
-      // Cap chunk size to 10MB for Cloudflare safety (browsers typically request much smaller)
       const requestedEnd = parts[1] ? parseInt(parts[1], 10) : stat.size - 1
-      const maxChunkSize = 10 * 1024 * 1024 // 10MB max per chunk
+      const maxChunkSize = 10 * 1024 * 1024
       const end = Math.min(requestedEnd, start + maxChunkSize - 1, stat.size - 1)
       const chunksize = (end - start) + 1
 
@@ -289,24 +249,21 @@ export async function GET(
       })
 
       return new NextResponse(readableStream, {
-        status: 206, // Partial Content
+        status: 206,
         headers: {
           'Content-Range': `bytes ${start}-${end}/${stat.size}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize.toString(),
           'Content-Type': 'video/mp4',
-          'Cache-Control': 'public, max-age=3600', // 1 hour cache for Cloudflare
-          // Security headers
+          'Cache-Control': 'public, max-age=3600',
           'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'SAMEORIGIN', // Allow embedding only on same domain
+          'X-Frame-Options': 'SAMEORIGIN',
           'Referrer-Policy': 'strict-origin-when-cross-origin',
-          // Cloudflare-specific optimizations
-          'CF-Cache-Status': 'DYNAMIC', // Let Cloudflare know this is streamable
+          'CF-Cache-Status': 'DYNAMIC',
         },
       })
     }
 
-    // Full file response (no range request)
     const fileStream = createReadStream(fullPath)
 
     const readableStream = new ReadableStream({
@@ -325,13 +282,11 @@ export async function GET(
         'Content-Type': 'video/mp4',
         'Content-Length': stat.size.toString(),
         'Accept-Ranges': 'bytes',
-        'Cache-Control': 'public, max-age=3600', // 1 hour cache for Cloudflare
-        // Security headers
+        'Cache-Control': 'public, max-age=3600',
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'SAMEORIGIN',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
-        // Cloudflare-specific optimizations
-        'CF-Cache-Status': 'DYNAMIC', // Let Cloudflare know this is streamable
+        'CF-Cache-Status': 'DYNAMIC',
       },
     })
   } catch (error) {

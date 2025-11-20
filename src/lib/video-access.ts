@@ -5,13 +5,6 @@ import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
 import { getRedis } from './redis'
 
-/**
- * Video Access Token System
- *
- * Provides secure, time-limited, session-bound access to videos
- * with full analytics tracking and hotlink detection
- */
-
 interface VideoAccessToken {
   videoId: string
   projectId: string
@@ -21,11 +14,6 @@ interface VideoAccessToken {
   createdAt: number
 }
 
-/**
- * Generate or retrieve cached video access token
- * Uses Redis caching to avoid regenerating tokens for same session+video+quality
- * Token is stored in Redis with TTL and contains metadata
- */
 export async function generateVideoAccessToken(
   videoId: string,
   projectId: string,
@@ -35,22 +23,17 @@ export async function generateVideoAccessToken(
 ): Promise<string> {
   const redis = getRedis()
 
-  // Check if we already have a valid token for this session+video+quality combo
   const cacheKey = `video_token_cache:${sessionId}:${videoId}:${quality}`
   const cachedToken = await redis.get(cacheKey)
 
   if (cachedToken) {
-    // Verify the cached token still exists and is valid
     const tokenData = await redis.get(`video_access:${cachedToken}`)
     if (tokenData) {
       return cachedToken
     }
   }
 
-  // Generate new cryptographically secure random token (128 bits of entropy)
   const token = crypto.randomBytes(16).toString('base64url')
-
-  // Get IP address
   const ipAddress = getClientIpAddress(request)
 
   const tokenData: VideoAccessToken = {
@@ -62,26 +45,19 @@ export async function generateVideoAccessToken(
     createdAt: Date.now(),
   }
 
-  // Get configurable client session timeout
   const ttlSeconds = await getClientSessionTimeoutSeconds()
 
-  // Store token in Redis with configurable TTL
   await redis.setex(
     `video_access:${token}`,
     ttlSeconds,
     JSON.stringify(tokenData)
   )
 
-  // Cache the token reference for this session+video+quality (same TTL)
   await redis.setex(cacheKey, ttlSeconds, token)
 
   return token
 }
 
-/**
- * Verify and retrieve a video access token
- * Performs session validation and security checks
- */
 export async function verifyVideoAccessToken(
   token: string,
   request: NextRequest,
@@ -96,12 +72,10 @@ export async function verifyVideoAccessToken(
     return null
   }
 
-  // Parse token data with error handling
   let tokenData: VideoAccessToken
   try {
     tokenData = JSON.parse(data)
 
-    // Validate required fields to prevent malformed data
     if (!tokenData.videoId || !tokenData.projectId || !tokenData.sessionId) {
       console.error('[SECURITY] Invalid token data structure', { token: token.substring(0, 10) })
       return null
@@ -114,14 +88,10 @@ export async function verifyVideoAccessToken(
     return null
   }
 
-  // Admin sessions (prefixed with "admin:") skip session matching
-  // Admins are authenticated via JWT, not share sessions
-  const isAdminSession = sessionId.startsWith('admin:')
+  const isAdminSession = sessionId?.startsWith('admin:') || false
 
   if (!isAdminSession) {
-    // Regular users: Verify session matches (prevent token sharing)
     if (tokenData.sessionId !== sessionId) {
-      // Log security event
       await logSecurityEvent({
         type: 'TOKEN_SESSION_MISMATCH',
         severity: 'WARNING',
@@ -139,10 +109,6 @@ export async function verifyVideoAccessToken(
   return tokenData
 }
 
-/**
- * Detect potential hotlinking or suspicious activity
- * Returns detection result with reason and severity
- */
 export async function detectHotlinking(
   request: NextRequest,
   sessionId: string,
@@ -153,16 +119,13 @@ export async function detectHotlinking(
   
   const referer = request.headers.get('referer') || request.headers.get('origin')
   const host = request.headers.get('host')
-  
-  // Check 1: External referer (hotlinking)
+
   if (referer && host) {
     try {
       const refererUrl = new URL(referer)
       const refererHost = refererUrl.hostname
-      
-      // If referer doesn't match our domain
+
       if (host && !refererHost.includes(host) && !host.includes(refererHost)) {
-        // Check if domain is blocked
         const blockedDomains = await getBlockedDomains()
         if (blockedDomains.some(domain => refererHost.includes(domain))) {
           return {
@@ -171,8 +134,7 @@ export async function detectHotlinking(
             severity: 'CRITICAL'
           }
         }
-        
-        // Log security event
+
         await logSecurityEvent({
           type: 'HOTLINK_DETECTED',
           severity: 'WARNING',
@@ -183,29 +145,21 @@ export async function detectHotlinking(
           referer,
           details: { refererHost }
         })
-        
+
         return {
           isHotlinking: true,
           reason: `External referer: ${refererHost}`,
           severity: 'WARNING'
         }
       }
-    } catch (error) {
-      // Invalid referer URL, ignore
-    }
+    } catch (error) {}
   }
-  
-  // Check 2: High frequency access (potential scraping)
-  // Note: Video streaming with chunking generates MANY requests (5-10/sec during active viewing)
-  // Increased threshold to avoid false positives during normal video playback
+
   const freqKey = `video_freq:${sessionId}:${videoId}`
   const count = await redis.incr(freqKey)
-  await redis.expire(freqKey, 300) // 5 minutes
+  await redis.expire(freqKey, 300)
 
-  // Allow up to 3000 requests per 5 minutes (10/sec sustained)
-  // This accommodates video seeking, multiple quality switches, and active viewing
   if (count > 3000) {
-    // Log security event every 500 requests
     if (count % 500 === 0) {
       await logSecurityEvent({
         type: 'SUSPICIOUS_ACTIVITY',
@@ -224,10 +178,9 @@ export async function detectHotlinking(
       severity: 'WARNING'
     }
   }
-  
-  // Check 3: Blocked IP
+
   const ipAddress = getClientIpAddress(request)
-  
+
   const blockedIPs = await getBlockedIPs()
   if (blockedIPs.includes(ipAddress)) {
     await logSecurityEvent({
@@ -246,14 +199,10 @@ export async function detectHotlinking(
       severity: 'CRITICAL'
     }
   }
-  
+
   return { isHotlinking: false }
 }
 
-/**
- * Track video analytics - simplified for video review platform
- * Only tracks: PAGE_VISIT (when non-admin views project) and DOWNLOAD_COMPLETE (when download finishes)
- */
 export async function trackVideoAccess(params: {
   videoId: string
   projectId: string
@@ -262,20 +211,18 @@ export async function trackVideoAccess(params: {
   request: NextRequest
   quality: string
   bandwidth?: number
-  eventType: 'PAGE_VISIT' | 'DOWNLOAD_COMPLETE' // Explicit event types only
+  eventType: 'PAGE_VISIT' | 'DOWNLOAD_COMPLETE'
 }) {
   const { videoId, projectId, bandwidth, eventType } = params
 
-  // Get settings to check if analytics is enabled
   const settings = await prisma.securitySettings.findUnique({
     where: { id: 'default' }
   })
 
   if (!settings?.trackAnalytics) {
-    return // Analytics disabled
+    return
   }
 
-  // Store simplified analytics
   await prisma.videoAnalytics.create({
     data: {
       videoId,
@@ -285,9 +232,6 @@ export async function trackVideoAccess(params: {
   })
 }
 
-/**
- * Log security event to database
- */
 export async function logSecurityEvent(params: {
   type: string
   severity: string
@@ -300,14 +244,13 @@ export async function logSecurityEvent(params: {
   wasBlocked?: boolean
 }) {
   try {
-    // Check if security logging is enabled
     const settings = await prisma.securitySettings.findUnique({
       where: { id: 'default' },
       select: { trackSecurityLogs: true }
     })
 
     if (!settings?.trackSecurityLogs) {
-      return // Security logging disabled
+      return
     }
 
     await prisma.securityEvent.create({
@@ -324,24 +267,19 @@ export async function logSecurityEvent(params: {
       }
     })
 
-    // Also store in Redis for real-time monitoring (last 1000 events)
     const redis = getRedis()
     await redis.lpush('security:events:recent', JSON.stringify({
       ...params,
       timestamp: new Date().toISOString()
     }))
-    await redis.ltrim('security:events:recent', 0, 999) // Keep last 1000
+    await redis.ltrim('security:events:recent', 0, 999)
 
-    // Send alert if configured
     await sendSecurityAlert(params)
   } catch (error) {
     console.error('[SECURITY_EVENT] Failed to log:', error)
   }
 }
 
-/**
- * Get global security settings
- */
 export async function getSecuritySettings() {
   const settings = await prisma.securitySettings.findUnique({
     where: { id: 'default' }
@@ -355,24 +293,14 @@ export async function getSecuritySettings() {
   }
 }
 
-/**
- * Get blocked IPs from settings (removed - handled at network level)
- */
 async function getBlockedIPs(): Promise<string[]> {
   return []
 }
 
-/**
- * Get blocked domains from settings (removed - handled at network level)
- */
 async function getBlockedDomains(): Promise<string[]> {
   return []
 }
 
-/**
- * Send security alert email if configured
- * Simplified - alerts removed from settings
- */
 async function sendSecurityAlert(event: {
   type: string
   severity: string
@@ -380,25 +308,19 @@ async function sendSecurityAlert(event: {
   ipAddress?: string
   referer?: string
 }) {
-  // Alert functionality removed for simplicity
-  // You can re-enable by adding alertEmail to SecuritySettings
-  // and sending email via the email service
   return
 }
 
-/**
- * Revoke all video tokens for a project
- */
 export async function revokeProjectVideoTokens(projectId: string): Promise<void> {
   const redis = getRedis()
-  
+
   const stream = redis.scanStream({
     match: 'video_access:*',
     count: 100
   })
-  
+
   const keysToDelete: string[] = []
-  
+
   stream.on('data', async (keys: string[]) => {
     for (const key of keys) {
       const data = await redis.get(key)
@@ -409,7 +331,6 @@ export async function revokeProjectVideoTokens(projectId: string): Promise<void>
             keysToDelete.push(key)
           }
         } catch (error) {
-          // If token data is corrupted, delete it anyway
           console.error('[SECURITY] Corrupted token data during revocation, will delete', {
             key,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -419,7 +340,7 @@ export async function revokeProjectVideoTokens(projectId: string): Promise<void>
       }
     }
   })
-  
+
   stream.on('end', async () => {
     if (keysToDelete.length > 0) {
       await redis.del(...keysToDelete)

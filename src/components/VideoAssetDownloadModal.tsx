@@ -85,60 +85,26 @@ export function VideoAssetDownloadModal({
       const asset = assets.find((a) => a.id === assetId)
       if (!asset) return
 
-      setDownloading(true)
-      setError(null)
-
-      const response = await apiFetch(`/api/videos/${videoId}/assets/${assetId}`)
-      if (!response.ok) {
-        throw new Error('Download failed')
-      }
-
-      // Download the file
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = asset.fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      // Direct download via URL - no loading into memory
+      // The browser will handle streaming the file directly to disk
+      window.open(`/api/videos/${videoId}/assets/${assetId}`, '_blank')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
-    } finally {
-      setDownloading(false)
     }
   }
 
   const downloadVideoOnly = async () => {
     try {
-      setDownloading(true)
-      setError(null)
-
-      const response = await apiFetch(`/api/videos/${videoId}/download`)
-      if (!response.ok) {
-        throw new Error('Download failed')
-      }
-
-      // Download the file
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${videoName}_${versionLabel}.mp4`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      // Direct download via URL - no loading into memory
+      // The browser will handle streaming the file directly to disk
+      window.open(`/api/videos/${videoId}/download`, '_blank')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
-    } finally {
-      setDownloading(false)
     }
   }
 
   const downloadSelectedAsZip = async () => {
-    if (selectedAssets.size === 0) return
+    if (selectedAssets.size === 0 || downloading) return
 
     try {
       setDownloading(true)
@@ -146,7 +112,7 @@ export function VideoAssetDownloadModal({
 
       const csrfToken = await getCsrfToken()
 
-      const response = await apiFetch(`/api/videos/${videoId}/assets/download-zip`, {
+      const response = await fetch(`/api/videos/${videoId}/assets/download-zip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,6 +121,7 @@ export function VideoAssetDownloadModal({
         body: JSON.stringify({
           assetIds: Array.from(selectedAssets),
         }),
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -162,12 +129,22 @@ export function VideoAssetDownloadModal({
         throw new Error(data.error || 'Download failed')
       }
 
-      // Download the zip file
+      // Extract filename from headers
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = `${videoName}_${versionLabel}_assets.zip`
+      if (contentDisposition) {
+        const matches = /filename="(.+)"/.exec(contentDisposition)
+        if (matches && matches[1]) {
+          filename = matches[1]
+        }
+      }
+
+      // Trigger browser download
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `${videoName}_${versionLabel}_assets.zip`
+      link.download = filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

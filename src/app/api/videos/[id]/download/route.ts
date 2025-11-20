@@ -36,7 +36,7 @@ export async function GET(
     }
 
     // SECURITY: Verify user has access to this project (admin OR valid share session)
-    const accessCheck = await verifyProjectAccess(request, video.project.id, video.project.sharePassword)
+    const accessCheck = await verifyProjectAccess(request, video.project.id, video.project.sharePassword, video.project.authMode)
     if (!accessCheck.authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }

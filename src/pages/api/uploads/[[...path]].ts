@@ -201,7 +201,7 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
   await assetQueue.add('process-asset', {
     assetId: asset.id,
     storagePath: asset.storagePath,
-    expectedCategory: asset.category,
+    expectedCategory: asset.category ?? undefined,
   })
 
   console.log(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)

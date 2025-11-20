@@ -194,6 +194,18 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
     },
   })
 
+  // Queue asset for magic byte validation in worker
+  const { getAssetQueue } = await import('@/lib/queue')
+  const assetQueue = getAssetQueue()
+
+  await assetQueue.add('process-asset', {
+    assetId: asset.id,
+    storagePath: asset.storagePath,
+    expectedCategory: asset.category,
+  })
+
+  console.log(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
+
   await cleanupTUSFile(tusFilePath)
 
   return {}

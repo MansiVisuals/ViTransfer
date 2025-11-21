@@ -32,6 +32,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   const [settingThumbnail, setSettingThumbnail] = useState<string | null>(null)
   const [showCopyModal, setShowCopyModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentThumbnailPath, setCurrentThumbnailPath] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAssets()
@@ -50,6 +51,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
 
       const data = await response.json()
       setAssets(data.assets || [])
+      setCurrentThumbnailPath(data.currentThumbnailPath || null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load assets')
     } finally {
@@ -119,7 +121,9 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     setSettingThumbnail(assetId)
     try {
       await apiPost(`/api/videos/${videoId}/assets/${assetId}/set-thumbnail`, {})
-      alert('Thumbnail updated successfully')
+
+      // Refresh assets to get updated thumbnail path
+      await fetchAssets()
 
       // Notify parent to refresh if needed
       if (onAssetDeleted) {
@@ -140,6 +144,13 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
 
     // Verify it's actually an image file (check if it starts with 'image/')
     return fileType.toLowerCase().startsWith('image/')
+  }
+
+  const isCurrentThumbnail = (asset: VideoAsset) => {
+    if (!currentThumbnailPath) return false
+    // Check if this asset's storage path matches the video's thumbnailPath
+    // The thumbnailPath might be a relative path, so we need to check if it contains the asset info
+    return currentThumbnailPath.includes(asset.id) || currentThumbnailPath.includes(asset.fileName)
   }
 
   if (loading) {
@@ -208,12 +219,12 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                     size="icon"
                     onClick={() => handleSetThumbnail(asset.id, asset.fileName)}
                     disabled={settingThumbnail === asset.id}
-                    title="Set as video thumbnail"
+                    title={isCurrentThumbnail(asset) ? "Current video thumbnail" : "Set as video thumbnail"}
                   >
                     {settingThumbnail === asset.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Image className="h-4 w-4 text-blue-500" />
+                      <Image className={`h-4 w-4 ${isCurrentThumbnail(asset) ? 'text-green-600' : ''}`} />
                     )}
                   </Button>
                 )}

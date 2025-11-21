@@ -114,15 +114,11 @@ export default function VideoPlayer({
         }
 
         if (url) {
-          setVideoUrl(url)
-
           // Reset player state
           setCurrentTime(0)
 
-          // Preload video for smooth playback after URL is set
-          if (videoRef.current) {
-            videoRef.current.load()
-          }
+          // Update video URL - this will trigger React to update the video element's src
+          setVideoUrl(url)
         }
       } catch (error) {
         // Video load error - player will show error state
@@ -131,6 +127,14 @@ export default function VideoPlayer({
 
     loadVideoUrl()
   }, [selectedVideo, defaultQuality])
+
+  // Separate effect to reload video when URL changes
+  // This ensures the video element has been updated by React before we call load()
+  useEffect(() => {
+    if (videoRef.current && videoUrl) {
+      videoRef.current.load()
+    }
+  }, [videoUrl])
 
   // Handle initial seek from URL parameters (only once on mount)
   useEffect(() => {
@@ -348,6 +352,7 @@ export default function VideoPlayer({
       <div className="relative bg-background rounded-lg overflow-hidden aspect-video flex-shrink min-h-0">
         {videoUrl ? (
           <video
+            key={selectedVideo?.id}
             ref={videoRef}
             src={videoUrl}
             poster={(selectedVideo as any).thumbnailUrl || undefined}

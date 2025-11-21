@@ -227,6 +227,11 @@ export async function GET(
 
     const range = request.headers.get('range')
 
+    const isThumbnail = verifiedToken.quality === 'thumbnail'
+    const cacheControl = isThumbnail
+      ? 'private, no-store, must-revalidate'
+      : 'public, max-age=3600'
+
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
@@ -249,7 +254,7 @@ export async function GET(
       })
 
       // Determine correct Content-Type based on file type
-      const contentType = verifiedToken.quality === 'thumbnail' ? 'image/jpeg' : 'video/mp4'
+      const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
 
       return new NextResponse(readableStream, {
         status: 206,
@@ -258,7 +263,7 @@ export async function GET(
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize.toString(),
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=3600',
+          'Cache-Control': cacheControl,
           'X-Content-Type-Options': 'nosniff',
           'X-Frame-Options': 'SAMEORIGIN',
           'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -281,14 +286,14 @@ export async function GET(
     })
 
     // Determine correct Content-Type based on file type
-    const contentType = verifiedToken.quality === 'thumbnail' ? 'image/jpeg' : 'video/mp4'
+    const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
 
     return new NextResponse(readableStream, {
       headers: {
         'Content-Type': contentType,
         'Content-Length': stat.size.toString(),
         'Accept-Ranges': 'bytes',
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': cacheControl,
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'SAMEORIGIN',
         'Referrer-Policy': 'strict-origin-when-cross-origin',

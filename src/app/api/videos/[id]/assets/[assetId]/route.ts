@@ -152,8 +152,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     }
 
-    // Delete file from storage
-    await deleteFile(asset.storagePath)
+    // Only delete the physical file if no other assets reference the same storage path
+    const sharedCount = await prisma.videoAsset.count({
+      where: {
+        storagePath: asset.storagePath,
+        id: { not: assetId },
+      },
+    })
+
+    if (sharedCount === 0) {
+      await deleteFile(asset.storagePath)
+    }
 
     // Delete database record
     await prisma.videoAsset.delete({

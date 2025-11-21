@@ -211,6 +211,9 @@ export async function DELETE(
     // Get video details
     const video = await prisma.video.findUnique({
       where: { id },
+      include: {
+        assets: true,
+      }
     })
 
     if (!video) {
@@ -221,6 +224,20 @@ export async function DELETE(
 
     // Delete all associated files from storage
     try {
+      // Delete asset files only if no other assets point to the same storage path
+      for (const asset of video.assets) {
+        const sharedCount = await prisma.videoAsset.count({
+          where: {
+            storagePath: asset.storagePath,
+            id: { not: asset.id },
+          },
+        })
+
+        if (sharedCount === 0) {
+          await deleteFile(asset.storagePath)
+        }
+      }
+
       // Delete original file
       if (video.originalStoragePath) {
         await deleteFile(video.originalStoragePath)

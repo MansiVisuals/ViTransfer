@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import {
+
   generateOTP,
   verifyRecipientEmail,
   checkOTPRateLimit,
   storeOTP,
   sendOTPEmail,
+
 } from '@/lib/otp'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { isSmtpConfigured } from '@/lib/email'
+export const runtime = 'nodejs'
+
 
 export async function POST(
   request: NextRequest,

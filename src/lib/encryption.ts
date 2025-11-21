@@ -1,4 +1,20 @@
-import crypto from 'crypto'
+const isEdgeRuntime = typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge'
+
+// Lazy-load crypto so the module isn't pulled into Edge bundles.
+let cryptoModule: typeof import('crypto') | null = null
+
+function getCrypto(): typeof import('crypto') {
+  if (cryptoModule) return cryptoModule
+
+  if (isEdgeRuntime) {
+    throw new Error('Encryption utilities require the Node.js runtime. Set runtime = \"nodejs\" for routes that use them.')
+  }
+
+  // Safe to require because all callers run on the server (Node.js)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  cryptoModule = require('crypto') as typeof import('crypto')
+  return cryptoModule
+}
 
 // Encryption key REQUIRED in production (see README for setup instructions)
 // Skip validation during build or if explicitly disabled
@@ -45,6 +61,8 @@ function validateEncryptionKey(): void {
  * 3. Applies computational hardening (though minimal for performance)
  */
 function getEncryptionKey(): Buffer {
+  const crypto = getCrypto()
+
   // Use a fixed salt for deterministic key derivation
   // This ensures the same ENCRYPTION_KEY always produces the same derived key
   const salt = 'vitransfer-encryption-v1'
@@ -69,6 +87,7 @@ export function encrypt(text: string): string {
   validateEncryptionKey()
   
   try {
+    const crypto = getCrypto()
     const key = getEncryptionKey()
     const iv = crypto.randomBytes(IV_LENGTH)
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
@@ -97,6 +116,7 @@ export function decrypt(encryptedText: string): string {
   validateEncryptionKey()
   
   try {
+    const crypto = getCrypto()
     const key = getEncryptionKey()
     const parts = encryptedText.split(':')
     
@@ -234,6 +254,7 @@ export function validatePassword(password: string): {
  */
 export function generatePassword(length: number = 16): string {
   const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+  const crypto = getCrypto()
   let password = ''
 
   // Ensure at least one of each required character type using crypto.randomInt

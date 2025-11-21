@@ -9,6 +9,9 @@ import { cookies } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getCurrentUserFromRequest } from '@/lib/auth'
+export const runtime = 'nodejs'
+
+
 
 export const dynamic = 'force-dynamic'
 

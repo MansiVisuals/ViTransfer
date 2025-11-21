@@ -5,6 +5,9 @@ import { encrypt, decrypt } from '@/lib/encryption'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { isSmtpConfigured } from '@/lib/email'
+export const runtime = 'nodejs'
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

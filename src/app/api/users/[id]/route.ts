@@ -5,6 +5,9 @@ import { hashPassword, validatePassword, verifyPassword } from '@/lib/encryption
 import { revokeAllUserTokens, clearUserRevocation } from '@/lib/token-revocation'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

@@ -5,6 +5,10 @@ import crypto from 'crypto'
 import { getClientSessionTimeoutSeconds, isHttpsEnabled } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
+
 
 /**
  * POST /api/share/[token]/guest

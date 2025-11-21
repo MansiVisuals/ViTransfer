@@ -3,6 +3,10 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
+
 
 // POST /api/videos/[id]/assets/[assetId]/set-thumbnail - Set asset as video thumbnail
 export async function POST(

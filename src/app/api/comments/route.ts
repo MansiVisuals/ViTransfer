@@ -8,14 +8,18 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import {
+
   validateCommentPermissions,
   resolveCommentAuthor,
   sanitizeAndValidateContent,
   handleCommentNotifications,
   fetchProjectComments
+
 } from '@/lib/comment-helpers'
 import { cookies } from 'next/headers'
 import { getRedis } from '@/lib/redis'
+export const runtime = 'nodejs'
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

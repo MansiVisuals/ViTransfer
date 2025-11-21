@@ -7,6 +7,10 @@ import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import archiver from 'archiver'
 import { Readable } from 'stream'
 import { z } from 'zod'
+export const runtime = 'nodejs'
+
+
+
 
 const downloadZipSchema = z.object({
   assetIds: z.array(z.string().min(1)).min(1, 'No assets selected').max(50, 'Too many assets requested'),

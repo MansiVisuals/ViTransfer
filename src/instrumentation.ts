@@ -1,5 +1,9 @@
 import { ensureDefaultAdmin } from './lib/seed'
 import { initializeSecuritySettings } from './lib/settings'
+
+// Ensure the instrumentation hook only builds/runs in the Node.js runtime.
+export const runtime = 'nodejs'
+
 /**
  * Next.js Instrumentation Hook
  *

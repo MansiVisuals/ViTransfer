@@ -4,6 +4,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { invalidateAllSessions, clearAllRateLimits } from '@/lib/session-invalidation'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
+
 
 // Helper functions for change detection
 function hasSessionTimeoutChanged(

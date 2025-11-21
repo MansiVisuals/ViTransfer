@@ -9,6 +9,10 @@ import { invalidateProjectSessions } from '@/lib/session-invalidation'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
+export const runtime = 'nodejs'
+
+
+
 
 const updateProjectSchema = z.object({
   title: z.string().min(1).max(200).optional(),

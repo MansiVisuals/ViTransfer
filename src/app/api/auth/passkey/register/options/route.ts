@@ -3,6 +3,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { generatePasskeyRegistrationOptions } from '@/lib/passkey'
 import { isPasskeyConfigured } from '@/lib/settings'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+export const runtime = 'nodejs'
+
+
+
 
 /**
  * Generate PassKey Registration Options

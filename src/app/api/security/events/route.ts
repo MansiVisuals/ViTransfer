@@ -3,6 +3,10 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+export const runtime = 'nodejs'
+
+
+
 
 export const dynamic = 'force-dynamic'
 

@@ -3,6 +3,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { updateRecipient, deleteRecipient } from '@/lib/recipients'
 import { z } from 'zod'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+export const runtime = 'nodejs'
+
+
+
 
 const updateRecipientSchema = z.object({
   name: z.string().nullable().optional(),

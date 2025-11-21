@@ -4,6 +4,10 @@ import { createSession } from '@/lib/auth'
 import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import type { AuthenticationResponseJSON } from '@simplewebauthn/browser'
+export const runtime = 'nodejs'
+
+
+
 
 /**
  * Verify PassKey Authentication Response

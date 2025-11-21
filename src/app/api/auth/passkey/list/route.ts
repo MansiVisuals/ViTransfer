@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { getUserPasskeys } from '@/lib/passkey'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
+
 
 /**
  * List User's PassKeys

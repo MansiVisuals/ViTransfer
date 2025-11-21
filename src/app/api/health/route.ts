@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getRedis } from '@/lib/redis'
+export const runtime = 'nodejs'
+
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

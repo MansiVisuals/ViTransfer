@@ -7,6 +7,9 @@ import { decrypt } from '@/lib/encryption'
 import { getProjectRecipients } from '@/lib/recipients'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
 
 export const dynamic = 'force-dynamic'
 

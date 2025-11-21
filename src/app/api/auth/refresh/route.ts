@@ -10,6 +10,10 @@ import { generateCsrfToken, getCsrfSessionIdentifier } from '@/lib/security/csrf
 import { isHttpsEnabled } from '@/lib/settings'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
+export const runtime = 'nodejs'
+
+
+
 
 export const dynamic = 'force-dynamic'
 

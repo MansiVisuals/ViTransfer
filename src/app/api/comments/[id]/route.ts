@@ -9,6 +9,10 @@ import { sanitizeCommentHtml } from '@/lib/security/html-sanitization'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { cookies } from 'next/headers'
 import { getRedis } from '@/lib/redis'
+export const runtime = 'nodejs'
+
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

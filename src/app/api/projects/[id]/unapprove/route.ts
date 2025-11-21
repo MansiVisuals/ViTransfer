@@ -4,6 +4,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { z } from 'zod'
+export const runtime = 'nodejs'
+
+
+
 
 const unapproveSchema = z.object({
   unapproveVideos: z.boolean().optional(),

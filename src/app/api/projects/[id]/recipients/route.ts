@@ -4,6 +4,10 @@ import { getProjectRecipients, addRecipient } from '@/lib/recipients'
 import { z } from 'zod'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
+
 
 const addRecipientSchema = z.object({
   email: z.string().email('Invalid email format').nullable().optional(),

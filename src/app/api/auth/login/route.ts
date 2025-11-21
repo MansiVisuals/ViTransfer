@@ -5,6 +5,10 @@ import { validateRequest, loginSchema } from '@/lib/validation'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
 import { getRedis } from '@/lib/redis'
+export const runtime = 'nodejs'
+
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

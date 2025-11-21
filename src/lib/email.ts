@@ -27,6 +27,57 @@ function sanitizeEmailHeader(value: string): string {
     .trim()
 }
 
+export interface EmailShellOptions {
+  companyName: string
+  title: string
+  subtitle?: string
+  bodyContent: string
+  footerNote?: string
+  headerGradient: string
+}
+
+export function renderEmailShell({
+  companyName,
+  title,
+  subtitle,
+  bodyContent,
+  footerNote,
+  headerGradient,
+}: EmailShellOptions) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background: ${headerGradient}; padding: 32px 24px; text-align: center;">
+      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">${escapeHtml(title)}</div>
+      ${subtitle ? `<div style="font-size: 15px; color: rgba(255,255,255,0.95);">${escapeHtml(subtitle)}</div>` : ''}
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 32px 24px;">
+      ${bodyContent}
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+        ${escapeHtml(footerNote || companyName)}
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
+  `
+}
+
 interface EmailSettings {
   smtpServer: string | null
   smtpPort: number | null
@@ -45,7 +96,7 @@ const CACHE_DURATION = 30 * 1000 // 30 seconds (reduced for testing)
 /**
  * Get email settings from database with caching
  */
-async function getEmailSettings(): Promise<EmailSettings> {
+export async function getEmailSettings(): Promise<EmailSettings> {
   const now = Date.now()
   
   // Return cached settings if still valid
@@ -199,24 +250,12 @@ export async function sendNewVersionEmail({
 
   const subject = `New Version Available: ${projectTitle}`
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 32px 24px; text-align: center;">
-      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">New Version Available</div>
-      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">Ready for your review</div>
-    </div>
-
-    <!-- Content -->
-    <div style="padding: 32px 24px;">
+  const html = renderEmailShell({
+    companyName,
+    headerGradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    title: 'New Version Available',
+    subtitle: 'Ready for your review',
+    bodyContent: `
       <p style="margin: 0 0 20px 0; font-size: 16px; color: #111827; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
@@ -252,19 +291,8 @@ export async function sendNewVersionEmail({
       <p style="margin: 24px 0 0 0; font-size: 14px; color: #6b7280; line-height: 1.5;">
         Questions or feedback? Simply reply to this email and we'll get back to you.
       </p>
-    </div>
-
-    <!-- Footer -->
-    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
-        ${escapeHtml(companyName)}
-      </p>
-    </div>
-
-  </div>
-</body>
-</html>
-  `
+    `,
+  })
 
   return sendEmail({
     to: clientEmail,
@@ -300,27 +328,15 @@ export async function sendProjectApprovedEmail({
 
   const statusTitle = isComplete ? 'Project Approved' : 'Video Approved'
   const statusMessage = isComplete
-    ? 'All videos have been approved and are ready for download'
+    ? 'All videos are approved and ready to deliver'
     : `${approvedVideos[0]?.name || 'Your video'} has been approved`
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px 24px; text-align: center;">
-      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">${statusTitle}</div>
-      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">${statusMessage}</div>
-    </div>
-
-    <!-- Content -->
-    <div style="padding: 32px 24px;">
+  const html = renderEmailShell({
+    companyName,
+    headerGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    title: statusTitle,
+    subtitle: statusMessage,
+    bodyContent: `
       <p style="margin: 0 0 20px 0; font-size: 16px; color: #111827; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
@@ -349,19 +365,8 @@ export async function sendProjectApprovedEmail({
       <p style="margin: 24px 0 0 0; font-size: 14px; color: #6b7280; line-height: 1.5;">
         Questions or need changes? Simply reply to this email and we'll be happy to help.
       </p>
-    </div>
-
-    <!-- Footer -->
-    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
-        ${escapeHtml(companyName)}
-      </p>
-    </div>
-
-  </div>
-</body>
-</html>
-  `
+    `,
+  })
 
   return sendEmail({
     to: clientEmail,
@@ -403,24 +408,12 @@ export async function sendCommentNotificationEmail({
     ? `at ${Math.floor(timestamp / 60)}:${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
     : ''
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 32px 24px; text-align: center;">
-      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">New Comment</div>
-      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">${escapeHtml(companyName)} left feedback on your video</div>
-    </div>
-
-    <!-- Content -->
-    <div style="padding: 32px 24px;">
+  const html = renderEmailShell({
+    companyName,
+    headerGradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    title: 'New Comment',
+    subtitle: `${companyName} left feedback on your video`,
+    bodyContent: `
       <p style="margin: 0 0 20px 0; font-size: 16px; color: #111827; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
@@ -453,19 +446,8 @@ export async function sendCommentNotificationEmail({
       <p style="margin: 24px 0 0 0; font-size: 14px; color: #6b7280; line-height: 1.5;">
         Questions? Simply reply to this email.
       </p>
-    </div>
-
-    <!-- Footer -->
-    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
-        ${escapeHtml(companyName)}
-      </p>
-    </div>
-
-  </div>
-</body>
-</html>
-  `
+    `,
+  })
 
   return sendEmail({
     to: clientEmail,
@@ -507,24 +489,12 @@ export async function sendAdminCommentNotificationEmail({
     ? `at ${Math.floor(timestamp / 60)}:${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
     : ''
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 32px 24px; text-align: center;">
-      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">New Client Feedback</div>
-      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">Your client left a comment</div>
-    </div>
-
-    <!-- Content -->
-    <div style="padding: 32px 24px;">
+  const html = renderEmailShell({
+    companyName,
+    headerGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    title: 'New Client Feedback',
+    subtitle: 'Your client left a comment',
+    bodyContent: `
       <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
         <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Client</div>
         <div style="font-size: 16px; color: #78350f; margin-bottom: 4px;">
@@ -557,19 +527,8 @@ export async function sendAdminCommentNotificationEmail({
           View in Admin Panel
         </a>
       </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
-        Automated notification from ${escapeHtml(companyName)}
-      </p>
-    </div>
-
-  </div>
-</body>
-</html>
-  `
+    `,
+  })
 
   // Send to all admin emails
   const promises = adminEmails.map(email =>
@@ -626,10 +585,11 @@ export async function sendAdminProjectApprovedEmail({
     ? `The complete project has been ${isApproval ? 'approved' : 'unapproved'} by the client`
     : `${approvedVideos[0]?.name || 'A video'} has been ${isApproval ? 'approved' : 'unapproved'} by the client`
 
-  // Color scheme based on approval/unapproval
   const headerGradient = isApproval
-    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'  // Green for approval
-    : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'  // Orange for unapproval
+    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+    : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
+  const buttonColor = isApproval ? '#10b981' : '#f97316'
+
   const boxBg = isApproval ? '#f0fdf4' : '#fef3c7'
   const boxBorder = isApproval ? '#86efac' : '#fcd34d'
   const textColor = isApproval ? '#065f46' : '#78350f'
@@ -638,28 +598,12 @@ export async function sendAdminProjectApprovedEmail({
   const buttonBg = isApproval ? '#10b981' : '#f59e0b'
   const buttonShadow = isApproval ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 20px; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-
-    <!-- Header -->
-    <div style="background: ${headerGradient}; padding: 32px 24px; text-align: center;">
-      <div style="font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">${statusTitle}</div>
-      <div style="font-size: 15px; color: rgba(255,255,255,0.95);">${statusMessage}</div>
-    </div>
-
-    <!-- Content -->
-    <div style="padding: 32px 24px;">
-      <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151; line-height: 1.6;">
-        <strong>${escapeHtml(clientName)}</strong> has ${isApproval ? 'approved' : 'unapproved'} ${isComplete ? 'the project' : 'a video in'} <strong>${escapeHtml(projectTitle)}</strong>.
-      </p>
-
+  const html = renderEmailShell({
+    companyName,
+    headerGradient,
+    title: statusTitle,
+    subtitle: statusMessage,
+    bodyContent: `
       ${approvedVideos.length > 0 ? `
         <div style="background: ${boxBg}; border: 1px solid ${boxBorder}; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
           <div style="font-size: 13px; font-weight: 600; color: ${textColor}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${isApproval ? 'Approved' : 'Unapproved'} Videos</div>
@@ -676,19 +620,8 @@ export async function sendAdminProjectApprovedEmail({
           View in Admin Panel
         </a>
       </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="background: #f9fafb; padding: 20px 24px; border-top: 1px solid #e5e7eb; text-align: center;">
-      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
-        Automated notification from ${escapeHtml(companyName)}
-      </p>
-    </div>
-
-  </div>
-</body>
-</html>
-  `
+    `,
+  })
 
   // Send to all admin emails
   const promises = adminEmails.map(email =>
@@ -734,57 +667,57 @@ export async function sendProjectGeneralNotificationEmail({
   const subject = `Project Ready for Review: ${escapeHtml(projectTitle)}`
 
   const passwordNotice = isPasswordProtected
-    ? `<p style="font-size: 14px; color: #d97706; background: #fef3c7; padding: 12px; border-radius: 4px; margin: 15px 0;">
-        <strong>Note:</strong> This project is password protected. Check your email for the access password.
-      </p>`
-    : ''
-
-  const videosList = readyVideos.length > 0
-    ? `<div style="background: white; border: 1px solid #e5e7eb; padding: 15px; margin: 15px 0; border-radius: 6px;">
-        <p style="margin: 0 0 10px 0; font-weight: 600;">Available Videos:</p>
-        <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #666;">
-          ${readyVideos.map(v => `<li style="margin: 5px 0;">${escapeHtml(v.name)} - ${escapeHtml(v.versionLabel)}</li>`).join('')}
-        </ul>
+    ? `<div style="border:1px dashed #0ea5e9; border-radius:10px; padding:12px 14px; font-size:14px; color:#0f172a; margin:0 0 14px; background:#f0f9ff;">
+        Password protected. Use the password sent separately to open the link.
       </div>`
     : ''
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="padding: 30px; background: #f9fafb; border-radius: 8px;">
-    <h1 style="margin: 0 0 10px 0; font-size: 24px; color: #111;">${escapeHtml(companyName)}</h1>
-    <p style="margin: 0 0 25px 0; font-size: 14px; color: #666;">Project Ready for Review</p>
+  const videosList = readyVideos.length > 0
+    ? `<div style="border:1px solid #bae6fd; padding:14px 16px; margin:0 0 14px; border-radius:10px; background:#f8fbff;">
+        <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:#0ea5e9; margin-bottom:6px;">Ready to view</div>
+        ${readyVideos.map(v => `<div style="font-size:15px; color:#0f172a; padding:4px 0;">${escapeHtml(v.name)} <span style="color:#0ea5e9;">${escapeHtml(v.versionLabel)}</span></div>`).join('')}
+      </div>`
+    : ''
 
-    <p style="margin: 0 0 20px 0;">Hi ${escapeHtml(clientName)},</p>
-
-    <p style="margin: 0 0 20px 0;">Your project is ready for review:</p>
-
-    <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0; border-radius: 6px;">
-      <p style="margin: 0 0 10px 0; font-size: 18px; font-weight: 600; color: #111;">${escapeHtml(projectTitle)}</p>
-      ${projectDescription ? `<p style="margin: 5px 0 0 0; font-size: 14px; color: #666; font-style: italic;">${escapeHtml(projectDescription)}</p>` : ''}
-    </div>
-
-    ${videosList}
-    ${passwordNotice}
-
-    <div style="margin: 25px 0;">
-      <a href="${escapeHtml(shareUrl)}" style="display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 500;">
-        View Project
-      </a>
-    </div>
-
-    <p style="font-size: 14px; color: #666; margin: 25px 0 0 0;">
-      Questions? Reply to this email.
-    </p>
-  </div>
-</body>
-</html>
-  `
+  const html = renderEmailShell({
+    companyName,
+    headerGradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+    title: 'Project Ready for Review',
+    subtitle: projectTitle,
+    bodyContent: `
+      <p style="margin:0 0 20px; font-size:16px;">
+        Hi <strong>${escapeHtml(clientName)}</strong>,
+      </p>
+      <p style="margin:0 0 24px; font-size:15px;">
+        Your project is ready for review. Click below to view and leave feedback.
+      </p>
+      ${projectDescription ? `
+        <div style="background:linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); border-left:4px solid #06b6d4; border-radius:8px; padding:20px; margin-bottom:20px;">
+          <div style="font-size:13px; font-weight:600; color:#155e75; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Project Overview</div>
+          <div style="font-size:15px; color:#164e63; line-height:1.6;">${escapeHtml(projectDescription)}</div>
+        </div>
+      ` : ''}
+      ${readyVideos.length > 0 ? `
+        <div style="background:#f9fafb; border-radius:8px; padding:20px; margin-bottom:24px;">
+          <div style="font-size:13px; font-weight:600; color:#6b7280; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Ready to View</div>
+          ${readyVideos.map(v => `
+            <div style="font-size:15px; color:#374151; padding:6px 0;">
+              • ${escapeHtml(v.name)} <span style="color:#06b6d4;">${escapeHtml(v.versionLabel)}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      ${passwordNotice}
+      <div style="text-align:center; margin:32px 0;">
+        <a href="${escapeHtml(shareUrl)}" style="display:inline-block; background:#06b6d4; color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(6,182,212,0.3);">
+          View Project
+        </a>
+      </div>
+      <p style="margin:24px 0 0; font-size:14px; color:#6b7280; text-align:center;">
+        Questions? Reply to this email.
+      </p>
+    `,
+  })
 
   return sendEmail({
     to: clientEmail,
@@ -812,44 +745,36 @@ export async function sendPasswordEmail({
 
   const subject = `Access Password: ${escapeHtml(projectTitle)}`
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="padding: 30px; background: #f9fafb; border-radius: 8px;">
-    <h1 style="margin: 0 0 10px 0; font-size: 24px; color: #111;">${escapeHtml(companyName)}</h1>
-    <p style="margin: 0 0 25px 0; font-size: 14px; color: #666;">Project Access Password</p>
-
-    <p style="margin: 0 0 20px 0;">Hi ${escapeHtml(clientName)},</p>
-
-    <p style="margin: 0 0 20px 0;">Here is your password to access the project:</p>
-
-    <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; margin: 20px 0; border-radius: 6px;">
-      <p style="margin: 0 0 10px 0; font-size: 18px; font-weight: 600; color: #111;">${escapeHtml(projectTitle)}</p>
-    </div>
-
-    <div style="background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 6px; text-align: center;">
-      <p style="margin: 0 0 10px 0; font-size: 12px; color: #92400e; font-weight: 600; text-transform: uppercase;">Password</p>
-      <p style="margin: 0; font-size: 20px; color: #78350f; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 1px; word-break: break-all;">
-        ${escapeHtml(password)}
+  const html = renderEmailShell({
+    companyName,
+    headerGradient: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+    title: 'Project Password',
+    subtitle: projectTitle,
+    bodyContent: `
+      <p style="margin:0 0 16px; font-size:15px; color:#1f2937; line-height:1.6;">
+        Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
-    </div>
-
-    <p style="font-size: 13px; color: #dc2626; background: #fee2e2; padding: 12px; border-radius: 4px; margin: 15px 0;">
-      <strong>Security:</strong> Keep this password confidential.
-    </p>
-
-    <p style="font-size: 14px; color: #666; margin: 25px 0 0 0;">
-      Use this password with the project link sent in the previous email.
-    </p>
-  </div>
-</body>
-</html>
-  `
+      <p style="margin:0 0 16px; font-size:15px; color:#374151; line-height:1.6;">
+        Use this password to open your private project link. We send it separately for security.
+      </p>
+      <div style="border:1px solid #fecdd3; padding:14px 16px; margin-bottom:12px; border-radius:10px;">
+        <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:#dc2626; margin-bottom:6px;">Project</div>
+        <div style="font-size:16px; font-weight:700; color:#7f1d1d;">${escapeHtml(projectTitle)}</div>
+      </div>
+      <div style="border:1px solid #dc2626; padding:16px; margin:6px 0 16px; border-radius:12px; text-align:center;">
+        <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#b91c1c; font-weight:700; margin-bottom:8px;">Password</div>
+        <div style="display:inline-block; padding:10px 14px; border-radius:8px; border:1px dashed #dc2626; font-family:'SFMono-Regular', Menlo, Consolas, monospace; font-size:18px; color:#7f1d1d; letter-spacing:1px; word-break:break-all;">
+          ${escapeHtml(password)}
+        </div>
+      </div>
+      <p style="font-size:13px; color:#7f1d1d; padding:0; margin:0 0 10px;">
+        Keep this password confidential. For security, do not forward this email.
+      </p>
+      <p style="font-size:13px; color:#6b7280; margin:0; text-align:center;">
+        Pair this password with the review link we sent in the previous email.
+      </p>
+    `,
+  })
 
   return sendEmail({
     to: clientEmail,
@@ -871,48 +796,26 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
     await transporter.verify()
 
     // Send test email
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-    <div style="background: #f3f4f6; padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 30px; border: 2px solid #10b981;">
-      <h1 style="color: #047857; margin: 0; font-size: 24px; font-weight: 700;">
-        ✓ Test Email Successful
-      </h1>
-    </div>
-
-    <div style="background: white; padding: 30px; border-radius: 8px; border: 1px solid #e5e7eb;">
-      <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-        Your SMTP configuration is working correctly.
-      </p>
-
-      <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0; border: 1px solid #e5e7eb;">
-        <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #666; font-weight: 600;">Connection Details:</h3>
-        <p style="margin: 5px 0; font-size: 13px; color: #555;"><strong>Server:</strong> ${settings.smtpServer}</p>
-        <p style="margin: 5px 0; font-size: 13px; color: #555;"><strong>Port:</strong> ${settings.smtpPort}</p>
-        <p style="margin: 5px 0; font-size: 13px; color: #555;"><strong>Security:</strong> ${settings.smtpSecure || 'STARTTLS'}</p>
-        <p style="margin: 5px 0; font-size: 13px; color: #555;"><strong>From:</strong> ${settings.smtpFromAddress}</p>
-      </div>
-
-      <p style="font-size: 14px; color: #666; margin-top: 20px;">
-        You can now send email notifications to your clients.
-      </p>
-    </div>
-
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-
-    <p style="font-size: 12px; color: #999; margin-bottom: 0; text-align: center;">
-      This is a test email from ${settings.companyName || 'ViTransfer'}
-    </p>
-  </div>
-</body>
-</html>
-    `
+    const html = renderEmailShell({
+      companyName: settings.companyName || 'ViTransfer',
+      headerGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      title: 'SMTP Test Succeeded',
+      subtitle: 'Email sending is working',
+      bodyContent: `
+        <p style="font-size:15px; color:#1f2937; line-height:1.6; margin:0 0 12px;">
+          Your SMTP configuration is working. Details below for your records.
+        </p>
+        <div style="border:1px solid #bbf7d0; border-radius:10px; padding:14px 16px;">
+          <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:#15803d; margin-bottom:6px;">Connection details</div>
+          <div style="font-size:14px; color:#0f172a; line-height:1.6;">
+            <div><strong>Server:</strong> ${settings.smtpServer}</div>
+            <div><strong>Port:</strong> ${settings.smtpPort}</div>
+            <div><strong>Security:</strong> ${settings.smtpSecure || 'STARTTLS'}</div>
+            <div><strong>From:</strong> ${settings.smtpFromAddress}</div>
+          </div>
+        </div>
+      `,
+    })
 
     // Send directly with transporter if custom config, otherwise use sendEmail
     if (customConfig) {

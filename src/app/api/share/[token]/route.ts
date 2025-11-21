@@ -9,6 +9,10 @@ import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-acces
 import { getRedis } from '@/lib/redis'
 import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
+
 
 export const dynamic = 'force-dynamic'
 

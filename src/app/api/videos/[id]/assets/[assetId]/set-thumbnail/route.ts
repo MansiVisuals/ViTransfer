@@ -34,6 +34,10 @@ export async function POST(
   const { id: videoId, assetId } = await params
 
   try {
+    // Get the action from request body (default to 'set')
+    const body = await request.json()
+    const action = body.action || 'set'
+
     // Verify video exists
     const video = await prisma.video.findUnique({
       where: { id: videoId },
@@ -43,7 +47,25 @@ export async function POST(
       return NextResponse.json({ error: 'Video not found' }, { status: 404 })
     }
 
-    // Verify asset exists and belongs to this video
+    // If action is 'remove', revert to system-generated thumbnail
+    if (action === 'remove') {
+      // System-generated thumbnail path: projects/{projectId}/videos/{videoId}/thumbnail.jpg
+      const systemThumbnailPath = `projects/${video.projectId}/videos/${videoId}/thumbnail.jpg`
+
+      await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          thumbnailPath: systemThumbnailPath,
+        },
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Reverted to system-generated thumbnail',
+      })
+    }
+
+    // For 'set' action, verify asset and set it as thumbnail
     const asset = await prisma.videoAsset.findUnique({
       where: { id: assetId },
     })

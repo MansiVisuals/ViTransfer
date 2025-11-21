@@ -191,16 +191,8 @@ export default function SharePage() {
       loadProject()
     }
 
-    // Auto-refresh every 30 seconds to get latest data (new videos, approval status)
-    const intervalId = setInterval(() => {
-      if (isMounted && isAuthenticated) {
-        loadProject()
-      }
-    }, 30000)
-
     return () => {
       isMounted = false // Mark component as unmounted
-      clearInterval(intervalId)
     }
   }, [token]) // Removed isAuthenticated from dependencies to prevent double-load
 
@@ -208,7 +200,10 @@ export default function SharePage() {
   useEffect(() => {
     if (project?.videosByName) {
       const videoNames = Object.keys(project.videosByName)
-      if (videoNames.length > 0 && !activeVideoName) {
+      if (videoNames.length === 0) return
+
+      // Determine which video group should be active
+      if (!activeVideoName) {
         let videoNameToUse: string | null = null
 
         // Priority 1: URL parameter for video name
@@ -232,6 +227,7 @@ export default function SharePage() {
         }
 
         setActiveVideoName(videoNameToUse)
+
         const videos = project.videosByName[videoNameToUse]
         setActiveVideos(videos)
 
@@ -246,6 +242,12 @@ export default function SharePage() {
         // Set initial seek time if URL parameter exists
         if (urlTimestamp !== null) {
           setInitialSeekTime(urlTimestamp)
+        }
+      } else {
+        // Keep activeVideos in sync when project data refreshes (ensures updated thumbnails/tokens)
+        const videos = project.videosByName[activeVideoName]
+        if (videos) {
+          setActiveVideos(videos)
         }
       }
     }

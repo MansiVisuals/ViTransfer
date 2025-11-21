@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { prisma } from './db'
-import { sendEmail, escapeHtml } from './email'
+import { sendEmail, escapeHtml, getEmailSettings, renderEmailShell } from './email'
 import { getRedis } from './redis'
 
 // OTP Configuration
@@ -178,15 +178,19 @@ export async function sendOTPEmail(
   projectTitle: string,
   code: string
 ): Promise<void> {
+  const settings = await getEmailSettings()
+  const companyName = settings.companyName || 'Secure Access'
+
   // SECURITY: Escape HTML to prevent XSS
   const safeProjectTitle = escapeHtml(projectTitle)
   const subject = `Your verification code for ${safeProjectTitle}`
 
-  const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #333; margin-bottom: 20px;">Verification Code</h2>
-
-      <p style="color: #666; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
+  const html = renderEmailShell({
+    companyName,
+    headerGradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    title: 'Verification Code',
+    bodyContent: `
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: #666; line-height: 1.5;">
         Your verification code for <strong>${safeProjectTitle}</strong> is:
       </p>
 
@@ -196,15 +200,15 @@ export async function sendOTPEmail(
         </div>
       </div>
 
-      <p style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 10px;">
+      <p style="margin: 0 0 10px 0; font-size: 14px; color: #666; line-height: 1.5;">
         This code will expire in ${OTP_EXPIRY_MINUTES} minutes.
       </p>
 
-      <p style="color: #999; font-size: 13px; line-height: 1.5;">
+      <p style="margin: 0; font-size: 13px; color: #999; line-height: 1.5;">
         If you didn't request this code, please ignore this email.
       </p>
-    </div>
-  `
+    `,
+  })
 
   const text = `
 Your verification code for ${projectTitle} is:
@@ -213,7 +217,7 @@ ${code}
 
 This code will expire in ${OTP_EXPIRY_MINUTES} minutes.
 
-If you didn't request this code, please ignore this email.
+If you didn't request this code, you can safely ignore this email.
   `.trim()
 
   await sendEmail({

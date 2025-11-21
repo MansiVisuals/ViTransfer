@@ -4,6 +4,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
+export const runtime = 'nodejs'
+
+
+
 
 const copyAssetsSchema = z.object({
   assetIds: z.array(z.string().min(1)).min(1, 'No assets selected for copying').max(50, 'Too many assets selected'),

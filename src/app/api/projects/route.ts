@@ -6,6 +6,9 @@ import { encrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { createProjectSchema, validateRequest } from '@/lib/validation'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+export const runtime = 'nodejs'
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

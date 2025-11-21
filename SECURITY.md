@@ -6,7 +6,8 @@ Currently supported versions with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.3.x   | :white_check_mark: |
+| 0.5.x   | :white_check_mark: |
+| < 0.5.0 | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -24,122 +25,149 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 - **Session monitoring** with warning notifications before logout
 - **Token rotation** on each refresh to prevent replay attacks
 - **Token revocation** support for forced logouts
+- **CSRF protection** on all state-changing endpoints (POST/PATCH/DELETE)
+- **CSRF token refresh** synchronized with session refresh
 
 ### Password Protection
 - **AES-256-GCM encryption** for share passwords
 - **Bcrypt hashing** for admin passwords
 - **Rate limiting** on password attempts (5 attempts per 15 minutes)
 - **Automatic lockout** after failed password attempts
+- **Real-time password validation** with inline feedback
 
 ### Video Access Control
 - **Token-based video streaming** with session validation
 - **Hotlink protection** to prevent unauthorized embedding
 - **Watermarking** on preview videos
 - **Time-limited access tokens** (15 minutes)
+- **Session binding** for video access tokens
 
 ### Data Protection
 - **Encrypted passwords** stored in database
 - **Secure cookie flags** (HttpOnly, Secure, SameSite)
 - **Database context isolation** for multi-tenancy
 - **Input validation** using Zod schemas
+- **Comment sanitization** to prevent XSS attacks
+- **Content Security Policy** headers
+
+### Rate Limiting
+- **API endpoint rate limiting** (60 requests/minute for most endpoints)
+- **Auth refresh rate limiting** (8 requests/minute per token)
+- **Asset download rate limiting** (30 requests/minute)
+- **Video deletion rate limiting** (30 requests/minute)
+- **Redis-backed rate limiting** with IP + User-Agent hashing
 
 ### Security Logging
 - **Failed login attempts** tracking
 - **Suspicious activity** monitoring
 - **Rate limit violations** logging
 - **Video access** audit trail
+- **Security events dashboard** for admins
 
 ## Known CVEs and Risk Assessment
 
 The following CVEs are present in Alpine Linux packages and dependencies (latest available versions). These are **transitive dependencies** from FFmpeg, Node.js, and Alpine system packages, and are **NOT directly exploitable** in ViTransfer's use case.
 
-### CVE Summary (As of 2025-11-16)
+### CVE Summary (As of 2025-11-21)
 
 | CVE ID | Severity | Package | Status | Real Risk |
 |--------|----------|---------|--------|-----------|
-| CVE-2025-52194 | 7.5 H | libsndfile | ⏳ Awaiting Fix | Low |
-| CVE-2024-50613 | 6.5 M | libsndfile | ⏳ Awaiting Fix | Low |
-| CVE-2024-45993 | 6.5 M | giflib | ⏳ Awaiting Fix | Very Low |
-| CVE-2025-4574 | 6.3 M | crossbeam-channel | ⏳ Awaiting Fix | Very Low |
-| CVE-2025-64118 | 6.1 M | npm/tar | ⏳ Awaiting Fix | Very Low |
-| CVE-2025-10966 | 6.0 M | curl | ⏳ Awaiting Fix | Low |
-| CVE-2025-47436 | 6.0 M | orc | ⏳ Awaiting Fix | Low |
+| CVE-2025-64756 | 7.5 H | npm/glob | ✅ Fixed in 0.5.3 | N/A |
+| CVE-2025-52194 | 7.5 H | alpine/libsndfile | ⏳ Awaiting Fix | Low |
+| CVE-2023-49502 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-59734 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2023-50009 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2024-31582 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2023-50010 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2023-50008 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2024-31578 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-48071 | 7.5 H | alpine/openexr | ⏳ Awaiting Fix | Very Low |
+| CVE-2024-11403 | 6.9 M | alpine/libjxl | ⏳ Awaiting Fix | Very Low |
+| CVE-2024-11498 | 6.9 M | alpine/libjxl | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-48072 | 6.8 M | alpine/openexr | ⏳ Awaiting Fix | Very Low |
+| CVE-2024-50613 | 6.5 M | alpine/libsndfile | ⏳ Awaiting Fix | Low |
+| CVE-2024-45993 | 6.5 M | alpine/giflib | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-4574 | 6.3 M | cargo/crossbeam-channel | ⏳ Awaiting Upstream | Very Low |
+| CVE-2025-47436 | 6.0 M | alpine/orc | ⏳ Awaiting Fix | Low |
+| CVE-2025-59729 | 5.7 M | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-64183 | 5.5 M | alpine/openexr | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-64182 | 5.5 M | alpine/openexr | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-1594 | 5.3 M | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2024-31585 | 5.3 M | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-1373 | 4.8 M | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-8114 | 4.7 M | alpine/libssh | ⏳ Awaiting Fix | Low |
+| CVE-2025-48074 | 4.6 M | alpine/openexr | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-48073 | 4.6 M | alpine/openexr | ⏳ Awaiting Fix | Very Low |
+| CVE-2022-3964 | 4.3 M | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-10966 | 4.3 M | alpine/curl | ⏳ Awaiting Fix | Low |
+| CVE-2023-50007 | 4.0 M | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-46394 | 3.2 L | alpine/busybox | ⏳ Awaiting Fix | Very Low |
+| CVE-2024-58251 | 2.5 L | alpine/busybox | ⏳ Awaiting Fix | Very Low |
+| CVE-2025-64181 | 2.0 L | alpine/openexr | ⏳ Awaiting Fix | Very Low |
+| GHSA-pg9f-39pc-qf8g | N/A U | cargo/crossbeam-channel | ⏳ Awaiting Upstream | Very Low |
+| RUSTSEC-2024-0436 | N/A U | cargo/paste | ⏳ Awaiting Upstream | Very Low |
 
 **Key Points:**
-- ⏳ **7 CVEs in Alpine/npm packages** - Using latest available versions, awaiting upstream fixes
-- 🔒 **All CVEs have low real-world exploitability** in ViTransfer's containerized environment
-
-### High Severity (Limited Impact in ViTransfer Context)
-
-#### CVE-2025-52194 - libsndfile 1.2.2-r2 (Severity: 7.5 High)
-- **Status**: ⏳ Awaiting upstream Alpine/libsndfile fix
-- **Impact**: Limited - Audio processing in FFmpeg (not directly exposed)
-- **Exploitability**: Low - Requires malicious audio file upload
-- **Mitigation**: ViTransfer validates video files; FFmpeg handles audio internally
-- **Risk**: Low - Not a primary attack vector
+- ⏳ **33 total CVEs** - 1 fixed in 0.5.3, 32 awaiting upstream fixes
+- ✅ **npm glob CVE-2025-64756 FIXED** - Updated to glob 11.1.0 in version 0.5.3 (will be in next Docker build)
+- 🔒 **All remaining CVEs have low real-world exploitability** in ViTransfer's containerized environment
+- 🔧 **Cargo CVEs require upstream Alpine FFmpeg updates** - Cannot be fixed in package.json
+- 📦 **Alpine package CVEs** - All using latest available Alpine 3.22 versions
 
 ### Medium Severity (Minimal Impact)
 
-#### CVE-2024-50613 - libsndfile 1.2.2-r2 (Severity: 6.5 Medium)
-- **Status**: ⏳ Awaiting upstream fix
-- **Impact**: Limited - Audio parsing vulnerability
-- **Mitigation**: Same as CVE-2025-52194
-- **Risk**: Low
+#### Alpine Package CVEs (FFmpeg Dependencies)
+The following CVEs are in Alpine Linux system packages used by FFmpeg for video processing:
 
-#### CVE-2024-45993 - giflib 5.2.2-r1 (Severity: 6.5 Medium)
-- **Status**: ⏳ Awaiting upstream fix
-- **Impact**: Minimal - GIF processing (ViTransfer processes videos only)
-- **Exploitability**: Very Low - GIF files not accepted by ViTransfer
-- **Risk**: Very Low
+**libjxl (JPEG XL codec)**
+- CVE-2024-11403, CVE-2024-11498 (6.9 M) - Image format not used by ViTransfer
 
-#### CVE-2025-4574 - crossbeam-channel 0.5.14 (Severity: 6.3 Medium)
-- **Status**: ⏳ Awaiting Alpine FFmpeg update
-- **Impact**: Minimal - Internal FFmpeg Rust dependency
-- **Exploitability**: Very Low - Not directly accessible
-- **Risk**: Very Low
+**openexr (EXR image format)**
+- CVE-2025-48072 (6.8 M), CVE-2025-64183, CVE-2025-64182 (5.5 M), CVE-2025-48074, CVE-2025-48073 (4.6 M), CVE-2025-64181 (2.0 L)
+- Impact: Minimal - EXR format not used by ViTransfer
 
-#### CVE-2025-64118 - npm tar 7.5.1 (Severity: 6.1 Medium)
-- **Status**: ⏳ Awaiting upstream npm fix
-- **Impact**: Minimal - tar is only used during npm install, not at runtime
-- **Exploitability**: Very Low - Only runs during container build, not production
-- **Mitigation**: Container is rebuilt from scratch for each deployment
-- **Risk**: Very Low - Build-time only, not runtime
+**libsndfile (Audio file library)**
+- CVE-2024-50613 (6.5 M) - Audio parsing vulnerability
+- Impact: Limited - ViTransfer validates video files; FFmpeg handles audio internally
 
-#### CVE-2025-10966 - curl 8.14.1-r2 (Severity: 6.0 Medium)
-- **Status**: ⏳ Awaiting upstream Alpine fix
-- **Impact**: Minimal - curl is used for health checks and external requests
-- **Exploitability**: Low - Limited exposure in containerized environment
-- **Risk**: Low
+**giflib (GIF image library)**
+- CVE-2024-45993 (6.5 M) - GIF processing vulnerability
+- Impact: Minimal - GIF files not accepted by ViTransfer
 
-#### CVE-2025-47436 - orc 0.4.40-r1 (Severity: 6.0 Medium)
-- **Status**: ⏳ Awaiting upstream fix
-- **Impact**: Minimal - Code optimization library
-- **Exploitability**: Low - Internal FFmpeg dependency
-- **Risk**: Low
+**orc (Code optimization library)**
+- CVE-2025-47436 (6.0 M) - Internal FFmpeg dependency
+- Impact: Minimal - Code optimization library, not directly exposed
 
-### Low Severity (Negligible Impact)
+**FFmpeg**
+- CVE-2025-59729 (5.7 M), CVE-2025-1594 (5.3 M), CVE-2024-31585 (5.3 M), CVE-2025-1373 (4.8 M), CVE-2022-3964 (4.3 M), CVE-2023-50007 (4.0 M)
+- Impact: Low - All require specially crafted video files; containerized execution limits exposure
 
-#### CVE-2025-46394 - busybox 1.37.0-r19 (Severity: 3.2 Low)
-- **Status**: ⏳ Awaiting upstream fix
-- **Impact**: Negligible - BusyBox utility (not used in runtime)
-- **Risk**: Very Low
+**libssh (SSH library)**
+- CVE-2025-8114 (4.7 M) - SSH library not used for video processing
+- Impact: Minimal
 
-#### CVE-2024-58251 - busybox 1.37.0-r19 (Severity: 2.5 Low)
-- **Status**: ⏳ Awaiting upstream fix
-- **Impact**: Negligible
-- **Risk**: Very Low
+**curl**
+- CVE-2025-10966 (4.3 M) - Used for health checks and external requests
+- Impact: Low - Limited exposure in containerized environment
 
-### Unscored / Advisories
+**busybox**
+- CVE-2025-46394 (3.2 L), CVE-2024-58251 (2.5 L)
+- Impact: Negligible - BusyBox utilities not used in runtime
 
-#### GHSA-pg9f-39pc-qf8g - crossbeam-channel 0.5.14
-- **Status**: ⏳ Awaiting Alpine FFmpeg update
-- **Impact**: Unknown - GitHub Security Advisory
-- **Risk**: Low - Transitive FFmpeg dependency
+#### Cargo/Rust CVEs (FFmpeg Rust Dependencies)
 
-#### RUSTSEC-2024-0436 - paste 1.0.14
-- **Status**: ⏳ Awaiting Alpine FFmpeg update
-- **Impact**: Minimal - Macro helper library
-- **Risk**: Very Low
+**crossbeam-channel**
+- CVE-2025-4574 (6.3 M), GHSA-pg9f-39pc-qf8g (Unscored)
+- Status: ⏳ Awaiting upstream Alpine FFmpeg update
+- Impact: Minimal - Internal FFmpeg Rust dependency (rav1e encoder)
+- Exploitability: Very Low - Not directly accessible
+- Risk: Very Low
+
+**paste**
+- RUSTSEC-2024-0436 (Unscored)
+- Status: ⏳ Awaiting upstream Alpine FFmpeg update
+- Impact: Minimal - Macro helper library
+- Risk: Very Low
 
 ### Why These CVEs Have Low/Minimal Risk for ViTransfer
 

@@ -1,6 +1,6 @@
 {
   "name": "vitransfer",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -60,6 +60,6 @@
   },
   "overrides": {
     "esbuild": "0.27.0",
-    "glob": "^11.0.4"
+    "glob": "^11.1.0"
   }
 }

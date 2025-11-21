@@ -5,6 +5,20 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2025-11-21
+
+### Fixed
+- Custom thumbnail fallback: when admin deletes an asset being used as a video thumbnail, the system now automatically reverts to the worker-generated thumbnail instead of leaving the video without a thumbnail
+
+### Improved
+- Share page performance: removed unnecessary 30-second polling interval that was repeatedly fetching project data
+- Content Security Policy now conditionally includes upgrade-insecure-requests only when HTTPS is enabled (fixes local development)
+- Thumbnail cache control headers now prevent caching (no-store) for immediate updates when thumbnails change
+
+### Security
+- Updated glob dependency from 11.0.4 to 11.1.0 (fixes CVE-2025-64756)
+- Asset deletion now uses reference counting to prevent deletion of files shared between video versions
+
 ## [0.5.2] - 2025-11-21
 
 ### Added

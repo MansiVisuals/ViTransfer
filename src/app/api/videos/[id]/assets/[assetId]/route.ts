@@ -143,17 +143,45 @@ export async function DELETE(
   if (rateLimitResult) return rateLimitResult
 
   try {
-    // Get asset
+    // Get asset with video info
     const asset = await prisma.videoAsset.findUnique({
       where: { id: assetId },
+      include: {
+        video: true,
+      },
     })
 
     if (!asset || asset.videoId !== videoId) {
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     }
 
-    // Delete file from storage
-    await deleteFile(asset.storagePath)
+    // Check if this asset is being used as the video's thumbnail
+    const isCurrentThumbnail = asset.video.thumbnailPath === asset.storagePath
+
+    // Only delete the physical file if no other assets reference the same storage path
+    const sharedCount = await prisma.videoAsset.count({
+      where: {
+        storagePath: asset.storagePath,
+        id: { not: assetId },
+      },
+    })
+
+    if (sharedCount === 0) {
+      await deleteFile(asset.storagePath)
+    }
+
+    // If this asset was the current thumbnail, revert to system-generated thumbnail
+    if (isCurrentThumbnail) {
+      // System-generated thumbnail path: projects/{projectId}/videos/{videoId}/thumbnail.jpg
+      const systemThumbnailPath = `projects/${asset.video.projectId}/videos/${videoId}/thumbnail.jpg`
+
+      await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          thumbnailPath: systemThumbnailPath,
+        },
+      })
+    }
 
     // Delete database record
     await prisma.videoAsset.delete({

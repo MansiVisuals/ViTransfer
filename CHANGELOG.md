@@ -5,6 +5,36 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2025-11-21
+
+### Added
+- Real-time password validation UI with inline feedback
+  - Shows requirements as you type (8+ chars, one letter, one number)
+  - Green checkmarks for met requirements, grey for pending
+  - Applied to both new project creation and settings pages
+
+### Security
+- CSRF protection on all mutation endpoints (POST/PATCH/DELETE)
+- CSRF token refresh aligned with session refresh to prevent mismatches
+- Rate limiting on auth refresh endpoint (8 requests/minute per token)
+- Rate limiting across all API routes
+- Zod schema validation for request payloads
+- Standardized authentication using requireApiAdmin helper
+- Session timeout monitoring improvements
+
+### Fixed
+- Session refresh CSRF token mismatch causing authentication errors
+- Video player version switching now loads videos and thumbnails correctly
+  - Separated URL state update from reload logic
+  - Added key prop to force proper video element remount
+- Thumbnail selection indicator shows green for active, grey for inactive
+- Password generator guarantees letter + number requirements
+- Thumbnail category preserved when copying assets between versions
+- Share password validation with proper Zod schema and error messages
+
+### Removed
+- Unused `/api/cron/cleanup-uploads` endpoint
+
 ## [0.5.1] - 2025-11-20
 
 ### Fixed

@@ -4,6 +4,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { logSecurityEvent } from '@/lib/video-access'
+export const runtime = 'nodejs'
+
+
+
 
 /**
  * GET /api/projects/[id]/password

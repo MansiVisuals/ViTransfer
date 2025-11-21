@@ -4,6 +4,10 @@ import { verifyPasskeyRegistration } from '@/lib/passkey'
 import { getClientIpAddress } from '@/lib/utils'
 import type { RegistrationResponseJSON } from '@simplewebauthn/browser'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+export const runtime = 'nodejs'
+
+
+
 
 /**
  * Verify PassKey Registration Response

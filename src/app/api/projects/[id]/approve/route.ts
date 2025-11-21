@@ -9,6 +9,10 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { z } from 'zod'
+export const runtime = 'nodejs'
+
+
+
 
 const approveSchema = z.object({
   authorName: z.string().trim().max(100, 'Name too long').optional().nullable(),

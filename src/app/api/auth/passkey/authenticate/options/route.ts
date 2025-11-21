@@ -3,6 +3,10 @@ import { generatePasskeyAuthenticationOptions } from '@/lib/passkey'
 import { isPasskeyConfigured } from '@/lib/settings'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
+export const runtime = 'nodejs'
+
+
+
 
 /**
  * Generate PassKey Authentication Options

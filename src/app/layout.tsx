@@ -4,6 +4,9 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// Force Node.js runtime across the app to allow use of Node APIs (e.g., crypto).
+export const runtime = 'nodejs';
+
 export const metadata: Metadata = {
   title: "ViTransfer",
   description: "Professional video review and approval platform",

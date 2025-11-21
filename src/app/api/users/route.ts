@@ -4,6 +4,9 @@ import { requireApiAdmin } from '@/lib/auth'
 import { hashPassword, validatePassword } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+export const runtime = 'nodejs'
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

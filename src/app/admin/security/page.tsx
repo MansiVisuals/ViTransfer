@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import SecurityEventsClient from './SecurityEventsClient'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 /**
  * Security Events Dashboard

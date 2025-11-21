@@ -6,6 +6,10 @@ import { deleteFile } from '@/lib/storage'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
+export const runtime = 'nodejs'
+
+
+
 
 const reprocessSchema = z.object({
   videoIds: z.array(z.string().min(1)).max(50).optional(),

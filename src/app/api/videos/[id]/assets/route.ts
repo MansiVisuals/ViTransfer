@@ -6,6 +6,10 @@ import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile } from '@/lib/file-validation'
 import { z } from 'zod'
+export const runtime = 'nodejs'
+
+
+
 
 const createAssetSchema = z.object({
   fileName: z.string().min(1).max(255),

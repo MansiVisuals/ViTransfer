@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateCsrfToken, getCsrfSessionIdentifier } from '@/lib/security/csrf'
 import { isHttpsEnabled } from '@/lib/settings'
 import { rateLimit } from '@/lib/rate-limit'
+export const runtime = 'nodejs'
+
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

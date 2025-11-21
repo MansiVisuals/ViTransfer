@@ -6,6 +6,10 @@ import { rateLimit } from '@/lib/rate-limit'
 import fs from 'fs'
 import { createReadStream } from 'fs'
 import { Readable } from 'stream'
+export const runtime = 'nodejs'
+
+
+
 
 export async function GET(
   request: NextRequest,

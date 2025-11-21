@@ -2,6 +2,10 @@ import { NextResponse, NextRequest } from 'next/server'
 import { deleteSession } from '@/lib/auth'
 import { isHttpsEnabled } from '@/lib/settings'
 import { validateCsrfProtection } from '@/lib/security/csrf-protection'
+export const runtime = 'nodejs'
+
+
+
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'

@@ -7,6 +7,10 @@ import { getFilePath, deleteFile, sanitizeFilenameForHeader } from '@/lib/storag
 import { verifyProjectAccess } from '@/lib/project-access'
 import { createReadStream } from 'fs'
 import fs from 'fs'
+export const runtime = 'nodejs'
+
+
+
 
 // GET /api/videos/[id]/assets/[assetId] - Download asset
 export async function GET(

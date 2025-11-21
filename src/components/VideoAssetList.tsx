@@ -114,13 +114,23 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   }
 
   const handleSetThumbnail = async (assetId: string, fileName: string) => {
-    if (!confirm(`Set "${fileName}" as the video thumbnail?`)) {
+    // Find the asset to check if it's currently active
+    const asset = assets.find(a => a.id === assetId)
+    const isCurrent = asset ? isCurrentThumbnail(asset) : false
+
+    // Toggle behavior: if current, remove it; if not current, set it
+    const action = isCurrent ? 'remove' : 'set'
+    const confirmMessage = isCurrent
+      ? `Remove "${fileName}" as the video thumbnail? The system-generated thumbnail will be used instead.`
+      : `Set "${fileName}" as the video thumbnail?`
+
+    if (!confirm(confirmMessage)) {
       return
     }
 
     setSettingThumbnail(assetId)
     try {
-      await apiPost(`/api/videos/${videoId}/assets/${assetId}/set-thumbnail`, {})
+      await apiPost(`/api/videos/${videoId}/assets/${assetId}/set-thumbnail`, { action })
 
       // Refresh assets to get updated thumbnail path
       await fetchAssets()
@@ -130,7 +140,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
         onAssetDeleted()
       }
     } catch (err) {
-      alert('Failed to set thumbnail')
+      alert(`Failed to ${action} thumbnail`)
     } finally {
       setSettingThumbnail(null)
     }
@@ -219,7 +229,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                     size="icon"
                     onClick={() => handleSetThumbnail(asset.id, asset.fileName)}
                     disabled={settingThumbnail === asset.id}
-                    title={isCurrentThumbnail(asset) ? "Current video thumbnail" : "Set as video thumbnail"}
+                    title={isCurrentThumbnail(asset) ? "Remove custom thumbnail (revert to system-generated)" : "Set as video thumbnail"}
                   >
                     {settingThumbnail === asset.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

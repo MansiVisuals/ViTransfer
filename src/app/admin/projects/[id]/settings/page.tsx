@@ -12,6 +12,7 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { ReprocessModal } from '@/components/ReprocessModal'
 import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
+import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { generateSecurePassword, generateRandomSlug, sanitizeSlug } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
@@ -925,7 +926,6 @@ export default function ProjectSettingsPage() {
                     id="guestMode"
                     checked={guestMode}
                     onCheckedChange={setGuestMode}
-                    disabled={authMode !== 'NONE'}
                   />
                 </div>
 
@@ -1005,6 +1005,9 @@ export default function ProjectSettingsPage() {
                       </Button>
                     )}
                   </div>
+                  {sharePassword && (
+                    <SharePasswordRequirements password={sharePassword} />
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Clients will need this password to access the share page
                   </p>

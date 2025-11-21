@@ -85,7 +85,10 @@ export async function GET(
       fileSize: asset.fileSize.toString(),
     }))
 
-    return NextResponse.json({ assets: serializedAssets })
+    return NextResponse.json({
+      assets: serializedAssets,
+      currentThumbnailPath: video.thumbnailPath
+    })
   } catch (error) {
     console.error('Error fetching video assets:', error)
     return NextResponse.json(

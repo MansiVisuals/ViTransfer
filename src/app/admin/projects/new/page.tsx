@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
 import { apiPost } from '@/lib/api-client'
 import { generateSecurePassword } from '@/lib/password-utils'
+import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 
 export default function NewProjectPage() {
   const router = useRouter()
@@ -296,6 +297,9 @@ export default function NewProjectPage() {
                             {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
                           </Button>
                         </div>
+                        {sharePassword && (
+                          <SharePasswordRequirements password={sharePassword} />
+                        )}
                         <p className="text-xs text-muted-foreground">
                           <strong className="text-warning">Important:</strong> Save this password!
                           You'll need to share it with your client so they can view and approve the project.

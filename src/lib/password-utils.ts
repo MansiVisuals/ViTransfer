@@ -1,12 +1,29 @@
 /**
  * Generate a secure random password
+ * Guarantees: 12 characters minimum, at least one letter, at least one number
  */
 export function generateSecurePassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%'
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'
+  const numbers = '23456789'
+  const special = '!@#$%'
+  const all = letters + numbers + special
+
   let password = ''
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
+
+  // Ensure at least one letter
+  password += letters.charAt(Math.floor(Math.random() * letters.length))
+
+  // Ensure at least one number
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length))
+
+  // Fill the rest randomly (total 12 chars)
+  for (let i = 2; i < 12; i++) {
+    password += all.charAt(Math.floor(Math.random() * all.length))
   }
+
+  // Shuffle to randomize positions of guaranteed chars
+  password = password.split('').sort(() => Math.random() - 0.5).join('')
+
   return password
 }
 

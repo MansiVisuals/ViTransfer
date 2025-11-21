@@ -15,7 +15,23 @@ const nextConfig = {
     // Database setting is checked at runtime in cookie functions
     const isHttpsEnabled = process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1';
 
-    const securityHeaders = [
+    const cspDirectives = [
+      {
+        key: 'Content-Security-Policy',
+        value: [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: blob: https:",
+          "font-src 'self' data:",
+          "connect-src 'self' https://cloudflareinsights.com",
+          "media-src 'self' blob:",
+          "object-src 'none'",
+          "base-uri 'self'",
+          "form-action 'self'",
+          "frame-ancestors 'none'",
+        ]
+      },
       {
         key: 'X-DNS-Prefetch-Control',
         value: 'on'
@@ -39,25 +55,20 @@ const nextConfig = {
       {
         key: 'Permissions-Policy',
         value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
-      },
-      {
-        key: 'Content-Security-Policy',
-        value: [
-          "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
-          "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: blob: https:",
-          "font-src 'self' data:",
-          "connect-src 'self' https://cloudflareinsights.com",
-          "media-src 'self' blob:",
-          "object-src 'none'",
-          "base-uri 'self'",
-          "form-action 'self'",
-          "frame-ancestors 'none'",
-          "upgrade-insecure-requests"
-        ].join('; ')
       }
     ];
+
+    // Only upgrade to HTTPS when HTTPS is actually enabled
+    if (isHttpsEnabled) {
+      cspDirectives[0].value.push('upgrade-insecure-requests');
+    }
+
+    const securityHeaders = cspDirectives.map(header => {
+      if (header.key === 'Content-Security-Policy') {
+        return { ...header, value: header.value.join('; ') };
+      }
+      return header;
+    });
 
     // Only add HSTS when HTTPS is enabled
     if (isHttpsEnabled) {

@@ -72,6 +72,16 @@ The following CVEs are present in Alpine Linux packages and dependencies (latest
 
 | CVE ID | Severity | Package | Status | Real Risk |
 |--------|----------|---------|--------|-----------|
+| CVE-2025-64756 | 7.5 H | npm/glob | ✅ Fixed in 0.5.3 | N/A |
+| CVE-2025-52194 | 7.5 H | alpine/libsndfile | ⏳ Awaiting Fix | Low |
+| CVE-2023-49502 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-59734 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2023-50009 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2024-31582 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2023-50010 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2023-50008 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2024-31578 | 7.5 H | alpine/ffmpeg | ⏳ Awaiting Fix | Low |
+| CVE-2025-48071 | 7.5 H | alpine/openexr | ⏳ Awaiting Fix | Very Low |
 | CVE-2024-11403 | 6.9 M | alpine/libjxl | ⏳ Awaiting Fix | Very Low |
 | CVE-2024-11498 | 6.9 M | alpine/libjxl | ⏳ Awaiting Fix | Very Low |
 | CVE-2025-48072 | 6.8 M | alpine/openexr | ⏳ Awaiting Fix | Very Low |
@@ -98,10 +108,11 @@ The following CVEs are present in Alpine Linux packages and dependencies (latest
 | RUSTSEC-2024-0436 | N/A U | cargo/paste | ⏳ Awaiting Upstream | Very Low |
 
 **Key Points:**
-- ⏳ **24 CVEs in Alpine/Cargo packages** - Using latest available versions, awaiting upstream fixes
-- 🔒 **All CVEs have low real-world exploitability** in ViTransfer's containerized environment
-- ✅ **npm glob CVE-2025-64756 resolved** - Updated to glob 11.1.0 in version 0.5.3
+- ⏳ **33 total CVEs** - 1 fixed in 0.5.3, 32 awaiting upstream fixes
+- ✅ **npm glob CVE-2025-64756 FIXED** - Updated to glob 11.1.0 in version 0.5.3 (will be in next Docker build)
+- 🔒 **All remaining CVEs have low real-world exploitability** in ViTransfer's containerized environment
 - 🔧 **Cargo CVEs require upstream Alpine FFmpeg updates** - Cannot be fixed in package.json
+- 📦 **Alpine package CVEs** - All using latest available Alpine 3.22 versions
 
 ### Medium Severity (Minimal Impact)
 

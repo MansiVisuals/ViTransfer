@@ -22,12 +22,9 @@ export async function generateCsrfToken(sessionIdentifier: string): Promise<stri
 
   const redis = getRedis()
   const tokenKey = `csrf:${sessionIdentifier}:${token}`
-  const tokenOnlyKey = `csrf:${token}`
 
   // Store token in Redis with TTL
   await redis.setex(tokenKey, CSRF_TOKEN_TTL, '1')
-  // Also store token-only key to tolerate session rotation while keeping TTL-bound validation
-  await redis.setex(tokenOnlyKey, CSRF_TOKEN_TTL, '1')
 
   return token
 }
@@ -52,10 +49,7 @@ export async function verifyCsrfToken(
 
   if (exists === '1') return true
 
-  // Fallback: accept token-only record to handle session rotation without forcing users to re-fetch token
-  const tokenOnlyKey = `csrf:${token}`
-  const tokenOnly = await redis.get(tokenOnlyKey)
-  return tokenOnly === '1'
+  return false
 }
 
 /**
@@ -85,10 +79,11 @@ export function getCsrfTokenFromRequest(request: NextRequest): string | null {
 export async function getCsrfSessionIdentifier(request: NextRequest): Promise<string | null> {
   const cookieStore = await cookies()
 
-  // Check admin session first
-  const adminSession = cookieStore.get('vitransfer_session')?.value
-  if (adminSession) {
-    return `admin:${adminSession}`
+  // Admin: bind CSRF to stable refresh cookie hash so access-token rotation doesn't break CSRF
+  const adminRefresh = cookieStore.get('vitransfer_refresh')?.value
+  if (adminRefresh) {
+    const hashed = crypto.createHash('sha256').update(adminRefresh).digest('hex')
+    return `admin:${hashed}`
   }
 
   // Check share session
@@ -109,12 +104,21 @@ export function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin')
   const referer = request.headers.get('referer')
   const host = request.headers.get('host')
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const effectiveHost = forwardedHost || host || ''
+  const effectiveProtocol = forwardedProto || (request.url.startsWith('https') ? 'https' : 'http')
 
   // For same-origin requests, origin should match host
   if (origin) {
     try {
       const originUrl = new URL(origin)
-      if (originUrl.host !== host) {
+      if (originUrl.host !== effectiveHost) {
+        console.warn('[CSRF] Origin host mismatch', { expected: effectiveHost, received: originUrl.host })
+        return false
+      }
+      if (originUrl.protocol.replace(':', '') !== effectiveProtocol) {
+        console.warn('[CSRF] Origin protocol mismatch', { expected: effectiveProtocol, received: originUrl.protocol })
         return false
       }
     } catch {
@@ -126,7 +130,12 @@ export function validateOrigin(request: NextRequest): boolean {
   if (!origin && referer) {
     try {
       const refererUrl = new URL(referer)
-      if (refererUrl.host !== host) {
+      if (refererUrl.host !== effectiveHost) {
+        console.warn('[CSRF] Referer host mismatch', { expected: effectiveHost, received: refererUrl.host })
+        return false
+      }
+      if (refererUrl.protocol.replace(':', '') !== effectiveProtocol) {
+        console.warn('[CSRF] Referer protocol mismatch', { expected: effectiveProtocol, received: refererUrl.protocol })
         return false
       }
     } catch {

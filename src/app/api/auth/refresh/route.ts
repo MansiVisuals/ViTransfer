@@ -161,9 +161,11 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Issue fresh CSRF token aligned with the new session
-    const sessionIdentifier = await getCsrfSessionIdentifier(request)
-    if (sessionIdentifier) {
+    // Issue fresh CSRF token aligned with the new refresh cookie (stable identifier)
+    const newRefreshForCsrf = cookieStore.get('vitransfer_refresh')?.value
+    if (newRefreshForCsrf) {
+      const hashed = crypto.createHash('sha256').update(newRefreshForCsrf).digest('hex')
+      const sessionIdentifier = `admin:${hashed}`
       const csrfToken = await generateCsrfToken(sessionIdentifier)
       const httpsEnabled = await isHttpsEnabled()
       response.cookies.set({

@@ -5,6 +5,8 @@ import { prisma, setDatabaseUserContext } from './db'
 import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
 import { isHttpsEnabled } from './settings'
+import { generateCsrfToken } from './security/csrf'
+import crypto from 'crypto'
 
 // JWT and session configuration
 const SESSION_COOKIE_NAME = 'vitransfer_session'
@@ -12,6 +14,7 @@ const REFRESH_COOKIE_NAME = 'vitransfer_refresh'
 const ACCESS_TOKEN_DURATION = 15 * 60 // 15 minutes in seconds
 const REFRESH_TOKEN_DURATION = 3 * 24 * 60 * 60 // 3 days in seconds (long-lived, rotated on use)
 const SESSION_INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes of inactivity in ms
+const DUMMY_BCRYPT_HASH = '$2a$14$aoLibk0GEJrzo6fSqPoQIONMGynUKWEoQhkCrFcEapn6I.WzXXdki' // bcrypt hash of "dummy-password" for timing equalization
 
 /**
  * Get cookie options with dynamic secure flag based on HTTPS setting
@@ -206,6 +209,8 @@ export async function verifyCredentials(
     })
 
     if (!user) {
+      // Dummy compare to reduce timing differences for unknown users
+      await verifyPassword(password, DUMMY_BCRYPT_HASH)
       return null
     }
 
@@ -262,7 +267,8 @@ export async function refreshAccessToken(): Promise<boolean> {
       return false
     }
 
-    const payload = await verifyRefreshToken(refreshToken.value)
+    const oldRefreshToken = refreshToken.value
+    const payload = await verifyRefreshToken(oldRefreshToken)
     if (!payload) {
       // Refresh token invalid or expired
       await deleteSession()
@@ -285,14 +291,40 @@ export async function refreshAccessToken(): Promise<boolean> {
       return false
     }
 
-    // Generate new access token
-    const newAccessToken = generateAccessToken(user)
+    // Rotate refresh token: revoke old, issue new refresh + access tokens
     const cookieOptions = await getCookieOptions()
+    const newAccessToken = generateAccessToken(user)
+    const newRefreshToken = generateRefreshToken(user)
 
-    // Update access token cookie
+    // Revoke old refresh token to prevent replay
+    const decodedOld = jwt.decode(oldRefreshToken) as JWTPayload | null
+    if (decodedOld?.exp) {
+      const now = Math.floor(Date.now() / 1000)
+      const ttl = Math.max(decodedOld.exp - now, 0)
+      await revokeToken(oldRefreshToken, ttl)
+    }
+
+    // Update cookies with rotated tokens
     cookieStore.set(SESSION_COOKIE_NAME, newAccessToken, {
       ...cookieOptions,
       maxAge: ACCESS_TOKEN_DURATION,
+    })
+    cookieStore.set(REFRESH_COOKIE_NAME, newRefreshToken, {
+      ...cookieOptions,
+      maxAge: REFRESH_TOKEN_DURATION,
+    })
+
+    // Issue fresh CSRF token bound to the new refresh token (stable identifier)
+    const hashed = crypto.createHash('sha256').update(newRefreshToken).digest('hex')
+    const sessionIdentifier = `admin:${hashed}`
+    const csrfToken = await generateCsrfToken(sessionIdentifier)
+    const httpsEnabled = await isHttpsEnabled()
+    cookieStore.set('csrf_token', csrfToken, {
+      httpOnly: true,
+      secure: httpsEnabled,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 3600,
     })
 
     return true

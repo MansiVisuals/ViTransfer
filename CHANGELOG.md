@@ -5,6 +5,31 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2025-11-22
+
+### Added
+- Consistent footer branding across application
+  - Admin layout footer with "Powered by ViTransfer" branding
+  - Mobile footer on share page with version display
+  - Video sidebar footer for consistent branding
+  - Standardized version display format across all footers
+
+### Security
+- Fix timing attack in login by adding dummy bcrypt for non-existent users
+- Implement refresh token rotation to prevent replay attacks
+- Bind CSRF tokens to refresh token hash instead of access token
+- Remove CSRF token-only fallback for stricter session-bound validation
+- Add protocol-aware origin validation respecting x-forwarded headers
+
+## [0.5.4] - 2025-11-22
+
+### Refactored
+- Email system with unified template engine
+  - Unified email template engine for easier maintenance
+  - Consolidated all email types into single reusable component
+  - Maintained clean, professional design aesthetic
+  - Reduced codebase complexity (135 fewer lines)
+
 ## [0.5.3] - 2025-11-21
 
 ### Fixed

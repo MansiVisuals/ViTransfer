@@ -38,16 +38,23 @@ export default function AdminLayout({
         <AdminHeader />
         <div className="flex-1 lg:pb-16">{children}</div>
         <footer className="border-t bg-card py-4 px-6 mt-8 lg:fixed lg:bottom-0 lg:left-0 lg:right-0 lg:z-10 lg:mt-0">
-          <div className="max-w-7xl mx-auto text-center text-xs text-muted-foreground">
-            <a
-              href="https://github.com/MansiVisuals/ViTransfer"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground transition-colors"
-            >
-              ViTransfer
-            </a>
-            {process.env.NEXT_PUBLIC_APP_VERSION && ` v${process.env.NEXT_PUBLIC_APP_VERSION}`}
+          <div className="max-w-7xl mx-auto text-center text-xs text-muted-foreground space-y-1">
+            <div>
+              Powered by{' '}
+              <a
+                href="https://github.com/MansiVisuals/ViTransfer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                ViTransfer
+              </a>
+            </div>
+            {process.env.NEXT_PUBLIC_APP_VERSION && (
+              <div className="text-[10px] uppercase tracking-wide">
+                Version: {process.env.NEXT_PUBLIC_APP_VERSION}
+              </div>
+            )}
           </div>
         </footer>
         <SessionMonitor />

@@ -183,6 +183,28 @@ export default function VideoSidebar({
           })()}
         </nav>
 
+        {/* Footer - Positioned at bottom */}
+        <div className="sticky bottom-0 border-t border-border bg-card py-3 px-6">
+          <div className="text-center text-xs text-muted-foreground space-y-1">
+            <div>
+              Powered by{' '}
+              <a
+                href="https://github.com/MansiVisuals/ViTransfer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                ViTransfer
+              </a>
+            </div>
+            {process.env.NEXT_PUBLIC_APP_VERSION && (
+              <div className="text-[10px] uppercase tracking-wide">
+                Version: {process.env.NEXT_PUBLIC_APP_VERSION}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Resize Handle */}
         <div
           onMouseDown={handleMouseDown}

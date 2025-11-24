@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Users, UserPlus, Edit, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { apiDelete } from '@/lib/api-client'
+import { apiDelete, apiFetch } from '@/lib/api-client'
 
 interface User {
   id: string
@@ -30,7 +30,7 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/users')
+      const res = await apiFetch('/api/users')
       if (!res.ok) throw new Error('Failed to fetch users')
       const data = await res.json()
       setUsers(data.users)

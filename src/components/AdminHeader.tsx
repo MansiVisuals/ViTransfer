@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api-client'
 
 export default function AdminHeader() {
   const { user, logout } = useAuth()
@@ -17,7 +18,7 @@ export default function AdminHeader() {
   useEffect(() => {
     async function fetchSecuritySettings() {
       try {
-        const response = await fetch('/api/settings')
+      const response = await apiFetch('/api/settings')
         if (response.ok) {
           const data = await response.json()
           setShowSecurityDashboard(data.security?.viewSecurityEvents ?? false)

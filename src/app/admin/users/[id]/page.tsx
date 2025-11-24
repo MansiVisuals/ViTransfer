@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordRequirements } from '@/components/PasswordRequirements'
-import { apiPatch, apiPost, apiDelete } from '@/lib/api-client'
+import { apiPatch, apiPost, apiDelete, apiFetch } from '@/lib/api-client'
 import { startRegistration } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 
@@ -47,7 +47,7 @@ export default function EditUserPage() {
 
   const fetchPasskeyStatus = async () => {
     try {
-      const res = await fetch('/api/auth/passkey/status')
+      const res = await apiFetch('/api/auth/passkey/status')
       if (res.ok) {
         const data = await res.json()
         setPasskeyAvailable(data.available)
@@ -60,7 +60,7 @@ export default function EditUserPage() {
 
   const fetchPasskeys = async () => {
     try {
-      const res = await fetch('/api/auth/passkey/list')
+      const res = await apiFetch('/api/auth/passkey/list')
       if (res.ok) {
         const data = await res.json()
         setPasskeys(data.passkeys || [])
@@ -117,7 +117,7 @@ export default function EditUserPage() {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch(`/api/users/${userId}`)
+      const res = await apiFetch(`/api/users/${userId}`)
       if (!res.ok) throw new Error('Failed to fetch user')
       const data = await res.json()
       setCurrentUser(data.user)

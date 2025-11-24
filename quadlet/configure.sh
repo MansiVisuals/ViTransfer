@@ -22,6 +22,7 @@ REDIS_PASSWORD=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 JWT_SECRET=$(openssl rand -hex 32)
 JWT_REFRESH_SECRET=$(openssl rand -hex 32)
+SHARE_TOKEN_SECRET=$(openssl rand -hex 32)
 echo "✅ Secrets generated"
 echo ""
 
@@ -73,6 +74,7 @@ sed -i.bak \
     -e "s#CHANGE_REDIS_PASSWORD#${REDIS_PASSWORD}#g" \
     -e "s#CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32#${ENCRYPTION_KEY}#g" \
     -e "s#CHANGE_THIS_SECRET#${JWT_SECRET}#g" \
+    -e "s#CHANGE_THIS_SHARE_SECRET#${SHARE_TOKEN_SECRET}#g" \
     -e "s#CHANGE_THIS_REFRESH_SECRET#${JWT_REFRESH_SECRET}#g" \
     -e "s#http://localhost:4321#${DOMAIN}#g" \
     -e "s#admin@example.com#${ADMIN_EMAIL}#g" \
@@ -87,6 +89,7 @@ sed -i.bak \
     -e "s#CHANGE_REDIS_PASSWORD#${REDIS_PASSWORD}#g" \
     -e "s#CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32#${ENCRYPTION_KEY}#g" \
     -e "s#CHANGE_THIS_SECRET#${JWT_SECRET}#g" \
+    -e "s#CHANGE_THIS_SHARE_SECRET#${SHARE_TOKEN_SECRET}#g" \
     -e "s#CHANGE_THIS_REFRESH_SECRET#${JWT_REFRESH_SECRET}#g" \
     vitransfer-worker.container
 echo "✅ Configured vitransfer-worker.container"
@@ -101,6 +104,7 @@ REDIS_PASSWORD=${REDIS_PASSWORD}
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
 JWT_SECRET=${JWT_SECRET}
 JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+SHARE_TOKEN_SECRET=${SHARE_TOKEN_SECRET}
 
 DOMAIN=${DOMAIN}
 ADMIN_EMAIL=${ADMIN_EMAIL}

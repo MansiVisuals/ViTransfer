@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest } from '@/lib/auth'
-import { cookies } from 'next/headers'
-import { getRedis } from '@/lib/redis'
+import { getCurrentUserFromRequest, getShareContext } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import type { Project, Video } from '@prisma/client'
 
@@ -10,7 +8,7 @@ import type { Project, Video } from '@prisma/client'
  *
  * Two authentication paths:
  * 1. Admin Path: JWT authentication (bypasses password protection)
- * 2. User Path: share_auth session cookie (requires password verification)
+ * 2. Share Path: bearer share token scoped to project
  *
  * This replaces duplicate auth logic in 6+ API routes.
  *
@@ -29,97 +27,46 @@ export async function verifyProjectAccess(
   isAdmin: boolean
   isAuthenticated: boolean
   isGuest?: boolean
+  shareTokenSessionId?: string
   errorResponse?: NextResponse
 }> {
   // Check if user is admin (admins bypass password protection)
   const currentUser = await getCurrentUserFromRequest(request)
   const isAdmin = currentUser?.role === 'ADMIN'
-  let isAuthenticated = isAdmin
+  const shareContext = await getShareContext(request)
 
-  // Admins bypass all authentication
   if (isAdmin) {
     return {
       authorized: true,
       isAdmin: true,
-      isAuthenticated: true
+      isAuthenticated: true,
+      shareTokenSessionId: `admin:${currentUser.id}`,
     }
   }
 
-  // Determine authentication requirements based on auth mode
-  const requiresPassword = (authMode === 'PASSWORD' || authMode === 'BOTH') && sharePassword
-  const requiresOTP = authMode === 'OTP' || authMode === 'BOTH'
   const isUnauthenticated = authMode === 'NONE'
-
-  // Handle unauthenticated mode (NONE)
   if (isUnauthenticated) {
-    // Always allow access for NONE mode - no authentication required
     return {
       authorized: true,
       isAdmin: false,
       isAuthenticated: true,
-      isGuest: false  // Guest status determined by share API based on project.guestMode
+      isGuest: false
     }
   }
 
-  // For PASSWORD/OTP/BOTH modes, authentication is required
-  const requiresAuth = requiresPassword || requiresOTP
-
-  // Validate that password modes have a password set
-  if ((authMode === 'PASSWORD' || authMode === 'BOTH') && !sharePassword) {
+  if (!shareContext) {
     return {
       authorized: false,
       isAdmin: false,
       isAuthenticated: false,
       errorResponse: NextResponse.json(
-        { error: 'Password authentication mode requires a password to be set' },
-        { status: 500 }
-      )
-    }
-  }
-
-  // If authentication is required, verify session
-  if (!requiresAuth) {
-    return {
-      authorized: true,
-      isAdmin: false,
-      isAuthenticated: true
-    }
-  }
-
-  // Password-protected project + non-admin user → verify share_auth or share_session cookie
-  const cookieStore = await cookies()
-  const authSessionId = cookieStore.get('share_auth')?.value
-  const shareSessionId = cookieStore.get('share_session')?.value
-
-  if (!authSessionId && !shareSessionId) {
-    return {
-      authorized: false,
-      isAdmin: false,
-      isAuthenticated: false,
-      errorResponse: NextResponse.json(
-        { error: 'Password required' },
+        { error: 'Authentication required', authMode },
         { status: 401 }
       )
     }
   }
 
-  // Verify session includes this project
-  const redis = getRedis()
-  let hasAccess = false
-
-  // Check auth_projects (for password/OTP authenticated users)
-  if (authSessionId) {
-    const isMember = await redis.sismember(`auth_projects:${authSessionId}`, projectId)
-    hasAccess = isMember === 1
-  }
-
-  // Check session_projects (for guest users and general share sessions)
-  if (!hasAccess && shareSessionId) {
-    const isMember = await redis.sismember(`session_projects:${shareSessionId}`, projectId)
-    hasAccess = isMember === 1
-  }
-
-  if (!hasAccess) {
+  if (shareContext.projectId !== projectId) {
     return {
       authorized: false,
       isAdmin: false,
@@ -131,13 +78,14 @@ export async function verifyProjectAccess(
     }
   }
 
-  // User has valid authentication (password or guest)
-  isAuthenticated = true
+  const isGuest = !!shareContext.guest
 
   return {
     authorized: true,
     isAdmin: false,
-    isAuthenticated: true
+    isAuthenticated: true,
+    isGuest,
+    shareTokenSessionId: shareContext.sessionId,
   }
 }
 

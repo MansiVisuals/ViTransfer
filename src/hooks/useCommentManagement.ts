@@ -19,6 +19,7 @@ interface UseCommentManagementProps {
   recipients: Array<{ id: string; name: string | null }>
   clientName: string
   restrictToLatestVersion: boolean
+  shareToken?: string | null
 }
 
 export function useCommentManagement({
@@ -31,6 +32,7 @@ export function useCommentManagement({
   recipients,
   clientName,
   restrictToLatestVersion,
+  shareToken = null,
 }: UseCommentManagementProps) {
   const router = useRouter()
 
@@ -264,8 +266,22 @@ export function useCommentManagement({
         requestBody.parentId = commentParentId
       }
 
-      // Use centralized API client (handles CSRF automatically)
-      await apiPost('/api/comments', requestBody)
+      if (shareToken) {
+        const response = await fetch('/api/comments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${shareToken}`,
+          },
+          body: JSON.stringify(requestBody),
+        })
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}))
+          throw new Error(err.error || 'Failed to submit comment')
+        }
+      } else {
+        await apiPost('/api/comments', requestBody)
+      }
 
       router.refresh()
     } catch (error) {
@@ -320,8 +336,20 @@ export function useCommentManagement({
     }
 
     try {
-      // Use centralized API client (handles CSRF automatically)
-      await apiDelete(`/api/comments/${commentId}`)
+      if (shareToken) {
+        const response = await fetch(`/api/comments/${commentId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${shareToken}`,
+          },
+        })
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}))
+          throw new Error(err.error || 'Failed to delete comment')
+        }
+      } else {
+        await apiDelete(`/api/comments/${commentId}`)
+      }
 
       // Trigger immediate re-fetch via window event (CommentSection polling will pick it up)
       window.dispatchEvent(new CustomEvent('commentDeleted'))

@@ -7,7 +7,6 @@ import { generateShareUrl } from '@/lib/url'
 import { getAutoApproveProject } from '@/lib/settings'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -61,12 +60,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Verify project access using dual auth pattern (clients can approve via share link)
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
-
-    // CSRF: enforce token for admins, origin-check for client approvals
-    const csrfCheck = accessCheck.isAdmin
-      ? await validateCsrfProtection(request)
-      : await validateCsrfProtection(request, { requireToken: false })
-    if (csrfCheck) return csrfCheck
 
     if (!accessCheck.authorized) {
       return NextResponse.json({

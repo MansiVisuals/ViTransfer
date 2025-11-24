@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireApiAdmin, regenerateSession, getCurrentUserFromRequest } from '@/lib/auth'
+import { requireApiAdmin, getCurrentUserFromRequest } from '@/lib/auth'
 import { hashPassword, validatePassword, verifyPassword } from '@/lib/encryption'
 import { revokeAllUserTokens, clearUserRevocation } from '@/lib/token-revocation'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -76,10 +75,6 @@ export async function PATCH(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   try {
     const { id } = await params
@@ -224,42 +219,23 @@ export async function PATCH(
 
     if (passwordChanged) {
       if (currentUser && currentUser.id === id) {
-        // User is changing their own password
-        // Generate new session FIRST before revoking
-        await regenerateSession({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        })
-
-        // NOW revoke ALL other sessions (after new session is created)
-        // The new tokens were just issued, so they won't be affected by the user-level revocation
-        // because the auth check will see they were issued AFTER the revocation timestamp
+        // User is changing their own password - revoke all sessions to force fresh login
         await revokeAllUserTokens(user.id)
-
-        // DON'T clear the user revocation - let it expire naturally after 7 days
-        // The new tokens will pass auth because their 'iat' (issued at) time is AFTER revocation time
       } else {
-        // Admin is changing another user's password - just revoke their sessions
+        // Admin is changing another user's password - revoke their sessions
         await revokeAllUserTokens(user.id)
       }
 
-      securityMessage = 'All sessions have been invalidated - user will need to log in again on other devices.'
+      securityMessage = 'All sessions have been invalidated - user will need to log in again.'
     }
 
     if (roleChanged) {
       if (currentUser && currentUser.id === id) {
-        // User's own role is changing - regenerate their session with new role
-        await regenerateSession({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        })
+        // User's own role is changing - revoke sessions to refresh permissions on next login
+        await revokeAllUserTokens(user.id)
         securityMessage = securityMessage
-          ? `${securityMessage} Role updated - your session has been refreshed.`
-          : 'Role updated - session refreshed with new permissions.'
+          ? `${securityMessage} Role updated - please log in again to refresh permissions.`
+          : 'Role updated - please log in again to refresh permissions.'
       } else {
         // Another admin is changing this user's role - revoke all their sessions
         await revokeAllUserTokens(user.id)
@@ -292,10 +268,6 @@ export async function DELETE(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   try {
     const { id } = await params

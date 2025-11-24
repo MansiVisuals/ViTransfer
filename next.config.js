@@ -12,19 +12,24 @@ const nextConfig = {
   // SECURITY: Add comprehensive security headers
   async headers() {
     // Check if HTTPS is enabled (via environment variable)
-    // Database setting is checked at runtime in cookie functions
     const isHttpsEnabled = process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1';
+    const tusEndpoint = process.env.NEXT_PUBLIC_TUS_ENDPOINT
+
+    const connectSrc = ["'self'", 'blob:']
+    if (tusEndpoint) {
+      connectSrc.push(tusEndpoint)
+    }
 
     const cspDirectives = [
       {
         key: 'Content-Security-Policy',
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
-          "style-src 'self' 'unsafe-inline'",
+          "script-src 'self' 'nonce-__NEXT_CSP_NONCE__' https://static.cloudflareinsights.com",
+          "style-src 'self' 'nonce-__NEXT_CSP_NONCE__'",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
-          "connect-src 'self' https://cloudflareinsights.com",
+          `connect-src ${connectSrc.join(' ')} https://cloudflareinsights.com`,
           "media-src 'self' blob:",
           "object-src 'none'",
           "base-uri 'self'",
@@ -45,12 +50,8 @@ const nextConfig = {
         value: 'nosniff'
       },
       {
-        key: 'X-XSS-Protection',
-        value: '1; mode=block'
-      },
-      {
         key: 'Referrer-Policy',
-        value: 'strict-origin-when-cross-origin'
+        value: 'same-origin'
       },
       {
         key: 'Permissions-Policy',

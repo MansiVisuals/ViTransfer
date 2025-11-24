@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Download, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
-import { apiFetch } from '@/lib/api-client'
-import { getCsrfToken } from '@/lib/csrf-client'
+import { getAccessToken } from '@/lib/token-store'
 
 interface VideoAsset {
   id: string
@@ -22,6 +21,7 @@ interface VideoAssetDownloadModalProps {
   versionLabel: string
   onClose: () => void
   isOpen: boolean
+  shareToken?: string | null
 }
 
 export function VideoAssetDownloadModal({
@@ -30,6 +30,7 @@ export function VideoAssetDownloadModal({
   versionLabel,
   onClose,
   isOpen,
+  shareToken = null,
 }: VideoAssetDownloadModalProps) {
   const [assets, setAssets] = useState<VideoAsset[]>([])
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
@@ -48,7 +49,10 @@ export function VideoAssetDownloadModal({
       setLoading(true)
       setError(null)
 
-      const response = await apiFetch(`/api/videos/${videoId}/assets`)
+      const headers = buildAuthHeaders(shareToken)
+      const response = await fetch(`/api/videos/${videoId}/assets`, {
+        headers,
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch assets')
       }
@@ -110,18 +114,15 @@ export function VideoAssetDownloadModal({
       setDownloading(true)
       setError(null)
 
-      const csrfToken = await getCsrfToken()
-
       const response = await fetch(`/api/videos/${videoId}/assets/download-zip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+          ...buildAuthHeaders(shareToken),
         },
         body: JSON.stringify({
           assetIds: Array.from(selectedAssets),
         }),
-        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -309,4 +310,13 @@ export function VideoAssetDownloadModal({
       </div>
     </div>
   )
+}
+
+function buildAuthHeaders(shareToken?: string | null) {
+  const headers: Record<string, string> = {}
+  const token = shareToken || getAccessToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+  return headers
 }

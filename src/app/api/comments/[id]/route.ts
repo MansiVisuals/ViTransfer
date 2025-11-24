@@ -6,8 +6,6 @@ import { requireApiAdmin } from '@/lib/auth'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { sanitizeCommentHtml } from '@/lib/security/html-sanitization'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
-import { cookies } from 'next/headers'
 import { getRedis } from '@/lib/redis'
 export const runtime = 'nodejs'
 
@@ -22,10 +20,6 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
-
   // Rate limiting to prevent abuse
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
@@ -92,24 +86,6 @@ export async function PATCH(
       )
     }
 
-    // SECURITY: Block guest comment updates (guests should only view videos)
-    if (existingComment.project.guestMode) {
-      const cookieStore = await cookies()
-      const sessionId = cookieStore.get('share_session')?.value
-
-      if (sessionId) {
-        const redis = await getRedis()
-        const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
-
-        if (isGuestSession === 1) {
-          return NextResponse.json(
-            { error: 'Comments are disabled for guest users' },
-            { status: 403 }
-          )
-        }
-      }
-    }
-
     // Verify project access using dual auth pattern
     const accessCheck = await verifyProjectAccess(
       request,
@@ -117,6 +93,13 @@ export async function PATCH(
       existingComment.project.sharePassword,
       existingComment.project.authMode
     )
+
+    if (accessCheck.isGuest) {
+      return NextResponse.json(
+        { error: 'Comments are disabled for guest users' },
+        { status: 403 }
+      )
+    }
 
     if (!accessCheck.authorized) {
       // Don't reveal if comment exists - return generic error
@@ -197,10 +180,6 @@ export async function DELETE(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // Rate limiting to prevent abuse
   const rateLimitResult = await rateLimit(request, {

@@ -5,7 +5,6 @@ import { prisma } from '@/lib/db'
 import { createReadStream, existsSync, statSync } from 'fs'
 import fs from 'fs'
 import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
-import { cookies } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getCurrentUserFromRequest } from '@/lib/auth'
@@ -57,8 +56,7 @@ export async function GET(
 
     const preliminaryTokenData = JSON.parse(rawTokenData)
 
-    const cookieStore = await cookies()
-    let sessionId = cookieStore.get('share_session')?.value
+    let sessionId: string | null = null
 
     if (isAdmin) {
       const project = await prisma.project.findUnique({
@@ -70,29 +68,10 @@ export async function GET(
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
 
-      // Admins can access any valid token, use token's sessionId if no cookie present
-      if (!sessionId) {
-        sessionId = preliminaryTokenData.sessionId
-      }
+      // Admins can access any valid token, use token's sessionId directly
+      sessionId = preliminaryTokenData.sessionId
     } else {
-      if (!sessionId) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
-      }
-
-      const hasAccess = await redis.sismember(`session_projects:${sessionId}`, preliminaryTokenData.projectId)
-
-      if (!hasAccess) {
-        await logSecurityEvent({
-          type: 'SESSION_PROJECT_MISMATCH',
-          severity: 'WARNING',
-          projectId: preliminaryTokenData.projectId,
-          sessionId,
-          ipAddress: getClientIpAddress(request),
-          details: { expectedProject: preliminaryTokenData.projectId }
-        })
-
-        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
-      }
+      sessionId = preliminaryTokenData.sessionId
     }
 
     if (!sessionId) {

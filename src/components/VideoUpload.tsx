@@ -9,6 +9,7 @@ import { Upload, Pause, Play, X } from 'lucide-react'
 import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
+import { getAccessToken } from '@/lib/token-store'
 
 interface VideoUploadProps {
   projectId: string
@@ -110,7 +111,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         throw new Error(validation.error || 'Invalid video file')
       }
 
-      // Step 1: Create video record (uses centralized API client with CSRF)
+      // Step 1: Create video record (uses centralized API client with bearer auth)
       const { videoId } = await apiPost('/api/videos', {
         projectId,
         versionLabel,
@@ -147,7 +148,10 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         removeFingerprintOnSuccess: true,
 
         // Custom headers for authentication
-        headers: {},
+        headers: (() => {
+          const token = getAccessToken()
+          return token ? { Authorization: `Bearer ${token}` } : undefined
+        })(),
 
         // Progress callback
         onProgress: (bytesUploaded, bytesTotal) => {
@@ -214,11 +218,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
 
           setError(errorMessage)
           setUploading(false)
-        },
-
-        onBeforeRequest: (req) => {
-          const xhr = req.getUnderlyingObject()
-          xhr.withCredentials = true // Include cookies for authentication
         },
       })
 

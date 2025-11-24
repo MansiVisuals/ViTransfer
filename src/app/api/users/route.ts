@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { hashPassword, validatePassword } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 export const runtime = 'nodejs'
 
 
@@ -61,10 +60,6 @@ export async function POST(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // Rate limiting: 10 user creation requests per minute
   const rateLimitResult = await rateLimit(request, {

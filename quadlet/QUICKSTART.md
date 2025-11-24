@@ -71,6 +71,7 @@ export REDIS_PASSWORD=$(openssl rand -base64 32)
 export ENCRYPTION_KEY=$(openssl rand -hex 32)
 export JWT_SECRET=$(openssl rand -hex 32)
 export JWT_REFRESH_SECRET=$(openssl rand -hex 32)
+export SHARE_TOKEN_SECRET=$(openssl rand -hex 32)
 
 # Save these somewhere safe!
 echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > ~/.vitransfer-secrets
@@ -78,6 +79,7 @@ echo "REDIS_PASSWORD=${REDIS_PASSWORD}" >> ~/.vitransfer-secrets
 echo "ENCRYPTION_KEY=${ENCRYPTION_KEY}" >> ~/.vitransfer-secrets
 echo "JWT_SECRET=${JWT_SECRET}" >> ~/.vitransfer-secrets
 echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}" >> ~/.vitransfer-secrets
+echo "SHARE_TOKEN_SECRET=${SHARE_TOKEN_SECRET}" >> ~/.vitransfer-secrets
 chmod 600 ~/.vitransfer-secrets
 
 # 3. Edit *.container files - replace all CHANGE_* placeholders

@@ -65,6 +65,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      SHARE_TOKEN_SECRET: ${SHARE_TOKEN_SECRET:?SHARE_TOKEN_SECRET is required}
       HTTPS_ENABLED: ${HTTPS_ENABLED:-false}
     ports:
       - "${APP_PORT:-4321}:4321"
@@ -107,6 +108,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      SHARE_TOKEN_SECRET: ${SHARE_TOKEN_SECRET}
     volumes:
       - /mnt/user/appdata/vitransfer/uploads:/app/uploads
     networks:

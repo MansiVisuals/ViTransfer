@@ -3,10 +3,8 @@ import { prisma } from '@/lib/db'
 import { deleteFile, deleteDirectory } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
-import { cookies } from 'next/headers'
 import { isSmtpConfigured } from '@/lib/email'
 import { invalidateProjectSessions } from '@/lib/session-invalidation'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
 export const runtime = 'nodejs'
@@ -141,10 +139,6 @@ export async function PATCH(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // Rate limiting: mutation throttle
   const rateLimitResult = await rateLimit(request, {
@@ -395,12 +389,6 @@ export async function PATCH(
         // Don't fail the request if session invalidation fails
       }
 
-      // Also clear current admin's cookie if they have one
-      const cookieStore = await cookies()
-      const authSessionId = cookieStore.get('share_auth')?.value
-      if (authSessionId) {
-        cookieStore.delete('share_auth')
-      }
     }
 
     return NextResponse.json(project)
@@ -421,10 +409,6 @@ export async function DELETE(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,

@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from './ui/dialog'
 import { VideoAssetDownloadModal } from './VideoAssetDownloadModal'
+import { getAccessToken } from '@/lib/token-store'
 
 interface VideoPlayerProps {
   videos: Video[]
@@ -33,6 +34,7 @@ interface VideoPlayerProps {
   initialSeekTime?: number | null // Initial timestamp to seek to (from URL params)
   initialVideoIndex?: number // Initial video index to select (from URL params)
   allowAssetDownload?: boolean // Allow clients to download assets
+  shareToken?: string | null
 }
 
 export default function VideoPlayer({
@@ -51,7 +53,8 @@ export default function VideoPlayer({
   activeVideoName,
   initialSeekTime = null,
   initialVideoIndex = 0,
-  allowAssetDownload = true
+  allowAssetDownload = true,
+  shareToken = null
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
@@ -67,6 +70,15 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
   const lastTimeUpdateRef = useRef(0) // Throttle time updates
+
+  const buildAuthHeaders = (shareTokenOverride?: string | null) => {
+    const headers: Record<string, string> = {}
+    const token = shareTokenOverride || getAccessToken()
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+    return headers
+  }
 
   // If ANY video is approved, only show approved videos (for both admin and client)
   const hasAnyApprovedVideo = videos.some((v: any) => v.approved === true)
@@ -251,9 +263,10 @@ export default function VideoPlayer({
     if (allowAssetDownload && !isGuest && !isAdmin) {
       setCheckingAssets(true)
       try {
+        const authHeaders = buildAuthHeaders(shareToken)
         // Check if this video has assets
         const response = await fetch(`/api/videos/${selectedVideo.id}/assets`, {
-          credentials: 'include'
+          headers: authHeaders,
         })
 
         if (response.ok) {
@@ -279,13 +292,13 @@ export default function VideoPlayer({
     setLoading(true)
 
     try {
+      const authHeaders = buildAuthHeaders(shareToken)
       const response = await fetch(`/api/projects/${projectId}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           selectedVideoId: selectedVideo.id,
         }),
-        credentials: 'include', // Include cookies for authentication
       })
 
       if (!response.ok) {
@@ -566,6 +579,7 @@ export default function VideoPlayer({
           versionLabel={selectedVideo.versionLabel}
           isOpen={showDownloadModal}
           onClose={() => setShowDownloadModal(false)}
+          shareToken={shareToken}
         />
       )}
     </div>

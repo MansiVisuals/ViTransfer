@@ -10,6 +10,7 @@ import ProjectActions from '@/components/ProjectActions'
 import ShareLink from '@/components/ShareLink'
 import CommentSection from '@/components/CommentSection'
 import { ArrowLeft, Settings, ArrowUpDown } from 'lucide-react'
+import { apiFetch } from '@/lib/api-client'
 
 // Force dynamic rendering (no static pre-rendering)
 export const dynamic = 'force-dynamic'
@@ -36,7 +37,7 @@ export default function ProjectPage() {
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = async () => {
     try {
-      const response = await fetch(`/api/projects/${id}`)
+      const response = await apiFetch(`/api/projects/${id}`)
       if (!response.ok) {
         if (response.status === 404) {
           router.push('/admin')
@@ -97,7 +98,7 @@ export default function ProjectPage() {
     async function fetchShareUrl() {
       if (!project?.slug) return
       try {
-        const response = await fetch(`/api/share/url?slug=${project.slug}`)
+        const response = await apiFetch(`/api/share/url?slug=${project.slug}`)
         if (response.ok) {
           const data = await response.json()
           setShareUrl(data.shareUrl)
@@ -114,7 +115,7 @@ export default function ProjectPage() {
   useEffect(() => {
     async function fetchCompanyName() {
       try {
-        const response = await fetch('/api/settings')
+        const response = await apiFetch('/api/settings')
         if (response.ok) {
           const data = await response.json()
           setCompanyName(data.companyName || 'Studio')
@@ -126,7 +127,7 @@ export default function ProjectPage() {
 
     async function fetchAdminUser() {
       try {
-        const response = await fetch('/api/auth/session')
+        const response = await apiFetch('/api/auth/session')
         if (response.ok) {
           const data = await response.json()
           setAdminUser(data.user)

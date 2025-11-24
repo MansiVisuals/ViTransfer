@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
-import { apiPost } from '@/lib/api-client'
+import { apiPost, apiFetch } from '@/lib/api-client'
 import { generateSecurePassword } from '@/lib/password-utils'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 
@@ -35,7 +35,7 @@ export default function NewProjectPage() {
   // Check if SMTP is configured (reuse centralized logic from settings API)
   async function checkSmtpConfiguration() {
     try {
-      const res = await fetch('/api/settings')
+      const res = await apiFetch('/api/settings')
       if (res.ok) {
         const data = await res.json()
         // Settings API now includes smtpConfigured field using isSmtpConfigured() helper

@@ -10,7 +10,7 @@ import { EmailSettingsSection } from '@/components/settings/EmailSettingsSection
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
 import { ProjectBehaviorSection } from '@/components/settings/ProjectBehaviorSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
-import { apiPatch, apiPost } from '@/lib/api-client'
+import { apiPatch, apiPost, apiFetch } from '@/lib/api-client'
 
 interface Settings {
   id: string
@@ -100,7 +100,7 @@ export default function GlobalSettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const response = await fetch('/api/settings')
+        const response = await apiFetch('/api/settings')
         if (!response.ok) {
           throw new Error('Failed to load settings')
         }
@@ -128,7 +128,7 @@ export default function GlobalSettingsPage() {
         setAdminNotificationDay(data.adminNotificationDay ?? 1)
 
         // Load security settings
-        const securityResponse = await fetch('/api/settings/security')
+        const securityResponse = await apiFetch('/api/settings/security')
         if (securityResponse.ok) {
           const securityData = await securityResponse.json()
           setSecuritySettings(securityData)
@@ -202,7 +202,7 @@ export default function GlobalSettingsPage() {
       setTimeout(() => setSuccess(false), 3000)
 
       // Reload settings data to reflect changes
-      const refreshResponse = await fetch('/api/settings')
+      const refreshResponse = await apiFetch('/api/settings')
       if (refreshResponse.ok) {
         const refreshedData = await refreshResponse.json()
         setSettings(refreshedData)
@@ -224,7 +224,7 @@ export default function GlobalSettingsPage() {
       }
 
       // Reload security settings data
-      const securityRefreshResponse = await fetch('/api/settings/security')
+      const securityRefreshResponse = await apiFetch('/api/settings/security')
       if (securityRefreshResponse.ok) {
         const refreshedSecurityData = await securityRefreshResponse.json()
         setSecuritySettings(refreshedSecurityData)

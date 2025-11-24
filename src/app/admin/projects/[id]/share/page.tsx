@@ -13,6 +13,11 @@ import { apiFetch } from '@/lib/api-client'
 export default function AdminSharePage() {
   const params = useParams()
   const router = useRouter()
+
+  if (!params?.id) {
+    return null
+  }
+
   const id = params.id as string
 
   const [project, setProject] = useState<any>(null)
@@ -157,6 +162,7 @@ export default function AdminSharePage() {
                     projectId={project.id}
                     videos={readyVideos}
                     comments={comments}
+                    clientName={companyName}
                     isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
                     restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                     isAdminView={true}

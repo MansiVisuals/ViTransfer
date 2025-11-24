@@ -36,9 +36,8 @@ export async function GET(request: NextRequest) {
         videos: {
           select: {
             id: true,
-            fileName: true,
+            name: true,
             status: true,
-            originalPath: true,
           },
         },
         _count: {

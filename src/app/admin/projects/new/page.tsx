@@ -355,7 +355,7 @@ export default function NewProjectPage() {
                   type="button"
                   variant="outline"
                   size="lg"
-                  onClick={() => router.push('/admin')}
+                  onClick={() => router.push('/admin/projects')}
                   disabled={loading}
                 >
                   <X className="w-4 h-4 sm:mr-2" />

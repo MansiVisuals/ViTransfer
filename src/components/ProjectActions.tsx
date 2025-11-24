@@ -224,7 +224,7 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
       await apiDelete(`/api/projects/${project.id}`)
 
       // Redirect to admin page after successful deletion
-      router.push('/admin')
+      router.push('/admin/projects')
       router.refresh()
     } catch (error) {
       alert('Failed to delete project')

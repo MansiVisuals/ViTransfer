@@ -40,7 +40,7 @@ export default function ProjectPage() {
       const response = await apiFetch(`/api/projects/${id}`)
       if (!response.ok) {
         if (response.status === 404) {
-          router.push('/admin')
+          router.push('/admin/projects')
           return
         }
         throw new Error('Failed to fetch project')

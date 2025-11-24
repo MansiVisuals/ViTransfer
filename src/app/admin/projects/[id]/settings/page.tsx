@@ -13,6 +13,7 @@ import { ReprocessModal } from '@/components/ReprocessModal'
 import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
+import { apiFetch } from '@/lib/api-client'
 import { generateSecurePassword, generateRandomSlug, sanitizeSlug } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
@@ -121,7 +122,7 @@ export default function ProjectSettingsPage() {
 
     setPasswordLoading(true)
     try {
-      const response = await fetch(`/api/projects/${projectId}/password`)
+      const response = await apiFetch(`/api/projects/${projectId}/password`)
       if (response.ok) {
         const data = await response.json()
         setSharePassword(data.password || '')
@@ -145,7 +146,7 @@ export default function ProjectSettingsPage() {
   useEffect(() => {
     async function loadProject() {
       try {
-        const response = await fetch(`/api/projects/${projectId}`)
+        const response = await apiFetch(`/api/projects/${projectId}`)
         if (!response.ok) {
           throw new Error('Failed to load project')
         }
@@ -321,7 +322,7 @@ export default function ProjectSettingsPage() {
       setTimeout(() => setSuccess(false), 3000)
 
       // Reload project data to reflect changes
-      const refreshResponse = await fetch(`/api/projects/${projectId}`)
+      const refreshResponse = await apiFetch(`/api/projects/${projectId}`)
       if (refreshResponse.ok) {
         const refreshedData = await refreshResponse.json()
         setProject(refreshedData)

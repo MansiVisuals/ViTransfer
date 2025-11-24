@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight } from 'lucide-react'
 import { Select } from '@/components/ui/select'
 import { formatDateTime } from '@/lib/utils'
-import { apiDelete } from '@/lib/api-client'
+import { apiDelete, apiFetch } from '@/lib/api-client'
 
 interface SecurityEvent {
   id: string
@@ -91,7 +91,7 @@ export default function SecurityEventsClient() {
       if (filterType) params.append('type', filterType)
       if (filterSeverity) params.append('severity', filterSeverity)
 
-      const response = await fetch(`/api/security/events?${params}`)
+      const response = await apiFetch(`/api/security/events?${params}`)
       if (!response.ok) throw new Error('Failed to load security events')
 
       const data: SecurityEventsResponse = await response.json()

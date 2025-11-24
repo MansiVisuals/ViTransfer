@@ -12,6 +12,56 @@ export const runtime = 'nodejs'
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
 
+// GET /api/projects - List all projects
+export async function GET(request: NextRequest) {
+  const authResult = await requireApiAdmin(request)
+  if (authResult instanceof Response) {
+    return authResult
+  }
+
+  // Rate limiting: 100 requests per minute for listing projects
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 100,
+    message: 'Too many requests. Please slow down.'
+  }, 'admin-projects-list')
+
+  if (rateLimitResult) {
+    return rateLimitResult
+  }
+
+  try {
+    const projects = await prisma.project.findMany({
+      include: {
+        videos: {
+          select: {
+            id: true,
+            fileName: true,
+            status: true,
+            originalPath: true,
+          },
+        },
+        _count: {
+          select: {
+            videos: true,
+            comments: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    return NextResponse.json({ projects })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Unable to process request' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Check authentication
   const authResult = await requireApiAdmin(request)

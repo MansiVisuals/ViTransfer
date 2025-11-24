@@ -42,6 +42,8 @@ export ENCRYPTION_KEY=$(openssl rand -hex 32)
 export JWT_SECRET=$(openssl rand -hex 32)
 export JWT_REFRESH_SECRET=$(openssl rand -hex 32)
 export SHARE_TOKEN_SECRET=$(openssl rand -hex 32)
+# Optional: Cloudflare tunnel deployments
+# export CLOUDFLARE_TUNNEL=true
 
 # Print them (save these securely!)
 echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"

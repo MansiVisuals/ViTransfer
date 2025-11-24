@@ -136,8 +136,7 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   }
 
   const handleViewSharePage = () => {
-    const shareUrl = `/share/${project.slug}`
-    window.open(shareUrl, '_blank')
+    router.push(`/admin/projects/${project.id}/share`)
   }
 
   const handleToggleApproval = async () => {

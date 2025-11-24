@@ -15,7 +15,7 @@ import { setTokens, clearTokens } from '@/lib/token-store'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const returnUrl = searchParams?.get('returnUrl') || '/admin'
+  const returnUrl = searchParams?.get('returnUrl') || '/admin/projects'
   const sessionExpired = searchParams?.get('sessionExpired') === 'true'
 
   const [email, setEmail] = useState('')

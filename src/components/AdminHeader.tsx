@@ -34,7 +34,7 @@ export default function AdminHeader() {
   if (!user) return null
 
   const navLinks = [
-    { href: '/admin', label: 'Projects', icon: FolderKanban },
+    { href: '/admin/projects', label: 'Projects', icon: FolderKanban },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
     { href: '/admin/users', label: 'Users', icon: Users },
@@ -53,7 +53,7 @@ export default function AdminHeader() {
             <nav className="flex gap-1 sm:gap-2 overflow-x-auto">
               {navLinks.map((link) => {
                 const Icon = link.icon
-                const isActive = pathname === link.href || (link.href !== '/admin' && pathname?.startsWith(link.href))
+                const isActive = pathname === link.href || (link.href !== '/admin/projects' && pathname?.startsWith(link.href))
 
                 return (
                   <Link

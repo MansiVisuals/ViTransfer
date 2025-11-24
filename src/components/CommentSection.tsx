@@ -215,20 +215,22 @@ export default function CommentSection({
   }
 
   const handleSeekToTimestamp = (timestamp: number, videoId: string, videoVersion: number | null) => {
-    // If in admin view, navigate to share page with timestamp
-    if (isAdminView && projectSlug) {
-      // Find the video name and construct share URL
-      const video = videos.find(v => v.id === videoId)
-      if (!video) return
+    // Check if we're on a page with a video player by checking if the event listener exists
+    const hasVideoPlayer = typeof window !== 'undefined' && document.querySelector('video')
 
-      // Navigate to share page with video, version, and timestamp parameters
-      const shareUrl = `/share/${projectSlug}?video=${encodeURIComponent(video.name)}&version=${videoVersion || video.version}&t=${Math.floor(timestamp)}`
-      window.open(shareUrl, '_blank')
-    } else {
-      // If on share page with video player, dispatch event to player
+    if (hasVideoPlayer) {
+      // If video player is present (admin share page or public share page), dispatch event
       window.dispatchEvent(new CustomEvent('seekToTime', {
         detail: { timestamp, videoId, videoVersion }
       }))
+    } else if (isAdminView) {
+      // If in admin view without video player, navigate to admin share page with timestamp
+      const video = videos.find(v => v.id === videoId)
+      if (!video) return
+
+      // Navigate to admin share page with video, version, and timestamp parameters
+      const adminShareUrl = `/admin/projects/${projectId}/share?video=${encodeURIComponent(video.name)}&version=${videoVersion || video.version}&t=${Math.floor(timestamp)}`
+      window.location.href = adminShareUrl
     }
   }
 

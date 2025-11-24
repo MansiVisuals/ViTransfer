@@ -114,6 +114,9 @@ openssl rand -base64 32   # 3. For ENCRYPTION_KEY
 openssl rand -base64 64   # 4. For JWT_SECRET
 openssl rand -base64 64   # 5. For JWT_REFRESH_SECRET
 openssl rand -base64 64   # 6. For SHARE_TOKEN_SECRET
+# Optional (Cloudflare tunnel integrations):
+# CLOUDFLARE_TUNNEL=false
+# NEXT_PUBLIC_TUS_ENDPOINT=https://uploads.example.com
 ```
 
 Replace each placeholder in `.env`:
@@ -297,6 +300,8 @@ Rootless Podman Quadlets are available in the folder quadlet.
 | `NEXT_PUBLIC_APP_URL` | No | Public URL for emails and links | `http://localhost:4321` | `https://videos.example.com` |
 | `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
 | `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens | _none_ | |
+| `CLOUDFLARE_TUNNEL` | No | Enable Cloudflare script/connect CSP allowances | `false` | |
+| `NEXT_PUBLIC_TUS_ENDPOINT` | No | If TUS is on another origin, add it to connect-src | _none_ | |
 
 **Important Notes:**
 - Use `openssl rand -hex 32` for database passwords (no special characters that break URLs)

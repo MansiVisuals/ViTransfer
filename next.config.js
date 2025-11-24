@@ -14,10 +14,14 @@ const nextConfig = {
     // Check if HTTPS is enabled (via environment variable)
     const isHttpsEnabled = process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1';
     const tusEndpoint = process.env.NEXT_PUBLIC_TUS_ENDPOINT
+    const cloudflareTunnelEnabled = process.env.CLOUDFLARE_TUNNEL === 'true' || process.env.CLOUDFLARE_TUNNEL === '1'
 
     const connectSrc = ["'self'", 'blob:']
     if (tusEndpoint) {
       connectSrc.push(tusEndpoint)
+    }
+    if (cloudflareTunnelEnabled) {
+      connectSrc.push('https://cloudflareinsights.com')
     }
 
     const cspDirectives = [
@@ -25,11 +29,11 @@ const nextConfig = {
         key: 'Content-Security-Policy',
         value: [
           "default-src 'self'",
-          "script-src 'self' 'nonce-__NEXT_CSP_NONCE__' https://static.cloudflareinsights.com",
+          `script-src 'self' 'nonce-__NEXT_CSP_NONCE__'${cloudflareTunnelEnabled ? " https://static.cloudflareinsights.com https://ajax.cloudflare.com" : ''}`,
           "style-src 'self' 'nonce-__NEXT_CSP_NONCE__'",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
-          `connect-src ${connectSrc.join(' ')} https://cloudflareinsights.com`,
+          `connect-src ${connectSrc.join(' ')}`,
           "media-src 'self' blob:",
           "object-src 'none'",
           "base-uri 'self'",

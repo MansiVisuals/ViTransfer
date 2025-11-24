@@ -5,7 +5,6 @@ import { requireApiAdmin } from '@/lib/auth'
 import { encrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { createProjectSchema, validateRequest } from '@/lib/validation'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 export const runtime = 'nodejs'
 
 
@@ -20,10 +19,6 @@ export async function POST(request: NextRequest) {
     return authResult
   }
   const admin = authResult
-
-  // CSRF Protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // Rate limiting: Max 20 projects per hour
   const rateLimitResult = await rateLimit(request, {

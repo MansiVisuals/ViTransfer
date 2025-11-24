@@ -29,6 +29,7 @@ interface CommentSectionProps {
   isPasswordProtected?: boolean
   adminUser?: any
   recipients?: Array<{ id: string; name: string | null }>
+  shareToken?: string | null
 }
 
 export default function CommentSection({
@@ -47,6 +48,7 @@ export default function CommentSection({
   isPasswordProtected = false,
   adminUser = null,
   recipients = [],
+  shareToken = null,
 }: CommentSectionProps) {
   const {
     comments,
@@ -77,6 +79,7 @@ export default function CommentSection({
     recipients,
     clientName,
     restrictToLatestVersion,
+    shareToken,
   })
 
   // Auto-scroll to latest comment (like messaging apps)
@@ -88,7 +91,7 @@ export default function CommentSection({
   const fetchComments = async () => {
     try {
       const response = await fetch(`/api/comments?projectId=${projectId}`, {
-        credentials: 'include',
+        headers: shareToken ? { Authorization: `Bearer ${shareToken}` } : undefined,
       })
       if (response.ok) {
         const freshComments = await response.json()

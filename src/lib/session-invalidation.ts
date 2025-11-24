@@ -8,7 +8,7 @@ import { getRedis } from './redis'
  *
  * Session Types:
  * - Client share sessions: auth_project:{sessionId} → projectId
- * - Share auth cookies: share_auth (contains sessionId)
+ * - Share tokens are bearer-based; legacy browser-managed sessions removed in v0.6.0
  *
  * Invalidation Triggers:
  * 1. Session timeout changes → Invalidate ALL sessions globally

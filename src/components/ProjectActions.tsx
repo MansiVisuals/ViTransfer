@@ -118,7 +118,6 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
     setMessage(null)
 
     try {
-      // Use centralized API client (handles CSRF automatically)
       const data = await apiPost(`/api/projects/${project.id}/notify`, {
         videoId: notificationType === 'specific-video' ? selectedVideoId : null,
         notifyEntireProject: notificationType === 'entire-project',
@@ -155,7 +154,6 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
 
       setIsTogglingApproval(true)
       try {
-        // Use centralized API client (handles CSRF automatically)
         await apiPatch(`/api/projects/${project.id}`, { status: 'APPROVED' })
 
         // Refresh project data
@@ -176,7 +174,6 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
     setShowUnapproveModal(false)
 
     try {
-      // Use centralized API client (handles CSRF automatically)
       const data = await apiPost(`/api/projects/${project.id}/unapprove`, { unapproveVideos })
 
       // Refresh project data
@@ -224,7 +221,6 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
 
     setIsDeleting(true)
     try {
-      // Use centralized API client (handles CSRF automatically)
       await apiDelete(`/api/projects/${project.id}`)
 
       // Redirect to admin page after successful deletion

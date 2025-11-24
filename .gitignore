@@ -56,3 +56,4 @@ prisma/.env
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+AGENTS.md

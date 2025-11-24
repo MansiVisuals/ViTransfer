@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import archiver from 'archiver'
 import { Readable } from 'stream'
 import { z } from 'zod'
@@ -59,12 +58,6 @@ export async function POST(
     if (!accessCheck.authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
-
-    // CSRF: token for admins, origin validation for share clients
-    const csrfCheck = accessCheck.isAdmin
-      ? await validateCsrfProtection(request)
-      : await validateCsrfProtection(request, { requireToken: false })
-    if (csrfCheck) return csrfCheck
 
     // For non-admins, verify asset download settings and video approval
     if (!accessCheck.isAdmin) {

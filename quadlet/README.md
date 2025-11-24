@@ -41,6 +41,7 @@ export ENCRYPTION_KEY=$(openssl rand -hex 32)
 # JWT secrets
 export JWT_SECRET=$(openssl rand -hex 32)
 export JWT_REFRESH_SECRET=$(openssl rand -hex 32)
+export SHARE_TOKEN_SECRET=$(openssl rand -hex 32)
 
 # Print them (save these securely!)
 echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
@@ -48,6 +49,7 @@ echo "REDIS_PASSWORD=${REDIS_PASSWORD}"
 echo "ENCRYPTION_KEY=${ENCRYPTION_KEY}"
 echo "JWT_SECRET=${JWT_SECRET}"
 echo "JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}"
+echo "SHARE_TOKEN_SECRET=${SHARE_TOKEN_SECRET}"
 ```
 
 ### 2. Configure Container Files
@@ -66,6 +68,7 @@ Edit each `.container` file and replace the placeholder values:
 - `CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32` → Encryption key
 - `CHANGE_THIS_SECRET` → JWT secret
 - `CHANGE_THIS_REFRESH_SECRET` → JWT refresh secret
+- `CHANGE_THIS_SHARE_SECRET` → Share token secret
 - `NEXT_PUBLIC_APP_URL` → Your domain (e.g., https://vitransfer.yourdomain.com)
 - `ADMIN_EMAIL` → Your admin email
 - `ADMIN_PASSWORD` → Your admin password

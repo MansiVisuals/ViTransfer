@@ -6,7 +6,6 @@ import { validateRequest, createCommentSchema } from '@/lib/validation'
 import { getPrimaryRecipient } from '@/lib/recipients'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import {
 
   validateCommentPermissions,
@@ -16,8 +15,6 @@ import {
   fetchProjectComments
 
 } from '@/lib/comment-helpers'
-import { cookies } from 'next/headers'
-import { getRedis } from '@/lib/redis'
 export const runtime = 'nodejs'
 
 
@@ -76,21 +73,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // SECURITY: Block guest access to comments (guests should only see videos)
-    if (project.guestMode) {
-      const cookieStore = await cookies()
-      const sessionId = cookieStore.get('share_session')?.value
-
-      if (sessionId) {
-        const redis = await getRedis()
-        const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
-
-        if (isGuestSession === 1) {
-          return NextResponse.json([])
-        }
-      }
-    }
-
     // Verify project access using dual auth pattern
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
 
@@ -98,7 +80,11 @@ export async function GET(request: NextRequest) {
       return accessCheck.errorResponse!
     }
 
-    const { isAdmin, isAuthenticated } = accessCheck
+    const { isAdmin, isAuthenticated, isGuest } = accessCheck
+
+    if (project.guestMode && isGuest) {
+      return NextResponse.json([])
+    }
 
     // Get primary recipient for author name fallback
     const primaryRecipient = await getPrimaryRecipient(projectId)
@@ -149,10 +135,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // CSRF Protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
-
   // Rate limiting to prevent comment spam
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,

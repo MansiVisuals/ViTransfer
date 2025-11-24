@@ -10,6 +10,7 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { Lock, Video, LogIn, Fingerprint } from 'lucide-react'
 import { startAuthentication } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
+import { setTokens, clearTokens } from '@/lib/token-store'
 
 function LoginForm() {
   const router = useRouter()
@@ -63,6 +64,15 @@ function LoginForm() {
         return
       }
 
+      if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
+        setTokens({
+          accessToken: data.tokens.accessToken,
+          refreshToken: data.tokens.refreshToken,
+        })
+      } else {
+        clearTokens()
+      }
+
       // Success - redirect
       router.push(returnUrl)
       router.refresh()
@@ -98,6 +108,15 @@ function LoginForm() {
         setError(data.error || 'Login failed')
         setLoading(false)
         return
+      }
+
+      if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
+        setTokens({
+          accessToken: data.tokens.accessToken,
+          refreshToken: data.tokens.refreshToken,
+        })
+      } else {
+        clearTokens()
       }
 
       // Success - redirect to return URL or admin

@@ -130,7 +130,7 @@ export default function AdminVideoManager({
       const videosInGroup = videoGroups[oldName]
       const videoIds = videosInGroup.map(v => v.id)
 
-      // Single batch update for all videos (uses centralized API client with CSRF)
+      // Single batch update for all videos (uses centralized API client)
       await apiPatch('/api/videos/batch', { videoIds, name: editGroupValue.trim() })
 
       setEditingGroupName(null)

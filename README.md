@@ -45,8 +45,8 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 - **PostgreSQL Database** - Reliable data storage with Prisma 6
 - **JWT Authentication** - Secure session management
 - **TUS Protocol** - Resumable uploads for large files
-- **CSRF Protection** - Cross-site request forgery protection
 - **Authentication Modes** - Password-based or passwordless (guest) access
+- **Bearer-Only Auth (>=0.6.0)** - Admin and share flows use explicit Authorization headers (no implicit browser credentials)
 
 ---
 
@@ -72,6 +72,12 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 ---
 
 ## 🚀 Quick Start
+
+### Authentication Model (>=0.6.0)
+- Admin and client share flows use bearer tokens in the `Authorization` header only (no cookies, no CSRF).
+- Admin login/refresh return `{ tokens: { accessToken, refreshToken } }`; store refresh in sessionStorage and keep access token in memory.
+- Share links issue short-lived share tokens after password/OTP/guest entry; send them in headers for all share API calls.
+- If you were previously logged in, re-login is required after upgrading (legacy sessions are invalidated).
 
 ### Prerequisites
 - Docker and Docker Compose installed
@@ -99,14 +105,15 @@ cp .env.example .env
 nano .env
 ```
 
-Generate **5 unique** secure values:
+Generate **6 unique** secure values:
 ```bash
-# Generate these 5 values (each must be different):
+# Generate these 6 values (each must be different):
 openssl rand -hex 32      # 1. For POSTGRES_PASSWORD
 openssl rand -hex 32      # 2. For REDIS_PASSWORD
 openssl rand -base64 32   # 3. For ENCRYPTION_KEY
 openssl rand -base64 64   # 4. For JWT_SECRET
 openssl rand -base64 64   # 5. For JWT_REFRESH_SECRET
+openssl rand -base64 64   # 6. For SHARE_TOKEN_SECRET
 ```
 
 Replace each placeholder in `.env`:
@@ -115,6 +122,7 @@ Replace each placeholder in `.env`:
 - `ENCRYPTION_KEY=<<REPLACE_WITH_openssl_rand_base64_32>>`
 - `JWT_SECRET=<<REPLACE_WITH_openssl_rand_base64_64>>`
 - `JWT_REFRESH_SECRET=<<REPLACE_WITH_openssl_rand_base64_64>>`
+- `SHARE_TOKEN_SECRET=<<REPLACE_WITH_openssl_rand_base64_64>>`
 
 **Default admin credentials** (change in production):
 - `ADMIN_EMAIL=admin@example.com`
@@ -287,7 +295,8 @@ Rootless Podman Quadlets are available in the folder quadlet.
 | `ADMIN_EMAIL` | Yes | Initial admin email | - | `admin@example.com` |
 | `ADMIN_PASSWORD` | Yes | Initial admin password | - | `Admin1234` (change in production) |
 | `NEXT_PUBLIC_APP_URL` | No | Public URL for emails and links | `http://localhost:4321` | `https://videos.example.com` |
-| `HTTPS_ENABLED` | No | Enable HTTPS enforcement (secure cookies, HSTS) | `true` | `false` for localhost |
+| `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
+| `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens | _none_ | |
 
 **Important Notes:**
 - Use `openssl rand -hex 32` for database passwords (no special characters that break URLs)
@@ -335,7 +344,7 @@ Configure these in the admin panel under Settings > Security:
 - Session Rate Limit - Requests per minute per session (default: 600)
 
 **HTTPS Enforcement:**
-- HTTPS Enabled - Enable secure cookies and HSTS header (default: true)
+- HTTPS Enabled - Enable HSTS header (default: true)
 - Note: `HTTPS_ENABLED` environment variable always overrides this setting
 
 **Logging:**
@@ -416,7 +425,6 @@ Tested with Cloudflare Tunnels.
 - **Encrypted Passwords** - AES-256 encryption at rest
 - **HTTPS Support** - SSL/TLS for secure connections
 - **Session Monitoring** - 15-minute inactivity timeout with warnings
-- **CSRF Protection** - Cross-site request forgery protection
 
 ### Security Notice
 

@@ -5,7 +5,6 @@ import { generateShareUrl } from '@/lib/url'
 import { requireApiAdmin } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
 import { getProjectRecipients } from '@/lib/recipients'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -20,10 +19,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (authResult instanceof Response) {
       return authResult
     }
-
-    // CSRF protection
-    const csrfCheck = await validateCsrfProtection(request)
-    if (csrfCheck) return csrfCheck
 
     // Throttle to prevent email spam
     const rateLimitResult = await rateLimit(request, {

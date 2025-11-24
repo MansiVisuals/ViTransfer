@@ -17,8 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Fix timing attack in login by adding dummy bcrypt for non-existent users
 - Implement refresh token rotation to prevent replay attacks
-- Bind CSRF tokens to refresh token hash instead of access token
-- Remove CSRF token-only fallback for stricter session-bound validation
 - Add protocol-aware origin validation respecting x-forwarded headers
 
 ## [0.5.4] - 2025-11-22
@@ -53,8 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Applied to both new project creation and settings pages
 
 ### Security
-- CSRF protection on all mutation endpoints (POST/PATCH/DELETE)
-- CSRF token refresh aligned with session refresh to prevent mismatches
 - Rate limiting on auth refresh endpoint (8 requests/minute per token)
 - Rate limiting across all API routes
 - Zod schema validation for request payloads
@@ -62,7 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session timeout monitoring improvements
 
 ### Fixed
-- Session refresh CSRF token mismatch causing authentication errors
 - Video player version switching now loads videos and thumbnails correctly
   - Separated URL state update from reload logic
   - Added key prop to force proper video element remount
@@ -184,8 +179,6 @@ Previous releases (0.3.5-0.3.7) added major features using patch increments. Now
 
 ### Security
 - Guest sessions marked in Redis with guest_session key
-- Automatic CSRF token handling in API client
-- CSRF validation on all state-changing API routes
 
 ### Database Migration
 - Added guestMode and guestLatestOnly fields to Project schema
@@ -203,10 +196,6 @@ Previous releases (0.3.5-0.3.7) added major features using patch increments. Now
   - Returns minimal information (no version or config exposure)
   - No authentication required for health monitoring
   - Replaces deprecated `/api/settings/public` endpoint
-- **CSRF Protection Infrastructure**
-  - Client-side CSRF token utilities (`src/lib/csrf-client.ts`)
-  - Security middleware foundation (`src/lib/security/`)
-  - CSRF API endpoint (`/api/csrf/`)
 - **Database Performance Improvements**
   - Added indexes on Video table for status queries
   - Migration: `20251117000000_add_video_status_indexes`
@@ -276,7 +265,6 @@ Previous releases (0.3.5-0.3.7) added major features using patch increments. Now
 - Authentication session storage now supports multiple projects simultaneously
   - Changed from single project ID to Redis SET for auth sessions
   - Changed from single project ID to Redis SET for video access sessions
-  - Reuse existing session cookies when authenticating to new projects
   - Add projects to session SET instead of overwriting single value
   - Refresh TTL on each project access to maintain active sessions
   - Update validation to use SISMEMBER instead of exact match

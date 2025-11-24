@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { decrypt } from '@/lib/encryption'
-import { cookies } from 'next/headers'
 import crypto from 'crypto'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
-import { getClientSessionTimeoutSeconds, isHttpsEnabled, getMaxAuthAttempts } from '@/lib/settings'
+import { getMaxAuthAttempts } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
+import { signShareToken } from '@/lib/auth'
 export const runtime = 'nodejs'
 
 
@@ -201,34 +201,14 @@ export async function POST(
     // SUCCESS - clear any existing rate limit data
     await redis.del(rateLimitKey)
 
-    // Get configurable client session timeout and HTTPS setting
-    const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
-    const httpsEnabled = await isHttpsEnabled()
+    const shareToken = signShareToken({
+      shareId: token,
+      projectId: project.id,
+      permissions: ['view', 'comment', 'download'],
+      guest: false,
+    })
 
-    // Check for existing session or generate new one
-    const cookieStore = await cookies()
-    let authSessionId = cookieStore.get('share_auth')?.value
-
-    if (!authSessionId) {
-      // Generate unique auth session ID (no project ID exposure)
-      authSessionId = crypto.randomBytes(16).toString('base64url')
-
-      // Set generic authentication cookie (no project ID exposure)
-      cookieStore.set('share_auth', authSessionId, {
-        httpOnly: true,
-        secure: httpsEnabled,
-        sameSite: 'strict',
-        path: '/',
-        maxAge: sessionTimeoutSeconds,
-      })
-    }
-
-    // Add project to session's authorized projects set
-    await redis.sadd(`auth_projects:${authSessionId}`, project.id)
-    // Refresh TTL on the entire set
-    await redis.expire(`auth_projects:${authSessionId}`, sessionTimeoutSeconds)
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, shareToken })
   } catch (error) {
     console.error('Error verifying share password:', error)
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })

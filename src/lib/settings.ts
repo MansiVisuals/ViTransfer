@@ -87,9 +87,9 @@ export async function getAutoApproveProject(): Promise<boolean> {
 /**
  * Get client session timeout in seconds from security settings
  * Used for:
- * - Client share sessions (share_session, share_auth cookies)
- * - Video access tokens
- * - Redis session mappings
+ * - Share token TTL guidance
+ * - Video access token TTL
+ * - Redis session mappings for content streaming
  *
  * NOT used for admin JWT sessions (those stay fixed at 15 min with auto-refresh)
  */
@@ -375,4 +375,3 @@ export async function getPasskeyConfigStatus(): Promise<{
     }
   }
 }
-

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateAllSessions, clearAllRateLimits } from '@/lib/session-invalidation'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -85,10 +84,6 @@ export async function PATCH(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   try {
     const body = await request.json()

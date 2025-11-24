@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { clearCsrfToken } from '@/lib/csrf-client'
+import { apiFetch } from '@/lib/api-client'
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '@/lib/token-store'
 
 interface User {
   id: string
@@ -44,19 +45,15 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
 
   async function checkAuth() {
     try {
-      // Use native fetch for session check to avoid circular redirect
-      // The session endpoint returns 401 for unauthenticated, which is expected
-      const response = await fetch('/api/auth/session', {
-        credentials: 'include',
-      })
-      const data = await response.json()
-
-      if (data.authenticated && data.user) {
-        setUser(data.user)
-      } else {
-        setUser(null)
-        // Middleware will handle redirect to /login
+      const response = await apiFetch('/api/auth/session')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.authenticated && data.user) {
+          setUser(data.user)
+          return
+        }
       }
+      setUser(null)
     } catch (error) {
       setUser(null)
     } finally{
@@ -65,8 +62,55 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
   }
 
   useEffect(() => {
-    checkAuth()
+    bootstrap()
   }, [pathname])
+
+  async function bootstrap() {
+    setLoading(true)
+    const refreshToken = getRefreshToken()
+    const hasAccess = getAccessToken()
+
+    if (!hasAccess && refreshToken) {
+      await refreshWithToken(refreshToken)
+    }
+
+    await checkAuth()
+  }
+
+  useEffect(() => {
+    if (requireAuth && !loading && !user) {
+      router.push(`/login?returnUrl=${encodeURIComponent(pathname || '/')}`)
+    }
+  }, [requireAuth, loading, user, pathname, router])
+
+  async function refreshWithToken(refreshToken: string) {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      })
+      if (!response.ok) {
+        clearTokens()
+        return false
+      }
+
+      const data = await response.json()
+      if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
+        setTokens({
+          accessToken: data.tokens.accessToken,
+          refreshToken: data.tokens.refreshToken,
+        })
+        return true
+      }
+      clearTokens()
+      return false
+    } catch (error) {
+      clearTokens()
+      return false
+    }
+  }
 
   /**
    * Secure Logout Function
@@ -79,27 +123,21 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
    * 5. Handle errors gracefully (still logout locally)
    * 
    * Security considerations:
-   * - Uses fetch with credentials: 'include' to send HttpOnly cookies
-   * - Hard redirect (window.location.href) clears all cached state
-   * - Local state cleared immediately (don't wait for server response)
-   * - Graceful degradation: even if API fails, user is logged out locally
    */
   async function logout() {
     try {
-      // Step 1: Call secure logout endpoint
-      // This will:
-      // - Revoke tokens in Redis blacklist
-      // - Delete HttpOnly cookies
-      // - Return 204 No Content
-      const response = await fetch('/api/auth/logout', { 
+      const refreshToken = getRefreshToken()
+      const accessToken = getAccessToken()
+
+      await fetch('/api/auth/logout', { 
         method: 'POST',
-        credentials: 'include', // Include HttpOnly cookies
         headers: {
           'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...(refreshToken ? { 'X-Refresh-Token': `Bearer ${refreshToken}` } : {}),
         },
+        body: JSON.stringify({ refreshToken }),
       })
-
-      // Continue if logout failed - local logout always proceeds
     } catch (error) {
       // Continue with local logout even if API call fails
     }
@@ -109,15 +147,9 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
     setUser(null)
 
     // Step 3: Clear any client-side storage (defense in depth)
-    // Even though we use HttpOnly cookies, clear any other stored data
     try {
-      // Clear CSRF token cache
-      clearCsrfToken()
-
-      // Clear localStorage (if any app data is stored there)
-      localStorage.removeItem('vitransfer_preferences') // Example
-
-      // Clear sessionStorage
+      clearTokens()
+      localStorage.removeItem('vitransfer_preferences')
       sessionStorage.clear()
     } catch (storageError) {
       // Storage might not be available in some contexts - silent fail

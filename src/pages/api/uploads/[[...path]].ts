@@ -26,18 +26,17 @@ const tusServer: Server = new Server({
 
   async onUploadCreate(req, upload) {
     try {
-      const cookieHeader = req.headers.get('cookie')
-      const sessionCookie = cookieHeader?.split(';').find(c => c.trim().startsWith('vitransfer_session='))?.split('=')[1]
+      const { parseBearerToken, verifyAdminAccessToken } = await import('@/lib/auth')
+      const bearer = parseBearerToken(req as any)
 
-      if (!sessionCookie) {
+      if (!bearer) {
         throw {
           status_code: 401,
           body: 'Authentication required'
         }
       }
 
-      const { verifyAccessToken } = await import('@/lib/auth')
-      const payload = await verifyAccessToken(sessionCookie)
+      const payload = await verifyAdminAccessToken(bearer)
 
       if (!payload || payload.role !== 'ADMIN') {
         throw {

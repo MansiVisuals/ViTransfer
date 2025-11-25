@@ -62,8 +62,13 @@ async function getRateLimitEntry(identifier: string): Promise<RateLimitEntry | n
   
   const data = await redis.get(identifier)
   if (!data) return null
-  
-  return JSON.parse(data) as RateLimitEntry
+
+  try {
+    return JSON.parse(data) as RateLimitEntry
+  } catch (error) {
+    console.error('Failed to parse rate limit data:', error)
+    return null
+  }
 }
 
 async function setRateLimitEntry(
@@ -103,10 +108,11 @@ export async function rateLimit(
     maxRequests: number
     message?: string
   },
-  identifier: string = 'general'
+  identifier: string = 'general',
+  customKey?: string
 ): Promise<NextResponse | null> {
   try {
-    const key = getIdentifier(request, identifier)
+    const key = getIdentifier(request, identifier, customKey)
     const now = Date.now()
     const entry = await getRateLimitEntry(key)
 

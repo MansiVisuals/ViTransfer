@@ -22,6 +22,7 @@ interface VideoAssetDownloadModalProps {
   onClose: () => void
   isOpen: boolean
   shareToken?: string | null
+  isAdmin?: boolean
 }
 
 export function VideoAssetDownloadModal({
@@ -31,6 +32,7 @@ export function VideoAssetDownloadModal({
   onClose,
   isOpen,
   shareToken = null,
+  isAdmin = false,
 }: VideoAssetDownloadModalProps) {
   const [assets, setAssets] = useState<VideoAsset[]>([])
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
@@ -49,7 +51,7 @@ export function VideoAssetDownloadModal({
       setLoading(true)
       setError(null)
 
-      const headers = buildAuthHeaders(shareToken)
+      const headers = buildAuthHeaders(shareToken, isAdmin)
       const response = await fetch(`/api/videos/${videoId}/assets`, {
         headers,
       })
@@ -118,7 +120,7 @@ export function VideoAssetDownloadModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...buildAuthHeaders(shareToken),
+          ...buildAuthHeaders(shareToken, isAdmin),
         },
         body: JSON.stringify({
           assetIds: Array.from(selectedAssets),
@@ -312,9 +314,9 @@ export function VideoAssetDownloadModal({
   )
 }
 
-function buildAuthHeaders(shareToken?: string | null) {
+function buildAuthHeaders(shareToken?: string | null, isAdmin?: boolean) {
   const headers: Record<string, string> = {}
-  const token = shareToken || getAccessToken()
+  const token = shareToken || (isAdmin ? getAccessToken() : null)
   if (token) {
     headers.Authorization = `Bearer ${token}`
   }

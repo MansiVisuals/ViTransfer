@@ -204,6 +204,51 @@ export async function isHttpsEnabled(): Promise<boolean> {
   }
 }
 
+export async function getRateLimitSettings(): Promise<{
+  ipRateLimit: number
+  sessionRateLimit: number
+  shareSessionRateLimit?: number
+  shareTokenTtlSeconds?: number
+}> {
+  try {
+    const settings = await prisma.securitySettings.findUnique({
+      where: { id: 'default' },
+      select: {
+        ipRateLimit: true,
+        sessionRateLimit: true,
+        shareSessionRateLimit: true,
+        shareTokenTtlSeconds: true,
+      },
+    })
+
+    return {
+      ipRateLimit: settings?.ipRateLimit ?? 1000,
+      sessionRateLimit: settings?.sessionRateLimit ?? 600,
+      shareSessionRateLimit: settings?.shareSessionRateLimit ?? 300,
+      shareTokenTtlSeconds: settings?.shareTokenTtlSeconds ?? undefined,
+    }
+  } catch (error) {
+    return {
+      ipRateLimit: 1000,
+      sessionRateLimit: 600,
+      shareSessionRateLimit: 300,
+      shareTokenTtlSeconds: undefined,
+    }
+  }
+}
+
+/**
+ * Share token TTL (seconds)
+ * Uses the same client session timeout setting to keep share JWTs aligned with content access TTLs.
+ */
+export async function getShareTokenTtlSeconds(): Promise<number> {
+  const { shareTokenTtlSeconds } = await getRateLimitSettings()
+  if (shareTokenTtlSeconds && shareTokenTtlSeconds > 0) {
+    return shareTokenTtlSeconds
+  }
+  return getClientSessionTimeoutSeconds()
+}
+
 /**
  * Get WebAuthn Relying Party configuration from settings
  *

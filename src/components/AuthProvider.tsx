@@ -168,8 +168,9 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
     router.push(`/login?returnUrl=${encodeURIComponent(pathname || '/')}`)
   }
 
-  // Show loading state while checking auth
-  if (loading && requireAuth) {
+  // SECURITY: Show loading state while checking auth OR when unauthenticated (before redirect)
+  // This prevents content flash - NO content should render until auth is confirmed
+  if (requireAuth && (loading || !user)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

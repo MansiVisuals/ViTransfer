@@ -9,8 +9,38 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
 import { apiPost, apiFetch } from '@/lib/api-client'
-import { generateSecurePassword } from '@/lib/password-utils'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
+
+// Client-safe password generation using Web Crypto API
+function generateSecurePassword(): string {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'
+  const numbers = '23456789'
+  const special = '!@#$%'
+  const all = letters + numbers + special
+
+  const getRandomInt = (max: number) => {
+    const array = new Uint32Array(1)
+    crypto.getRandomValues(array)
+    return array[0] % max
+  }
+
+  let password = ''
+  password += letters.charAt(getRandomInt(letters.length))
+  password += numbers.charAt(getRandomInt(numbers.length))
+
+  for (let i = 2; i < 12; i++) {
+    password += all.charAt(getRandomInt(all.length))
+  }
+
+  // Fisher-Yates shuffle
+  const chars = password.split('')
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = getRandomInt(i + 1)
+    ;[chars[i], chars[j]] = [chars[j], chars[i]]
+  }
+
+  return chars.join('')
+}
 
 export default function NewProjectPage() {
   const router = useRouter()

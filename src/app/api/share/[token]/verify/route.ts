@@ -4,9 +4,10 @@ import { decrypt } from '@/lib/encryption'
 import crypto from 'crypto'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
-import { getMaxAuthAttempts } from '@/lib/settings'
+import { getMaxAuthAttempts, getRateLimitSettings } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
 import { signShareToken } from '@/lib/auth'
+import { getShareTokenTtlSeconds } from '@/lib/settings'
 export const runtime = 'nodejs'
 
 
@@ -53,6 +54,7 @@ export async function POST(
 ) {
   try {
     const { token } = await params
+    const { sessionRateLimit } = await getRateLimitSettings()
     const redis = getRedis()
     const rateLimitKey = getIdentifier(request, token)
 
@@ -201,11 +203,13 @@ export async function POST(
     // SUCCESS - clear any existing rate limit data
     await redis.del(rateLimitKey)
 
+    const shareTokenTtl = await getShareTokenTtlSeconds()
     const shareToken = signShareToken({
       shareId: token,
       projectId: project.id,
       permissions: ['view', 'comment', 'download'],
       guest: false,
+      ttlSeconds: shareTokenTtl,
     })
 
     return NextResponse.json({ success: true, shareToken })

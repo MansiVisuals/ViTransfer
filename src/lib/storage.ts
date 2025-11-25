@@ -34,8 +34,10 @@ function validatePath(filePath: string): string {
   // 3. Normalize path separators (convert backslashes to forward slashes)
   decoded = decoded.replace(/\\/g, '/')
 
-  // 4. Remove any .. sequences anywhere in the path
-  decoded = decoded.replace(/\.\./g, '')
+  // 4. Remove any .. sequences anywhere in the path (loop to handle .... → ..)
+  while (decoded.includes('..')) {
+    decoded = decoded.replace(/\.\./g, '')
+  }
 
   // 5. Normalize the path to resolve any remaining . or .. sequences
   const sanitized = path.normalize(decoded)

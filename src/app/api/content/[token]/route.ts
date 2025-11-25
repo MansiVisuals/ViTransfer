@@ -2,18 +2,40 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyVideoAccessToken, detectHotlinking, trackVideoAccess, logSecurityEvent, getSecuritySettings } from '@/lib/video-access'
 import { getRedis } from '@/lib/redis'
 import { prisma } from '@/lib/db'
-import { createReadStream, existsSync, statSync } from 'fs'
-import fs from 'fs'
+import { createReadStream, existsSync, statSync, ReadStream } from 'fs'
 import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getCurrentUserFromRequest } from '@/lib/auth'
+
 export const runtime = 'nodejs'
-
-
-
 export const dynamic = 'force-dynamic'
 
+/**
+ * Convert Node.js ReadStream to Web ReadableStream
+ */
+function createWebReadableStream(fileStream: ReadStream): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      fileStream.on('data', (chunk) => controller.enqueue(chunk))
+      fileStream.on('end', () => controller.close())
+      fileStream.on('error', (err) => controller.error(err))
+    },
+    cancel() {
+      fileStream.destroy()
+    },
+  })
+}
+
+/**
+ * Content delivery endpoint - streams video/thumbnail content with security checks
+ * Handles both admin and share token authentication with rate limiting and hotlink protection
+ * Supports range requests for video streaming and direct downloads
+ *
+ * @param request - NextRequest with authorization header and optional range header
+ * @param params - Route params containing the video access token
+ * @returns Video/thumbnail stream with appropriate headers, or error response
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -184,17 +206,7 @@ export async function GET(
       })
 
       const fileStream = createReadStream(fullPath)
-
-      const readableStream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', (chunk) => controller.enqueue(chunk))
-          fileStream.on('end', () => controller.close())
-          fileStream.on('error', (err) => controller.error(err))
-        },
-        cancel() {
-          fileStream.destroy()
-        },
-      })
+      const readableStream = createWebReadableStream(fileStream)
 
       return new NextResponse(readableStream, {
         headers: {
@@ -223,17 +235,7 @@ export async function GET(
       const chunksize = (end - start) + 1
 
       const fileStream = createReadStream(fullPath, { start, end })
-
-      const readableStream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', (chunk) => controller.enqueue(chunk))
-          fileStream.on('end', () => controller.close())
-          fileStream.on('error', (err) => controller.error(err))
-        },
-        cancel() {
-          fileStream.destroy()
-        },
-      })
+      const readableStream = createWebReadableStream(fileStream)
 
       // Determine correct Content-Type based on file type
       const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
@@ -255,17 +257,7 @@ export async function GET(
     }
 
     const fileStream = createReadStream(fullPath)
-
-    const readableStream = new ReadableStream({
-      start(controller) {
-        fileStream.on('data', (chunk) => controller.enqueue(chunk))
-        fileStream.on('end', () => controller.close())
-        fileStream.on('error', (err) => controller.error(err))
-      },
-      cancel() {
-        fileStream.destroy()
-      },
-    })
+    const readableStream = createWebReadableStream(fileStream)
 
     // Determine correct Content-Type based on file type
     const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'

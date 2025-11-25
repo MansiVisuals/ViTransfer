@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import crypto from 'crypto'
 
 // Debug mode - outputs verbose FFmpeg logs
 // Enable with: DEBUG_WORKER=true environment variable
@@ -255,7 +256,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
 
     // SECURITY: Write watermark to temp file instead of inline
     // This eliminates command injection risk even with complex escaping
-    watermarkTextFile = path.join(os.tmpdir(), `watermark-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`)
+    watermarkTextFile = path.join(os.tmpdir(), `watermark-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.txt`)
     fs.writeFileSync(watermarkTextFile, validatedText, 'utf-8')
 
     const isVertical = height > width
@@ -335,8 +336,8 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
       if (onProgress && duration > 0) {
         const timeMatch = text.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/)
         if (timeMatch) {
-          const hours = parseInt(timeMatch[1])
-          const minutes = parseInt(timeMatch[2])
+          const hours = parseInt(timeMatch[1], 10)
+          const minutes = parseInt(timeMatch[2], 10)
           const seconds = parseFloat(timeMatch[3])
           const currentTime = hours * 3600 + minutes * 60 + seconds
           const progress = Math.min(currentTime / duration, 1)

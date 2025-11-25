@@ -1,5 +1,7 @@
+import crypto from 'crypto'
+
 /**
- * Generate a secure random password
+ * Generate a secure random password using crypto.randomInt()
  * Guarantees: 12 characters minimum, at least one letter, at least one number
  */
 export function generateSecurePassword(): string {
@@ -11,32 +13,37 @@ export function generateSecurePassword(): string {
   let password = ''
 
   // Ensure at least one letter
-  password += letters.charAt(Math.floor(Math.random() * letters.length))
+  password += letters.charAt(crypto.randomInt(0, letters.length))
 
   // Ensure at least one number
-  password += numbers.charAt(Math.floor(Math.random() * numbers.length))
+  password += numbers.charAt(crypto.randomInt(0, numbers.length))
 
   // Fill the rest randomly (total 12 chars)
   for (let i = 2; i < 12; i++) {
-    password += all.charAt(Math.floor(Math.random() * all.length))
+    password += all.charAt(crypto.randomInt(0, all.length))
   }
 
-  // Shuffle to randomize positions of guaranteed chars
-  password = password.split('').sort(() => Math.random() - 0.5).join('')
+  // Shuffle to randomize positions of guaranteed chars using Fisher-Yates
+  const chars = password.split('')
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(0, i + 1)
+    ;[chars[i], chars[j]] = [chars[j], chars[i]]
+  }
+  password = chars.join('')
 
   return password
 }
 
 /**
- * Generate a URL-safe random slug
+ * Generate a URL-safe random slug using crypto.randomInt()
  */
 export function generateRandomSlug(): string {
   const chars = 'abcdefghjkmnpqrstuvwxyz23456789'
   let slug = ''
-  const length = 8 + Math.floor(Math.random() * 5) // Random length between 8-12
+  const length = 8 + crypto.randomInt(0, 5) // Random length between 8-12
   for (let i = 0; i < length; i++) {
-    slug += chars.charAt(Math.floor(Math.random() * chars.length))
-    if (i > 0 && i < length - 1 && Math.random() < 0.2) {
+    slug += chars.charAt(crypto.randomInt(0, chars.length))
+    if (i > 0 && i < length - 1 && crypto.randomInt(0, 5) === 0) {
       slug += '-'
     }
   }

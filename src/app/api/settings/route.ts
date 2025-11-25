@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
   // Rate limiting to prevent enumeration/scraping
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000, // 1 minute
-    maxRequests: 30,
+    maxRequests: 120,
     message: 'Too many requests. Please slow down.'
-  }, 'settings-read')
+  }, 'settings-read', authResult.id)
   if (rateLimitResult) return rateLimitResult
 
   try {
@@ -202,7 +202,7 @@ export async function PATCH(request: NextRequest) {
     const updateData: any = {
       companyName,
       smtpServer,
-      smtpPort: smtpPort ? parseInt(smtpPort) : null,
+      smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
       smtpUsername,
       smtpFromAddress,
       smtpSecure,
@@ -229,7 +229,7 @@ export async function PATCH(request: NextRequest) {
         id: 'default',
         companyName,
         smtpServer,
-        smtpPort: smtpPort ? parseInt(smtpPort) : null,
+        smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
         smtpUsername,
         smtpPassword: passwordUpdate || null,
         smtpFromAddress,

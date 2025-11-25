@@ -46,13 +46,13 @@ export function sanitizeComment(
       }
     }
   } else if (isAuthenticated) {
-    // Authenticated users see the actual author name (custom or recipient name)
-    sanitized.authorName = comment.isInternal ? 'Admin' : (comment.authorName || clientName || 'Client')
-    // NO email fields at all for non-admins
+    // Authenticated share users see author names but never emails
+    sanitized.authorName = comment.isInternal
+      ? (comment.authorName || 'Admin')
+      : (comment.authorName || clientName || 'Client')
   } else {
-    // Clients/public users ONLY see generic labels - zero PII
+    // Guests/public: generic labels only, no PII
     sanitized.authorName = comment.isInternal ? 'Admin' : 'Client'
-    // NO email fields at all for non-admins
   }
 
   // Recursively sanitize replies

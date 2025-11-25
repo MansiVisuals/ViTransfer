@@ -1,8 +1,8 @@
 import { Worker, Queue } from 'bullmq'
-import { getConnection, VideoProcessingJob, AssetProcessingJob } from '../lib/queue'
+import { VideoProcessingJob, AssetProcessingJob } from '../lib/queue'
 import { initStorage } from '../lib/storage'
 import { runCleanup } from '../lib/upload-cleanup'
-import { closeRedisConnection } from '../lib/redis'
+import { getRedisForQueue, closeRedisConnection } from '../lib/redis'
 import os from 'os'
 import { processVideo } from './video-processor'
 import { processAsset } from './asset-processor'
@@ -64,7 +64,7 @@ async function main() {
   }
 
   const worker = new Worker<VideoProcessingJob>('video-processing', processVideo, {
-    connection: getConnection(),
+    connection: getRedisForQueue(),
     concurrency,
     limiter: {
       max: concurrency * 10,
@@ -102,7 +102,7 @@ async function main() {
 
   // Create asset processing worker
   const assetWorker = new Worker<AssetProcessingJob>('asset-processing', processAsset, {
-    connection: getConnection(),
+    connection: getRedisForQueue(),
     concurrency: concurrency * 2, // Assets are lighter than videos
   })
 
@@ -126,7 +126,7 @@ async function main() {
   // Create notification processing queue with repeatable job
   console.log('Setting up notification processing...')
   const notificationQueue = new Queue('notification-processing', {
-    connection: getConnection(),
+    connection: getRedisForQueue(),
   })
 
   // Add repeatable job to check notification schedules every minute
@@ -155,7 +155,7 @@ async function main() {
       console.log('Notification check completed')
     },
     {
-      connection: getConnection(),
+      connection: getRedisForQueue(),
       concurrency: 1,
     }
   )

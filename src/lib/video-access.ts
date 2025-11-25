@@ -14,6 +14,17 @@ interface VideoAccessToken {
   createdAt: number
 }
 
+/**
+ * Generate a time-limited video access token with session binding
+ * Tokens are cached per session to prevent token proliferation
+ *
+ * @param videoId - ID of the video to grant access to
+ * @param projectId - ID of the project containing the video
+ * @param quality - Quality level (thumbnail, preview720, preview1080, original)
+ * @param request - NextRequest for IP address extraction
+ * @param sessionId - Session ID for binding token to specific session
+ * @returns Base64url-encoded access token valid for client session timeout duration
+ */
 export async function generateVideoAccessToken(
   videoId: string,
   projectId: string,
@@ -58,6 +69,15 @@ export async function generateVideoAccessToken(
   return token
 }
 
+/**
+ * Verify video access token and validate session binding
+ * Checks token existence, session match, and IP address consistency
+ *
+ * @param token - The access token to verify
+ * @param request - NextRequest for IP address validation
+ * @param sessionId - Expected session ID for token binding verification
+ * @returns Parsed token data if valid, null if invalid or expired
+ */
 export async function verifyVideoAccessToken(
   token: string,
   request: NextRequest,
@@ -109,6 +129,16 @@ export async function verifyVideoAccessToken(
   return tokenData
 }
 
+/**
+ * Detect potential hotlinking attempts using referer analysis and session validation
+ * Checks for suspicious patterns: missing referer, external domains, rapid token rotation
+ *
+ * @param request - NextRequest containing referer and origin headers
+ * @param sessionId - Session ID for tracking access patterns
+ * @param videoId - Video being accessed
+ * @param projectId - Project containing the video
+ * @returns Object indicating if hotlinking detected, with reason and severity level
+ */
 export async function detectHotlinking(
   request: NextRequest,
   sessionId: string,

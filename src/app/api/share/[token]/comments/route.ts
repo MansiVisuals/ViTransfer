@@ -4,6 +4,7 @@ import { getPrimaryRecipient } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
+import { getRateLimitSettings } from '@/lib/settings'
 export const runtime = 'nodejs'
 
 
@@ -24,11 +25,12 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const { ipRateLimit } = await getRateLimitSettings()
 
     // Rate limiting to prevent scraping
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
-      maxRequests: 30,
+      maxRequests: ipRateLimit ? Math.max(1, Math.min(ipRateLimit, 1000)) : 30,
       message: 'Too many requests. Please slow down.'
     }, `share-comments:${token}`)
 
@@ -108,7 +110,12 @@ export async function GET(
     })
 
     // Sanitize comments - never expose PII to non-admins
-    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, fallbackName))
+    const sanitizedComments = comments.map((comment: any) => sanitizeComment(
+      comment,
+      isAdmin,
+      isAuthenticated,
+      fallbackName,
+    ))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

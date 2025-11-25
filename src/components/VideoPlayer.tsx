@@ -73,7 +73,7 @@ export default function VideoPlayer({
 
   const buildAuthHeaders = (shareTokenOverride?: string | null) => {
     const headers: Record<string, string> = {}
-    const token = shareTokenOverride || getAccessToken()
+    const token = shareTokenOverride || (isAdmin ? getAccessToken() : null)
     if (token) {
       headers.Authorization = `Bearer ${token}`
     }
@@ -315,9 +315,7 @@ export default function VideoPlayer({
       if (onApprove) {
         await onApprove()
       }
-
-      // Reload the page to show updated state
-      window.location.reload()
+      // Parent handles refresh; avoid page reload to prevent loops
     } catch (error) {
       alert('Failed to approve project')
     } finally {
@@ -580,6 +578,7 @@ export default function VideoPlayer({
           isOpen={showDownloadModal}
           onClose={() => setShowDownloadModal(false)}
           shareToken={shareToken}
+          isAdmin={isAdmin}
         />
       )}
     </div>

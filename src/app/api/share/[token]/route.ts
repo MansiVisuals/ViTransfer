@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { generateVideoAccessToken } from '@/lib/video-access'
-import { isSmtpConfigured } from '@/lib/settings'
+import { isSmtpConfigured, getRateLimitSettings, getShareTokenTtlSeconds } from '@/lib/settings'
 import { getCurrentUserFromRequest, getShareContext, signShareToken } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-access'
@@ -19,10 +19,12 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const { ipRateLimit } = await getRateLimitSettings()
+    const shareTtlSeconds = await getShareTokenTtlSeconds()
 
     const rateLimitResult = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
-      maxRequests: 100,
+      maxRequests: ipRateLimit || 100,
       message: 'Too many requests. Please try again later.'
     }, `share-access:${token}`)
     if (rateLimitResult) return rateLimitResult
@@ -69,7 +71,8 @@ export async function GET(
 
     const { isAdmin } = accessCheck
 
-    if (projectMeta.guestMode && !isAdmin && !isGuest) {
+    const hasShareSession = !!shareContext
+    if (projectMeta.guestMode && !isAdmin && !hasShareSession && !isGuest) {
       return NextResponse.json({
         error: 'Guest entry required',
         requiresPassword: false,
@@ -282,6 +285,7 @@ export async function GET(
         guest: false,
         sessionId,
         authMode: projectMeta.authMode,
+        ttlSeconds: shareTtlSeconds,
       })
       responseBody.shareToken = shareToken
     }

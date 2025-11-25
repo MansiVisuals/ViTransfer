@@ -6,6 +6,7 @@ import { getClientIpAddress } from '@/lib/utils'
 import { getMaxAuthAttempts } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
 import { signShareToken } from '@/lib/auth'
+import { getShareTokenTtlSeconds } from '@/lib/settings'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -210,11 +211,13 @@ export async function POST(
     // SUCCESS - Clear rate limit on successful verification
     await redisClient.del(rateLimitKey)
 
+    const shareTokenTtl = await getShareTokenTtlSeconds()
     const shareToken = signShareToken({
       shareId: token,
       projectId: project.id,
       permissions: ['view', 'comment', 'download'],
       guest: false,
+      ttlSeconds: shareTokenTtl,
     })
 
     // Log security event for successful OTP verification

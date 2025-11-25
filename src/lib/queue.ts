@@ -1,32 +1,9 @@
 import { Queue, Worker, Job } from 'bullmq'
-import IORedis from 'ioredis'
+import { getRedisForQueue } from './redis'
 
 // Lazy initialization to prevent connections during build time
-let connection: IORedis | null = null
 let videoQueueInstance: Queue<VideoProcessingJob> | null = null
 let assetQueueInstance: Queue<AssetProcessingJob> | null = null
-
-function getConnection(): IORedis {
-  if (!connection) {
-    connection = new IORedis({
-      host: process.env.REDIS_HOST || 'redis',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null,
-      lazyConnect: true, // Don't connect immediately
-      enableReadyCheck: false,
-      retryStrategy: (times) => {
-        // Only retry in production/runtime, not during build
-        if (process.env.NEXT_PHASE === 'phase-production-build') {
-          return null // Don't retry during build
-        }
-        const delay = Math.min(times * 50, 2000)
-        return delay
-      },
-    })
-  }
-  return connection
-}
 
 export interface VideoProcessingJob {
   videoId: string
@@ -48,7 +25,7 @@ export function getVideoQueue(): Queue<VideoProcessingJob> {
   
   if (!videoQueueInstance) {
     videoQueueInstance = new Queue<VideoProcessingJob>('video-processing', {
-      connection: getConnection(),
+      connection: getRedisForQueue(),
       defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -75,7 +52,7 @@ export function getAssetQueue(): Queue<AssetProcessingJob> {
 
   if (!assetQueueInstance) {
     assetQueueInstance = new Queue<AssetProcessingJob>('asset-processing', {
-      connection: getConnection(),
+      connection: getRedisForQueue(),
       defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -106,5 +83,3 @@ export const assetQueue = new Proxy({} as Queue<AssetProcessingJob>, {
     return getAssetQueue()[prop as keyof Queue<AssetProcessingJob>]
   }
 })
-
-export { connection, getConnection }

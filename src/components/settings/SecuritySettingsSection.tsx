@@ -15,6 +15,10 @@ interface SecuritySettingsSectionProps {
   setIpRateLimit: (value: string) => void
   sessionRateLimit: string
   setSessionRateLimit: (value: string) => void
+  shareSessionRateLimit: string
+  setShareSessionRateLimit: (value: string) => void
+  shareTokenTtlSeconds: string
+  setShareTokenTtlSeconds: (value: string) => void
   passwordAttempts: string
   setPasswordAttempts: (value: string) => void
   sessionTimeoutValue: string
@@ -40,6 +44,10 @@ export function SecuritySettingsSection({
   setIpRateLimit,
   sessionRateLimit,
   setSessionRateLimit,
+  shareSessionRateLimit,
+  setShareSessionRateLimit,
+  shareTokenTtlSeconds,
+  setShareTokenTtlSeconds,
   passwordAttempts,
   setPasswordAttempts,
   sessionTimeoutValue,
@@ -146,7 +154,7 @@ export function SecuritySettingsSection({
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
             <Label className="text-base">Rate Limiting & Security</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ipRateLimit">IP Rate Limit</Label>
                 <Input
@@ -154,24 +162,38 @@ export function SecuritySettingsSection({
                   type="number"
                   value={ipRateLimit}
                   onChange={(e) => setIpRateLimit(e.target.value)}
-                  placeholder="300"
+                  placeholder="1000"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Requests per minute per IP
+                  Requests per minute per IP (default: 1000)
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sessionRateLimit">Session Rate Limit</Label>
+                <Label htmlFor="sessionRateLimit">Admin Session Limit</Label>
                 <Input
                   id="sessionRateLimit"
                   type="number"
                   value={sessionRateLimit}
                   onChange={(e) => setSessionRateLimit(e.target.value)}
-                  placeholder="120"
+                  placeholder="600"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Requests per minute per session
+                  Requests per minute per admin session (default: 600)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="shareSessionRateLimit">Share Session Limit</Label>
+                <Input
+                  id="shareSessionRateLimit"
+                  type="number"
+                  value={shareSessionRateLimit}
+                  onChange={(e) => setShareSessionRateLimit(e.target.value)}
+                  placeholder="300"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Requests per minute per share session (default: 300)
                 </p>
               </div>
 
@@ -233,13 +255,29 @@ export function SecuritySettingsSection({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="shareTokenTtlSeconds">Share JWT Token Expiry (seconds)</Label>
+              <Input
+                id="shareTokenTtlSeconds"
+                type="number"
+                min="60"
+                max="86400"
+                value={shareTokenTtlSeconds}
+                onChange={(e) => setShareTokenTtlSeconds(e.target.value)}
+                placeholder="Leave blank to use session timeout"
+              />
+              <p className="text-xs text-muted-foreground">
+                Override share JWT expiry (60-86400 seconds). Leave blank to use session timeout above. Default: session timeout.
+              </p>
+            </div>
+
             <div className="p-3 bg-muted rounded-md">
               <p className="text-sm font-medium">
                 Current Setting: {sessionTimeoutValue} {sessionTimeoutUnit.toLowerCase()}
               </p>
               <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
                 {(() => {
-                  const val = parseInt(sessionTimeoutValue) || 15
+                  const val = parseInt(sessionTimeoutValue, 10) || 15
                   const unit = sessionTimeoutUnit
                   if (unit === 'MINUTES') {
                     if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very short - users may be logged out while actively viewing</>

@@ -20,6 +20,8 @@ interface UseCommentManagementProps {
   clientName: string
   restrictToLatestVersion: boolean
   shareToken?: string | null
+  useAdminAuth?: boolean
+  companyName?: string
 }
 
 export function useCommentManagement({
@@ -33,6 +35,8 @@ export function useCommentManagement({
   clientName,
   restrictToLatestVersion,
   shareToken = null,
+  useAdminAuth = false,
+  companyName = 'Studio',
 }: UseCommentManagementProps) {
   const router = useRouter()
 
@@ -191,6 +195,11 @@ export function useCommentManagement({
       return
     }
 
+    if (useAdminAuth && !adminUser) {
+      alert('Admin session not loaded yet. Please wait a moment and try again.')
+      return
+    }
+
     const validatedVideoId: string = selectedVideoId
 
     // Check if commenting on latest version only
@@ -206,7 +215,7 @@ export function useCommentManagement({
     setLoading(true)
 
     // OPTIMISTIC UPDATE
-    const isInternalComment = !!adminUser
+    const isInternalComment = useAdminAuth || !!adminUser
     const optimisticComment: CommentWithReplies = {
       id: `temp-${Date.now()}`,
       projectId,
@@ -215,9 +224,9 @@ export function useCommentManagement({
       timestamp: selectedTimestamp,
       content: newComment,
       authorName: isInternalComment
-        ? (adminUser.name || adminUser.email)
+        ? (adminUser!.name || 'Admin')
         : (isPasswordProtected ? authorName : 'Client'),
-      authorEmail: isInternalComment ? adminUser.email : (clientEmail || null),
+      authorEmail: isInternalComment ? null : (clientEmail || null),
       isInternal: isInternalComment,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -251,8 +260,7 @@ export function useCommentManagement({
 
       // Add optional fields only if they have values
       if (isInternalComment) {
-        requestBody.authorName = adminUser.name || adminUser.email
-        if (adminUser.email) requestBody.authorEmail = adminUser.email
+        requestBody.authorName = companyName || adminUser!.name || 'Admin'
       } else {
         if (authorName) requestBody.authorName = authorName
         if (clientEmail) requestBody.authorEmail = clientEmail
@@ -279,8 +287,10 @@ export function useCommentManagement({
           const err = await response.json().catch(() => ({}))
           throw new Error(err.error || 'Failed to submit comment')
         }
-      } else {
+      } else if (useAdminAuth) {
         await apiPost('/api/comments', requestBody)
+      } else {
+        throw new Error('Authentication required to submit comment')
       }
 
       router.refresh()
@@ -326,7 +336,7 @@ export function useCommentManagement({
   }
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!adminUser) {
+    if (!(useAdminAuth || adminUser)) {
       alert('Only admins can delete comments')
       return
     }
@@ -347,8 +357,10 @@ export function useCommentManagement({
           const err = await response.json().catch(() => ({}))
           throw new Error(err.error || 'Failed to delete comment')
         }
-      } else {
+      } else if (useAdminAuth) {
         await apiDelete(`/api/comments/${commentId}`)
+      } else {
+        throw new Error('Authentication required to delete comment')
       }
 
       // Trigger immediate re-fetch via window event (CommentSection polling will pick it up)

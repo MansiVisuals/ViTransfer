@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
 import { Lock, Check, Mail, KeyRound } from 'lucide-react'
+import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 
 export default function SharePage() {
   const params = useParams()
@@ -18,9 +19,9 @@ export default function SharePage() {
   const token = params?.token as string
 
   // Parse URL parameters for video seeking
-  const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!) : null
+  const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
   const urlVideoName = searchParams?.get('video') || null
-  const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!) : null
+  const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
 
   const [isPasswordProtected, setIsPasswordProtected] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -39,11 +40,51 @@ export default function SharePage() {
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [companyName, setCompanyName] = useState('Studio')
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
+  const [adminUser, setAdminUser] = useState<any>(null)
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
+  const visitLoggedRef = useRef(false)
+  const storageKey = token || ''
+
+  // Load stored token once (persist across refresh)
+  useEffect(() => {
+    if (!storageKey) return
+    const stored = loadShareToken(storageKey)
+    if (stored) {
+      setShareToken(stored)
+    }
+  }, [storageKey])
+
+  // Detect if an admin session is present so admin comments stay internal
+  useEffect(() => {
+    let isMounted = true
+
+    const loadAdminUser = async () => {
+      try {
+        const response = await fetch('/api/auth/session', {
+          headers: { 'Cache-Control': 'no-store' },
+        })
+        if (!isMounted) return
+        if (response.ok) {
+          const data = await response.json()
+          setAdminUser(data.user)
+        } else {
+          setAdminUser(null)
+        }
+      } catch {
+        // Ignore session lookup failures for public viewers
+      }
+    }
+
+    loadAdminUser()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Fetch comments separately for security
   const fetchComments = async () => {
@@ -79,8 +120,10 @@ export default function SharePage() {
 
         if (projectData.shareToken) {
           setShareToken(projectData.shareToken)
+          saveShareToken(storageKey, projectData.shareToken)
         } else if (tokenOverride) {
           setShareToken(tokenOverride)
+          saveShareToken(storageKey, tokenOverride)
         }
         setProject(projectData)
 
@@ -110,6 +153,7 @@ export default function SharePage() {
         if (!isMounted) return
 
         if (response.status === 401) {
+          saveShareToken(storageKey, null)
           const data = await response.json()
           if (data.authMode === 'NONE' && data.guestMode) {
             try {
@@ -121,6 +165,7 @@ export default function SharePage() {
                 const guestData = await guestResponse.json()
                 if (guestData.shareToken) {
                   setShareToken(guestData.shareToken)
+                  saveShareToken(storageKey, guestData.shareToken)
                   setIsGuest(true)
                   setIsAuthenticated(true)
                   await loadProject()
@@ -148,6 +193,7 @@ export default function SharePage() {
           const projectData = await response.json()
           if (projectData.shareToken) {
             setShareToken(projectData.shareToken)
+            saveShareToken(storageKey, projectData.shareToken)
           }
           if (isMounted) {
             setProject(projectData)
@@ -234,6 +280,30 @@ export default function SharePage() {
     }
   }, [project, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
 
+  // Record analytics visit once per page load (deduped server-side)
+  useEffect(() => {
+    if (visitLoggedRef.current) return
+    if (!token || !project?.id || !activeVideoName || !shareToken) return
+
+    const videosForActive = project.videosByName?.[activeVideoName]
+    if (!videosForActive || videosForActive.length === 0) return
+
+    const targetVideoId = videosForActive[0]?.id
+    if (!targetVideoId) return
+
+    visitLoggedRef.current = true
+    fetch('/api/analytics/visit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${shareToken}`
+      },
+      body: JSON.stringify({ projectId: project.id, videoId: targetVideoId }),
+    }).catch(() => {
+      // ignore analytics failure
+    })
+  }, [project?.id, project?.videosByName, activeVideoName, token, shareToken])
+
   // Handle video selection
   const handleVideoSelect = (videoName: string) => {
     setActiveVideoName(videoName)
@@ -288,6 +358,7 @@ export default function SharePage() {
         const data = await response.json()
         if (data.shareToken) {
           setShareToken(data.shareToken)
+          saveShareToken(storageKey, data.shareToken)
         }
         setIsAuthenticated(true)
         setIsGuest(false)
@@ -319,6 +390,7 @@ export default function SharePage() {
         const data = await response.json()
         if (data.shareToken) {
           setShareToken(data.shareToken)
+          saveShareToken(storageKey, data.shareToken)
         }
         setIsAuthenticated(true)
         setIsGuest(false)
@@ -348,6 +420,7 @@ export default function SharePage() {
         const data = await response.json()
         if (data.shareToken) {
           setShareToken(data.shareToken)
+          saveShareToken(storageKey, data.shareToken)
         }
         setIsAuthenticated(true)
         setIsGuest(true)
@@ -633,15 +706,16 @@ export default function SharePage() {
                     restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                     videos={readyVideos}
                     isAdminView={false}
-                    companyName={companyName}
-                    clientCompanyName={project.companyName}
-                    smtpConfigured={project.smtpConfigured}
-                    isPasswordProtected={isPasswordProtected || false}
-                    recipients={project.recipients || []}
-                    shareToken={shareToken}
-                  />
-                </div>
-              )}
+                  companyName={companyName}
+                  clientCompanyName={project.companyName}
+                  smtpConfigured={project.smtpConfigured}
+                  isPasswordProtected={isPasswordProtected || false}
+                  adminUser={adminUser}
+                  recipients={project.recipients || []}
+                  shareToken={shareToken}
+                />
+              </div>
+            )}
 
               {/* Mobile Footer */}
               <div className="lg:hidden border-t border-border py-3 px-6 mt-6 col-span-full">

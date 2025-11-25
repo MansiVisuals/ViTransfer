@@ -125,7 +125,12 @@ export async function GET(request: NextRequest) {
 
     // Sanitize the response data
     const sanitizedComments = allComments.map((comment: any) =>
-      sanitizeComment(comment, isAdmin, isAuthenticated, fallbackName)
+      sanitizeComment(
+        comment,
+        isAdmin,
+        isAuthenticated,
+        fallbackName,
+      )
     )
 
     return NextResponse.json(sanitizedComments)

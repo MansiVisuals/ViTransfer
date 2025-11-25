@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
 import { signShareToken } from '@/lib/auth'
+import { getShareTokenTtlSeconds } from '@/lib/settings'
 export const runtime = 'nodejs'
 
 
@@ -46,12 +47,14 @@ export async function POST(
       return NextResponse.json({ error: 'Guest access is not enabled for this project' }, { status: 403 })
     }
 
+    const ttlSeconds = await getShareTokenTtlSeconds()
     const shareToken = signShareToken({
       shareId: token,
       projectId: project.id,
       permissions: ['view'],
       guest: true,
       sessionId: crypto.randomBytes(16).toString('base64url'),
+      ttlSeconds,
     })
 
     return NextResponse.json({ success: true, shareToken })

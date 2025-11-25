@@ -14,10 +14,61 @@ import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { apiFetch } from '@/lib/api-client'
-import { generateSecurePassword, generateRandomSlug, sanitizeSlug } from '@/lib/password-utils'
+import { sanitizeSlug } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
 import { ArrowLeft, Save, RefreshCw, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
+
+// Client-safe password generation using Web Crypto API
+function generateSecurePassword(): string {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'
+  const numbers = '23456789'
+  const special = '!@#$%'
+  const all = letters + numbers + special
+
+  const getRandomInt = (max: number) => {
+    const array = new Uint32Array(1)
+    crypto.getRandomValues(array)
+    return array[0] % max
+  }
+
+  let password = ''
+  password += letters.charAt(getRandomInt(letters.length))
+  password += numbers.charAt(getRandomInt(numbers.length))
+
+  for (let i = 2; i < 12; i++) {
+    password += all.charAt(getRandomInt(all.length))
+  }
+
+  // Fisher-Yates shuffle
+  const chars = password.split('')
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = getRandomInt(i + 1)
+    ;[chars[i], chars[j]] = [chars[j], chars[i]]
+  }
+
+  return chars.join('')
+}
+
+// Client-safe slug generation using Web Crypto API
+function generateRandomSlug(): string {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'
+  const getRandomInt = (max: number) => {
+    const array = new Uint32Array(1)
+    crypto.getRandomValues(array)
+    return array[0] % max
+  }
+
+  let slug = ''
+  const length = 8 + getRandomInt(5) // 8-12 chars
+  for (let i = 0; i < length; i++) {
+    slug += chars.charAt(getRandomInt(chars.length))
+    if (i > 0 && i < length - 1 && getRandomInt(5) === 0) {
+      slug += '-'
+    }
+  }
+  return slug.replace(/-+/g, '-')
+}
 
 interface Project {
   id: string
@@ -244,7 +295,7 @@ export default function ProjectSettingsPage() {
       }
 
       // Ensure revision values are valid numbers before saving
-      const finalMaxRevisions = typeof maxRevisions === 'number' ? maxRevisions : parseInt(String(maxRevisions)) || 1
+      const finalMaxRevisions = typeof maxRevisions === 'number' ? maxRevisions : parseInt(String(maxRevisions), 10) || 1
 
       // Validate: maxRevisions must be at least 1
       if (enableRevisions && finalMaxRevisions < 1) {
@@ -355,8 +406,7 @@ export default function ProjectSettingsPage() {
   async function reprocessVideos() {
     setReprocessing(true)
     try {
-      const data = await apiPost(`/api/projects/${projectId}/reprocess`, {})
-      console.log(`Reprocessing ${data.count} videos`)
+      await apiPost(`/api/projects/${projectId}/reprocess`, {})
     } catch (err) {
       console.error('Error reprocessing videos:', err)
       // Don't throw - we still want to save settings
@@ -763,7 +813,7 @@ export default function ProjectSettingsPage() {
                           if (val === '') {
                             setMaxRevisions('')
                           } else {
-                            const num = parseInt(val)
+                            const num = parseInt(val, 10)
                             if (!isNaN(num)) setMaxRevisions(num)
                           }
                         }}
@@ -773,7 +823,7 @@ export default function ProjectSettingsPage() {
                           if (val === '') {
                             setMaxRevisions(1)
                           } else {
-                            const num = parseInt(val)
+                            const num = parseInt(val, 10)
                             if (isNaN(num) || num < 1) setMaxRevisions(1)
                             else if (num > 20) setMaxRevisions(20)
                           }

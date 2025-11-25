@@ -162,7 +162,12 @@ export async function PATCH(
     // Sanitize response - never expose PII
     // Priority: companyName → primary recipient → undefined
     const primaryRecipientName = existingComment.project.companyName || existingComment.project.recipients[0]?.name || undefined
-    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, primaryRecipientName))
+    const sanitizedComments = allComments.map((comment: any) => sanitizeComment(
+      comment,
+      isAdmin,
+      isAuthenticated,
+      primaryRecipientName,
+    ))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

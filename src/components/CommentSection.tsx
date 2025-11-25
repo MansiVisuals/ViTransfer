@@ -8,6 +8,7 @@ import MessageBubble from './MessageBubble'
 import CommentInput from './CommentInput'
 import { useCommentManagement } from '@/hooks/useCommentManagement'
 import { formatDate } from '@/lib/utils'
+import { apiFetch } from '@/lib/api-client'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -80,6 +81,8 @@ export default function CommentSection({
     clientName,
     restrictToLatestVersion,
     shareToken,
+    useAdminAuth: isAdminView,
+    companyName,
   })
 
   // Auto-scroll to latest comment (like messaging apps)
@@ -90,9 +93,16 @@ export default function CommentSection({
   // Fetch comments function (only used for event-triggered updates)
   const fetchComments = async () => {
     try {
-      const response = await fetch(`/api/comments?projectId=${projectId}`, {
-        headers: shareToken ? { Authorization: `Bearer ${shareToken}` } : undefined,
-      })
+      const response = isAdminView
+        ? await apiFetch(`/api/comments?projectId=${projectId}`)
+        : shareToken
+          ? await fetch(`/api/comments?projectId=${projectId}`, {
+              headers: { Authorization: `Bearer ${shareToken}` },
+            })
+          : null
+
+      if (!response) return
+
       if (response.ok) {
         const freshComments = await response.json()
         setLocalComments(freshComments)
@@ -248,7 +258,7 @@ export default function CommentSection({
   }
 
   return (
-    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[75vh]" data-comment-section>
+    <Card className="bg-card border border-border flex flex-col h-auto lg:h-full max-h-[75vh] rounded-lg overflow-hidden" data-comment-section>
       <CardHeader className="border-b border-border flex-shrink-0">
         <CardTitle className="text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
@@ -300,7 +310,7 @@ export default function CommentSection({
                   : null
 
                 // Viewer's own messages: admin sees their internal messages, client sees their non-internal messages
-                const isViewerMessage = adminUser ? comment.isInternal : !comment.isInternal
+                const isViewerMessage = isAdminView ? comment.isInternal : !comment.isInternal
 
                 return (
                   <MessageBubble
@@ -313,7 +323,7 @@ export default function CommentSection({
                     parentComment={parentComment}
                     onReply={!isReply ? () => handleReply(comment.id, comment.videoId) : undefined}
                     onSeekToTimestamp={handleSeekToTimestamp}
-                    onDelete={adminUser ? () => handleDeleteComment(comment.id) : undefined}
+                    onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
                     onScrollToComment={handleScrollToComment}
                     formatMessageTime={formatMessageTime}
                     commentsDisabled={commentsDisabled}
@@ -337,7 +347,7 @@ export default function CommentSection({
           onClearTimestamp={handleClearTimestamp}
           replyingToComment={replyingToComment}
           onCancelReply={handleCancelReply}
-          showAuthorInput={isPasswordProtected && !adminUser}
+          showAuthorInput={!isAdminView && isPasswordProtected}
           authorName={authorName}
           onAuthorNameChange={setAuthorName}
           namedRecipients={namedRecipients}

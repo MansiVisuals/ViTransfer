@@ -180,10 +180,10 @@ export default function ProjectPage() {
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6 flex justify-between items-center">
-          <Link href="/admin">
+          <Link href="/admin/projects">
             <Button variant="ghost" size="default" className="justify-start px-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="hidden sm:inline">Back to Projects</span>
               <span className="sm:hidden">Back</span>
             </Button>
           </Link>

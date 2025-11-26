@@ -141,12 +141,10 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
  * If you get locked out on localhost, set HTTPS_ENABLED=false in docker-compose.yml
  *
  * When HTTPS is OFF:
- * - Cookies use secure: false
  * - No HSTS header
  * - Use for: localhost, internal LAN (set HTTPS_ENABLED=false in docker-compose)
  *
  * When HTTPS is ON (default for security):
- * - Cookies use secure: true (only sent over HTTPS)
  * - HSTS header enabled (forces browser to use HTTPS)
  * - Use for: production deployments with HTTPS (direct or reverse proxy)
  */

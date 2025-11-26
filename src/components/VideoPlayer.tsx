@@ -337,28 +337,6 @@ export default function VideoPlayer({
 
   return (
     <div className="space-y-4 flex flex-col max-h-full">
-      {/* Version Selector - Only show if there are multiple versions to choose from */}
-      {displayVideos.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto py-4 flex-shrink-0">
-          {displayVideos.map((video, index) => {
-            const videoApproved = (video as any).approved === true
-            return (
-              <Button
-                key={video.id}
-                onClick={() => setSelectedVideoIndex(index)}
-                variant={selectedVideoIndex === index ? 'default' : 'outline'}
-                className="whitespace-nowrap relative"
-              >
-                {videoApproved && (
-                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
-                )}
-                {videoApproved ? 'Approved Version' : video.versionLabel}
-              </Button>
-            )
-          })}
-        </div>
-      )}
-
       {/* Video Player */}
       <div className="relative bg-background rounded-lg overflow-hidden aspect-video flex-shrink min-h-0">
         {videoUrl ? (
@@ -386,6 +364,28 @@ export default function VideoPlayer({
           </div>
         )}
       </div>
+
+      {/* Version Selector - Only show if there are multiple versions to choose from */}
+      {displayVideos.length > 1 && (
+        <div className="flex gap-3 overflow-x-auto py-2 flex-shrink-0">
+          {displayVideos.map((video, index) => {
+            const videoApproved = (video as any).approved === true
+            return (
+              <Button
+                key={video.id}
+                onClick={() => setSelectedVideoIndex(index)}
+                variant={selectedVideoIndex === index ? 'default' : 'outline'}
+                className="whitespace-nowrap relative"
+              >
+                {videoApproved && (
+                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
+                )}
+                {videoApproved ? 'Approved Version' : video.versionLabel}
+              </Button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Video & Project Information */}
       <div className={`rounded-lg p-4 text-card-foreground flex-shrink-0 ${!isVideoApproved ? 'bg-accent/50 border-2 border-primary/20' : 'bg-card border border-border'}`}>

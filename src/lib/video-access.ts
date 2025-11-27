@@ -5,6 +5,34 @@ import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
 import { getRedis } from './redis'
 
+type CachedValue<T> = { value: T; expiresAt: number; version?: string }
+type SecuritySettingsResult = {
+  hotlinkProtection: string
+  ipRateLimit: number
+  sessionRateLimit: number
+  trackSecurityLogs: boolean
+  trackAnalytics: boolean
+}
+
+const SECURITY_SETTINGS_CACHE_TTL_MS = 90_000
+const securitySettingsCache: CachedValue<SecuritySettingsResult> = {
+  value: {
+    hotlinkProtection: 'LOG_ONLY',
+    ipRateLimit: 1000,
+    sessionRateLimit: 600,
+    trackSecurityLogs: true,
+    trackAnalytics: true
+  },
+  expiresAt: 0,
+  version: undefined
+}
+
+const TOKEN_CACHE_TTL_MS = 10_000
+const TOKEN_CACHE_MAX_ENTRIES = 500
+type CachedTokenEntry = CachedValue<VideoAccessToken>
+const tokenVerificationCache = new Map<string, CachedTokenEntry>()
+const TOKEN_REV_VERSION_KEY = 'video_token_rev_version'
+
 interface VideoAccessToken {
   videoId: string
   projectId: string
@@ -84,6 +112,18 @@ export async function verifyVideoAccessToken(
   sessionId: string
 ): Promise<VideoAccessToken | null> {
   const redis = getRedis()
+  const now = Date.now()
+
+  const revVersion = (await redis.get(TOKEN_REV_VERSION_KEY)) || '0'
+  const cacheKey = `${token}:${sessionId}:${revVersion}`
+  const cached = tokenVerificationCache.get(cacheKey)
+
+  if (cached) {
+    if (cached.expiresAt > now && cached.version === revVersion) {
+      return cached.value
+    }
+    tokenVerificationCache.delete(cacheKey)
+  }
 
   const key = `video_access:${token}`
   const data = await redis.get(key)
@@ -124,6 +164,16 @@ export async function verifyVideoAccessToken(
 
       return null
     }
+  }
+
+  tokenVerificationCache.set(cacheKey, {
+    value: tokenData,
+    expiresAt: now + TOKEN_CACHE_TTL_MS,
+    version: revVersion
+  })
+
+  if (tokenVerificationCache.size > TOKEN_CACHE_MAX_ENTRIES) {
+    tokenVerificationCache.clear()
   }
 
   return tokenData
@@ -245,11 +295,8 @@ export async function trackVideoAccess(params: {
 }) {
   const { videoId, projectId, bandwidth, eventType } = params
 
-  const settings = await prisma.securitySettings.findUnique({
-    where: { id: 'default' }
-  })
-
-  if (!settings?.trackAnalytics) {
+  const settings = await getSecuritySettings()
+  if (!settings.trackAnalytics) {
     return
   }
 
@@ -274,12 +321,9 @@ export async function logSecurityEvent(params: {
   wasBlocked?: boolean
 }) {
   try {
-    const settings = await prisma.securitySettings.findUnique({
-      where: { id: 'default' },
-      select: { trackSecurityLogs: true }
-    })
+    const settings = await getSecuritySettings()
 
-    if (!settings?.trackSecurityLogs) {
+    if (!settings.trackSecurityLogs) {
       return
     }
 
@@ -311,16 +355,36 @@ export async function logSecurityEvent(params: {
 }
 
 export async function getSecuritySettings() {
+  const now = Date.now()
+  if (securitySettingsCache.expiresAt > now) {
+    return securitySettingsCache.value
+  }
+
   const settings = await prisma.securitySettings.findUnique({
-    where: { id: 'default' }
+    where: { id: 'default' },
+    select: {
+      hotlinkProtection: true,
+      ipRateLimit: true,
+      sessionRateLimit: true,
+      trackSecurityLogs: true,
+      trackAnalytics: true,
+      updatedAt: true
+    }
   })
 
-  return {
+  const value: SecuritySettingsResult = {
     hotlinkProtection: settings?.hotlinkProtection || 'LOG_ONLY',
     ipRateLimit: settings?.ipRateLimit || 1000,
     sessionRateLimit: settings?.sessionRateLimit || 600,
     trackSecurityLogs: settings?.trackSecurityLogs ?? true,
+    trackAnalytics: settings?.trackAnalytics ?? true
   }
+
+  securitySettingsCache.value = value
+  securitySettingsCache.expiresAt = now + SECURITY_SETTINGS_CACHE_TTL_MS
+  securitySettingsCache.version = settings?.updatedAt?.toISOString()
+
+  return value
 }
 
 async function getBlockedIPs(): Promise<string[]> {
@@ -375,5 +439,6 @@ export async function revokeProjectVideoTokens(projectId: string): Promise<void>
     if (keysToDelete.length > 0) {
       await redis.del(...keysToDelete)
     }
+    await redis.incr(TOKEN_REV_VERSION_KEY)
   })
 }

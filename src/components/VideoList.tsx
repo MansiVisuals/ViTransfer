@@ -8,7 +8,7 @@ import { Button } from './ui/button'
 import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
 import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare, Upload, Download } from 'lucide-react'
-import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
+import { apiPost, apiPatch, apiDelete, apiFetch } from '@/lib/api-client'
 import { VideoAssetUpload } from './VideoAssetUpload'
 import { VideoAssetList } from './VideoAssetList'
 
@@ -168,7 +168,11 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   const handleDownloadVideo = async (videoId: string) => {
     try {
       // Generate download token for instant download (no memory loading)
-      const response = await apiPost(`/api/videos/${videoId}/download-token`, {})
+      const response = await apiFetch(`/api/videos/${videoId}/download-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Download failed' }))

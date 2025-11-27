@@ -88,12 +88,21 @@ export function VideoAssetDownloadModal({
 
   const downloadSingleAsset = async (assetId: string) => {
     try {
-      const asset = assets.find((a) => a.id === assetId)
-      if (!asset) return
+      setError(null)
 
-      // Direct download via URL - no loading into memory
-      // The browser will handle streaming the file directly to disk
-      window.open(`/api/videos/${videoId}/assets/${assetId}`, '_blank')
+      // Use token-based download for everyone (instant, no memory loading)
+      const response = await fetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
+        method: 'POST',
+        headers: buildAuthHeaders(shareToken, isAdmin),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Failed to generate download link' }))
+        throw new Error(data.error || 'Failed to generate download link')
+      }
+
+      const { url: downloadUrl } = await response.json()
+      window.open(downloadUrl, '_blank')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     }
@@ -101,9 +110,21 @@ export function VideoAssetDownloadModal({
 
   const downloadVideoOnly = async () => {
     try {
-      // Direct download via URL - no loading into memory
-      // The browser will handle streaming the file directly to disk
-      window.open(`/api/videos/${videoId}/download`, '_blank')
+      setError(null)
+
+      // Use token-based download for everyone (instant, no memory loading)
+      const response = await fetch(`/api/videos/${videoId}/download-token`, {
+        method: 'POST',
+        headers: buildAuthHeaders(shareToken, isAdmin),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Failed to generate download link' }))
+        throw new Error(data.error || 'Failed to generate download link')
+      }
+
+      const { url: downloadUrl } = await response.json()
+      window.open(downloadUrl, '_blank')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     }

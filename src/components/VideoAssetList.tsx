@@ -1,7 +1,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileIcon, Trash2, Loader2, Download, Image, Copy } from 'lucide-react'
+import {
+  FileIcon,
+  FileImage,
+  FileVideo,
+  FilePlay,
+  FileMusic,
+  FileText,
+  File,
+  FileArchive,
+  ImagePlay,
+  Trash2,
+  Loader2,
+  Download,
+  Copy
+} from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
 import { apiFetch, apiDelete, apiPost } from '@/lib/api-client'
@@ -89,6 +103,48 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
 
   const formatFileSizeBigInt = (bytes: string) => {
     return formatFileSize(Number(bytes))
+  }
+
+  const getAssetIcon = (asset: VideoAsset) => {
+    const fileType = asset.fileType?.toLowerCase() || ''
+    const fileName = asset.fileName.toLowerCase()
+    const category = asset.category?.toLowerCase() || ''
+
+    if (category === 'thumbnail' || fileType.startsWith('image/')) {
+      return <FileImage className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (category === 'project') {
+      return <FilePlay className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (fileType.startsWith('video/')) {
+      return <FileVideo className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (fileType.startsWith('audio/')) {
+      return <FileMusic className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (
+      fileType === 'application/zip' ||
+      fileType === 'application/x-zip-compressed' ||
+      fileName.endsWith('.zip')
+    ) {
+      return <FileArchive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (
+      category === 'caption' ||
+      fileName.endsWith('.srt') ||
+      fileName.endsWith('.vtt') ||
+      fileName.endsWith('.txt') ||
+      fileName.endsWith('.md')
+    ) {
+      return <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    return <File className="h-5 w-5 text-muted-foreground flex-shrink-0" />
   }
 
   const handleDownload = async (assetId: string, fileName: string) => {
@@ -208,7 +264,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
               key={asset.id}
               className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
             >
-              <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              {getAssetIcon(asset)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{asset.fileName}</p>
                 <div className="flex gap-3 text-xs text-muted-foreground">
@@ -230,7 +286,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                     {settingThumbnail === asset.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Image className={`h-4 w-4 ${isCurrentThumbnail(asset) ? 'text-green-600' : ''}`} />
+                      <ImagePlay className={`h-4 w-4 ${isCurrentThumbnail(asset) ? 'text-green-600' : ''}`} />
                     )}
                   </Button>
                 )}

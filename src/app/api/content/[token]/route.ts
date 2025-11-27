@@ -11,6 +11,8 @@ import { getCurrentUserFromRequest } from '@/lib/auth'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const STREAM_HIGH_WATER_MARK = 1 * 1024 * 1024 // 1MB stream buffer
+
 /**
  * Convert Node.js ReadStream to Web ReadableStream
  */
@@ -101,13 +103,13 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 401 })
     }
 
-    const sessionRateLimitResult = await rateLimit(request, {
-      windowMs: 60 * 1000,
-      maxRequests: securitySettings.sessionRateLimit,
-      message: 'Video streaming rate limit exceeded. Please wait a moment.'
-    }, `content-stream-session:${sessionId}`)
-
-    if (sessionRateLimitResult) {
+    // Session-based rate limiting using lightweight INCR to avoid heavy payloads per chunk
+    const sessionCounterKey = `content-session-count:${sessionId}`
+    const sessionCount = await redis.incr(sessionCounterKey)
+    if (sessionCount === 1) {
+      await redis.expire(sessionCounterKey, 60)
+    }
+    if (sessionCount > securitySettings.sessionRateLimit) {
       await logSecurityEvent({
         type: 'RATE_LIMIT_HIT',
         severity: 'INFO',
@@ -118,7 +120,9 @@ export async function GET(
         wasBlocked: true
       })
 
-      return sessionRateLimitResult
+      return NextResponse.json({
+        error: 'Video streaming rate limit exceeded. Please wait a moment.'
+      }, { status: 429, headers: { 'Retry-After': '60' } })
     }
 
     const verifiedToken = await verifyVideoAccessToken(token, request, sessionId)
@@ -234,9 +238,9 @@ export async function GET(
         quality: verifiedToken.quality,
         bandwidth: stat.size,
         eventType: 'DOWNLOAD_COMPLETE'
-      })
+      }).catch(() => {})
 
-      const fileStream = createReadStream(fullPath)
+      const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
       const readableStream = createWebReadableStream(fileStream)
 
       return new NextResponse(readableStream, {
@@ -261,11 +265,11 @@ export async function GET(
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
       const requestedEnd = parts[1] ? parseInt(parts[1], 10) : stat.size - 1
-      const maxChunkSize = 10 * 1024 * 1024
+      const maxChunkSize = 90 * 1024 * 1024
       const end = Math.min(requestedEnd, start + maxChunkSize - 1, stat.size - 1)
       const chunksize = (end - start) + 1
 
-      const fileStream = createReadStream(fullPath, { start, end })
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })
       const readableStream = createWebReadableStream(fileStream)
 
       // For non-asset streams, determine Content-Type based on quality
@@ -289,7 +293,7 @@ export async function GET(
       })
     }
 
-    const fileStream = createReadStream(fullPath)
+    const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
     const readableStream = createWebReadableStream(fileStream)
 
     // For non-asset streams, determine Content-Type based on quality

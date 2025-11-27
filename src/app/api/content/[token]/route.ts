@@ -44,6 +44,7 @@ export async function GET(
     const { token } = await params
     const { searchParams } = new URL(request.url)
     const isDownload = searchParams.get('download') === 'true'
+    const assetId = searchParams.get('assetId')
 
     const securitySettings = await getSecuritySettings()
 
@@ -157,19 +158,48 @@ export async function GET(
       where: { id: verifiedToken.videoId },
       include: { project: true }
     })
-    
+
     if (!video || video.projectId !== verifiedToken.projectId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
 
     let filePath: string | null = null
+    let filename: string | null = null
+    let contentType = 'video/mp4'
 
-    if (verifiedToken.quality === 'thumbnail') {
-      filePath = video.thumbnailPath
-    } else if (video.approved) {
-      filePath = video.originalStoragePath
+    // Handle asset download
+    if (assetId && isDownload) {
+      const asset = await prisma.videoAsset.findUnique({
+        where: { id: assetId }
+      })
+
+      if (!asset || asset.videoId !== video.id) {
+        return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+      }
+
+      // Check permissions (skip for admins)
+      if (!isAdmin) {
+        if (!video.project.allowAssetDownload) {
+          return NextResponse.json({ error: 'Asset downloads not allowed' }, { status: 403 })
+        }
+
+        if (!video.approved) {
+          return NextResponse.json({ error: 'Assets only available for approved videos' }, { status: 403 })
+        }
+      }
+
+      filePath = asset.storagePath
+      filename = asset.fileName
+      contentType = asset.fileType
     } else {
-      filePath = video.preview1080Path || video.preview720Path
+      // Handle video download/stream
+      if (verifiedToken.quality === 'thumbnail') {
+        filePath = video.thumbnailPath
+      } else if (video.approved) {
+        filePath = video.originalStoragePath
+      } else {
+        filePath = video.preview1080Path || video.preview720Path
+      }
     }
 
     if (!filePath) {
@@ -189,10 +219,11 @@ export async function GET(
     }
 
     if (isDownload) {
-      const rawFilename = video.approved
+      // Use asset filename if available, otherwise generate from video info
+      const rawFilename = filename || (video.approved
         ? video.originalFileName
-        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`
-      const filename = sanitizeFilenameForHeader(rawFilename)
+        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`)
+      const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
 
       await trackVideoAccess({
         videoId: verifiedToken.videoId,
@@ -210,8 +241,8 @@ export async function GET(
 
       return new NextResponse(readableStream, {
         headers: {
-          'Content-Type': 'video/mp4',
-          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
           'Content-Length': stat.size.toString(),
           'X-Content-Type-Options': 'nosniff',
           'Cache-Control': 'private, no-cache',
@@ -237,8 +268,10 @@ export async function GET(
       const fileStream = createReadStream(fullPath, { start, end })
       const readableStream = createWebReadableStream(fileStream)
 
-      // Determine correct Content-Type based on file type
-      const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+      // For non-asset streams, determine Content-Type based on quality
+      if (!assetId) {
+        contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+      }
 
       return new NextResponse(readableStream, {
         status: 206,
@@ -259,8 +292,10 @@ export async function GET(
     const fileStream = createReadStream(fullPath)
     const readableStream = createWebReadableStream(fileStream)
 
-    // Determine correct Content-Type based on file type
-    const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+    // For non-asset streams, determine Content-Type based on quality
+    if (!assetId) {
+      contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+    }
 
     return new NextResponse(readableStream, {
       headers: {

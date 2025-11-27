@@ -93,21 +93,17 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
 
   const handleDownload = async (assetId: string, fileName: string) => {
     try {
-      const response = await apiFetch(`/api/videos/${videoId}/assets/${assetId}`)
+      // Generate download token for instant download (same as share page)
+      const response = await apiFetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
+        method: 'POST'
+      })
+
       if (!response.ok) {
-        throw new Error('Download failed')
+        throw new Error('Failed to generate download link')
       }
 
-      // Download the file
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      const { url } = await response.json()
+      window.open(url, '_blank')
     } catch (err) {
       alert('Failed to download asset')
     }

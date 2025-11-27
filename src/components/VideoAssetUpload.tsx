@@ -19,7 +19,9 @@ const CATEGORY_OPTIONS = [
   { value: '', label: 'Other' },
   { value: 'thumbnail', label: 'Thumbnail (JPG, PNG only)' },
   { value: 'image', label: 'Image' },
+  { value: 'video', label: 'Video (B-roll, Uncut, Extras)' },
   { value: 'audio', label: 'Audio/Music' },
+  { value: 'subtitle', label: 'Subtitles/Captions' },
   { value: 'project', label: 'Project File (Premiere, DaVinci, Final Cut)' },
   { value: 'document', label: 'Document' },
 ]

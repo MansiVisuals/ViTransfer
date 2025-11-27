@@ -7,7 +7,7 @@ import { Progress } from './ui/progress'
 import { Button } from './ui/button'
 import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
-import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare, Upload } from 'lucide-react'
+import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare, Upload, Download } from 'lucide-react'
 import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
 import { VideoAssetUpload } from './VideoAssetUpload'
 import { VideoAssetList } from './VideoAssetList'
@@ -165,6 +165,24 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     }
   }
 
+  const handleDownloadVideo = async (videoId: string) => {
+    try {
+      // Generate download token for instant download (no memory loading)
+      const response = await apiPost(`/api/videos/${videoId}/download-token`, {})
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Download failed' }))
+        throw new Error(errorData.error || 'Failed to generate download link')
+      }
+
+      const { url } = await response.json()
+      window.open(url, '_blank')
+    } catch (error) {
+      console.error('Download error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to generate download link')
+    }
+  }
+
   if (videos.length === 0) {
     return <p className="text-sm text-muted-foreground">No videos uploaded yet</p>
   }
@@ -262,6 +280,17 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                     title="Upload Assets"
                   >
                     <Upload className="w-4 h-4" />
+                  </Button>
+                )}
+                {isAdmin && video.status === 'READY' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDownloadVideo(video.id)}
+                    className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                    title="Download Video"
+                  >
+                    <Download className="w-4 h-4" />
                   </Button>
                 )}
                 {isAdmin && (

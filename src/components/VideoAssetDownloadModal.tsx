@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Download, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
-import { apiFetch } from '@/lib/api-client'
-import { getCsrfToken } from '@/lib/csrf-client'
+import { getAccessToken } from '@/lib/token-store'
 
 interface VideoAsset {
   id: string
@@ -22,6 +21,8 @@ interface VideoAssetDownloadModalProps {
   versionLabel: string
   onClose: () => void
   isOpen: boolean
+  shareToken?: string | null
+  isAdmin?: boolean
 }
 
 export function VideoAssetDownloadModal({
@@ -30,6 +31,8 @@ export function VideoAssetDownloadModal({
   versionLabel,
   onClose,
   isOpen,
+  shareToken = null,
+  isAdmin = false,
 }: VideoAssetDownloadModalProps) {
   const [assets, setAssets] = useState<VideoAsset[]>([])
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
@@ -48,7 +51,10 @@ export function VideoAssetDownloadModal({
       setLoading(true)
       setError(null)
 
-      const response = await apiFetch(`/api/videos/${videoId}/assets`)
+      const headers = buildAuthHeaders(shareToken, isAdmin)
+      const response = await fetch(`/api/videos/${videoId}/assets`, {
+        headers,
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch assets')
       }
@@ -82,12 +88,21 @@ export function VideoAssetDownloadModal({
 
   const downloadSingleAsset = async (assetId: string) => {
     try {
-      const asset = assets.find((a) => a.id === assetId)
-      if (!asset) return
+      setError(null)
 
-      // Direct download via URL - no loading into memory
-      // The browser will handle streaming the file directly to disk
-      window.open(`/api/videos/${videoId}/assets/${assetId}`, '_blank')
+      // Use token-based download for everyone (instant, no memory loading)
+      const response = await fetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
+        method: 'POST',
+        headers: buildAuthHeaders(shareToken, isAdmin),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Failed to generate download link' }))
+        throw new Error(data.error || 'Failed to generate download link')
+      }
+
+      const { url: downloadUrl } = await response.json()
+      window.open(downloadUrl, '_blank')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     }
@@ -95,9 +110,21 @@ export function VideoAssetDownloadModal({
 
   const downloadVideoOnly = async () => {
     try {
-      // Direct download via URL - no loading into memory
-      // The browser will handle streaming the file directly to disk
-      window.open(`/api/videos/${videoId}/download`, '_blank')
+      setError(null)
+
+      // Use token-based download for everyone (instant, no memory loading)
+      const response = await fetch(`/api/videos/${videoId}/download-token`, {
+        method: 'POST',
+        headers: buildAuthHeaders(shareToken, isAdmin),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Failed to generate download link' }))
+        throw new Error(data.error || 'Failed to generate download link')
+      }
+
+      const { url: downloadUrl } = await response.json()
+      window.open(downloadUrl, '_blank')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     }
@@ -110,18 +137,16 @@ export function VideoAssetDownloadModal({
       setDownloading(true)
       setError(null)
 
-      const csrfToken = await getCsrfToken()
-
-      const response = await fetch(`/api/videos/${videoId}/assets/download-zip`, {
+      // Generate download token for ZIP (non-blocking, no memory loading)
+      const response = await fetch(`/api/videos/${videoId}/assets/download-zip-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+          ...buildAuthHeaders(shareToken, isAdmin),
         },
         body: JSON.stringify({
           assetIds: Array.from(selectedAssets),
         }),
-        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -129,26 +154,15 @@ export function VideoAssetDownloadModal({
         throw new Error(data.error || 'Download failed')
       }
 
-      // Extract filename from headers
-      const contentDisposition = response.headers.get('Content-Disposition')
-      let filename = `${videoName}_${versionLabel}_assets.zip`
-      if (contentDisposition) {
-        const matches = /filename="(.+)"/.exec(contentDisposition)
-        if (matches && matches[1]) {
-          filename = matches[1]
-        }
-      }
+      const { url: downloadUrl } = await response.json()
 
-      // Trigger browser download
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      // Direct download via window.open (streaming, non-blocking, supports multiple simultaneous downloads)
+      window.open(downloadUrl, '_blank')
+
+      // Close modal shortly after initiating download
+      setTimeout(() => {
+        onClose()
+      }, 500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     } finally {
@@ -309,4 +323,13 @@ export function VideoAssetDownloadModal({
       </div>
     </div>
   )
+}
+
+function buildAuthHeaders(shareToken?: string | null, isAdmin?: boolean) {
+  const headers: Record<string, string> = {}
+  const token = shareToken || (isAdmin ? getAccessToken() : null)
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+  return headers
 }

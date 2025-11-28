@@ -15,15 +15,17 @@ interface VideoSidebarProps {
   activeVideoName: string
   onVideoSelect: (videoName: string) => void
   className?: string
+  initialCollapsed?: boolean
 }
 
 export default function VideoSidebar({
   videosByName,
   activeVideoName,
   onVideoSelect,
-  className
+  className,
+  initialCollapsed = false,
 }: VideoSidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const [sidebarWidth, setSidebarWidth] = useState(256) // Default 256px (w-64)
   const [isResizing, setIsResizing] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
@@ -38,7 +40,7 @@ export default function VideoSidebar({
   useEffect(() => {
     const saved = localStorage.getItem('share_sidebar_width')
     if (saved) {
-      const width = parseInt(saved)
+      const width = parseInt(saved, 10)
       if (width >= 200 && width <= window.innerWidth * 0.3) {
         setSidebarWidth(width)
       }
@@ -93,8 +95,10 @@ export default function VideoSidebar({
         ref={sidebarRef}
         style={{ width: `${sidebarWidth}px` }}
         className={cn(
-          'hidden lg:block bg-card border-r border-border relative',
-          'sticky top-0 h-screen overflow-y-auto',
+          'hidden lg:block bg-card border border-border relative rounded-lg',
+          'sticky top-0 overflow-y-auto',
+          // Default to full screen height, but allow override via className
+          !className?.includes('max-h-') && !className?.includes('h-') && 'h-screen',
           className
         )}
       >
@@ -182,28 +186,6 @@ export default function VideoSidebar({
             )
           })()}
         </nav>
-
-        {/* Footer - Positioned at bottom */}
-        <div className="sticky bottom-0 border-t border-border bg-card py-3 px-6">
-          <div className="text-center text-xs text-muted-foreground space-y-1">
-            <div>
-              Powered by{' '}
-              <a
-                href="https://github.com/MansiVisuals/ViTransfer"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                ViTransfer
-              </a>
-            </div>
-            {process.env.NEXT_PUBLIC_APP_VERSION && (
-              <div className="text-[10px] uppercase tracking-wide">
-                Version: {process.env.NEXT_PUBLIC_APP_VERSION}
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Resize Handle */}
         <div

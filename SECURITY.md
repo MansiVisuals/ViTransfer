@@ -20,13 +20,13 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 ## Security Features
 
 ### Authentication & Sessions
-- **JWT-based authentication** with secure HttpOnly cookies
+- **Bearer-only authentication** (v0.6.0+): admin and share flows use Authorization headers only; browser-managed credentials are not trusted.
+- **Access/refresh tokens** returned in JSON; refresh stored in sessionStorage, access kept in memory.
 - **15-minute inactivity timeout** with automatic logout
 - **Session monitoring** with warning notifications before logout
 - **Token rotation** on each refresh to prevent replay attacks
 - **Token revocation** support for forced logouts
-- **CSRF protection** on all state-changing endpoints (POST/PATCH/DELETE)
-- **CSRF token refresh** synchronized with session refresh
+- **No implicit cross-site tokens**: all state-changing endpoints rely on explicit bearer tokens
 
 ### Password Protection
 - **AES-256-GCM encryption** for share passwords
@@ -44,11 +44,10 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 
 ### Data Protection
 - **Encrypted passwords** stored in database
-- **Secure cookie flags** (HttpOnly, Secure, SameSite)
 - **Database context isolation** for multi-tenancy
 - **Input validation** using Zod schemas
 - **Comment sanitization** to prevent XSS attacks
-- **Content Security Policy** headers
+- **Content Security Policy** headers (nonce-based, no unsafe-inline/eval)
 
 ### Rate Limiting
 - **API endpoint rate limiting** (60 requests/minute for most endpoints)

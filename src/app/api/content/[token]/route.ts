@@ -2,19 +2,42 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyVideoAccessToken, detectHotlinking, trackVideoAccess, logSecurityEvent, getSecuritySettings } from '@/lib/video-access'
 import { getRedis } from '@/lib/redis'
 import { prisma } from '@/lib/db'
-import { createReadStream, existsSync, statSync } from 'fs'
-import fs from 'fs'
+import { createReadStream, existsSync, statSync, ReadStream } from 'fs'
 import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
-import { cookies } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { getAuthContext } from '@/lib/auth'
+
 export const runtime = 'nodejs'
-
-
-
 export const dynamic = 'force-dynamic'
 
+const STREAM_HIGH_WATER_MARK = 1 * 1024 * 1024 // 1MB stream buffer
+
+/**
+ * Convert Node.js ReadStream to Web ReadableStream
+ */
+function createWebReadableStream(fileStream: ReadStream): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      fileStream.on('data', (chunk) => controller.enqueue(chunk))
+      fileStream.on('end', () => controller.close())
+      fileStream.on('error', (err) => controller.error(err))
+    },
+    cancel() {
+      fileStream.destroy()
+    },
+  })
+}
+
+/**
+ * Content delivery endpoint - streams video/thumbnail content with security checks
+ * Handles both admin and share token authentication with rate limiting and hotlink protection
+ * Supports range requests for video streaming and direct downloads
+ *
+ * @param request - NextRequest with authorization header and optional range header
+ * @param params - Route params containing the video access token
+ * @returns Video/thumbnail stream with appropriate headers, or error response
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -23,6 +46,7 @@ export async function GET(
     const { token } = await params
     const { searchParams } = new URL(request.url)
     const isDownload = searchParams.get('download') === 'true'
+    const assetId = searchParams.get('assetId')
 
     const securitySettings = await getSecuritySettings()
 
@@ -44,8 +68,8 @@ export async function GET(
       return ipRateLimitResult
     }
 
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
+    // Get authentication context once
+    const authContext = await getAuthContext(request)
 
     const redis = getRedis()
     const tokenKey = `video_access:${token}`
@@ -57,10 +81,14 @@ export async function GET(
 
     const preliminaryTokenData = JSON.parse(rawTokenData)
 
-    const cookieStore = await cookies()
-    let sessionId = cookieStore.get('share_session')?.value
+    // Use token's session ID for all users
+    const sessionId = preliminaryTokenData.sessionId
 
-    if (isAdmin) {
+    // Determine if this is an admin request (JWT token OR admin session ID)
+    const isAdminRequest = authContext.isAdmin || sessionId?.startsWith('admin:')
+
+    // For admin users, verify they have access to the project
+    if (isAdminRequest) {
       const project = await prisma.project.findUnique({
         where: { id: preliminaryTokenData.projectId },
         select: { id: true }
@@ -69,43 +97,19 @@ export async function GET(
       if (!project) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
-
-      // Admins can access any valid token, use token's sessionId if no cookie present
-      if (!sessionId) {
-        sessionId = preliminaryTokenData.sessionId
-      }
-    } else {
-      if (!sessionId) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
-      }
-
-      const hasAccess = await redis.sismember(`session_projects:${sessionId}`, preliminaryTokenData.projectId)
-
-      if (!hasAccess) {
-        await logSecurityEvent({
-          type: 'SESSION_PROJECT_MISMATCH',
-          severity: 'WARNING',
-          projectId: preliminaryTokenData.projectId,
-          sessionId,
-          ipAddress: getClientIpAddress(request),
-          details: { expectedProject: preliminaryTokenData.projectId }
-        })
-
-        return NextResponse.json({ error: 'Access denied' }, { status: 401 })
-      }
     }
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 401 })
     }
 
-    const sessionRateLimitResult = await rateLimit(request, {
-      windowMs: 60 * 1000,
-      maxRequests: securitySettings.sessionRateLimit,
-      message: 'Video streaming rate limit exceeded. Please wait a moment.'
-    }, `content-stream-session:${sessionId}`)
-
-    if (sessionRateLimitResult) {
+    // Session-based rate limiting using lightweight INCR to avoid heavy payloads per chunk
+    const sessionCounterKey = `content-session-count:${sessionId}`
+    const sessionCount = await redis.incr(sessionCounterKey)
+    if (sessionCount === 1) {
+      await redis.expire(sessionCounterKey, 60)
+    }
+    if (sessionCount > securitySettings.sessionRateLimit) {
       await logSecurityEvent({
         type: 'RATE_LIMIT_HIT',
         severity: 'INFO',
@@ -116,7 +120,9 @@ export async function GET(
         wasBlocked: true
       })
 
-      return sessionRateLimitResult
+      return NextResponse.json({
+        error: 'Video streaming rate limit exceeded. Please wait a moment.'
+      }, { status: 429, headers: { 'Retry-After': '60' } })
     }
 
     const verifiedToken = await verifyVideoAccessToken(token, request, sessionId)
@@ -156,19 +162,48 @@ export async function GET(
       where: { id: verifiedToken.videoId },
       include: { project: true }
     })
-    
+
     if (!video || video.projectId !== verifiedToken.projectId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
 
     let filePath: string | null = null
+    let filename: string | null = null
+    let contentType = 'video/mp4'
 
-    if (verifiedToken.quality === 'thumbnail') {
-      filePath = video.thumbnailPath
-    } else if (video.approved) {
-      filePath = video.originalStoragePath
+    // Handle asset download
+    if (assetId && isDownload) {
+      const asset = await prisma.videoAsset.findUnique({
+        where: { id: assetId }
+      })
+
+      if (!asset || asset.videoId !== video.id) {
+        return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+      }
+
+      // Check permissions (skip for admins)
+      if (!isAdminRequest) {
+        if (!video.project.allowAssetDownload) {
+          return NextResponse.json({ error: 'Asset downloads not allowed' }, { status: 403 })
+        }
+
+        if (!video.approved) {
+          return NextResponse.json({ error: 'Assets only available for approved videos' }, { status: 403 })
+        }
+      }
+
+      filePath = asset.storagePath
+      filename = asset.fileName
+      contentType = asset.fileType
     } else {
-      filePath = video.preview1080Path || video.preview720Path
+      // Handle video download/stream
+      if (verifiedToken.quality === 'thumbnail') {
+        filePath = video.thumbnailPath
+      } else if (video.approved) {
+        filePath = video.originalStoragePath
+      } else {
+        filePath = video.preview1080Path || video.preview720Path
+      }
     }
 
     if (!filePath) {
@@ -188,10 +223,11 @@ export async function GET(
     }
 
     if (isDownload) {
-      const rawFilename = video.approved
+      // Use asset filename if available, otherwise generate from video info
+      const rawFilename = filename || (video.approved
         ? video.originalFileName
-        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`
-      const filename = sanitizeFilenameForHeader(rawFilename)
+        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`)
+      const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
 
       await trackVideoAccess({
         videoId: verifiedToken.videoId,
@@ -202,25 +238,15 @@ export async function GET(
         quality: verifiedToken.quality,
         bandwidth: stat.size,
         eventType: 'DOWNLOAD_COMPLETE'
-      })
+      }).catch(() => {})
 
-      const fileStream = createReadStream(fullPath)
-
-      const readableStream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', (chunk) => controller.enqueue(chunk))
-          fileStream.on('end', () => controller.close())
-          fileStream.on('error', (err) => controller.error(err))
-        },
-        cancel() {
-          fileStream.destroy()
-        },
-      })
+      const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
+      const readableStream = createWebReadableStream(fileStream)
 
       return new NextResponse(readableStream, {
         headers: {
-          'Content-Type': 'video/mp4',
-          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
           'Content-Length': stat.size.toString(),
           'X-Content-Type-Options': 'nosniff',
           'Cache-Control': 'private, no-cache',
@@ -239,25 +265,17 @@ export async function GET(
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
       const requestedEnd = parts[1] ? parseInt(parts[1], 10) : stat.size - 1
-      const maxChunkSize = 10 * 1024 * 1024
+      const maxChunkSize = 90 * 1024 * 1024
       const end = Math.min(requestedEnd, start + maxChunkSize - 1, stat.size - 1)
       const chunksize = (end - start) + 1
 
-      const fileStream = createReadStream(fullPath, { start, end })
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })
+      const readableStream = createWebReadableStream(fileStream)
 
-      const readableStream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', (chunk) => controller.enqueue(chunk))
-          fileStream.on('end', () => controller.close())
-          fileStream.on('error', (err) => controller.error(err))
-        },
-        cancel() {
-          fileStream.destroy()
-        },
-      })
-
-      // Determine correct Content-Type based on file type
-      const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+      // For non-asset streams, determine Content-Type based on quality
+      if (!assetId) {
+        contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+      }
 
       return new NextResponse(readableStream, {
         status: 206,
@@ -275,21 +293,13 @@ export async function GET(
       })
     }
 
-    const fileStream = createReadStream(fullPath)
+    const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
+    const readableStream = createWebReadableStream(fileStream)
 
-    const readableStream = new ReadableStream({
-      start(controller) {
-        fileStream.on('data', (chunk) => controller.enqueue(chunk))
-        fileStream.on('end', () => controller.close())
-        fileStream.on('error', (err) => controller.error(err))
-      },
-      cancel() {
-        fileStream.destroy()
-      },
-    })
-
-    // Determine correct Content-Type based on file type
-    const contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+    // For non-asset streams, determine Content-Type based on quality
+    if (!assetId) {
+      contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+    }
 
     return new NextResponse(readableStream, {
       headers: {

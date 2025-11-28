@@ -32,6 +32,14 @@ export const ALLOWED_ASSET_TYPES = {
     extensions: ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma'],
     mimeTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/aac', 'audio/flac', 'audio/ogg', 'audio/mp4', 'audio/x-ms-wma']
   },
+  video: {
+    extensions: ['.mp4', '.mov', '.avi', '.mkv', '.mxf', '.prores'],
+    mimeTypes: ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm', 'application/octet-stream']
+  },
+  subtitle: {
+    extensions: ['.srt', '.vtt', '.ass', '.ssa', '.sub'],
+    mimeTypes: ['text/plain', 'text/vtt', 'application/x-subrip', 'application/octet-stream']
+  },
   project: {
     extensions: ['.prproj', '.aep', '.fcp', '.davinci', '.zip', '.rar', '.7z'],
     mimeTypes: ['application/octet-stream', 'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed']

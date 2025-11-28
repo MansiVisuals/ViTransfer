@@ -47,7 +47,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
         onSuccess()
       } else {
         router.refresh()
-        router.push('/admin')
+        router.push('/admin/projects')
       }
     } catch (err) {
       setError('An error occurred. Please try again.')

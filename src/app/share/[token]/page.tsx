@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
-import { Lock, Check, ArrowLeft, Mail, KeyRound } from 'lucide-react'
-import Link from 'next/link'
+import { Lock, Check, Mail, KeyRound } from 'lucide-react'
+import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 
 export default function SharePage() {
   const params = useParams()
@@ -19,9 +19,9 @@ export default function SharePage() {
   const token = params?.token as string
 
   // Parse URL parameters for video seeking
-  const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!) : null
+  const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
   const urlVideoName = searchParams?.get('video') || null
-  const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!) : null
+  const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
 
   const [isPasswordProtected, setIsPasswordProtected] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -40,20 +40,62 @@ export default function SharePage() {
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [companyName, setCompanyName] = useState('Studio')
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
+  const [adminUser, setAdminUser] = useState<any>(null)
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
-  const [adminUser, setAdminUser] = useState<any>(null)
+  const [shareToken, setShareToken] = useState<string | null>(null)
+  const visitLoggedRef = useRef(false)
+  const storageKey = token || ''
+
+  // Load stored token once (persist across refresh)
+  useEffect(() => {
+    if (!storageKey) return
+    const stored = loadShareToken(storageKey)
+    if (stored) {
+      setShareToken(stored)
+    }
+  }, [storageKey])
+
+  // Detect if an admin session is present so admin comments stay internal
+  useEffect(() => {
+    let isMounted = true
+
+    const loadAdminUser = async () => {
+      try {
+        const response = await fetch('/api/auth/session', {
+          headers: { 'Cache-Control': 'no-store' },
+        })
+        if (!isMounted) return
+        if (response.ok) {
+          const data = await response.json()
+          setAdminUser(data.user)
+        } else {
+          setAdminUser(null)
+        }
+      } catch {
+        // Ignore session lookup failures for public viewers
+      }
+    }
+
+    loadAdminUser()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Fetch comments separately for security
   const fetchComments = async () => {
-    if (!token) return
+    if (!token || !shareToken) return
 
     setCommentsLoading(true)
     try {
       const response = await fetch(`/api/share/${token}/comments`, {
-        credentials: 'include'
+        headers: {
+          Authorization: `Bearer ${shareToken}`
+        }
       })
       if (response.ok) {
         const commentsData = await response.json()
@@ -67,13 +109,22 @@ export default function SharePage() {
   }
 
   // Fetch project data function (for refresh after approval)
-  const fetchProjectData = async () => {
+  const fetchProjectData = async (tokenOverride?: string | null) => {
     try {
+      const authToken = tokenOverride || shareToken
       const projectResponse = await fetch(`/api/share/${token}`, {
-        credentials: 'include'
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined
       })
       if (projectResponse.ok) {
         const projectData = await projectResponse.json()
+
+        if (projectData.shareToken) {
+          setShareToken(projectData.shareToken)
+          saveShareToken(storageKey, projectData.shareToken)
+        } else if (tokenOverride) {
+          setShareToken(tokenOverride)
+          saveShareToken(storageKey, tokenOverride)
+        }
         setProject(projectData)
 
         // Fetch comments after project loads (if not hidden)
@@ -91,110 +142,86 @@ export default function SharePage() {
 
   // Load project data (handles auth check implicitly via API response)
   useEffect(() => {
-    let isMounted = true // Prevent state updates after unmount
-    let hasInitiallyLoaded = false // Prevent duplicate initial load
+    let isMounted = true
 
     async function loadProject() {
       try {
         const response = await fetch(`/api/share/${token}`, {
-          credentials: 'include'
+          headers: shareToken ? { Authorization: `Bearer ${shareToken}` } : undefined
         })
 
-        if (!isMounted) return // Component unmounted, abort
+        if (!isMounted) return
 
-        // Handle different response statuses
         if (response.status === 401) {
-          // Authentication required
+          saveShareToken(storageKey, null)
           const data = await response.json()
-          if (isMounted) {
-            // If authMode is NONE and guestMode is enabled, auto-enter as guest
-            if (data.authMode === 'NONE' && data.guestMode) {
-              // Auto-enter as guest
-              try {
-                const guestResponse = await fetch(`/api/share/${token}/guest`, {
-                  method: 'POST',
-                  credentials: 'include'
-                })
-                if (guestResponse.ok) {
+          if (data.authMode === 'NONE' && data.guestMode) {
+            try {
+              const guestResponse = await fetch(`/api/share/${token}/guest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+              })
+              if (guestResponse.ok) {
+                const guestData = await guestResponse.json()
+                if (guestData.shareToken) {
+                  setShareToken(guestData.shareToken)
+                  saveShareToken(storageKey, guestData.shareToken)
                   setIsGuest(true)
                   setIsAuthenticated(true)
-                  // Re-fetch project data
-                  loadProject()
+                  await loadProject()
                   return
                 }
-              } catch (error) {
-                // Fall through to show auth screen
               }
+            } catch {
+              // fall through
             }
-
-            setIsPasswordProtected(true)
-            setIsAuthenticated(false)
-            setAuthMode(data.authMode || 'PASSWORD')
-            setGuestMode(data.guestMode || false)
           }
+
+          setIsPasswordProtected(true)
+          setIsAuthenticated(false)
+          setAuthMode(data.authMode || 'PASSWORD')
+          setGuestMode(data.guestMode || false)
           return
         }
 
         if (response.status === 403 || response.status === 404) {
-          // Invalid token or access denied - redirect to home
           window.location.href = '/'
           return
         }
 
         if (response.ok) {
-          // Success - show project
           const projectData = await response.json()
+          if (projectData.shareToken) {
+            setShareToken(projectData.shareToken)
+            saveShareToken(storageKey, projectData.shareToken)
+          }
           if (isMounted) {
             setProject(projectData)
-            // Check if project is password-protected based on presence of recipients
-            // (recipients are only included for password-protected projects)
             setIsPasswordProtected(!!projectData.recipients && projectData.recipients.length > 0)
             setIsAuthenticated(true)
-            // Set guest mode from API response
             setIsGuest(projectData.isGuest || false)
 
-            // Load global settings from project response
             if (projectData.settings) {
               setCompanyName(projectData.settings.companyName || 'Studio')
               setDefaultQuality(projectData.settings.defaultPreviewResolution || '720p')
             }
 
-            // Fetch comments separately (if not hidden)
             if (!projectData.hideFeedback) {
               fetchComments()
-            }
-
-            // Check if admin session exists (always check, doesn't expose anything)
-            try {
-              const adminResponse = await fetch('/api/auth/session', {
-                credentials: 'include'
-              })
-              if (adminResponse.ok) {
-                const adminData = await adminResponse.json()
-                if (adminData.authenticated && adminData.user?.role === 'ADMIN') {
-                  setAdminUser(adminData.user)
-                }
-              }
-            } catch (error) {
-              // Silent fail - not an admin
             }
           }
         }
       } catch (error) {
-        // Silent fail - errors handled by UI state
+        // Silent fail
       }
     }
 
-    // Only run initial check once
-    if (!hasInitiallyLoaded) {
-      hasInitiallyLoaded = true
-      loadProject()
-    }
+    loadProject()
 
     return () => {
-      isMounted = false // Mark component as unmounted
+      isMounted = false
     }
-  }, [token]) // Removed isAuthenticated from dependencies to prevent double-load
+  }, [token, shareToken])
 
   // Set active video when project loads, handling URL parameters
   useEffect(() => {
@@ -253,6 +280,30 @@ export default function SharePage() {
     }
   }, [project, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
 
+  // Record analytics visit once per page load (deduped server-side)
+  useEffect(() => {
+    if (visitLoggedRef.current) return
+    if (!token || !project?.id || !activeVideoName || !shareToken) return
+
+    const videosForActive = project.videosByName?.[activeVideoName]
+    if (!videosForActive || videosForActive.length === 0) return
+
+    const targetVideoId = videosForActive[0]?.id
+    if (!targetVideoId) return
+
+    visitLoggedRef.current = true
+    fetch('/api/analytics/visit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${shareToken}`
+      },
+      body: JSON.stringify({ projectId: project.id, videoId: targetVideoId }),
+    }).catch(() => {
+      // ignore analytics failure
+    })
+  }, [project?.id, project?.videosByName, activeVideoName, token, shareToken])
+
   // Handle video selection
   const handleVideoSelect = (videoName: string) => {
     setActiveVideoName(videoName)
@@ -271,7 +322,6 @@ export default function SharePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
-        credentials: 'include'
       })
 
       const data = await response.json()
@@ -302,26 +352,18 @@ export default function SharePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: otp }),
-        credentials: 'include'
       })
 
       if (response.ok) {
+        const data = await response.json()
+        if (data.shareToken) {
+          setShareToken(data.shareToken)
+          saveShareToken(storageKey, data.shareToken)
+        }
         setIsAuthenticated(true)
         setIsGuest(false)
 
-        // Fetch project data
-        const projectResponse = await fetch(`/api/share/${token}`, {
-          credentials: 'include'
-        })
-        if (projectResponse.ok) {
-          const projectData = await projectResponse.json()
-          setProject(projectData)
-
-          // Fetch comments after successful auth (if not hidden)
-          if (!projectData.hideFeedback) {
-            fetchComments()
-          }
-        }
+        await fetchProjectData(data.shareToken)
       } else {
         setError('Invalid or expired code. Please try again.')
       }
@@ -342,26 +384,18 @@ export default function SharePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
-        credentials: 'include'
       })
 
       if (response.ok) {
+        const data = await response.json()
+        if (data.shareToken) {
+          setShareToken(data.shareToken)
+          saveShareToken(storageKey, data.shareToken)
+        }
         setIsAuthenticated(true)
         setIsGuest(false)
 
-        // Fetch project data
-        const projectResponse = await fetch(`/api/share/${token}`, {
-          credentials: 'include'
-        })
-        if (projectResponse.ok) {
-          const projectData = await projectResponse.json()
-          setProject(projectData)
-
-          // Fetch comments after successful auth (if not hidden)
-          if (!projectData.hideFeedback) {
-            fetchComments()
-          }
-        }
+        await fetchProjectData(data.shareToken)
       } else {
         setError('Incorrect password')
       }
@@ -379,21 +413,19 @@ export default function SharePage() {
     try {
       const response = await fetch(`/api/share/${token}/guest`, {
         method: 'POST',
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' },
       })
 
       if (response.ok) {
+        const data = await response.json()
+        if (data.shareToken) {
+          setShareToken(data.shareToken)
+          saveShareToken(storageKey, data.shareToken)
+        }
         setIsAuthenticated(true)
         setIsGuest(true)
 
-        // Fetch project data
-        const projectResponse = await fetch(`/api/share/${token}`, {
-          credentials: 'include'
-        })
-        if (projectResponse.ok) {
-          const projectData = await projectResponse.json()
-          setProject(projectData)
-        }
+        await fetchProjectData(data.shareToken)
       } else {
         setError('Unable to access as guest')
       }
@@ -626,23 +658,6 @@ export default function SharePage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Admin Indicator */}
-        {adminUser && (
-          <div className="bg-primary-visible border-b-2 border-primary-visible">
-            <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-              <p className="text-sm text-primary font-medium">
-                Admin Mode: Viewing as {adminUser.name || adminUser.email} • You can comment as {companyName}
-              </p>
-              <Link href={`/admin/projects/${project.id}`}>
-                <Button variant="outline" size="sm" className="flex-shrink-0">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Admin
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
-
         {/* Content Area */}
         <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 min-h-0 flex flex-col">
           {/* Content Area */}
@@ -672,9 +687,10 @@ export default function SharePage() {
                   onApprove={isGuest ? undefined : fetchProjectData}
                   initialSeekTime={initialSeekTime}
                   initialVideoIndex={initialVideoIndex}
-                  isAdmin={!!adminUser}
+                  isAdmin={false}
                   isGuest={isGuest}
                   allowAssetDownload={project.allowAssetDownload}
+                  shareToken={shareToken}
                 />
               </div>
 
@@ -689,16 +705,17 @@ export default function SharePage() {
                     isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
                     restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                     videos={readyVideos}
-                    isAdminView={!!adminUser}
-                    companyName={companyName}
-                    clientCompanyName={project.companyName}
-                    smtpConfigured={project.smtpConfigured}
-                    isPasswordProtected={isPasswordProtected || false}
-                    adminUser={adminUser}
-                    recipients={project.recipients || []}
-                  />
-                </div>
-              )}
+                    isAdminView={false}
+                  companyName={companyName}
+                  clientCompanyName={project.companyName}
+                  smtpConfigured={project.smtpConfigured}
+                  isPasswordProtected={isPasswordProtected || false}
+                  adminUser={adminUser}
+                  recipients={project.recipients || []}
+                  shareToken={shareToken}
+                />
+              </div>
+            )}
 
               {/* Mobile Footer */}
               <div className="lg:hidden border-t border-border py-3 px-6 mt-6 col-span-full">

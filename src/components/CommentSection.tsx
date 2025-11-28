@@ -8,6 +8,7 @@ import MessageBubble from './MessageBubble'
 import CommentInput from './CommentInput'
 import { useCommentManagement } from '@/hooks/useCommentManagement'
 import { formatDate } from '@/lib/utils'
+import { apiFetch } from '@/lib/api-client'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -29,6 +30,7 @@ interface CommentSectionProps {
   isPasswordProtected?: boolean
   adminUser?: any
   recipients?: Array<{ id: string; name: string | null }>
+  shareToken?: string | null
 }
 
 export default function CommentSection({
@@ -47,6 +49,7 @@ export default function CommentSection({
   isPasswordProtected = false,
   adminUser = null,
   recipients = [],
+  shareToken = null,
 }: CommentSectionProps) {
   const {
     comments,
@@ -77,6 +80,9 @@ export default function CommentSection({
     recipients,
     clientName,
     restrictToLatestVersion,
+    shareToken,
+    useAdminAuth: isAdminView,
+    companyName,
   })
 
   // Auto-scroll to latest comment (like messaging apps)
@@ -87,9 +93,16 @@ export default function CommentSection({
   // Fetch comments function (only used for event-triggered updates)
   const fetchComments = async () => {
     try {
-      const response = await fetch(`/api/comments?projectId=${projectId}`, {
-        credentials: 'include',
-      })
+      const response = isAdminView
+        ? await apiFetch(`/api/comments?projectId=${projectId}`)
+        : shareToken
+          ? await fetch(`/api/comments?projectId=${projectId}`, {
+              headers: { Authorization: `Bearer ${shareToken}` },
+            })
+          : null
+
+      if (!response) return
+
       if (response.ok) {
         const freshComments = await response.json()
         setLocalComments(freshComments)
@@ -212,20 +225,22 @@ export default function CommentSection({
   }
 
   const handleSeekToTimestamp = (timestamp: number, videoId: string, videoVersion: number | null) => {
-    // If in admin view, navigate to share page with timestamp
-    if (isAdminView && projectSlug) {
-      // Find the video name and construct share URL
-      const video = videos.find(v => v.id === videoId)
-      if (!video) return
+    // Check if we're on a page with a video player by checking if the event listener exists
+    const hasVideoPlayer = typeof window !== 'undefined' && document.querySelector('video')
 
-      // Navigate to share page with video, version, and timestamp parameters
-      const shareUrl = `/share/${projectSlug}?video=${encodeURIComponent(video.name)}&version=${videoVersion || video.version}&t=${Math.floor(timestamp)}`
-      window.open(shareUrl, '_blank')
-    } else {
-      // If on share page with video player, dispatch event to player
+    if (hasVideoPlayer) {
+      // If video player is present (admin share page or public share page), dispatch event
       window.dispatchEvent(new CustomEvent('seekToTime', {
         detail: { timestamp, videoId, videoVersion }
       }))
+    } else if (isAdminView) {
+      // If in admin view without video player, navigate to admin share page with timestamp
+      const video = videos.find(v => v.id === videoId)
+      if (!video) return
+
+      // Navigate to admin share page with video, version, and timestamp parameters
+      const adminShareUrl = `/admin/projects/${projectId}/share?video=${encodeURIComponent(video.name)}&version=${videoVersion || video.version}&t=${Math.floor(timestamp)}`
+      window.location.href = adminShareUrl
     }
   }
 
@@ -243,7 +258,7 @@ export default function CommentSection({
   }
 
   return (
-    <Card className="bg-card border-border flex flex-col h-auto lg:h-full max-h-[75vh]" data-comment-section>
+    <Card className="bg-card border border-border flex flex-col h-auto lg:h-full max-h-[75vh] rounded-lg overflow-hidden" data-comment-section>
       <CardHeader className="border-b border-border flex-shrink-0">
         <CardTitle className="text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
@@ -295,7 +310,7 @@ export default function CommentSection({
                   : null
 
                 // Viewer's own messages: admin sees their internal messages, client sees their non-internal messages
-                const isViewerMessage = adminUser ? comment.isInternal : !comment.isInternal
+                const isViewerMessage = isAdminView ? comment.isInternal : !comment.isInternal
 
                 return (
                   <MessageBubble
@@ -308,7 +323,7 @@ export default function CommentSection({
                     parentComment={parentComment}
                     onReply={!isReply ? () => handleReply(comment.id, comment.videoId) : undefined}
                     onSeekToTimestamp={handleSeekToTimestamp}
-                    onDelete={adminUser ? () => handleDeleteComment(comment.id) : undefined}
+                    onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
                     onScrollToComment={handleScrollToComment}
                     formatMessageTime={formatMessageTime}
                     commentsDisabled={commentsDisabled}
@@ -332,7 +347,7 @@ export default function CommentSection({
           onClearTimestamp={handleClearTimestamp}
           replyingToComment={replyingToComment}
           onCancelReply={handleCancelReply}
-          showAuthorInput={isPasswordProtected && !adminUser}
+          showAuthorInput={!isAdminView && isPasswordProtected}
           authorName={authorName}
           onAuthorNameChange={setAuthorName}
           namedRecipients={namedRecipients}

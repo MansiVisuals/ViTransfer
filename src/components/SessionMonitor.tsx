@@ -1,141 +1,38 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { clearCsrfToken } from '@/lib/csrf-client'
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/lib/token-store'
 
-/**
- * Secure Session Monitor - JWT Best Practices
- *
- * SECURITY STRATEGY:
- *
- * 1. ACCESS TOKEN: 15 minutes (short-lived)
- *    - Limits damage if token is stolen
- *    - Automatically refreshed while user is active
- *
- * 2. REFRESH TOKEN: 3 days (long-lived)
- *    - HttpOnly cookie (JavaScript can't access)
- *    - Rotated on each refresh (old token revoked)
- *    - Fingerprinted (detects token theft)
- *
- * 3. AUTOMATIC REFRESH:
- *    - Refresh every 10 minutes if user is active
- *    - Only refresh if user has interacted recently
- *    - Prevents unnecessary server load
- *
- * 4. INACTIVITY LOGOUT:
- *    - After 15 minutes of no activity
- *    - Warning at 2 minutes before logout
- *    - Clear warning: tokens refreshed on activity
- *
- * NO TOKEN SENT FROM CLIENT:
- * - Tokens are in HttpOnly cookies
- * - Client just triggers refresh endpoint
- * - Server handles all token validation
- */
-
-// Production timeouts
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes
-const WARNING_TIME = 2 * 60 * 1000 // Show warning 2 minutes before logout
-const REFRESH_INTERVAL = 10 * 60 * 1000 // Refresh every 10 minutes if active
-const CHECK_INTERVAL = 30 * 1000 // Check every 30 seconds
+const CHECK_INTERVAL = 30 * 1000 // 30 seconds
+const REFRESH_INTERVAL = 10 * 60 * 1000 // 10 minutes
 
 export default function SessionMonitor() {
   const router = useRouter()
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
-  const [refreshing, setRefreshing] = useState(false)
+  const lastActivityRef = useRef<number>(Date.now())
+  const lastRefreshRef = useRef<number>(Date.now())
 
   useEffect(() => {
-    let lastActivity = Date.now()
-    let lastRefresh = Date.now()
-    let checkInterval: NodeJS.Timeout
-    let refreshInterval: NodeJS.Timeout
-
-    // Automatic token refresh while user is active
-    const refreshToken = async () => {
-      const timeSinceActivity = Date.now() - lastActivity
-      const timeSinceRefresh = Date.now() - lastRefresh
-
-      // Only refresh if:
-      // 1. User has been active recently (within last 15 min)
-      // 2. Haven't refreshed in the last 10 min
-      if (timeSinceActivity < INACTIVITY_TIMEOUT && timeSinceRefresh >= REFRESH_INTERVAL) {
-        if (refreshing) return // Prevent concurrent refreshes
-
-        try {
-          setRefreshing(true)
-          const response = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            credentials: 'include',
-          })
-
-          if (response.ok) {
-            // Clear cached CSRF token so next state-changing request fetches the fresh token
-            clearCsrfToken()
-            lastRefresh = Date.now()
-          } else if (response.status === 401 || response.status === 403) {
-            // Refresh token invalid/expired or security violation
-            router.push('/api/auth/logout')
-          }
-        } catch (error) {
-          // Session refresh failed - will retry
-        } finally {
-          setRefreshing(false)
-        }
-      }
-    }
-
-    // Reset activity timer on user interaction
-    // IMPORTANT: If warning is showing and user interacts, refresh token immediately
-    const resetActivity = async () => {
-      const wasShowingWarning = showWarning
-      lastActivity = Date.now()
+    const onActivity = () => {
+      lastActivityRef.current = Date.now()
       setShowWarning(false)
-
-      // If user was seeing warning and now interacts, refresh token immediately
-      // This ensures the session is extended right away, not waiting for next interval
-      if (wasShowingWarning) {
-        const timeSinceRefresh = Date.now() - lastRefresh
-        // Only refresh if haven't refreshed very recently (prevent spam)
-        if (timeSinceRefresh >= 30 * 1000) { // 30 seconds minimum between refreshes
-          // Note: refreshToken() already calls clearCsrfToken() on success
-          await refreshToken()
-        }
-      }
     }
 
-    // Activity events that reset the inactivity timer
-    const activityEvents = [
-      'mousedown',
-      'mousemove',
-      'keypress',
-      'scroll',
-      'touchstart',
-      'click',
-    ]
-
-    // Add activity listeners
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
     activityEvents.forEach(event => {
-      document.addEventListener(event, resetActivity, { passive: true, capture: true })
+      document.addEventListener(event, onActivity, { passive: true, capture: true })
     })
 
-    // Check session status periodically
-    checkInterval = setInterval(() => {
-      const timeSinceActivity = Date.now() - lastActivity
+    const inactivityTimer = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityRef.current
       const timeUntilLogout = INACTIVITY_TIMEOUT - timeSinceActivity
 
       if (timeUntilLogout <= 0) {
-        // Inactivity timeout - logout
-        // Call logout API to clear cookies, then redirect to login with sessionExpired flag
-        fetch('/api/auth/logout', {
-          method: 'POST',
-          credentials: 'include',
-        }).finally(() => {
-          router.push('/login?sessionExpired=true')
-        })
-      } else if (timeUntilLogout <= WARNING_TIME) {
-        // Show warning
+        handleLogout()
+      } else if (timeUntilLogout <= 2 * 60 * 1000) {
         setShowWarning(true)
         setTimeRemaining(Math.ceil(timeUntilLogout / 1000))
       } else {
@@ -143,22 +40,75 @@ export default function SessionMonitor() {
       }
     }, CHECK_INTERVAL)
 
-    // Refresh tokens periodically while active
-    refreshInterval = setInterval(refreshToken, REFRESH_INTERVAL)
+    const refreshTimer = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityRef.current
+      const timeSinceRefresh = Date.now() - lastRefreshRef.current
+      if (timeSinceActivity < INACTIVITY_TIMEOUT && timeSinceRefresh >= REFRESH_INTERVAL) {
+        refreshTokens()
+      }
+    }, CHECK_INTERVAL)
 
-    // Initial refresh check (in case page was just loaded)
-    refreshToken()
+    refreshTokens() // initial
 
-    // Cleanup
     return () => {
       activityEvents.forEach(event => {
-        document.removeEventListener(event, resetActivity, { capture: true } as any)
+        document.removeEventListener(event, onActivity, { capture: true } as any)
       })
-      clearInterval(checkInterval)
-      clearInterval(refreshInterval)
+      clearInterval(inactivityTimer)
+      clearInterval(refreshTimer)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]) // IMPORTANT: Don't include showWarning or refreshing - they would reset the timer!
+  }, [])
+
+  async function refreshTokens() {
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) return
+
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${refreshToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        handleLogout()
+        return
+      }
+
+      const data = await response.json()
+      if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
+        setTokens({
+          accessToken: data.tokens.accessToken,
+          refreshToken: data.tokens.refreshToken,
+        })
+        lastRefreshRef.current = Date.now()
+      }
+    } catch (error) {
+      // ignore transient failures
+    }
+  }
+
+  async function handleLogout() {
+    const accessToken = getAccessToken()
+    const refreshToken = getRefreshToken()
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...(refreshToken ? { 'X-Refresh-Token': `Bearer ${refreshToken}` } : {}),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      })
+    } catch (error) {
+      // ignore
+    } finally {
+      clearTokens()
+      router.push('/login?sessionExpired=true')
+    }
+  }
 
   if (!showWarning) {
     return null

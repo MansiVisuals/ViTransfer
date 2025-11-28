@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 export const runtime = 'nodejs'
 
 
@@ -46,8 +45,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
     const type = searchParams.get('type') || undefined
     const severity = searchParams.get('severity') || undefined
     const projectId = searchParams.get('projectId') || undefined
@@ -122,10 +121,6 @@ export async function DELETE(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   try {
     const body = await request.json()

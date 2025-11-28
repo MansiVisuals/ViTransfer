@@ -12,6 +12,7 @@ import {
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { isSmtpConfigured } from '@/lib/email'
+import crypto from 'crypto'
 export const runtime = 'nodejs'
 
 
@@ -142,7 +143,7 @@ export async function POST(
       // Valid emails take 100-500ms for SMTP, add equivalent delay here
       const minDelay = 150
       const maxDelay = 500
-      const randomDelay = Math.random() * (maxDelay - minDelay) + minDelay
+      const randomDelay = crypto.randomInt(minDelay, maxDelay + 1)
       const elapsed = Date.now() - startTime
       if (elapsed < randomDelay) {
         await new Promise(resolve => setTimeout(resolve, randomDelay - elapsed))

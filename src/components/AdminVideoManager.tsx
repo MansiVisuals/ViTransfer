@@ -58,10 +58,8 @@ export default function AdminVideoManager({
   }, {})
 
   const hasVideos = videos.length > 0
-  // Only allow one video expanded at a time - default to first video
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(
-    Object.keys(videoGroups)[0] || null
-  )
+  // Only allow one video expanded at a time - default collapsed
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
   const [showNewVideoForm, setShowNewVideoForm] = useState(!hasVideos) // Auto-show if no videos
   const [newVideoName, setNewVideoName] = useState('')
   const [editingGroupName, setEditingGroupName] = useState<string | null>(null)
@@ -70,11 +68,8 @@ export default function AdminVideoManager({
 
   // Notify parent when component mounts with first video
   useEffect(() => {
-    const firstVideoName = Object.keys(videoGroups)[0]
-    if (firstVideoName && onVideoSelect && videoGroups[firstVideoName]) {
-      onVideoSelect(firstVideoName, videoGroups[firstVideoName])
-    }
-  }, []) // Run only once on mount
+    // No auto-expansion on mount; admin will expand explicitly
+  }, [])
 
   const toggleGroup = (name: string) => {
     const wasExpanded = expandedGroup === name
@@ -126,22 +121,25 @@ export default function AdminVideoManager({
     }
 
     setSavingGroupName(oldName)
-    try {
-      const videosInGroup = videoGroups[oldName]
-      const videoIds = videosInGroup.map(v => v.id)
 
-      // Single batch update for all videos (uses centralized API client with CSRF)
-      await apiPatch('/api/videos/batch', { videoIds, name: editGroupValue.trim() })
+    const videosInGroup = videoGroups[oldName]
+    const videoIds = videosInGroup.map(v => v.id)
 
-      setEditingGroupName(null)
-      setEditGroupValue('')
-      await onRefresh?.()
-      router.refresh()
-    } catch (error) {
-      alert('Failed to update video name')
-    } finally {
-      setSavingGroupName(null)
-    }
+    // Single batch update for all videos (non-blocking)
+    apiPatch('/api/videos/batch', { videoIds, name: editGroupValue.trim() })
+      .then(() => {
+        setEditingGroupName(null)
+        setEditGroupValue('')
+        // Refresh in background
+        onRefresh?.()
+        router.refresh()
+      })
+      .catch((error) => {
+        alert('Failed to update video name')
+      })
+      .finally(() => {
+        setSavingGroupName(null)
+      })
   }
 
   const sortedGroupNames = Object.keys(videoGroups).sort((nameA, nameB) => {

@@ -8,9 +8,39 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
-import { apiPost } from '@/lib/api-client'
-import { generateSecurePassword } from '@/lib/password-utils'
+import { apiPost, apiFetch } from '@/lib/api-client'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
+
+// Client-safe password generation using Web Crypto API
+function generateSecurePassword(): string {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'
+  const numbers = '23456789'
+  const special = '!@#$%'
+  const all = letters + numbers + special
+
+  const getRandomInt = (max: number) => {
+    const array = new Uint32Array(1)
+    crypto.getRandomValues(array)
+    return array[0] % max
+  }
+
+  let password = ''
+  password += letters.charAt(getRandomInt(letters.length))
+  password += numbers.charAt(getRandomInt(numbers.length))
+
+  for (let i = 2; i < 12; i++) {
+    password += all.charAt(getRandomInt(all.length))
+  }
+
+  // Fisher-Yates shuffle
+  const chars = password.split('')
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = getRandomInt(i + 1)
+    ;[chars[i], chars[j]] = [chars[j], chars[i]]
+  }
+
+  return chars.join('')
+}
 
 export default function NewProjectPage() {
   const router = useRouter()
@@ -35,7 +65,7 @@ export default function NewProjectPage() {
   // Check if SMTP is configured (reuse centralized logic from settings API)
   async function checkSmtpConfiguration() {
     try {
-      const res = await fetch('/api/settings')
+      const res = await apiFetch('/api/settings')
       if (res.ok) {
         const data = await res.json()
         // Settings API now includes smtpConfigured field using isSmtpConfigured() helper
@@ -355,7 +385,7 @@ export default function NewProjectPage() {
                   type="button"
                   variant="outline"
                   size="lg"
-                  onClick={() => router.push('/admin')}
+                  onClick={() => router.push('/admin/projects')}
                   disabled={loading}
                 >
                   <X className="w-4 h-4 sm:mr-2" />

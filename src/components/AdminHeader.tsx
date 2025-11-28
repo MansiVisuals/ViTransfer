@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api-client'
 
 export default function AdminHeader() {
   const { user, logout } = useAuth()
@@ -17,7 +18,7 @@ export default function AdminHeader() {
   useEffect(() => {
     async function fetchSecuritySettings() {
       try {
-        const response = await fetch('/api/settings')
+      const response = await apiFetch('/api/settings')
         if (response.ok) {
           const data = await response.json()
           setShowSecurityDashboard(data.security?.viewSecurityEvents ?? false)
@@ -33,7 +34,7 @@ export default function AdminHeader() {
   if (!user) return null
 
   const navLinks = [
-    { href: '/admin', label: 'Projects', icon: FolderKanban },
+    { href: '/admin/projects', label: 'Projects', icon: FolderKanban },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
     { href: '/admin/users', label: 'Users', icon: Users },
@@ -52,7 +53,7 @@ export default function AdminHeader() {
             <nav className="flex gap-1 sm:gap-2 overflow-x-auto">
               {navLinks.map((link) => {
                 const Icon = link.icon
-                const isActive = pathname === link.href || (link.href !== '/admin' && pathname?.startsWith(link.href))
+                const isActive = pathname === link.href || (link.href !== '/admin/projects' && pathname?.startsWith(link.href))
 
                 return (
                   <Link

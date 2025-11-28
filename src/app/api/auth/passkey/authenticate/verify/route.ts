@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyPasskeyAuthentication } from '@/lib/passkey'
-import { createSession } from '@/lib/auth'
 import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import type { AuthenticationResponseJSON } from '@simplewebauthn/browser'
+import { issueAdminTokens } from '@/lib/auth'
+import crypto from 'crypto'
 export const runtime = 'nodejs'
 
 
@@ -82,8 +83,8 @@ export async function POST(request: NextRequest) {
     // SUCCESSFUL LOGIN: Clear rate limit counter
     await clearRateLimit(request, 'login', rateLimitKey)
 
-    // Create session with JWT tokens (reuses existing auth infrastructure)
-    await createSession(result.user)
+    const fingerprint = crypto.createHash('sha256').update(request.headers.get('user-agent') || 'unknown').digest('base64url')
+    const tokens = await issueAdminTokens(result.user, fingerprint)
 
     // Return user data (without password)
     return NextResponse.json({
@@ -93,6 +94,12 @@ export async function POST(request: NextRequest) {
         email: result.user.email,
         name: result.user.name,
         role: result.user.role,
+      },
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        accessExpiresAt: tokens.accessExpiresAt,
+        refreshExpiresAt: tokens.refreshExpiresAt,
       },
     })
   } catch (error) {

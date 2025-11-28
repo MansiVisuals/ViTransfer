@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db'
 import { deleteFile } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { getAutoApproveProject } from '@/lib/settings'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -74,10 +73,6 @@ export async function PATCH(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // Rate limit admin toggles
   const rateLimitResult = await rateLimit(request, {
@@ -198,10 +193,6 @@ export async function DELETE(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,

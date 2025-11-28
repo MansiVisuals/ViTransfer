@@ -86,7 +86,15 @@ export async function checkOTPRateLimit(
   const now = Date.now()
 
   if (data) {
-    const { count, firstAttempt } = JSON.parse(data)
+    let parsed
+    try {
+      parsed = JSON.parse(data)
+    } catch (error) {
+      console.error('Failed to parse OTP rate limit data:', error)
+      await redis.del(rateLimitKey)
+      return { limited: false }
+    }
+    const { count, firstAttempt } = parsed
 
     // Check if window has expired
     if (now - firstAttempt > RATE_LIMIT_WINDOW_MS) {
@@ -125,14 +133,20 @@ async function incrementOTPRateLimit(
   let firstAttempt = now
 
   if (data) {
-    const parsed = JSON.parse(data)
-    // Reset if window expired
-    if (now - parsed.firstAttempt > RATE_LIMIT_WINDOW_MS) {
-      count = 1
-      firstAttempt = now
-    } else {
-      count = parsed.count + 1
-      firstAttempt = parsed.firstAttempt
+    try {
+      const parsed = JSON.parse(data)
+      // Reset if window expired
+      if (now - parsed.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+        count = 1
+        firstAttempt = now
+      } else {
+        count = parsed.count + 1
+        firstAttempt = parsed.firstAttempt
+      }
+    } catch (error) {
+      console.error('Failed to parse OTP rate limit data:', error)
+      await redis.del(rateLimitKey)
+      // Continue with default values
     }
   }
 
@@ -258,7 +272,17 @@ export async function verifyOTP(
     }
   }
 
-  const otpData = JSON.parse(data)
+  let otpData
+  try {
+    otpData = JSON.parse(data)
+  } catch (error) {
+    console.error('Failed to parse OTP data:', error)
+    await redis.del(otpKey)
+    return {
+      success: false,
+      error: 'Invalid or expired code',
+    }
+  }
 
   // Check if email matches (case-insensitive)
   if (otpData.email.toLowerCase() !== email.toLowerCase().trim()) {

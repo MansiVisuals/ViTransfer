@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyCredentials, createSession } from '@/lib/auth'
+import { verifyCredentials, issueAdminTokens } from '@/lib/auth'
 import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { validateRequest, loginSchema } from '@/lib/validation'
-import { cookies } from 'next/headers'
 import crypto from 'crypto'
-import { getRedis } from '@/lib/redis'
 export const runtime = 'nodejs'
 
 
@@ -23,8 +21,7 @@ export const dynamic = 'force-dynamic'
  * 2. Successful logins clear the rate limit counter
  * 3. Input validation using Zod schema
  * 4. Secure password verification with bcrypt
- * 5. JWT tokens with short TTL (15 min access, 7 day refresh)
- * 6. HttpOnly, Secure, SameSite cookies
+ * 5. JWT tokens with short TTL (15 min access, 7 day refresh) returned explicitly in JSON
  * 
  * Rate Limiting Strategy:
  * - Only failed login attempts increment the counter
@@ -85,21 +82,8 @@ export async function POST(request: NextRequest) {
     // User successfully authenticated, reset failed attempt counter
     await clearRateLimit(request, 'login', email)
 
-    // Create session with JWT tokens
-    await createSession(user)
-
-    // SECURITY: Store fingerprint for refresh token
-    const cookieStore = await cookies()
-    const refreshTokenCookie = cookieStore.get('vitransfer_refresh')
-    if (refreshTokenCookie?.value) {
-      const userAgent = request.headers.get('user-agent') || 'unknown'
-      const fingerprintHash = crypto
-        .createHash('sha256')
-        .update(userAgent)
-        .digest('base64url')
-
-      await storeTokenFingerprint(user.id, refreshTokenCookie.value, fingerprintHash)
-    }
+    const fingerprint = fingerprintHash(request.headers.get('user-agent') || 'unknown')
+    const tokens = await issueAdminTokens(user, fingerprint)
 
     // Return user data (without password)
     return NextResponse.json({
@@ -109,6 +93,12 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
+      },
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        accessExpiresAt: tokens.accessExpiresAt,
+        refreshExpiresAt: tokens.refreshExpiresAt,
       },
     })
   } catch (error) {
@@ -122,26 +112,6 @@ export async function POST(request: NextRequest) {
 /**
  * Store token fingerprint in Redis for theft detection
  */
-async function storeTokenFingerprint(
-  userId: string,
-  refreshToken: string,
-  fingerprintHash: string
-): Promise<void> {
-  try {
-    const redis = getRedis()
-
-    // Use full hash (256 bits) - no truncation for better collision resistance
-    const tokenHash = crypto
-      .createHash('sha256')
-      .update(refreshToken)
-      .digest('base64url')
-
-    const key = `token_fingerprint:${userId}:${tokenHash}`
-    const ttl = 7 * 24 * 60 * 60 // 7 days
-
-    await redis.setex(key, ttl, fingerprintHash)
-  } catch (error) {
-    console.error('[AUTH] Failed to store token fingerprint:', error)
-    // Don't fail login if fingerprint storage fails
-  }
+function fingerprintHash(userAgent: string): string {
+  return crypto.createHash('sha256').update(userAgent).digest('base64url')
 }

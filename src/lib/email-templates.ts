@@ -168,7 +168,7 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
     `
   }).join('')
 
-  const adminUrl = data.projects[0]?.shareUrl ? escapeHtml(data.projects[0].shareUrl.replace(/\/share\/[^/]+/, '/admin')) : '#'
+  const adminUrl = data.projects[0]?.shareUrl ? escapeHtml(data.projects[0].shareUrl.replace(/\/share\/[^/]+/, '/admin/projects')) : '#'
 
   return renderEmailShell({
     companyName: 'Admin Dashboard',

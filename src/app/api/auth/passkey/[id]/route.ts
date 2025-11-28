@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { deletePasskey, updatePasskeyName } from '@/lib/passkey'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 export const runtime = 'nodejs'
 
 
@@ -25,10 +24,6 @@ export async function DELETE(
     // Require admin authentication
     const user = await requireApiAdmin(request)
     if (user instanceof Response) return user
-
-    // CSRF protection
-    const csrfCheck = await validateCsrfProtection(request)
-    if (csrfCheck) return csrfCheck
 
     const { id: credentialId } = await params
 
@@ -75,10 +70,6 @@ export async function PATCH(
     // Require admin authentication
     const user = await requireApiAdmin(request)
     if (user instanceof Response) return user
-
-    // CSRF protection
-    const csrfCheck = await validateCsrfProtection(request)
-    if (csrfCheck) return csrfCheck
 
     const { id: credentialId } = await params
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUserFromRequest, requireApiAdmin } from '@/lib/auth'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile } from '@/lib/file-validation'
@@ -114,10 +113,6 @@ export async function POST(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // CSRF Protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // Rate limiting
   const rateLimitResult = await rateLimit(

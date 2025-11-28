@@ -19,6 +19,9 @@ interface UseCommentManagementProps {
   recipients: Array<{ id: string; name: string | null }>
   clientName: string
   restrictToLatestVersion: boolean
+  shareToken?: string | null
+  useAdminAuth?: boolean
+  companyName?: string
 }
 
 export function useCommentManagement({
@@ -31,6 +34,9 @@ export function useCommentManagement({
   recipients,
   clientName,
   restrictToLatestVersion,
+  shareToken = null,
+  useAdminAuth = false,
+  companyName = 'Studio',
 }: UseCommentManagementProps) {
   const router = useRouter()
 
@@ -97,6 +103,7 @@ export function useCommentManagement({
   }, [videos, selectedVideoId])
 
   // Sync with video player if available (share page with player)
+  // Reduced from 1s to 5s to prevent UI lag during heavy interaction
   useEffect(() => {
     const syncCurrentVideo = () => {
       window.dispatchEvent(
@@ -113,7 +120,7 @@ export function useCommentManagement({
     }
 
     syncCurrentVideo()
-    const interval = setInterval(syncCurrentVideo, 1000)
+    const interval = setInterval(syncCurrentVideo, 5000) // Changed from 1000ms to 5000ms
     return () => clearInterval(interval)
   }, [selectedVideoId])
 
@@ -184,8 +191,16 @@ export function useCommentManagement({
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return
 
+    // Prevent rapid-fire submissions
+    if (loading) return
+
     if (!selectedVideoId) {
       alert('Please select a video before commenting.')
+      return
+    }
+
+    if (useAdminAuth && !adminUser) {
+      alert('Admin session not loaded yet. Please wait a moment and try again.')
       return
     }
 
@@ -204,7 +219,7 @@ export function useCommentManagement({
     setLoading(true)
 
     // OPTIMISTIC UPDATE
-    const isInternalComment = !!adminUser
+    const isInternalComment = useAdminAuth || !!adminUser
     const optimisticComment: CommentWithReplies = {
       id: `temp-${Date.now()}`,
       projectId,
@@ -213,9 +228,9 @@ export function useCommentManagement({
       timestamp: selectedTimestamp,
       content: newComment,
       authorName: isInternalComment
-        ? (adminUser.name || adminUser.email)
+        ? (adminUser!.name || 'Admin')
         : (isPasswordProtected ? authorName : 'Client'),
-      authorEmail: isInternalComment ? adminUser.email : (clientEmail || null),
+      authorEmail: isInternalComment ? null : (clientEmail || null),
       isInternal: isInternalComment,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -249,8 +264,7 @@ export function useCommentManagement({
 
       // Add optional fields only if they have values
       if (isInternalComment) {
-        requestBody.authorName = adminUser.name || adminUser.email
-        if (adminUser.email) requestBody.authorEmail = adminUser.email
+        requestBody.authorName = companyName || adminUser!.name || 'Admin'
       } else {
         if (authorName) requestBody.authorName = authorName
         if (clientEmail) requestBody.authorEmail = clientEmail
@@ -264,18 +278,52 @@ export function useCommentManagement({
         requestBody.parentId = commentParentId
       }
 
-      // Use centralized API client (handles CSRF automatically)
-      await apiPost('/api/comments', requestBody)
+      // Submit comment in background without blocking UI
+      const submitPromise = shareToken
+        ? fetch('/api/comments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${shareToken}`,
+            },
+            body: JSON.stringify(requestBody),
+          }).then(response => {
+            if (!response.ok) {
+              return response.json().catch(() => ({})).then(err => {
+                throw new Error(err.error || 'Failed to submit comment')
+              })
+            }
+            return response
+          })
+        : useAdminAuth
+        ? apiPost('/api/comments', requestBody)
+        : Promise.reject(new Error('Authentication required to submit comment'))
 
-      router.refresh()
+      // Handle submission result in background
+      submitPromise
+        .then(() => {
+          // Refresh in background (non-blocking)
+          router.refresh()
+        })
+        .catch((error) => {
+          // Remove optimistic comment and restore form on error
+          setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
+          setNewComment(commentContent)
+          setSelectedTimestamp(commentTimestamp)
+          setSelectedVideoId(commentVideoId)
+          alert(`Failed to submit comment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        })
+
+      // UI is already unblocked - loading state cleared immediately
     } catch (error) {
-      // Remove optimistic comment and restore form
+      // Handle synchronous errors only
       setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
       setNewComment(commentContent)
       setSelectedTimestamp(commentTimestamp)
       setSelectedVideoId(commentVideoId)
       alert(`Failed to submit comment: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
+      // Clear loading immediately so UI is not blocked
       setLoading(false)
     }
   }
@@ -310,7 +358,7 @@ export function useCommentManagement({
   }
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!adminUser) {
+    if (!(useAdminAuth || adminUser)) {
       alert('Only admins can delete comments')
       return
     }
@@ -320,8 +368,22 @@ export function useCommentManagement({
     }
 
     try {
-      // Use centralized API client (handles CSRF automatically)
-      await apiDelete(`/api/comments/${commentId}`)
+      if (shareToken) {
+        const response = await fetch(`/api/comments/${commentId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${shareToken}`,
+          },
+        })
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}))
+          throw new Error(err.error || 'Failed to delete comment')
+        }
+      } else if (useAdminAuth) {
+        await apiDelete(`/api/comments/${commentId}`)
+      } else {
+        throw new Error('Authentication required to delete comment')
+      }
 
       // Trigger immediate re-fetch via window event (CommentSection polling will pick it up)
       window.dispatchEvent(new CustomEvent('commentDeleted'))

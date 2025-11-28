@@ -1,5 +1,17 @@
 import { prisma } from './db'
 
+// Simple in-memory cache for frequently read settings to avoid repeated DB hits
+const SETTINGS_CACHE_TTL_MS = 60_000
+type CachedValue<T> = { value: T; expiresAt: number }
+const cachedRateLimits: CachedValue<{
+  ipRateLimit: number
+  sessionRateLimit: number
+  shareSessionRateLimit?: number
+  shareTokenTtlSeconds?: number
+}> = { value: { ipRateLimit: 1000, sessionRateLimit: 600 }, expiresAt: 0 }
+const cachedSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
+const cachedSmtpConfigured: CachedValue<boolean> = { value: false, expiresAt: 0 }
+
 /**
  * Get the company name from settings
  * Returns 'Studio' as default if not set
@@ -48,6 +60,11 @@ export async function getSettings() {
  * Check if SMTP is configured
  */
 export async function isSmtpConfigured(): Promise<boolean> {
+  const now = Date.now()
+  if (cachedSmtpConfigured.expiresAt > now) {
+    return cachedSmtpConfigured.value
+  }
+
   try {
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
@@ -59,10 +76,14 @@ export async function isSmtpConfigured(): Promise<boolean> {
       },
     })
 
-    return !!(settings?.smtpServer && settings?.smtpPort && settings?.smtpUsername && settings?.smtpPassword)
+    const configured = !!(settings?.smtpServer && settings?.smtpPort && settings?.smtpUsername && settings?.smtpPassword)
+    cachedSmtpConfigured.value = configured
+    cachedSmtpConfigured.expiresAt = now + SETTINGS_CACHE_TTL_MS
+
+    return configured
   } catch (error) {
     console.error('Error checking SMTP configuration:', error)
-    return false
+    return cachedSmtpConfigured.value
   }
 }
 
@@ -87,13 +108,18 @@ export async function getAutoApproveProject(): Promise<boolean> {
 /**
  * Get client session timeout in seconds from security settings
  * Used for:
- * - Client share sessions (share_session, share_auth cookies)
- * - Video access tokens
- * - Redis session mappings
+ * - Share token TTL guidance
+ * - Video access token TTL
+ * - Redis session mappings for content streaming
  *
  * NOT used for admin JWT sessions (those stay fixed at 15 min with auto-refresh)
  */
 export async function getClientSessionTimeoutSeconds(): Promise<number> {
+  const now = Date.now()
+  if (cachedSessionTimeout.expiresAt > now) {
+    return cachedSessionTimeout.value
+  }
+
   try {
     const settings = await prisma.securitySettings.findUnique({
       where: { id: 'default' },
@@ -104,8 +130,9 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
     })
 
     if (!settings) {
-      // Default to 15 minutes if settings don't exist
-      return 15 * 60
+      cachedSessionTimeout.value = 15 * 60
+      cachedSessionTimeout.expiresAt = now + SETTINGS_CACHE_TTL_MS
+      return cachedSessionTimeout.value
     }
 
     const value = settings.sessionTimeoutValue
@@ -114,21 +141,27 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
     // Convert to seconds based on unit
     switch (unit) {
       case 'MINUTES':
-        return value * 60
+        cachedSessionTimeout.value = value * 60
+        break
       case 'HOURS':
-        return value * 60 * 60
+        cachedSessionTimeout.value = value * 60 * 60
+        break
       case 'DAYS':
-        return value * 24 * 60 * 60
+        cachedSessionTimeout.value = value * 24 * 60 * 60
+        break
       case 'WEEKS':
-        return value * 7 * 24 * 60 * 60
+        cachedSessionTimeout.value = value * 7 * 24 * 60 * 60
+        break
       default:
-        // Fallback to 15 minutes if unit is invalid
-        return 15 * 60
+        cachedSessionTimeout.value = 15 * 60
+        break
     }
+
+    cachedSessionTimeout.expiresAt = now + SETTINGS_CACHE_TTL_MS
+    return cachedSessionTimeout.value
   } catch (error) {
     console.error('Error fetching client session timeout:', error)
-    // Fallback to 15 minutes on error
-    return 15 * 60
+    return cachedSessionTimeout.value
   }
 }
 
@@ -141,12 +174,10 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
  * If you get locked out on localhost, set HTTPS_ENABLED=false in docker-compose.yml
  *
  * When HTTPS is OFF:
- * - Cookies use secure: false
  * - No HSTS header
  * - Use for: localhost, internal LAN (set HTTPS_ENABLED=false in docker-compose)
  *
  * When HTTPS is ON (default for security):
- * - Cookies use secure: true (only sent over HTTPS)
  * - HSTS header enabled (forces browser to use HTTPS)
  * - Use for: production deployments with HTTPS (direct or reverse proxy)
  */
@@ -202,6 +233,54 @@ export async function isHttpsEnabled(): Promise<boolean> {
     // Default to true even on error for security
     return true
   }
+}
+
+export async function getRateLimitSettings(): Promise<{
+  ipRateLimit: number
+  sessionRateLimit: number
+  shareSessionRateLimit?: number
+  shareTokenTtlSeconds?: number
+}> {
+  const now = Date.now()
+  if (cachedRateLimits.expiresAt > now) {
+    return cachedRateLimits.value
+  }
+
+  try {
+    const settings = await prisma.securitySettings.findUnique({
+      where: { id: 'default' },
+      select: {
+        ipRateLimit: true,
+        sessionRateLimit: true,
+        shareSessionRateLimit: true,
+        shareTokenTtlSeconds: true,
+      },
+    })
+
+    cachedRateLimits.value = {
+      ipRateLimit: settings?.ipRateLimit ?? 1000,
+      sessionRateLimit: settings?.sessionRateLimit ?? 600,
+      shareSessionRateLimit: settings?.shareSessionRateLimit ?? 300,
+      shareTokenTtlSeconds: settings?.shareTokenTtlSeconds ?? undefined,
+    }
+    cachedRateLimits.expiresAt = now + SETTINGS_CACHE_TTL_MS
+
+    return cachedRateLimits.value
+  } catch (error) {
+    return cachedRateLimits.value
+  }
+}
+
+/**
+ * Share token TTL (seconds)
+ * Uses the same client session timeout setting to keep share JWTs aligned with content access TTLs.
+ */
+export async function getShareTokenTtlSeconds(): Promise<number> {
+  const { shareTokenTtlSeconds } = await getRateLimitSettings()
+  if (shareTokenTtlSeconds && shareTokenTtlSeconds > 0) {
+    return shareTokenTtlSeconds
+  }
+  return getClientSessionTimeoutSeconds()
 }
 
 /**
@@ -375,4 +454,3 @@ export async function getPasskeyConfigStatus(): Promise<{
     }
   }
 }
-

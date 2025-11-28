@@ -10,7 +10,7 @@ import { EmailSettingsSection } from '@/components/settings/EmailSettingsSection
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
 import { ProjectBehaviorSection } from '@/components/settings/ProjectBehaviorSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
-import { apiPatch, apiPost } from '@/lib/api-client'
+import { apiPatch, apiPost, apiFetch } from '@/lib/api-client'
 
 interface Settings {
   id: string
@@ -37,6 +37,8 @@ interface SecuritySettings {
   hotlinkProtection: string
   ipRateLimit: number
   sessionRateLimit: number
+  shareSessionRateLimit?: number
+  shareTokenTtlSeconds?: number | null
   passwordAttempts: number
   sessionTimeoutValue: number
   sessionTimeoutUnit: string
@@ -83,6 +85,8 @@ export default function GlobalSettingsPage() {
   const [hotlinkProtection, setHotlinkProtection] = useState('LOG_ONLY')
   const [ipRateLimit, setIpRateLimit] = useState('1000')
   const [sessionRateLimit, setSessionRateLimit] = useState('600')
+  const [shareSessionRateLimit, setShareSessionRateLimit] = useState('300')
+  const [shareTokenTtlSeconds, setShareTokenTtlSeconds] = useState('')
   const [passwordAttempts, setPasswordAttempts] = useState('5')
   const [sessionTimeoutValue, setSessionTimeoutValue] = useState('15')
   const [sessionTimeoutUnit, setSessionTimeoutUnit] = useState('MINUTES')
@@ -100,7 +104,7 @@ export default function GlobalSettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const response = await fetch('/api/settings')
+        const response = await apiFetch('/api/settings')
         if (!response.ok) {
           throw new Error('Failed to load settings')
         }
@@ -128,7 +132,7 @@ export default function GlobalSettingsPage() {
         setAdminNotificationDay(data.adminNotificationDay ?? 1)
 
         // Load security settings
-        const securityResponse = await fetch('/api/settings/security')
+        const securityResponse = await apiFetch('/api/settings/security')
         if (securityResponse.ok) {
           const securityData = await securityResponse.json()
           setSecuritySettings(securityData)
@@ -138,6 +142,8 @@ export default function GlobalSettingsPage() {
           setHotlinkProtection(securityData.hotlinkProtection || 'LOG_ONLY')
           setIpRateLimit(securityData.ipRateLimit?.toString() || '1000')
           setSessionRateLimit(securityData.sessionRateLimit?.toString() || '600')
+          setShareSessionRateLimit(securityData.shareSessionRateLimit?.toString() || '300')
+          setShareTokenTtlSeconds(securityData.shareTokenTtlSeconds ? securityData.shareTokenTtlSeconds.toString() : '')
           setPasswordAttempts(securityData.passwordAttempts?.toString() || '5')
           setSessionTimeoutValue(securityData.sessionTimeoutValue?.toString() || '15')
           setSessionTimeoutUnit(securityData.sessionTimeoutUnit || 'MINUTES')
@@ -164,7 +170,7 @@ export default function GlobalSettingsPage() {
       const updates = {
         companyName: companyName || null,
         smtpServer: smtpServer || null,
-        smtpPort: smtpPort ? parseInt(smtpPort) : 587,
+        smtpPort: smtpPort ? parseInt(smtpPort, 10) : 587,
         smtpUsername: smtpUsername || null,
         smtpPassword: smtpPassword || null,
         smtpFromAddress: smtpFromAddress || null,
@@ -186,10 +192,12 @@ export default function GlobalSettingsPage() {
       const securityUpdates = {
         httpsEnabled,
         hotlinkProtection,
-        ipRateLimit: parseInt(ipRateLimit) || 1000,
-        sessionRateLimit: parseInt(sessionRateLimit) || 600,
-        passwordAttempts: parseInt(passwordAttempts) || 5,
-        sessionTimeoutValue: parseInt(sessionTimeoutValue) || 15,
+        ipRateLimit: parseInt(ipRateLimit, 10) || 1000,
+        sessionRateLimit: parseInt(sessionRateLimit, 10) || 600,
+        shareSessionRateLimit: parseInt(shareSessionRateLimit, 10) || 300,
+        shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
+        passwordAttempts: parseInt(passwordAttempts, 10) || 5,
+        sessionTimeoutValue: parseInt(sessionTimeoutValue, 10) || 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
         trackAnalytics,
         trackSecurityLogs,
@@ -202,7 +210,7 @@ export default function GlobalSettingsPage() {
       setTimeout(() => setSuccess(false), 3000)
 
       // Reload settings data to reflect changes
-      const refreshResponse = await fetch('/api/settings')
+      const refreshResponse = await apiFetch('/api/settings')
       if (refreshResponse.ok) {
         const refreshedData = await refreshResponse.json()
         setSettings(refreshedData)
@@ -224,7 +232,7 @@ export default function GlobalSettingsPage() {
       }
 
       // Reload security settings data
-      const securityRefreshResponse = await fetch('/api/settings/security')
+      const securityRefreshResponse = await apiFetch('/api/settings/security')
       if (securityRefreshResponse.ok) {
         const refreshedSecurityData = await securityRefreshResponse.json()
         setSecuritySettings(refreshedSecurityData)
@@ -258,7 +266,7 @@ export default function GlobalSettingsPage() {
       // Prepare current form values as SMTP config
       const smtpConfig = {
         smtpServer: smtpServer || null,
-        smtpPort: smtpPort ? parseInt(smtpPort) : null,
+        smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
         smtpUsername: smtpUsername || null,
         smtpPassword: smtpPassword || null,
         smtpFromAddress: smtpFromAddress || null,
@@ -410,6 +418,10 @@ export default function GlobalSettingsPage() {
             setIpRateLimit={setIpRateLimit}
             sessionRateLimit={sessionRateLimit}
             setSessionRateLimit={setSessionRateLimit}
+            shareSessionRateLimit={shareSessionRateLimit}
+            setShareSessionRateLimit={setShareSessionRateLimit}
+            shareTokenTtlSeconds={shareTokenTtlSeconds}
+            setShareTokenTtlSeconds={setShareTokenTtlSeconds}
             passwordAttempts={passwordAttempts}
             setPasswordAttempts={setPasswordAttempts}
             sessionTimeoutValue={sessionTimeoutValue}

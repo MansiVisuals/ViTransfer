@@ -394,6 +394,7 @@ export default function AdminSharePage() {
                   allowAssetDownload={project.allowAssetDownload}
                   shareToken={null}
                   onApprove={undefined}
+                  hideDownloadButton={true}
                 />
               )}
             </div>

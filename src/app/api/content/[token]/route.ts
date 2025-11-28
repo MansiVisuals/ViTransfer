@@ -68,6 +68,7 @@ export async function GET(
       return ipRateLimitResult
     }
 
+    // Check admin status first to potentially skip token verification
     const currentUser = await getCurrentUserFromRequest(request)
     const isAdmin = currentUser?.role === 'ADMIN'
 
@@ -81,6 +82,7 @@ export async function GET(
 
     const preliminaryTokenData = JSON.parse(rawTokenData)
 
+    // For admin users, verify project access and use token's sessionId
     let sessionId: string | null = null
 
     if (isAdmin) {

@@ -35,6 +35,7 @@ interface VideoPlayerProps {
   initialVideoIndex?: number // Initial video index to select (from URL params)
   allowAssetDownload?: boolean // Allow clients to download assets
   shareToken?: string | null
+  hideDownloadButton?: boolean // Hide download button completely (for admin share view)
 }
 
 export default function VideoPlayer({
@@ -54,7 +55,8 @@ export default function VideoPlayer({
   initialSeekTime = null,
   initialVideoIndex = 0,
   allowAssetDownload = true,
-  shareToken = null
+  shareToken = null,
+  hideDownloadButton = false, // Default to false (show download button)
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
@@ -460,7 +462,7 @@ export default function VideoPlayer({
             )}
 
             {/* Download Button - Only show when video is approved and not in guest mode */}
-            {isVideoApproved && !isGuest && (
+            {isVideoApproved && !isGuest && !hideDownloadButton && (
               <Button onClick={handleDownload} variant="default" size="sm">
                 <Download className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Download</span>

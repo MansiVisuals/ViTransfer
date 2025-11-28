@@ -79,21 +79,27 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     }
 
     setDeletingId(assetId)
-    try {
-      await apiDelete(`/api/videos/${videoId}/assets/${assetId}`)
 
-      // Remove from local state
-      setAssets(assets.filter(a => a.id !== assetId))
+    // Optimistically remove from UI
+    const previousAssets = assets
+    setAssets(assets.filter(a => a.id !== assetId))
 
-      // Notify parent component
-      if (onAssetDeleted) {
-        onAssetDeleted()
-      }
-    } catch (err) {
-      alert('Failed to delete asset')
-    } finally {
-      setDeletingId(null)
-    }
+    // Delete in background without blocking UI
+    apiDelete(`/api/videos/${videoId}/assets/${assetId}`)
+      .then(() => {
+        // Notify parent component
+        if (onAssetDeleted) {
+          onAssetDeleted()
+        }
+      })
+      .catch((err) => {
+        // Restore on error
+        setAssets(previousAssets)
+        alert('Failed to delete asset')
+      })
+      .finally(() => {
+        setDeletingId(null)
+      })
   }
 
   const getCategoryLabel = (category: string | null) => {
@@ -148,21 +154,22 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   }
 
   const handleDownload = async (assetId: string, fileName: string) => {
-    try {
-      // Generate download token for instant download (same as share page)
-      const response = await apiFetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
-        method: 'POST'
+    // Generate download token in background without blocking UI
+    apiFetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
+      method: 'POST'
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Failed to generate download link')
+        }
+        return response.json()
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to generate download link')
-      }
-
-      const { url } = await response.json()
-      window.open(url, '_blank')
-    } catch (err) {
-      alert('Failed to download asset')
-    }
+      .then(({ url }) => {
+        window.open(url, '_blank')
+      })
+      .catch((err) => {
+        alert('Failed to download asset')
+      })
   }
 
   const handleSetThumbnail = async (assetId: string, fileName: string) => {
@@ -181,21 +188,25 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     }
 
     setSettingThumbnail(assetId)
-    try {
-      await apiPost(`/api/videos/${videoId}/assets/${assetId}/set-thumbnail`, { action })
 
-      // Refresh assets to get updated thumbnail path
-      await fetchAssets()
-
-      // Notify parent to refresh if needed
-      if (onAssetDeleted) {
-        onAssetDeleted()
-      }
-    } catch (err) {
-      alert(`Failed to ${action} thumbnail`)
-    } finally {
-      setSettingThumbnail(null)
-    }
+    // Set thumbnail in background without blocking UI
+    apiPost(`/api/videos/${videoId}/assets/${assetId}/set-thumbnail`, { action })
+      .then(() => {
+        // Refresh assets to get updated thumbnail path
+        return fetchAssets()
+      })
+      .then(() => {
+        // Notify parent to refresh if needed
+        if (onAssetDeleted) {
+          onAssetDeleted()
+        }
+      })
+      .catch((err) => {
+        alert(`Failed to ${action} thumbnail`)
+      })
+      .finally(() => {
+        setSettingThumbnail(null)
+      })
   }
 
   const canSetAsThumbnail = (category: string | null, fileType: string) => {

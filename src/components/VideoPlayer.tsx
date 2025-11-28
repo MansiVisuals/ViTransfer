@@ -264,26 +264,36 @@ export default function VideoPlayer({
     // Check if assets are available and asset downloads are allowed
     if (allowAssetDownload && !isGuest && !isAdmin) {
       setCheckingAssets(true)
-      try {
-        const authHeaders = buildAuthHeaders(shareToken)
-        // Check if this video has assets
-        const response = await fetch(`/api/videos/${selectedVideo.id}/assets`, {
-          headers: authHeaders,
-        })
 
-        if (response.ok) {
-          const data = await response.json()
-          if (data.assets && data.assets.length > 0) {
-            setHasAssets(true)
-            setShowDownloadModal(true)
-            setCheckingAssets(false)
-            return
+      const authHeaders = buildAuthHeaders(shareToken)
+      // Check if this video has assets (non-blocking)
+      fetch(`/api/videos/${selectedVideo.id}/assets`, {
+        headers: authHeaders,
+      })
+        .then(async (response) => {
+          if (response.ok) {
+            const data = await response.json()
+            if (data.assets && data.assets.length > 0) {
+              setHasAssets(true)
+              setShowDownloadModal(true)
+              setCheckingAssets(false)
+              return true
+            }
           }
-        }
-      } catch (err) {
-        // If checking fails, just proceed with direct download
-      }
-      setCheckingAssets(false)
+          return false
+        })
+        .catch((err) => {
+          // If checking fails, just proceed with direct download
+          return false
+        })
+        .then((hasAssets) => {
+          setCheckingAssets(false)
+          if (!hasAssets) {
+            // Direct download if no assets
+            window.open(downloadUrl, '_blank')
+          }
+        })
+      return
     }
 
     // Direct download if no assets or not allowed
@@ -293,36 +303,39 @@ export default function VideoPlayer({
   const handleApprove = async () => {
     setLoading(true)
 
-    try {
-      const authHeaders = buildAuthHeaders(shareToken)
-      const response = await fetch(`/api/projects/${projectId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({
-          selectedVideoId: selectedVideo.id,
-        }),
+    const authHeaders = buildAuthHeaders(shareToken)
+    // Approve project in background without blocking UI
+    fetch(`/api/projects/${projectId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({
+        selectedVideoId: selectedVideo.id,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to approve project')
+        }
+        return response
       })
+      .then(() => {
+        // Store the current video group name in sessionStorage to restore after reload
+        if (activeVideoName) {
+          sessionStorage.setItem('approvedVideoName', activeVideoName)
+        }
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to approve project')
-      }
-
-      // Store the current video group name in sessionStorage to restore after reload
-      if (activeVideoName) {
-        sessionStorage.setItem('approvedVideoName', activeVideoName)
-      }
-
-      // Call the optional callback if provided (for parent component updates)
-      if (onApprove) {
-        await onApprove()
-      }
-      // Parent handles refresh; avoid page reload to prevent loops
-    } catch (error) {
-      alert('Failed to approve project')
-    } finally {
-      setLoading(false)
-    }
+        // Call the optional callback if provided (for parent component updates)
+        if (onApprove) {
+          return onApprove()
+        }
+      })
+      .catch((error) => {
+        alert('Failed to approve project')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   // Safety check: if no videos available, show message

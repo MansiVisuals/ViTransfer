@@ -75,6 +75,7 @@ export default function ProjectPage() {
   }, [id])
 
   // Auto-refresh when videos are processing to show real-time progress
+  // Centralized polling to prevent duplicate network requests
   useEffect(() => {
     if (!project?.videos) return
 
@@ -84,10 +85,10 @@ export default function ProjectPage() {
     )
 
     if (hasProcessingVideos) {
-      // Poll every 3 seconds while videos are processing
+      // Poll every 5 seconds while videos are processing (reduced from 3s to reduce load)
       const interval = setInterval(() => {
         fetchProject()
-      }, 3000)
+      }, 5000)
 
       return () => clearInterval(interval)
     }

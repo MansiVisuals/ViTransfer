@@ -31,15 +31,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Optimized query: only fetch essential fields, use _count for video/comment totals
     const projects = await prisma.project.findMany({
-      include: {
-        videos: {
-          select: {
-            id: true,
-            name: true,
-            status: true,
-          },
-        },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+        watermarkEnabled: true,
+        sharePassword: true,
+        authMode: true,
+        hideFeedback: true,
+        guestMode: true,
+        allowAssetDownload: true,
+        previewResolution: true,
         _count: {
           select: {
             videos: true,

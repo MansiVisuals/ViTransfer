@@ -340,6 +340,27 @@ export async function getShareContext(request: NextRequest): Promise<SharePayloa
   return verifyShareToken(bearer)
 }
 
+/**
+ * Get complete authentication context for a request
+ *
+ * Preferred method for dual-auth routes (admin + share token support).
+ * Returns all auth information in a single call, preventing redundant lookups.
+ *
+ * @param request - NextRequest object
+ * @returns Object containing user, isAdmin flag, and share context
+ */
+export async function getAuthContext(request: NextRequest): Promise<{
+  user: AuthUser | null
+  isAdmin: boolean
+  shareContext: SharePayload | null
+}> {
+  const user = await getCurrentUserFromRequest(request)
+  const shareContext = await getShareContext(request)
+  const isAdmin = user?.role === 'ADMIN'
+
+  return { user, isAdmin, shareContext }
+}
+
 export async function getAdminOverrideFromRequest(request: NextRequest): Promise<AuthUser | null> {
   const adminHeader = parseBearerToken(request, 'x-admin-authorization')
   if (!adminHeader) return null

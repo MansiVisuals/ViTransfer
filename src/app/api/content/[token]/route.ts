@@ -6,7 +6,7 @@ import { createReadStream, existsSync, statSync, ReadStream } from 'fs'
 import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { getAuthContext } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -68,9 +68,8 @@ export async function GET(
       return ipRateLimitResult
     }
 
-    // Check admin status first to potentially skip token verification
-    const currentUser = await getCurrentUserFromRequest(request)
-    const isAdmin = currentUser?.role === 'ADMIN'
+    // Get authentication context once
+    const authContext = await getAuthContext(request)
 
     const redis = getRedis()
     const tokenKey = `video_access:${token}`
@@ -82,10 +81,11 @@ export async function GET(
 
     const preliminaryTokenData = JSON.parse(rawTokenData)
 
-    // For admin users, verify project access and use token's sessionId
-    let sessionId: string | null = null
+    // Use token's session ID for all users
+    const sessionId = preliminaryTokenData.sessionId
 
-    if (isAdmin) {
+    // For admin users, verify they have access to the project
+    if (authContext.isAdmin) {
       const project = await prisma.project.findUnique({
         where: { id: preliminaryTokenData.projectId },
         select: { id: true }
@@ -94,11 +94,6 @@ export async function GET(
       if (!project) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
-
-      // Admins can access any valid token, use token's sessionId directly
-      sessionId = preliminaryTokenData.sessionId
-    } else {
-      sessionId = preliminaryTokenData.sessionId
     }
 
     if (!sessionId) {
@@ -184,7 +179,7 @@ export async function GET(
       }
 
       // Check permissions (skip for admins)
-      if (!isAdmin) {
+      if (!authContext.isAdmin) {
         if (!video.project.allowAssetDownload) {
           return NextResponse.json({ error: 'Asset downloads not allowed' }, { status: 403 })
         }

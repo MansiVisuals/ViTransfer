@@ -84,8 +84,11 @@ export async function GET(
     // Use token's session ID for all users
     const sessionId = preliminaryTokenData.sessionId
 
+    // Determine if this is an admin request (JWT token OR admin session ID)
+    const isAdminRequest = authContext.isAdmin || sessionId?.startsWith('admin:')
+
     // For admin users, verify they have access to the project
-    if (authContext.isAdmin) {
+    if (isAdminRequest) {
       const project = await prisma.project.findUnique({
         where: { id: preliminaryTokenData.projectId },
         select: { id: true }
@@ -179,7 +182,7 @@ export async function GET(
       }
 
       // Check permissions (skip for admins)
-      if (!authContext.isAdmin) {
+      if (!isAdminRequest) {
         if (!video.project.allowAssetDownload) {
           return NextResponse.json({ error: 'Asset downloads not allowed' }, { status: 403 })
         }

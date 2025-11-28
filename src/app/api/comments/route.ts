@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { getAuthContext } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateRequest, createCommentSchema } from '@/lib/validation'
 import { getPrimaryRecipient } from '@/lib/recipients'
@@ -178,14 +178,14 @@ export async function POST(request: NextRequest) {
       isInternal
     } = validation.data
 
-    // Get current user if authenticated (for admin comments)
-    const currentUser = await getCurrentUserFromRequest(request)
+    // Get authentication context (single call for both admin and share token)
+    const authContext = await getAuthContext(request)
 
     // Validate comment permissions
     const permissionCheck = await validateCommentPermissions({
       projectId,
       isInternal: isInternal || false,
-      currentUser
+      currentUser: authContext.user
     })
 
     if (!permissionCheck.valid) {
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
         authorEmail: finalAuthorEmail,
         isInternal: isInternal || false,
         parentId: parentId || null,
-        userId: currentUser?.id || null,
+        userId: authContext.user?.id || null,
       },
       include: {
         user: {

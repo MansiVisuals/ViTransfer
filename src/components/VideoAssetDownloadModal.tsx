@@ -137,7 +137,8 @@ export function VideoAssetDownloadModal({
       setDownloading(true)
       setError(null)
 
-      const response = await fetch(`/api/videos/${videoId}/assets/download-zip`, {
+      // Generate download token for ZIP (non-blocking, no memory loading)
+      const response = await fetch(`/api/videos/${videoId}/assets/download-zip-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,26 +154,15 @@ export function VideoAssetDownloadModal({
         throw new Error(data.error || 'Download failed')
       }
 
-      // Extract filename from headers
-      const contentDisposition = response.headers.get('Content-Disposition')
-      let filename = `${videoName}_${versionLabel}_assets.zip`
-      if (contentDisposition) {
-        const matches = /filename="(.+)"/.exec(contentDisposition)
-        if (matches && matches[1]) {
-          filename = matches[1]
-        }
-      }
+      const { url: downloadUrl } = await response.json()
 
-      // Trigger browser download
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      // Direct download via window.open (streaming, non-blocking, supports multiple simultaneous downloads)
+      window.open(downloadUrl, '_blank')
+
+      // Close modal shortly after initiating download
+      setTimeout(() => {
+        onClose()
+      }, 500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     } finally {

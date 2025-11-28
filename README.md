@@ -18,35 +18,34 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 ## Features
 
 ### Core Functionality
-- **Video Upload & Processing** - Automatic transcoding to multiple resolutions (720p/1080p)
-- **Watermarking** - Customizable watermarks for preview videos
-- **Timestamped Comments** - Collect feedback with precise video timestamps
-- **Approval Workflow** - Client approval system with revision tracking
-- **Password Protection** - Secure projects with client passwords
-- **Email Notifications** - Automated notifications for new videos and replies
-- **Dark Mode** - Dark/light theme support
-- **Responsive Design** - Works on desktop, tablet, and mobile devices
+- **Video Upload & Processing** - Automatic FFmpeg transcoding to 720p, 1080p, or 4K with resumable uploads via TUS protocol
+- **Smart Watermarking** - Customizable watermarks with center and corner placements, configurable per project or globally
+- **Timestamped Comments** - Timestamped feedback with threaded replies that track video versions (up to 10,000 characters)
+- **Approval Workflow** - Per video approval system with automatic project approval when all videos are approved
+- **Flexible Authentication** - Share links support password protection, email OTP codes, both methods, or no authentication with optional guest mode
+- **Smart Notifications** - Email notifications with scheduling options: immediate, hourly, daily, or weekly digests
+- **Dark Mode** - Native light and dark themes for consistent experience across devices
+- **Responsive Design** - Optimized for desktop, tablet, and mobile devices
 
 ### Admin Features
-- **Multi-User Support** - Create multiple admin accounts
-- **Analytics Dashboard** - Track page visits, downloads, and engagement
-- **Security Logging** - Monitor access attempts and suspicious activity
-- **Version Management** - Hide/show specific video versions
-- **Revision Tracking** - Limit and track project revisions
-- **Guest Mode** - View-only access for clients without editing capabilities
-- **Video Asset Management** - Attach additional files to projects (images, audio, project files)
-- **Flexible Settings** - Per-project and global configuration options
+- **Multi-User Support** - Multiple admin accounts with JWT authentication and optional WebAuthn passkey support
+- **Analytics Dashboard** - Track page visits and download events per project and video with engagement metrics
+- **Security Features** - Rate limiting, hotlink protection, security event logging, encrypted credentials, and token based authentication with IP binding
+- **Version Control** - Multiple video versions per project with revision tracking and optional max revision limits
+- **Guest Controls** - View only guest access with optional restriction to latest version only
+- **Asset Management** - Attach images, audio, subtitles, project files (Premiere, DaVinci, Final Cut), and documents with magic byte validation
+- **Custom Thumbnails** - Set per version thumbnails from uploaded image assets
+- **Flexible Settings** - Per project and global configuration with override capabilities
 
 ### Technical Features
-- **Docker-First** - Easy deployment with Docker Compose
-- **High Performance** - Built with Next.js 16 and React 19
-- **Redis Queue** - Background video processing with BullMQ
-- **FFmpeg Processing** - Industry-standard video transcoding
-- **PostgreSQL Database** - Reliable data storage with Prisma 6
-- **JWT Authentication** - Secure session management
-- **TUS Protocol** - Resumable uploads for large files
-- **Authentication Modes** - Password-based or passwordless (guest) access
-- **Bearer-Only Auth (>=0.6.0)** - Admin and share flows use explicit Authorization headers (no implicit browser credentials)
+- **Docker First** - Easy deployment with Docker Compose, Unraid, TrueNAS, and Podman/Quadlet support
+- **High Performance** - Built with Next.js 16 and React 19 with CPU aware FFmpeg presets
+- **Background Processing** - Redis queue with BullMQ for video transcoding and notifications
+- **Professional Video** - FFmpeg powered transcoding supporting MP4, MOV, AVI, MKV, MXF, and ProRes formats
+- **Reliable Database** - PostgreSQL with Prisma 6 ORM for type safe data access
+- **Secure Authentication** - JWT tokens with refresh rotation, WebAuthn passkeys, and bearer only auth (v0.6.0+)
+- **Resumable Uploads** - TUS protocol for large file uploads with progress tracking
+- **Flexible Auth Modes** - Password, email OTP, both methods, or no authentication with guest access
 
 ---
 
@@ -107,17 +106,16 @@ nano .env
 
 Generate **6 unique** secure values:
 ```bash
-# Generate these 6 values (each must be different):
-openssl rand -hex 32      # 1. For POSTGRES_PASSWORD
-openssl rand -hex 32      # 2. For REDIS_PASSWORD
-openssl rand -base64 32   # 3. For ENCRYPTION_KEY
-openssl rand -base64 64   # 4. For JWT_SECRET
-openssl rand -base64 64   # 5. For JWT_REFRESH_SECRET
-openssl rand -base64 64   # 6. For SHARE_TOKEN_SECRET
+openssl rand -hex 32      # POSTGRES_PASSWORD (hex/URL-safe)
+openssl rand -hex 32      # REDIS_PASSWORD (hex/URL-safe)
+openssl rand -base64 32   # ENCRYPTION_KEY
+openssl rand -base64 64   # JWT_SECRET
+openssl rand -base64 64   # JWT_REFRESH_SECRET
+openssl rand -base64 64   # SHARE_TOKEN_SECRET
+```
 # Optional (Cloudflare tunnel integrations):
 # CLOUDFLARE_TUNNEL=false
 # NEXT_PUBLIC_TUS_ENDPOINT=https://uploads.example.com
-```
 
 Replace each placeholder in `.env`:
 - `POSTGRES_PASSWORD=<<REPLACE_WITH_openssl_rand_hex_32>>`
@@ -497,39 +495,11 @@ docker exec -i vitransfer-postgres psql -U vitransfer vitransfer < backup.sql
 
 ## 🐛 Troubleshooting
 
-### Container won't start
-```bash
-# Check logs
-docker-compose logs app
-
-# Verify environment variables
-docker-compose config
-
-# Restart all services
-docker-compose restart
-```
-
-### Videos not processing
-```bash
-# Check worker logs
-docker-compose logs worker
-
-# Verify FFmpeg is installed
-docker exec vitransfer-worker ffmpeg -version
-
-# Check disk space
-df -h
-```
-
-### Can't login
-- Verify `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`
-- Check database connection: `docker-compose logs postgres`
-- Reset password in database if needed
-
-### Upload fails
-- Check `client_max_body_size` in reverse proxy
-- Verify disk space available
-- Check upload permissions on volumes
+### Quick checks
+- Review logs: `docker-compose logs` (use `-f app` or `-f worker` for specific services)
+- Verify `.env` matches your compose file
+- Ensure disk space is available: `df -h`
+- If uploads fail, confirm proxy/body size limits and retry with a small file
 
 ---
 

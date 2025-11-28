@@ -61,7 +61,10 @@ export default function CommentInput({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      onSubmit()
+      // Prevent multiple submissions while loading
+      if (!loading && newComment.trim()) {
+        onSubmit()
+      }
     }
   }
 

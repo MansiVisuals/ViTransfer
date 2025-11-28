@@ -10,6 +10,7 @@ import ProjectActions from '@/components/ProjectActions'
 import ShareLink from '@/components/ShareLink'
 import CommentSection from '@/components/CommentSection'
 import { ArrowLeft, Settings, ArrowUpDown } from 'lucide-react'
+import { apiFetch } from '@/lib/api-client'
 
 // Force dynamic rendering (no static pre-rendering)
 export const dynamic = 'force-dynamic'
@@ -36,10 +37,10 @@ export default function ProjectPage() {
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = async () => {
     try {
-      const response = await fetch(`/api/projects/${id}`)
+      const response = await apiFetch(`/api/projects/${id}`)
       if (!response.ok) {
         if (response.status === 404) {
-          router.push('/admin')
+          router.push('/admin/projects')
           return
         }
         throw new Error('Failed to fetch project')
@@ -74,6 +75,7 @@ export default function ProjectPage() {
   }, [id])
 
   // Auto-refresh when videos are processing to show real-time progress
+  // Centralized polling to prevent duplicate network requests
   useEffect(() => {
     if (!project?.videos) return
 
@@ -83,10 +85,10 @@ export default function ProjectPage() {
     )
 
     if (hasProcessingVideos) {
-      // Poll every 3 seconds while videos are processing
+      // Poll every 5 seconds while videos are processing (reduced from 3s to reduce load)
       const interval = setInterval(() => {
         fetchProject()
-      }, 3000)
+      }, 5000)
 
       return () => clearInterval(interval)
     }
@@ -97,7 +99,7 @@ export default function ProjectPage() {
     async function fetchShareUrl() {
       if (!project?.slug) return
       try {
-        const response = await fetch(`/api/share/url?slug=${project.slug}`)
+        const response = await apiFetch(`/api/share/url?slug=${project.slug}`)
         if (response.ok) {
           const data = await response.json()
           setShareUrl(data.shareUrl)
@@ -114,7 +116,7 @@ export default function ProjectPage() {
   useEffect(() => {
     async function fetchCompanyName() {
       try {
-        const response = await fetch('/api/settings')
+        const response = await apiFetch('/api/settings')
         if (response.ok) {
           const data = await response.json()
           setCompanyName(data.companyName || 'Studio')
@@ -126,7 +128,7 @@ export default function ProjectPage() {
 
     async function fetchAdminUser() {
       try {
-        const response = await fetch('/api/auth/session')
+        const response = await apiFetch('/api/auth/session')
         if (response.ok) {
           const data = await response.json()
           setAdminUser(data.user)
@@ -179,10 +181,10 @@ export default function ProjectPage() {
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6 flex justify-between items-center">
-          <Link href="/admin">
+          <Link href="/admin/projects">
             <Button variant="ghost" size="default" className="justify-start px-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="hidden sm:inline">Back to Projects</span>
               <span className="sm:hidden">Back</span>
             </Button>
           </Link>

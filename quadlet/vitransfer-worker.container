@@ -31,6 +31,7 @@ Environment=STORAGE_ROOT=/app/uploads
 Environment=ENCRYPTION_KEY=CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32
 Environment=JWT_SECRET=CHANGE_THIS_SECRET
 Environment=JWT_REFRESH_SECRET=CHANGE_THIS_REFRESH_SECRET
+Environment=SHARE_TOKEN_SECRET=CHANGE_THIS_SHARE_SECRET
 
 # Volumes - bind mount to /podman/vitransfer
 Volume=/podman/vitransfer/uploads:/app/uploads:Z

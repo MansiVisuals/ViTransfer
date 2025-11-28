@@ -5,13 +5,86 @@ import { requireApiAdmin } from '@/lib/auth'
 import { encrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { createProjectSchema, validateRequest } from '@/lib/validation'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 export const runtime = 'nodejs'
 
 
 
 // Prevent static generation for this route
 export const dynamic = 'force-dynamic'
+
+// GET /api/projects - List all projects
+export async function GET(request: NextRequest) {
+  const authResult = await requireApiAdmin(request)
+  if (authResult instanceof Response) {
+    return authResult
+  }
+
+  // Rate limiting: 100 requests per minute for listing projects
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 100,
+    message: 'Too many requests. Please slow down.'
+  }, 'admin-projects-list')
+
+  if (rateLimitResult) {
+    return rateLimitResult
+  }
+
+  try {
+    // Optimized query: only fetch essential fields + minimal video data for list view
+    const projects = await prisma.project.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+        watermarkEnabled: true,
+        sharePassword: true,
+        authMode: true,
+        hideFeedback: true,
+        guestMode: true,
+        allowAssetDownload: true,
+        previewResolution: true,
+        companyName: true,
+        maxRevisions: true,
+        enableRevisions: true,
+        videos: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        recipients: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            isPrimary: true,
+          },
+        },
+        _count: {
+          select: {
+            videos: true,
+            comments: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    return NextResponse.json({ projects })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Unable to process request' },
+      { status: 500 }
+    )
+  }
+}
 
 export async function POST(request: NextRequest) {
   // Check authentication
@@ -20,10 +93,6 @@ export async function POST(request: NextRequest) {
     return authResult
   }
   const admin = authResult
-
-  // CSRF Protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // Rate limiting: Max 20 projects per hour
   const rateLimitResult = await rateLimit(request, {

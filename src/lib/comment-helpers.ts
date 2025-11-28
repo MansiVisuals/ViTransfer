@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
 import { getPrimaryRecipient } from '@/lib/recipients'
 import { isSmtpConfigured } from '@/lib/settings'
@@ -43,21 +42,6 @@ export async function validateCommentPermissions(params: {
   // SECURITY: If feedback is hidden, reject comment creation
   if (project.hideFeedback) {
     return { valid: false, error: 'Comments are disabled for this project', errorStatus: 403 }
-  }
-
-  // SECURITY: Block guest comment creation (guests should only view videos)
-  if (project.guestMode) {
-    const cookieStore = await cookies()
-    const sessionId = cookieStore.get('share_session')?.value
-
-    if (sessionId) {
-      const redis = await getRedis()
-      const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
-
-      if (isGuestSession === 1) {
-        return { valid: false, error: 'Comments are disabled for guest users', errorStatus: 403 }
-      }
-    }
   }
 
   return { valid: true }

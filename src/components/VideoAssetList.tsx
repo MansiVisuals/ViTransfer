@@ -1,7 +1,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileIcon, Trash2, Loader2, Download, Image, Copy } from 'lucide-react'
+import {
+  FileIcon,
+  FileImage,
+  FileVideo,
+  FilePlay,
+  FileMusic,
+  FileText,
+  File,
+  FileArchive,
+  ImagePlay,
+  Trash2,
+  Loader2,
+  Download,
+  Copy
+} from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
 import { apiFetch, apiDelete, apiPost } from '@/lib/api-client'
@@ -65,21 +79,27 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     }
 
     setDeletingId(assetId)
-    try {
-      await apiDelete(`/api/videos/${videoId}/assets/${assetId}`)
 
-      // Remove from local state
-      setAssets(assets.filter(a => a.id !== assetId))
+    // Optimistically remove from UI
+    const previousAssets = assets
+    setAssets(assets.filter(a => a.id !== assetId))
 
-      // Notify parent component
-      if (onAssetDeleted) {
-        onAssetDeleted()
-      }
-    } catch (err) {
-      alert('Failed to delete asset')
-    } finally {
-      setDeletingId(null)
-    }
+    // Delete in background without blocking UI
+    apiDelete(`/api/videos/${videoId}/assets/${assetId}`)
+      .then(() => {
+        // Notify parent component
+        if (onAssetDeleted) {
+          onAssetDeleted()
+        }
+      })
+      .catch((err) => {
+        // Restore on error
+        setAssets(previousAssets)
+        alert('Failed to delete asset')
+      })
+      .finally(() => {
+        setDeletingId(null)
+      })
   }
 
   const getCategoryLabel = (category: string | null) => {
@@ -91,26 +111,65 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     return formatFileSize(Number(bytes))
   }
 
-  const handleDownload = async (assetId: string, fileName: string) => {
-    try {
-      const response = await apiFetch(`/api/videos/${videoId}/assets/${assetId}`)
-      if (!response.ok) {
-        throw new Error('Download failed')
-      }
+  const getAssetIcon = (asset: VideoAsset) => {
+    const fileType = asset.fileType?.toLowerCase() || ''
+    const fileName = asset.fileName.toLowerCase()
+    const category = asset.category?.toLowerCase() || ''
 
-      // Download the file
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } catch (err) {
-      alert('Failed to download asset')
+    if (category === 'thumbnail' || fileType.startsWith('image/')) {
+      return <FileImage className="h-5 w-5 text-muted-foreground flex-shrink-0" />
     }
+
+    if (category === 'project') {
+      return <FilePlay className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (fileType.startsWith('video/')) {
+      return <FileVideo className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (fileType.startsWith('audio/')) {
+      return <FileMusic className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (
+      fileType === 'application/zip' ||
+      fileType === 'application/x-zip-compressed' ||
+      fileName.endsWith('.zip')
+    ) {
+      return <FileArchive className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    if (
+      category === 'caption' ||
+      fileName.endsWith('.srt') ||
+      fileName.endsWith('.vtt') ||
+      fileName.endsWith('.txt') ||
+      fileName.endsWith('.md')
+    ) {
+      return <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+    }
+
+    return <File className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+  }
+
+  const handleDownload = async (assetId: string, fileName: string) => {
+    // Generate download token in background without blocking UI
+    apiFetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
+      method: 'POST'
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Failed to generate download link')
+        }
+        return response.json()
+      })
+      .then(({ url }) => {
+        window.open(url, '_blank')
+      })
+      .catch((err) => {
+        alert('Failed to download asset')
+      })
   }
 
   const handleSetThumbnail = async (assetId: string, fileName: string) => {
@@ -129,21 +188,25 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     }
 
     setSettingThumbnail(assetId)
-    try {
-      await apiPost(`/api/videos/${videoId}/assets/${assetId}/set-thumbnail`, { action })
 
-      // Refresh assets to get updated thumbnail path
-      await fetchAssets()
-
-      // Notify parent to refresh if needed
-      if (onAssetDeleted) {
-        onAssetDeleted()
-      }
-    } catch (err) {
-      alert(`Failed to ${action} thumbnail`)
-    } finally {
-      setSettingThumbnail(null)
-    }
+    // Set thumbnail in background without blocking UI
+    apiPost(`/api/videos/${videoId}/assets/${assetId}/set-thumbnail`, { action })
+      .then(() => {
+        // Refresh assets to get updated thumbnail path
+        return fetchAssets()
+      })
+      .then(() => {
+        // Notify parent to refresh if needed
+        if (onAssetDeleted) {
+          onAssetDeleted()
+        }
+      })
+      .catch((err) => {
+        alert(`Failed to ${action} thumbnail`)
+      })
+      .finally(() => {
+        setSettingThumbnail(null)
+      })
   }
 
   const canSetAsThumbnail = (category: string | null, fileType: string) => {
@@ -212,7 +275,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
               key={asset.id}
               className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
             >
-              <FileIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              {getAssetIcon(asset)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{asset.fileName}</p>
                 <div className="flex gap-3 text-xs text-muted-foreground">
@@ -234,7 +297,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                     {settingThumbnail === asset.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Image className={`h-4 w-4 ${isCurrentThumbnail(asset) ? 'text-green-600' : ''}`} />
+                      <ImagePlay className={`h-4 w-4 ${isCurrentThumbnail(asset) ? 'text-green-600' : ''}`} />
                     )}
                   </Button>
                 )}

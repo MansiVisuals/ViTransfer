@@ -2,12 +2,13 @@
 
 # ViTransfer Multi-Architecture Build Script
 # Builds for both amd64 and arm64 platforms
-# Usage: ./build-multiarch.sh [version|--dev] [--no-cache]
+# Usage: ./build-multiarch.sh [version|--dev|-dev<version>] [--no-cache]
 # Examples:
-#   ./build-multiarch.sh 0.1.0    # Tag as 0.1.0 and latest
-#   ./build-multiarch.sh --dev    # Tag as dev only
+#   ./build-multiarch.sh 0.1.0         # Tag as 0.1.0 and latest
+#   ./build-multiarch.sh --dev         # Tag as dev only
+#   ./build-multiarch.sh -dev0.6.0     # Tag as dev-0.6.0 only (no latest)
 #   ./build-multiarch.sh --dev --no-cache    # Tag as dev with no cache
-#   ./build-multiarch.sh          # Tag as latest
+#   ./build-multiarch.sh               # Tag as latest
 
 set -e
 
@@ -22,8 +23,13 @@ if [ "$2" = "--no-cache" ] || [ "$1" = "--no-cache" ]; then
     echo "🔨 Building with --no-cache flag"
 fi
 
+# Check if we're building dev version with -dev prefix
+if [[ "$VERSION" == -dev* ]]; then
+    # Dev version format (-dev0.6.0) - tag as dev-<version> only, no latest
+    VERSION="${VERSION:1}"  # Remove leading -
+    TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION}"
 # Check if we're building dev
-if [ "$VERSION" = "--dev" ] || [ "$VERSION" = "dev" ]; then
+elif [ "$VERSION" = "--dev" ] || [ "$VERSION" = "dev" ]; then
     TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:dev"
     VERSION="dev"
 # If version is provided, tag as both version and latest
@@ -77,8 +83,8 @@ echo ""
 echo "🏗️  Building multi-architecture image..."
 echo "   Version: ${VERSION}"
 echo "   Platforms: linux/amd64, linux/arm64"
-if [ "$VERSION" = "dev" ]; then
-    echo "   Tags: dev (testing only, will NOT update latest)"
+if [[ "$VERSION" == dev* ]]; then
+    echo "   Tags: ${VERSION} (testing only, will NOT update latest)"
 elif [ "$VERSION" != "latest" ]; then
     echo "   Tags: ${VERSION}, latest"
 else

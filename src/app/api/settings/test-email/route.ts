@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { testEmailConnection } from '@/lib/email'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 export const runtime = 'nodejs'
 
 
@@ -16,10 +15,6 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof Response) {
       return authResult
     }
-
-    // CSRF protection
-    const csrfCheck = await validateCsrfProtection(request)
-    if (csrfCheck) return csrfCheck
 
     const { testEmail, smtpConfig } = await request.json()
 

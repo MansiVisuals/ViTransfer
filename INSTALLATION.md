@@ -16,6 +16,7 @@ nano .env  # Set ADMIN_EMAIL, ADMIN_PASSWORD, and generate secrets
 echo "ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
 echo "JWT_SECRET=$(openssl rand -base64 64)" >> .env
 echo "JWT_REFRESH_SECRET=$(openssl rand -base64 64)" >> .env
+echo "SHARE_TOKEN_SECRET=$(openssl rand -base64 64)" >> .env
 echo "POSTGRES_PASSWORD=$(openssl rand -base64 32)" >> .env
 echo "REDIS_PASSWORD=$(openssl rand -base64 32)" >> .env
 
@@ -68,6 +69,7 @@ REDIS_PASSWORD=
 ENCRYPTION_KEY=
 JWT_SECRET=
 JWT_REFRESH_SECRET=
+SHARE_TOKEN_SECRET=
 ```
 
 ### Step 3: Generate Secrets
@@ -81,6 +83,7 @@ REDIS_PASSWORD=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -base64 32)
 JWT_SECRET=$(openssl rand -base64 64)
 JWT_REFRESH_SECRET=$(openssl rand -base64 64)
+SHARE_TOKEN_SECRET=$(openssl rand -base64 64)
 EOF
 ```
 

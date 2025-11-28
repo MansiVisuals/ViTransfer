@@ -8,6 +8,7 @@ import { Upload, Pause, Play, X } from 'lucide-react'
 import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
+import { getAccessToken } from '@/lib/token-store'
 import { ALLOWED_ASSET_EXTENSIONS, ALL_ALLOWED_EXTENSIONS, validateAssetExtension, detectAssetCategory } from '@/lib/asset-validation'
 
 interface VideoAssetUploadProps {
@@ -19,7 +20,9 @@ const CATEGORY_OPTIONS = [
   { value: '', label: 'Other' },
   { value: 'thumbnail', label: 'Thumbnail (JPG, PNG only)' },
   { value: 'image', label: 'Image' },
+  { value: 'video', label: 'Video (B-roll, Uncut, Extras)' },
   { value: 'audio', label: 'Audio/Music' },
+  { value: 'subtitle', label: 'Subtitles/Captions' },
   { value: 'project', label: 'Project File (Premiere, DaVinci, Final Cut)' },
   { value: 'document', label: 'Document' },
 ]
@@ -162,6 +165,12 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
         onBeforeRequest: (req) => {
           const xhr = req.getUnderlyingObject()
           xhr.withCredentials = true
+
+          // Add authorization token for admin uploads
+          const token = getAccessToken()
+          if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+          }
         },
       })
 

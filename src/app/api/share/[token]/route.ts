@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { cookies } from 'next/headers'
 import { generateVideoAccessToken } from '@/lib/video-access'
-import { isSmtpConfigured, getClientSessionTimeoutSeconds, isHttpsEnabled } from '@/lib/settings'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { isSmtpConfigured, getRateLimitSettings, getShareTokenTtlSeconds } from '@/lib/settings'
+import { getCurrentUserFromRequest, getShareContext, signShareToken } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-access'
-import { getRedis } from '@/lib/redis'
-import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -22,10 +19,12 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const { ipRateLimit } = await getRateLimitSettings()
+    const shareTtlSeconds = await getShareTokenTtlSeconds()
 
     const rateLimitResult = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
-      maxRequests: 100,
+      maxRequests: ipRateLimit || 100,
       message: 'Too many requests. Please try again later.'
     }, `share-access:${token}`)
     if (rateLimitResult) return rateLimitResult
@@ -45,12 +44,8 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const cookieStore = await cookies()
-    let sessionId = cookieStore.get('share_session')?.value
-    const redis = await getRedis()
-
-    const isGuestSession = sessionId ? await redis.exists(`guest_session:${sessionId}`) : 0
-    const isGuest = projectMeta.guestMode && isGuestSession === 1
+    const shareContext = await getShareContext(request)
+    const isGuest = !!shareContext?.guest
 
     const project = await fetchProjectWithVideos(
       token,
@@ -76,7 +71,8 @@ export async function GET(
 
     const { isAdmin } = accessCheck
 
-    if (projectMeta.guestMode && !isAdmin && !isGuest) {
+    const hasShareSession = !!shareContext
+    if (projectMeta.guestMode && !isAdmin && !hasShareSession && !isGuest) {
       return NextResponse.json({
         error: 'Guest entry required',
         requiresPassword: false,
@@ -85,41 +81,7 @@ export async function GET(
       }, { status: 401 })
     }
 
-    let isNewSession = false
-    const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
-    const httpsEnabled = await isHttpsEnabled()
-
-    if (!sessionId) {
-      sessionId = crypto.randomBytes(16).toString('base64url')
-      isNewSession = true
-
-      cookieStore.set({
-        name: 'share_session',
-        value: sessionId,
-        path: '/',
-        httpOnly: true,
-        secure: httpsEnabled,
-        sameSite: 'strict',
-        maxAge: sessionTimeoutSeconds,
-      })
-    }
-
-    await redis.sadd(`session_projects:${sessionId}`, project.id)
-    await redis.expire(`session_projects:${sessionId}`, sessionTimeoutSeconds)
-
-    if (isNewSession) {
-      if (!isAdmin && project.videos.length > 0) {
-        const firstVideo = project.videos[0]
-
-        await prisma.videoAnalytics.create({
-          data: {
-            videoId: firstVideo.id,
-            projectId: project.id,
-            eventType: 'PAGE_VISIT',
-          }
-        }).catch(() => {})
-      }
-    }
+    const sessionId = accessCheck.shareTokenSessionId || `share:${project.id}:${token}`
 
     const videosWithTokens = await Promise.all(
       project.videos.map(async (video: any) => {
@@ -133,7 +95,7 @@ export async function GET(
             project.id,
             'original',
             request,
-            sessionId!
+            accessCheck.shareTokenSessionId || sessionId
           )
 
           streamToken720p = originalToken
@@ -145,7 +107,7 @@ export async function GET(
             project.id,
             '720p',
             request,
-            sessionId!
+            accessCheck.shareTokenSessionId || sessionId
           )
 
           streamToken1080p = await generateVideoAccessToken(
@@ -153,7 +115,7 @@ export async function GET(
             project.id,
             '1080p',
             request,
-            sessionId!
+            accessCheck.shareTokenSessionId || sessionId
           )
         }
 
@@ -214,17 +176,18 @@ export async function GET(
       sortedVideosByName[key] = videosByName[key]
     })
 
-    const smtpConfigured = await isSmtpConfigured()
-
-    const globalSettings = await prisma.settings.findUnique({
-      where: { id: 'default' },
-      select: {
-        companyName: true,
-        defaultPreviewResolution: true,
-      },
-    })
-
-    const primaryRecipient = await getPrimaryRecipient(project.id)
+    // Parallelize independent queries for better performance
+    const [smtpConfigured, globalSettings, primaryRecipient] = await Promise.all([
+      isSmtpConfigured(),
+      prisma.settings.findUnique({
+        where: { id: 'default' },
+        select: {
+          companyName: true,
+          defaultPreviewResolution: true,
+        },
+      }),
+      getPrimaryRecipient(project.id)
+    ])
 
     let allRecipients: Array<{id: string, name: string | null}> = []
     if (project.sharePassword || isAdmin) {
@@ -312,7 +275,23 @@ export async function GET(
       },
     }
 
-    return NextResponse.json(projectData)
+    const responseBody: any = projectData
+
+    // If no share token present, issue a short-lived viewer token (view-only) for this project
+    if (!shareContext && !isAdmin) {
+      const shareToken = signShareToken({
+        shareId: token,
+        projectId: project.id,
+        permissions: ['view', 'comment', 'download'],
+        guest: false,
+        sessionId,
+        authMode: projectMeta.authMode,
+        ttlSeconds: shareTtlSeconds,
+      })
+      responseBody.shareToken = shareToken
+    }
+
+    return NextResponse.json(responseBody)
   } catch (error) {
     return NextResponse.json({
       error: 'Unable to process request'

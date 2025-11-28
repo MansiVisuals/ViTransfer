@@ -22,6 +22,7 @@ REDIS_PASSWORD=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 JWT_SECRET=$(openssl rand -hex 32)
 JWT_REFRESH_SECRET=$(openssl rand -hex 32)
+SHARE_TOKEN_SECRET=$(openssl rand -hex 32)
 echo "✅ Secrets generated"
 echo ""
 
@@ -29,13 +30,29 @@ echo ""
 read -p "🌐 Enter your domain (e.g., https://vitransfer.example.com) [http://localhost:4321]: " DOMAIN
 DOMAIN=${DOMAIN:-http://localhost:4321}
 
-# Ask for admin credentials
-read -p "👤 Enter admin email [admin@example.com]: " ADMIN_EMAIL
-ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+# Ask for admin credentials (REQUIRED)
+echo "Admin credentials are REQUIRED for initial setup:"
+while true; do
+    read -p "Enter admin email: " ADMIN_EMAIL
+    if [[ -n "$ADMIN_EMAIL" && "$ADMIN_EMAIL" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
+        break
+    else
+        echo "Invalid email format. Please try again."
+    fi
+done
 
-read -sp "🔒 Enter admin password [changeme123]: " ADMIN_PASSWORD
-echo ""
-ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
+while true; do
+    read -sp "Enter admin password (min 8 characters): " ADMIN_PASSWORD
+    echo ""
+    if [[ ${#ADMIN_PASSWORD} -ge 8 ]]; then
+        break
+    else
+        echo "Password must be at least 8 characters. Please try again."
+    fi
+done
+
+read -p "Enter admin display name [Admin]: " ADMIN_NAME
+ADMIN_NAME=${ADMIN_NAME:-Admin}
 
 # Ask for port
 read -p "🔌 Enter port to expose [4321]: " APP_PORT
@@ -45,6 +62,7 @@ echo ""
 echo "📝 Configuration Summary:"
 echo "  Domain: ${DOMAIN}"
 echo "  Admin Email: ${ADMIN_EMAIL}"
+echo "  Admin Name: ${ADMIN_NAME}"
 echo "  Port: ${APP_PORT}"
 echo ""
 
@@ -73,10 +91,12 @@ sed -i.bak \
     -e "s#CHANGE_REDIS_PASSWORD#${REDIS_PASSWORD}#g" \
     -e "s#CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32#${ENCRYPTION_KEY}#g" \
     -e "s#CHANGE_THIS_SECRET#${JWT_SECRET}#g" \
+    -e "s#CHANGE_THIS_SHARE_SECRET#${SHARE_TOKEN_SECRET}#g" \
     -e "s#CHANGE_THIS_REFRESH_SECRET#${JWT_REFRESH_SECRET}#g" \
     -e "s#http://localhost:4321#${DOMAIN}#g" \
-    -e "s#admin@example.com#${ADMIN_EMAIL}#g" \
-    -e "s#changeme123#${ADMIN_PASSWORD}#g" \
+    -e "s#CHANGE_THIS_ADMIN_EMAIL#${ADMIN_EMAIL}#g" \
+    -e "s#CHANGE_THIS_ADMIN_PASSWORD#${ADMIN_PASSWORD}#g" \
+    -e "s#Environment=ADMIN_NAME=Admin#Environment=ADMIN_NAME=${ADMIN_NAME}#g" \
     -e "s#4321:4321#${APP_PORT}:4321#g" \
     vitransfer-app.container
 echo "✅ Configured vitransfer-app.container"
@@ -87,6 +107,7 @@ sed -i.bak \
     -e "s#CHANGE_REDIS_PASSWORD#${REDIS_PASSWORD}#g" \
     -e "s#CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32#${ENCRYPTION_KEY}#g" \
     -e "s#CHANGE_THIS_SECRET#${JWT_SECRET}#g" \
+    -e "s#CHANGE_THIS_SHARE_SECRET#${SHARE_TOKEN_SECRET}#g" \
     -e "s#CHANGE_THIS_REFRESH_SECRET#${JWT_REFRESH_SECRET}#g" \
     vitransfer-worker.container
 echo "✅ Configured vitransfer-worker.container"
@@ -101,10 +122,12 @@ REDIS_PASSWORD=${REDIS_PASSWORD}
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
 JWT_SECRET=${JWT_SECRET}
 JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+SHARE_TOKEN_SECRET=${SHARE_TOKEN_SECRET}
 
 DOMAIN=${DOMAIN}
 ADMIN_EMAIL=${ADMIN_EMAIL}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ADMIN_NAME=${ADMIN_NAME}
 APP_PORT=${APP_PORT}
 EOF
 

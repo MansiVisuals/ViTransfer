@@ -2,6 +2,8 @@ export const ALLOWED_ASSET_EXTENSIONS = {
   thumbnail: ['.jpg', '.jpeg', '.png'],
   image: ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.psd', '.ai', '.eps'],
   audio: ['.wav', '.mp3', '.aac', '.flac', '.m4a'],
+  video: ['.mp4', '.mov', '.avi', '.mkv', '.mxf', '.prores'],
+  subtitle: ['.srt', '.vtt', '.ass', '.ssa', '.sub'],
   project: ['.prproj', '.drp', '.fcpbundle', '.fcpxml'],
   document: ['.pdf', '.txt', '.md', '.doc', '.docx'],
   archive: ['.zip']
@@ -11,6 +13,8 @@ export const ALL_ALLOWED_EXTENSIONS = [
   ...ALLOWED_ASSET_EXTENSIONS.thumbnail,
   ...ALLOWED_ASSET_EXTENSIONS.image,
   ...ALLOWED_ASSET_EXTENSIONS.audio,
+  ...ALLOWED_ASSET_EXTENSIONS.video,
+  ...ALLOWED_ASSET_EXTENSIONS.subtitle,
   ...ALLOWED_ASSET_EXTENSIONS.project,
   ...ALLOWED_ASSET_EXTENSIONS.document,
   ...ALLOWED_ASSET_EXTENSIONS.archive
@@ -43,6 +47,8 @@ export function detectAssetCategory(filename: string): string {
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
 
   if (ALLOWED_ASSET_EXTENSIONS.audio.includes(ext as any)) return 'audio'
+  if (ALLOWED_ASSET_EXTENSIONS.video.includes(ext as any)) return 'video'
+  if (ALLOWED_ASSET_EXTENSIONS.subtitle.includes(ext as any)) return 'subtitle'
   if (ALLOWED_ASSET_EXTENSIONS.project.includes(ext as any)) return 'project'
   if (ALLOWED_ASSET_EXTENSIONS.document.includes(ext as any)) return 'document'
   if (ALLOWED_ASSET_EXTENSIONS.archive.includes(ext as any)) return ''

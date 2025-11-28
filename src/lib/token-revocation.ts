@@ -129,7 +129,7 @@ export async function isUserTokensRevoked(userId: string, tokenIssuedAt?: number
 
   // Compare: token was issued BEFORE revocation = revoked
   // token was issued AFTER revocation = allowed (new session)
-  const revocationTime = parseInt(revocationTimestamp) / 1000 // Convert ms to seconds for JWT comparison
+  const revocationTime = parseInt(revocationTimestamp, 10) / 1000 // Convert ms to seconds for JWT comparison
   return tokenIssuedAt < revocationTime
 }
 

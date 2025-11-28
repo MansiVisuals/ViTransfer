@@ -7,8 +7,8 @@ import { Progress } from './ui/progress'
 import { Button } from './ui/button'
 import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
-import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare, Upload } from 'lucide-react'
-import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
+import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare, Upload, Download } from 'lucide-react'
+import { apiPost, apiPatch, apiDelete, apiFetch } from '@/lib/api-client'
 import { VideoAssetUpload } from './VideoAssetUpload'
 import { VideoAssetList } from './VideoAssetList'
 
@@ -21,6 +21,7 @@ interface VideoListProps {
 export default function VideoList({ videos: initialVideos, isAdmin = true, onRefresh }: VideoListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [videos, setVideos] = useState<Video[]>(initialVideos)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -31,24 +32,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   const [uploadingAssetsFor, setUploadingAssetsFor] = useState<string | null>(null)
   const [assetRefreshTrigger, setAssetRefreshTrigger] = useState(0)
 
-  // Poll for updates when there are processing videos
-  useEffect(() => {
-    const hasProcessingVideos = videos.some(
-      v => v.status === 'PROCESSING' || v.status === 'UPLOADING'
-    )
-
-    if (!hasProcessingVideos) {
-      return
-    }
-
-    // Refresh page data every 2 seconds when videos are processing
-    const interval = setInterval(() => {
-      // Use callback instead of router.refresh for better performance
-      onRefresh?.()
-    }, 2000)
-
-    return () => clearInterval(interval)
-  }, [videos, onRefresh])
+  // Polling removed from VideoList to prevent duplicate polling
+  // Parent component (Project page) handles polling for processing videos
 
   // Update local state when props change
   useEffect(() => {
@@ -56,40 +41,69 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   }, [initialVideos])
 
   const handleDelete = async (videoId: string) => {
+    // Prevent double-clicks during deletion
+    if (deletingId) return
+
     if (!confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
       return
     }
 
     setDeletingId(videoId)
-    try {
-      await apiDelete(`/api/videos/${videoId}`)
-      await onRefresh?.()
-    } catch (error) {
-      alert('Failed to delete video')
-    } finally {
-      setDeletingId(null)
-    }
+
+    // Optimistically remove from UI immediately
+    setVideos(prev => prev.filter(v => v.id !== videoId))
+
+    // Perform deletion in background without blocking UI
+    apiDelete(`/api/videos/${videoId}`)
+      .then(() => {
+        // Refresh in background
+        onRefresh?.()
+      })
+      .catch((error) => {
+        // Restore video on error
+        setVideos(initialVideos)
+        alert('Failed to delete video')
+      })
+      .finally(() => {
+        setDeletingId(null)
+      })
   }
 
   const handleToggleApproval = async (videoId: string, currentlyApproved: boolean) => {
+    // Prevent double-clicks during approval toggle
+    if (approvingId) return
+
     const action = currentlyApproved ? 'unapprove' : 'approve'
     if (!confirm(`Are you sure you want to ${action} this video?`)) {
       return
     }
 
     setApprovingId(videoId)
-    try {
-      await apiPatch(`/api/videos/${videoId}`, { approved: !currentlyApproved })
 
-      // Trigger immediate UI update for comment section approval banner
-      window.dispatchEvent(new CustomEvent('videoApprovalChanged'))
+    // Optimistically update UI immediately
+    setVideos(prev => prev.map(v =>
+      v.id === videoId ? { ...v, approved: !currentlyApproved } as Video : v
+    ))
 
-      await onRefresh?.()
-    } catch (error) {
-      alert(`Failed to ${action} video`)
-    } finally {
-      setApprovingId(null)
-    }
+    // Trigger immediate UI update for comment section approval banner
+    window.dispatchEvent(new CustomEvent('videoApprovalChanged'))
+
+    // Perform approval in background without blocking UI
+    apiPatch(`/api/videos/${videoId}`, { approved: !currentlyApproved })
+      .then(() => {
+        // Refresh in background
+        onRefresh?.()
+      })
+      .catch((error) => {
+        // Revert optimistic update on error
+        setVideos(prev => prev.map(v =>
+          v.id === videoId ? { ...v, approved: currentlyApproved } as Video : v
+        ))
+        alert(`Failed to ${action} video`)
+      })
+      .finally(() => {
+        setApprovingId(null)
+      })
   }
 
   const handleStartEdit = (videoId: string, currentLabel: string) => {
@@ -163,6 +177,37 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     if (commentSection) {
       commentSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
+  }
+
+  const handleDownloadVideo = async (videoId: string) => {
+    // Prevent multiple simultaneous download requests
+    if (downloadingId) return
+
+    setDownloadingId(videoId)
+
+    // Generate download token and open link - non-blocking
+    apiFetch(`/api/videos/${videoId}/download-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Download failed' }))
+          throw new Error(errorData.error || 'Failed to generate download link')
+        }
+        return response.json()
+      })
+      .then(({ url }) => {
+        window.open(url, '_blank')
+      })
+      .catch((error) => {
+        console.error('Download error:', error)
+        alert(error instanceof Error ? error.message : 'Failed to generate download link')
+      })
+      .finally(() => {
+        setDownloadingId(null)
+      })
   }
 
   if (videos.length === 0) {
@@ -262,6 +307,18 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                     title="Upload Assets"
                   >
                     <Upload className="w-4 h-4" />
+                  </Button>
+                )}
+                {isAdmin && video.status === 'READY' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDownloadVideo(video.id)}
+                    disabled={downloadingId === video.id}
+                    className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                    title="Download Video"
+                  >
+                    <Download className="w-4 h-4" />
                   </Button>
                 )}
                 {isAdmin && (

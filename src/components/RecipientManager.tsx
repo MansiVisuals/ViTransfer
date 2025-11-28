@@ -64,7 +64,6 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
     }
 
     try {
-      // Use centralized API client (handles CSRF automatically)
       await apiPost(`/api/projects/${projectId}/recipients`, {
         email: newEmail || null,
         name: newName || null,
@@ -86,7 +85,6 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
     }
 
     try {
-      // Use centralized API client (handles CSRF automatically)
       await apiDelete(`/api/projects/${projectId}/recipients/${recipientId}`)
       await loadRecipients()
     } catch (error) {
@@ -96,7 +94,6 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
 
   const setPrimary = async (recipientId: string) => {
     try {
-      // Use centralized API client (handles CSRF automatically)
       await apiPatch(`/api/projects/${projectId}/recipients/${recipientId}`, { isPrimary: true })
       await loadRecipients()
     } catch (error) {
@@ -106,7 +103,6 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
 
   const toggleNotifications = async (recipientId: string, currentValue: boolean) => {
     try {
-      // Use centralized API client (handles CSRF automatically)
       await apiPatch(`/api/projects/${projectId}/recipients/${recipientId}`, { receiveNotifications: !currentValue })
       await loadRecipients()
     } catch (error) {
@@ -140,7 +136,6 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
     }
 
     try {
-      // Use centralized API client (handles CSRF automatically)
       await apiPatch(`/api/projects/${projectId}/recipients/${editingId}`, {
         name: editName || null,
         email: editEmail || null

@@ -107,27 +107,29 @@ export function AssetCopyMoveModal({
   const handleCopyAssets = async () => {
     if (selectedAssets.size === 0 || !targetVideoId) return
 
-    try {
-      setCopying(true)
-      setError(null)
-      setSuccess(null)
+    setCopying(true)
+    setError(null)
+    setSuccess(null)
 
-      const response = await apiPost(`/api/videos/${currentVideoId}/assets/copy-to-version`, {
-        assetIds: Array.from(selectedAssets),
-        targetVideoId,
+    // Copy assets in background without blocking UI
+    apiPost(`/api/videos/${currentVideoId}/assets/copy-to-version`, {
+      assetIds: Array.from(selectedAssets),
+      targetVideoId,
+    })
+      .then((response) => {
+        setSuccess(`Successfully copied ${selectedAssets.size} asset(s) to the selected version`)
+        setSelectedAssets(new Set())
+
+        if (onComplete) {
+          onComplete()
+        }
       })
-
-      setSuccess(`Successfully copied ${selectedAssets.size} asset(s) to the selected version`)
-      setSelectedAssets(new Set())
-
-      if (onComplete) {
-        onComplete()
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to copy assets')
-    } finally {
-      setCopying(false)
-    }
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to copy assets')
+      })
+      .finally(() => {
+        setCopying(false)
+      })
   }
 
   const formatFileSizeBigInt = (bytes: string) => {

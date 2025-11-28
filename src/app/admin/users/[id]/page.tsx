@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordRequirements } from '@/components/PasswordRequirements'
-import { apiPatch, apiPost, apiDelete } from '@/lib/api-client'
+import { apiPatch, apiPost, apiDelete, apiFetch } from '@/lib/api-client'
 import { startRegistration } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 
@@ -47,7 +47,7 @@ export default function EditUserPage() {
 
   const fetchPasskeyStatus = async () => {
     try {
-      const res = await fetch('/api/auth/passkey/status')
+      const res = await apiFetch('/api/auth/passkey/status')
       if (res.ok) {
         const data = await res.json()
         setPasskeyAvailable(data.available)
@@ -60,7 +60,7 @@ export default function EditUserPage() {
 
   const fetchPasskeys = async () => {
     try {
-      const res = await fetch('/api/auth/passkey/list')
+      const res = await apiFetch('/api/auth/passkey/list')
       if (res.ok) {
         const data = await res.json()
         setPasskeys(data.passkeys || [])
@@ -117,7 +117,7 @@ export default function EditUserPage() {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch(`/api/users/${userId}`)
+      const res = await apiFetch(`/api/users/${userId}`)
       if (!res.ok) throw new Error('Failed to fetch user')
       const data = await res.json()
       setCurrentUser(data.user)
@@ -143,20 +143,32 @@ export default function EditUserPage() {
     const special = '!@#$%^&*'
     const all = uppercase + lowercase + numbers + special
 
+    // Helper function for cryptographically secure random int
+    const getRandomInt = (max: number) => {
+      const array = new Uint32Array(1)
+      crypto.getRandomValues(array)
+      return array[0] % max
+    }
+
     // Ensure at least one of each type
     let password = ''
-    password += uppercase[Math.floor(Math.random() * uppercase.length)]
-    password += lowercase[Math.floor(Math.random() * lowercase.length)]
-    password += numbers[Math.floor(Math.random() * numbers.length)]
-    password += special[Math.floor(Math.random() * special.length)]
+    password += uppercase[getRandomInt(uppercase.length)]
+    password += lowercase[getRandomInt(lowercase.length)]
+    password += numbers[getRandomInt(numbers.length)]
+    password += special[getRandomInt(special.length)]
 
     // Fill the rest randomly
     for (let i = password.length; i < length; i++) {
-      password += all[Math.floor(Math.random() * all.length)]
+      password += all[getRandomInt(all.length)]
     }
 
-    // Shuffle the password
-    password = password.split('').sort(() => Math.random() - 0.5).join('')
+    // Shuffle the password using Fisher-Yates
+    const chars = password.split('')
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = getRandomInt(i + 1)
+      ;[chars[i], chars[j]] = [chars[j], chars[i]]
+    }
+    password = chars.join('')
 
     setFormData({
       ...formData,

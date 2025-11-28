@@ -5,6 +5,34 @@ import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
 import { getRedis } from './redis'
 
+type CachedValue<T> = { value: T; expiresAt: number; version?: string }
+type SecuritySettingsResult = {
+  hotlinkProtection: string
+  ipRateLimit: number
+  sessionRateLimit: number
+  trackSecurityLogs: boolean
+  trackAnalytics: boolean
+}
+
+const SECURITY_SETTINGS_CACHE_TTL_MS = 90_000
+const securitySettingsCache: CachedValue<SecuritySettingsResult> = {
+  value: {
+    hotlinkProtection: 'LOG_ONLY',
+    ipRateLimit: 1000,
+    sessionRateLimit: 600,
+    trackSecurityLogs: true,
+    trackAnalytics: true
+  },
+  expiresAt: 0,
+  version: undefined
+}
+
+const TOKEN_CACHE_TTL_MS = 10_000
+const TOKEN_CACHE_MAX_ENTRIES = 500
+type CachedTokenEntry = CachedValue<VideoAccessToken>
+const tokenVerificationCache = new Map<string, CachedTokenEntry>()
+const TOKEN_REV_VERSION_KEY = 'video_token_rev_version'
+
 interface VideoAccessToken {
   videoId: string
   projectId: string
@@ -14,6 +42,17 @@ interface VideoAccessToken {
   createdAt: number
 }
 
+/**
+ * Generate a time-limited video access token with session binding
+ * Tokens are cached per session to prevent token proliferation
+ *
+ * @param videoId - ID of the video to grant access to
+ * @param projectId - ID of the project containing the video
+ * @param quality - Quality level (thumbnail, preview720, preview1080, original)
+ * @param request - NextRequest for IP address extraction
+ * @param sessionId - Session ID for binding token to specific session
+ * @returns Base64url-encoded access token valid for client session timeout duration
+ */
 export async function generateVideoAccessToken(
   videoId: string,
   projectId: string,
@@ -58,12 +97,33 @@ export async function generateVideoAccessToken(
   return token
 }
 
+/**
+ * Verify video access token and validate session binding
+ * Checks token existence, session match, and IP address consistency
+ *
+ * @param token - The access token to verify
+ * @param request - NextRequest for IP address validation
+ * @param sessionId - Expected session ID for token binding verification
+ * @returns Parsed token data if valid, null if invalid or expired
+ */
 export async function verifyVideoAccessToken(
   token: string,
   request: NextRequest,
   sessionId: string
 ): Promise<VideoAccessToken | null> {
   const redis = getRedis()
+  const now = Date.now()
+
+  const revVersion = (await redis.get(TOKEN_REV_VERSION_KEY)) || '0'
+  const cacheKey = `${token}:${sessionId}:${revVersion}`
+  const cached = tokenVerificationCache.get(cacheKey)
+
+  if (cached) {
+    if (cached.expiresAt > now && cached.version === revVersion) {
+      return cached.value
+    }
+    tokenVerificationCache.delete(cacheKey)
+  }
 
   const key = `video_access:${token}`
   const data = await redis.get(key)
@@ -106,9 +166,29 @@ export async function verifyVideoAccessToken(
     }
   }
 
+  tokenVerificationCache.set(cacheKey, {
+    value: tokenData,
+    expiresAt: now + TOKEN_CACHE_TTL_MS,
+    version: revVersion
+  })
+
+  if (tokenVerificationCache.size > TOKEN_CACHE_MAX_ENTRIES) {
+    tokenVerificationCache.clear()
+  }
+
   return tokenData
 }
 
+/**
+ * Detect potential hotlinking attempts using referer analysis and session validation
+ * Checks for suspicious patterns: missing referer, external domains, rapid token rotation
+ *
+ * @param request - NextRequest containing referer and origin headers
+ * @param sessionId - Session ID for tracking access patterns
+ * @param videoId - Video being accessed
+ * @param projectId - Project containing the video
+ * @returns Object indicating if hotlinking detected, with reason and severity level
+ */
 export async function detectHotlinking(
   request: NextRequest,
   sessionId: string,
@@ -215,11 +295,8 @@ export async function trackVideoAccess(params: {
 }) {
   const { videoId, projectId, bandwidth, eventType } = params
 
-  const settings = await prisma.securitySettings.findUnique({
-    where: { id: 'default' }
-  })
-
-  if (!settings?.trackAnalytics) {
+  const settings = await getSecuritySettings()
+  if (!settings.trackAnalytics) {
     return
   }
 
@@ -244,12 +321,9 @@ export async function logSecurityEvent(params: {
   wasBlocked?: boolean
 }) {
   try {
-    const settings = await prisma.securitySettings.findUnique({
-      where: { id: 'default' },
-      select: { trackSecurityLogs: true }
-    })
+    const settings = await getSecuritySettings()
 
-    if (!settings?.trackSecurityLogs) {
+    if (!settings.trackSecurityLogs) {
       return
     }
 
@@ -281,16 +355,54 @@ export async function logSecurityEvent(params: {
 }
 
 export async function getSecuritySettings() {
+  const now = Date.now()
+
+  // Check in-memory cache first (fastest)
+  if (securitySettingsCache.expiresAt > now) {
+    return securitySettingsCache.value
+  }
+
+  // Check Redis cache (shared across instances)
+  const redis = getRedis()
+  const REDIS_KEY = 'app:security_settings'
+  const cached = await redis.get(REDIS_KEY)
+
+  if (cached) {
+    const parsed = JSON.parse(cached)
+    securitySettingsCache.value = parsed
+    securitySettingsCache.expiresAt = now + SECURITY_SETTINGS_CACHE_TTL_MS
+    return parsed
+  }
+
+  // Fetch from database (slowest, only when both caches miss)
   const settings = await prisma.securitySettings.findUnique({
-    where: { id: 'default' }
+    where: { id: 'default' },
+    select: {
+      hotlinkProtection: true,
+      ipRateLimit: true,
+      sessionRateLimit: true,
+      trackSecurityLogs: true,
+      trackAnalytics: true,
+      updatedAt: true
+    }
   })
 
-  return {
+  const value: SecuritySettingsResult = {
     hotlinkProtection: settings?.hotlinkProtection || 'LOG_ONLY',
     ipRateLimit: settings?.ipRateLimit || 1000,
     sessionRateLimit: settings?.sessionRateLimit || 600,
     trackSecurityLogs: settings?.trackSecurityLogs ?? true,
+    trackAnalytics: settings?.trackAnalytics ?? true
   }
+
+  // Cache in both Redis and memory
+  securitySettingsCache.value = value
+  securitySettingsCache.expiresAt = now + SECURITY_SETTINGS_CACHE_TTL_MS
+  securitySettingsCache.version = settings?.updatedAt?.toISOString()
+
+  await redis.setex(REDIS_KEY, 300, JSON.stringify(value)) // 5 min Redis cache
+
+  return value
 }
 
 async function getBlockedIPs(): Promise<string[]> {
@@ -345,5 +457,6 @@ export async function revokeProjectVideoTokens(projectId: string): Promise<void>
     if (keysToDelete.length > 0) {
       await redis.del(...keysToDelete)
     }
+    await redis.incr(TOKEN_REV_VERSION_KEY)
   })
 }

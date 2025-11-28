@@ -277,16 +277,18 @@ model SecuritySettings {
   hotlinkProtection String @default("LOG_ONLY")
 
   // Rate Limiting (global only - per minute)
-  ipRateLimit      Int @default(1000) // requests per minute per IP (video streaming requires high limit)
-  sessionRateLimit Int @default(600) // requests per minute per session (10/sec for seeking/buffering)
-  passwordAttempts Int @default(5) // password attempts before lockout
+  ipRateLimit             Int  @default(1000) // requests per minute per IP (video streaming requires high limit)
+  sessionRateLimit        Int  @default(600)  // requests per minute per admin session (10/sec for seeking/buffering)
+  shareSessionRateLimit   Int  @default(300)  // requests per minute per share session (client access)
+  passwordAttempts        Int  @default(5)    // password attempts before lockout
+  shareTokenTtlSeconds    Int? // optional override for share JWT expiry (60-86400 seconds, null = use session timeout)
 
   // Session Timeout (for client share sessions, not admin JWT)
   sessionTimeoutValue Int    @default(15) // Numeric value (15, 30, 1, 2, etc.)
   sessionTimeoutUnit  String @default("MINUTES") // MINUTES, HOURS, DAYS, WEEKS
 
   // HTTPS Enforcement (HTTPS_ENABLED env var always takes precedence if set)
-  httpsEnabled Boolean @default(true) // Enable secure cookies and HSTS (default: true for production security)
+  httpsEnabled Boolean @default(true) // Enable HSTS (default: true for production security)
 
   // Logging toggles
   trackAnalytics    Boolean @default(true)

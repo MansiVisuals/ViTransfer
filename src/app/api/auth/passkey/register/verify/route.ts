@@ -3,7 +3,6 @@ import { requireApiAdmin } from '@/lib/auth'
 import { verifyPasskeyRegistration } from '@/lib/passkey'
 import { getClientIpAddress } from '@/lib/utils'
 import type { RegistrationResponseJSON } from '@simplewebauthn/browser'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 export const runtime = 'nodejs'
 
 
@@ -33,10 +32,6 @@ export async function POST(request: NextRequest) {
     // Require admin authentication
     const user = await requireApiAdmin(request)
     if (user instanceof Response) return user
-
-    // CSRF protection
-    const csrfCheck = await validateCsrfProtection(request)
-    if (csrfCheck) return csrfCheck
 
     // Parse request body
     const body = await request.json()

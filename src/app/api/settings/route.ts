@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 import { isSmtpConfigured } from '@/lib/email'
 export const runtime = 'nodejs'
@@ -22,9 +21,9 @@ export async function GET(request: NextRequest) {
   // Rate limiting to prevent enumeration/scraping
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000, // 1 minute
-    maxRequests: 30,
+    maxRequests: 120,
     message: 'Too many requests. Please slow down.'
-  }, 'settings-read')
+  }, 'settings-read', authResult.id)
   if (rateLimitResult) return rateLimitResult
 
   try {
@@ -85,10 +84,6 @@ export async function PATCH(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult // Return 401/403 response
   }
-
-  // CSRF Protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   try {
     const body = await request.json()
@@ -207,7 +202,7 @@ export async function PATCH(request: NextRequest) {
     const updateData: any = {
       companyName,
       smtpServer,
-      smtpPort: smtpPort ? parseInt(smtpPort) : null,
+      smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
       smtpUsername,
       smtpFromAddress,
       smtpSecure,
@@ -234,7 +229,7 @@ export async function PATCH(request: NextRequest) {
         id: 'default',
         companyName,
         smtpServer,
-        smtpPort: smtpPort ? parseInt(smtpPort) : null,
+        smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
         smtpUsername,
         smtpPassword: passwordUpdate || null,
         smtpFromAddress,

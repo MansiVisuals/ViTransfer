@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { cookies } from 'next/headers'
 import crypto from 'crypto'
-import { getClientSessionTimeoutSeconds, isHttpsEnabled } from '@/lib/settings'
-import { getRedis } from '@/lib/redis'
 import { rateLimit } from '@/lib/rate-limit'
+import { signShareToken } from '@/lib/auth'
+import { getShareTokenTtlSeconds } from '@/lib/settings'
 export const runtime = 'nodejs'
 
 
@@ -48,38 +47,17 @@ export async function POST(
       return NextResponse.json({ error: 'Guest access is not enabled for this project' }, { status: 403 })
     }
 
-    // Create guest session
-    const cookieStore = await cookies()
-    const sessionId = crypto.randomBytes(16).toString('base64url')
-
-    const sessionTimeoutSeconds = await getClientSessionTimeoutSeconds()
-    const httpsEnabled = await isHttpsEnabled()
-
-    // Set guest session cookie
-    cookieStore.set({
-      name: 'share_session',
-      value: sessionId,
-      path: '/',
-      httpOnly: true,
-      secure: httpsEnabled,
-      sameSite: 'strict',
-      maxAge: sessionTimeoutSeconds,
+    const ttlSeconds = await getShareTokenTtlSeconds()
+    const shareToken = signShareToken({
+      shareId: token,
+      projectId: project.id,
+      permissions: ['view'],
+      guest: true,
+      sessionId: crypto.randomBytes(16).toString('base64url'),
+      ttlSeconds,
     })
 
-    // Mark this session as a guest session in Redis
-    const redis = await getRedis()
-    await redis.set(
-      `guest_session:${sessionId}`,
-      project.id,
-      'EX',
-      sessionTimeoutSeconds
-    )
-
-    // Also add to authorized projects set for compatibility
-    await redis.sadd(`session_projects:${sessionId}`, project.id)
-    await redis.expire(`session_projects:${sessionId}`, sessionTimeoutSeconds)
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, shareToken })
   } catch (error) {
     return NextResponse.json(
       { error: 'Unable to process request' },

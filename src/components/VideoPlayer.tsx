@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from './ui/dialog'
 import { VideoAssetDownloadModal } from './VideoAssetDownloadModal'
+import { getAccessToken } from '@/lib/token-store'
 
 interface VideoPlayerProps {
   videos: Video[]
@@ -33,6 +34,8 @@ interface VideoPlayerProps {
   initialSeekTime?: number | null // Initial timestamp to seek to (from URL params)
   initialVideoIndex?: number // Initial video index to select (from URL params)
   allowAssetDownload?: boolean // Allow clients to download assets
+  shareToken?: string | null
+  hideDownloadButton?: boolean // Hide download button completely (for admin share view)
 }
 
 export default function VideoPlayer({
@@ -51,7 +54,9 @@ export default function VideoPlayer({
   activeVideoName,
   initialSeekTime = null,
   initialVideoIndex = 0,
-  allowAssetDownload = true
+  allowAssetDownload = true,
+  shareToken = null,
+  hideDownloadButton = false, // Default to false (show download button)
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
@@ -67,6 +72,15 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
   const lastTimeUpdateRef = useRef(0) // Throttle time updates
+
+  const buildAuthHeaders = (shareTokenOverride?: string | null) => {
+    const headers: Record<string, string> = {}
+    const token = shareTokenOverride || (isAdmin ? getAccessToken() : null)
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+    return headers
+  }
 
   // If ANY video is approved, only show approved videos (for both admin and client)
   const hasAnyApprovedVideo = videos.some((v: any) => v.approved === true)
@@ -250,25 +264,36 @@ export default function VideoPlayer({
     // Check if assets are available and asset downloads are allowed
     if (allowAssetDownload && !isGuest && !isAdmin) {
       setCheckingAssets(true)
-      try {
-        // Check if this video has assets
-        const response = await fetch(`/api/videos/${selectedVideo.id}/assets`, {
-          credentials: 'include'
-        })
 
-        if (response.ok) {
-          const data = await response.json()
-          if (data.assets && data.assets.length > 0) {
-            setHasAssets(true)
-            setShowDownloadModal(true)
-            setCheckingAssets(false)
-            return
+      const authHeaders = buildAuthHeaders(shareToken)
+      // Check if this video has assets (non-blocking)
+      fetch(`/api/videos/${selectedVideo.id}/assets`, {
+        headers: authHeaders,
+      })
+        .then(async (response) => {
+          if (response.ok) {
+            const data = await response.json()
+            if (data.assets && data.assets.length > 0) {
+              setHasAssets(true)
+              setShowDownloadModal(true)
+              setCheckingAssets(false)
+              return true
+            }
           }
-        }
-      } catch (err) {
-        // If checking fails, just proceed with direct download
-      }
-      setCheckingAssets(false)
+          return false
+        })
+        .catch((err) => {
+          // If checking fails, just proceed with direct download
+          return false
+        })
+        .then((hasAssets) => {
+          setCheckingAssets(false)
+          if (!hasAssets) {
+            // Direct download if no assets
+            window.open(downloadUrl, '_blank')
+          }
+        })
+      return
     }
 
     // Direct download if no assets or not allowed
@@ -278,38 +303,39 @@ export default function VideoPlayer({
   const handleApprove = async () => {
     setLoading(true)
 
-    try {
-      const response = await fetch(`/api/projects/${projectId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          selectedVideoId: selectedVideo.id,
-        }),
-        credentials: 'include', // Include cookies for authentication
+    const authHeaders = buildAuthHeaders(shareToken)
+    // Approve project in background without blocking UI
+    fetch(`/api/projects/${projectId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({
+        selectedVideoId: selectedVideo.id,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to approve project')
+        }
+        return response
       })
+      .then(() => {
+        // Store the current video group name in sessionStorage to restore after reload
+        if (activeVideoName) {
+          sessionStorage.setItem('approvedVideoName', activeVideoName)
+        }
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to approve project')
-      }
-
-      // Store the current video group name in sessionStorage to restore after reload
-      if (activeVideoName) {
-        sessionStorage.setItem('approvedVideoName', activeVideoName)
-      }
-
-      // Call the optional callback if provided (for parent component updates)
-      if (onApprove) {
-        await onApprove()
-      }
-
-      // Reload the page to show updated state
-      window.location.reload()
-    } catch (error) {
-      alert('Failed to approve project')
-    } finally {
-      setLoading(false)
-    }
+        // Call the optional callback if provided (for parent component updates)
+        if (onApprove) {
+          return onApprove()
+        }
+      })
+      .catch((error) => {
+        alert('Failed to approve project')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   // Safety check: if no videos available, show message
@@ -326,28 +352,6 @@ export default function VideoPlayer({
 
   return (
     <div className="space-y-4 flex flex-col max-h-full">
-      {/* Version Selector - Only show if there are multiple versions to choose from */}
-      {displayVideos.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto py-4 flex-shrink-0">
-          {displayVideos.map((video, index) => {
-            const videoApproved = (video as any).approved === true
-            return (
-              <Button
-                key={video.id}
-                onClick={() => setSelectedVideoIndex(index)}
-                variant={selectedVideoIndex === index ? 'default' : 'outline'}
-                className="whitespace-nowrap relative"
-              >
-                {videoApproved && (
-                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
-                )}
-                {videoApproved ? 'Approved Version' : video.versionLabel}
-              </Button>
-            )
-          })}
-        </div>
-      )}
-
       {/* Video Player */}
       <div className="relative bg-background rounded-lg overflow-hidden aspect-video flex-shrink min-h-0">
         {videoUrl ? (
@@ -375,6 +379,28 @@ export default function VideoPlayer({
           </div>
         )}
       </div>
+
+      {/* Version Selector - Only show if there are multiple versions to choose from */}
+      {displayVideos.length > 1 && (
+        <div className="flex gap-3 overflow-x-auto py-2 flex-shrink-0">
+          {displayVideos.map((video, index) => {
+            const videoApproved = (video as any).approved === true
+            return (
+              <Button
+                key={video.id}
+                onClick={() => setSelectedVideoIndex(index)}
+                variant={selectedVideoIndex === index ? 'default' : 'outline'}
+                className="whitespace-nowrap relative"
+              >
+                {videoApproved && (
+                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
+                )}
+                {videoApproved ? 'Approved Version' : video.versionLabel}
+              </Button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Video & Project Information */}
       <div className={`rounded-lg p-4 text-card-foreground flex-shrink-0 ${!isVideoApproved ? 'bg-accent/50 border-2 border-primary/20' : 'bg-card border border-border'}`}>
@@ -449,7 +475,7 @@ export default function VideoPlayer({
             )}
 
             {/* Download Button - Only show when video is approved and not in guest mode */}
-            {isVideoApproved && !isGuest && (
+            {isVideoApproved && !isGuest && !hideDownloadButton && (
               <Button onClick={handleDownload} variant="default" size="sm">
                 <Download className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Download</span>
@@ -566,6 +592,8 @@ export default function VideoPlayer({
           versionLabel={selectedVideo.versionLabel}
           isOpen={showDownloadModal}
           onClose={() => setShowDownloadModal(false)}
+          shareToken={shareToken}
+          isAdmin={isAdmin}
         />
       )}
     </div>

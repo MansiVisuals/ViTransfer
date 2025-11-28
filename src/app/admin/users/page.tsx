@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Users, UserPlus, Edit, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { apiDelete } from '@/lib/api-client'
+import { apiDelete, apiFetch } from '@/lib/api-client'
 
 interface User {
   id: string
@@ -30,7 +30,7 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/users')
+      const res = await apiFetch('/api/users')
       if (!res.ok) throw new Error('Failed to fetch users')
       const data = await res.json()
       setUsers(data.users)
@@ -58,14 +58,14 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <p className="text-muted-foreground">Loading users...</p>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">

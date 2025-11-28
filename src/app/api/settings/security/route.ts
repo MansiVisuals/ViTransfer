@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateAllSessions, clearAllRateLimits } from '@/lib/session-invalidation'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -17,7 +16,7 @@ function hasSessionTimeoutChanged(
 ): boolean {
   if (!current || (newValue === undefined && newUnit === undefined)) return false
 
-  const value = newValue !== undefined ? parseInt(newValue) : current.sessionTimeoutValue
+  const value = newValue !== undefined ? parseInt(newValue, 10) : current.sessionTimeoutValue
   const unit = newUnit !== undefined ? newUnit : current.sessionTimeoutUnit
 
   return current.sessionTimeoutValue !== value || current.sessionTimeoutUnit !== unit
@@ -35,7 +34,7 @@ function hasHotlinkProtectionChanged(current: any, newProtection?: string): bool
 
 function hasPasswordAttemptsChanged(current: any, newAttempts?: string): boolean {
   if (!current || newAttempts === undefined) return false
-  return current.passwordAttempts !== parseInt(newAttempts)
+  return current.passwordAttempts !== parseInt(newAttempts, 10)
 }
 
 export const dynamic = 'force-dynamic'
@@ -86,10 +85,6 @@ export async function PATCH(request: NextRequest) {
     return authResult
   }
 
-  // CSRF protection
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
-
   try {
     const body = await request.json()
 
@@ -98,6 +93,8 @@ export async function PATCH(request: NextRequest) {
       hotlinkProtection,
       ipRateLimit,
       sessionRateLimit,
+      shareSessionRateLimit,
+      shareTokenTtlSeconds,
       passwordAttempts,
       sessionTimeoutValue,
       sessionTimeoutUnit,
@@ -108,7 +105,7 @@ export async function PATCH(request: NextRequest) {
 
     // Validate required security fields
     if (sessionTimeoutValue !== undefined && sessionTimeoutValue !== null) {
-      const timeoutVal = parseInt(sessionTimeoutValue)
+      const timeoutVal = parseInt(sessionTimeoutValue, 10)
       if (isNaN(timeoutVal) || timeoutVal <= 0) {
         return NextResponse.json(
           { error: 'Session timeout value must be a positive number' },
@@ -118,10 +115,30 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (passwordAttempts !== undefined && passwordAttempts !== null) {
-      const attemptsVal = parseInt(passwordAttempts)
+      const attemptsVal = parseInt(passwordAttempts, 10)
       if (isNaN(attemptsVal) || attemptsVal <= 0 || attemptsVal > 100) {
         return NextResponse.json(
           { error: 'Password attempts must be between 1 and 100' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (shareSessionRateLimit !== undefined && shareSessionRateLimit !== null) {
+      const val = parseInt(shareSessionRateLimit, 10)
+      if (isNaN(val) || val <= 0 || val > 2000) {
+        return NextResponse.json(
+          { error: 'Share session rate limit must be between 1 and 2000 requests per window' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (shareTokenTtlSeconds !== undefined && shareTokenTtlSeconds !== null) {
+      const val = parseInt(shareTokenTtlSeconds, 10)
+      if (isNaN(val) || val <= 60 || val > 24 * 60 * 60) {
+        return NextResponse.json(
+          { error: 'Share token TTL must be between 60 seconds and 86400 seconds' },
           { status: 400 }
         )
       }
@@ -142,10 +159,12 @@ export async function PATCH(request: NextRequest) {
       update: {
         httpsEnabled: httpsEnabled ?? false,
         hotlinkProtection,
-        ipRateLimit: ipRateLimit ? parseInt(ipRateLimit) : 1000,
-        sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit) : 600,
-        passwordAttempts: passwordAttempts ? parseInt(passwordAttempts) : 5,
-        sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue) : 15,
+        ipRateLimit: ipRateLimit ? parseInt(ipRateLimit, 10) : 1000,
+        sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit, 10) : 600,
+        shareSessionRateLimit: shareSessionRateLimit ? parseInt(shareSessionRateLimit, 10) : 300,
+        shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
+        passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
+        sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
         trackAnalytics: trackAnalytics ?? true,
         trackSecurityLogs: trackSecurityLogs ?? true,
@@ -155,10 +174,12 @@ export async function PATCH(request: NextRequest) {
         id: 'default',
         httpsEnabled: httpsEnabled ?? false,
         hotlinkProtection,
-        ipRateLimit: ipRateLimit ? parseInt(ipRateLimit) : 1000,
-        sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit) : 600,
-        passwordAttempts: passwordAttempts ? parseInt(passwordAttempts) : 5,
-        sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue) : 15,
+        ipRateLimit: ipRateLimit ? parseInt(ipRateLimit, 10) : 1000,
+        sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit, 10) : 600,
+        shareSessionRateLimit: shareSessionRateLimit ? parseInt(shareSessionRateLimit, 10) : 300,
+        shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
+        passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
+        sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
         trackAnalytics: trackAnalytics ?? true,
         trackSecurityLogs: trackSecurityLogs ?? true,

@@ -4,8 +4,7 @@ import { getPrimaryRecipient } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
-import { cookies } from 'next/headers'
-import { getRedis } from '@/lib/redis'
+import { getRateLimitSettings } from '@/lib/settings'
 export const runtime = 'nodejs'
 
 
@@ -26,11 +25,12 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const { ipRateLimit } = await getRateLimitSettings()
 
     // Rate limiting to prevent scraping
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
-      maxRequests: 30,
+      maxRequests: ipRateLimit ? Math.max(1, Math.min(ipRateLimit, 1000)) : 30,
       message: 'Too many requests. Please slow down.'
     }, `share-comments:${token}`)
 
@@ -58,34 +58,24 @@ export async function GET(
       return NextResponse.json([])
     }
 
-    // SECURITY: Block guest access to comments (guests should only see videos)
-  if (project.guestMode) {
-      const cookieStore = await cookies()
-      const sessionId = cookieStore.get('share_session')?.value
-
-      if (sessionId) {
-        const redis = await getRedis()
-        const isGuestSession = await redis.exists(`guest_session:${sessionId}`)
-
-        if (isGuestSession === 1) {
-          return NextResponse.json([])
-        }
-      }
-    }
-
     // Get primary recipient for author name
     const primaryRecipient = await getPrimaryRecipient(project.id)
     // Priority: companyName → primary recipient → 'Client'
     const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
-    // Verify project access using dual auth pattern (admin JWT or share_auth cookie)
+    // Verify project access using bearer admin/share tokens
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
 
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse!
     }
 
-    const { isAdmin, isAuthenticated } = accessCheck
+    const { isAdmin, isAuthenticated, isGuest } = accessCheck
+
+    // Block guest users from seeing comments
+    if (project.guestMode && isGuest) {
+      return NextResponse.json([])
+    }
 
     // Fetch comments with nested replies
     const comments = await prisma.comment.findMany({
@@ -120,7 +110,12 @@ export async function GET(
     })
 
     // Sanitize comments - never expose PII to non-admins
-    const sanitizedComments = comments.map((comment: any) => sanitizeComment(comment, isAdmin, isAuthenticated, fallbackName))
+    const sanitizedComments = comments.map((comment: any) => sanitizeComment(
+      comment,
+      isAdmin,
+      isAuthenticated,
+      fallbackName,
+    ))
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {

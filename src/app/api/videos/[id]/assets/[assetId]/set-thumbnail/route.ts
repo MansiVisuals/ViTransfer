@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
-import { validateCsrfProtection } from '@/lib/security/csrf-protection'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -18,10 +17,6 @@ export async function POST(
   if (authResult instanceof Response) {
     return authResult
   }
-
-  // 2. CSRF PROTECTION
-  const csrfCheck = await validateCsrfProtection(request)
-  if (csrfCheck) return csrfCheck
 
   // 3. RATE LIMITING
   const rateLimitResult = await rateLimit(

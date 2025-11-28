@@ -121,22 +121,25 @@ export default function AdminVideoManager({
     }
 
     setSavingGroupName(oldName)
-    try {
-      const videosInGroup = videoGroups[oldName]
-      const videoIds = videosInGroup.map(v => v.id)
 
-      // Single batch update for all videos (uses centralized API client)
-      await apiPatch('/api/videos/batch', { videoIds, name: editGroupValue.trim() })
+    const videosInGroup = videoGroups[oldName]
+    const videoIds = videosInGroup.map(v => v.id)
 
-      setEditingGroupName(null)
-      setEditGroupValue('')
-      await onRefresh?.()
-      router.refresh()
-    } catch (error) {
-      alert('Failed to update video name')
-    } finally {
-      setSavingGroupName(null)
-    }
+    // Single batch update for all videos (non-blocking)
+    apiPatch('/api/videos/batch', { videoIds, name: editGroupValue.trim() })
+      .then(() => {
+        setEditingGroupName(null)
+        setEditGroupValue('')
+        // Refresh in background
+        onRefresh?.()
+        router.refresh()
+      })
+      .catch((error) => {
+        alert('Failed to update video name')
+      })
+      .finally(() => {
+        setSavingGroupName(null)
+      })
   }
 
   const sortedGroupNames = Object.keys(videoGroups).sort((nameA, nameB) => {

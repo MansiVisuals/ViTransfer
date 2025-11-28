@@ -103,6 +103,7 @@ export function useCommentManagement({
   }, [videos, selectedVideoId])
 
   // Sync with video player if available (share page with player)
+  // Reduced from 1s to 5s to prevent UI lag during heavy interaction
   useEffect(() => {
     const syncCurrentVideo = () => {
       window.dispatchEvent(
@@ -119,7 +120,7 @@ export function useCommentManagement({
     }
 
     syncCurrentVideo()
-    const interval = setInterval(syncCurrentVideo, 1000)
+    const interval = setInterval(syncCurrentVideo, 5000) // Changed from 1000ms to 5000ms
     return () => clearInterval(interval)
   }, [selectedVideoId])
 
@@ -189,6 +190,9 @@ export function useCommentManagement({
   // Submit comment
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return
+
+    // Prevent rapid-fire submissions
+    if (loading) return
 
     if (!selectedVideoId) {
       alert('Please select a video before commenting.')
@@ -274,34 +278,52 @@ export function useCommentManagement({
         requestBody.parentId = commentParentId
       }
 
-      if (shareToken) {
-        const response = await fetch('/api/comments', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${shareToken}`,
-          },
-          body: JSON.stringify(requestBody),
-        })
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}))
-          throw new Error(err.error || 'Failed to submit comment')
-        }
-      } else if (useAdminAuth) {
-        await apiPost('/api/comments', requestBody)
-      } else {
-        throw new Error('Authentication required to submit comment')
-      }
+      // Submit comment in background without blocking UI
+      const submitPromise = shareToken
+        ? fetch('/api/comments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${shareToken}`,
+            },
+            body: JSON.stringify(requestBody),
+          }).then(response => {
+            if (!response.ok) {
+              return response.json().catch(() => ({})).then(err => {
+                throw new Error(err.error || 'Failed to submit comment')
+              })
+            }
+            return response
+          })
+        : useAdminAuth
+        ? apiPost('/api/comments', requestBody)
+        : Promise.reject(new Error('Authentication required to submit comment'))
 
-      router.refresh()
+      // Handle submission result in background
+      submitPromise
+        .then(() => {
+          // Refresh in background (non-blocking)
+          router.refresh()
+        })
+        .catch((error) => {
+          // Remove optimistic comment and restore form on error
+          setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
+          setNewComment(commentContent)
+          setSelectedTimestamp(commentTimestamp)
+          setSelectedVideoId(commentVideoId)
+          alert(`Failed to submit comment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        })
+
+      // UI is already unblocked - loading state cleared immediately
     } catch (error) {
-      // Remove optimistic comment and restore form
+      // Handle synchronous errors only
       setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
       setNewComment(commentContent)
       setSelectedTimestamp(commentTimestamp)
       setSelectedVideoId(commentVideoId)
       alert(`Failed to submit comment: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
+      // Clear loading immediately so UI is not blocked
       setLoading(false)
     }
   }

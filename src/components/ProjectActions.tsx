@@ -108,6 +108,9 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   }
 
   const handleSendNotification = async () => {
+    // Prevent rapid-fire notification sends
+    if (loading) return
+
     // Validation
     if (notificationType === 'specific-video' && !selectedVideoId) {
       setMessage({ type: 'error', text: 'Please select a video and version' })
@@ -115,24 +118,26 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
     }
 
     setLoading(true)
-    setMessage(null)
+    setMessage({ type: 'success', text: 'Sending notification...' })
 
-    try {
-      const data = await apiPost(`/api/projects/${project.id}/notify`, {
-        videoId: notificationType === 'specific-video' ? selectedVideoId : null,
-        notifyEntireProject: notificationType === 'entire-project',
-        sendPasswordSeparately: isPasswordProtected && sendPasswordSeparately
+    // Send notification in background without blocking UI
+    apiPost(`/api/projects/${project.id}/notify`, {
+      videoId: notificationType === 'specific-video' ? selectedVideoId : null,
+      notifyEntireProject: notificationType === 'entire-project',
+      sendPasswordSeparately: isPasswordProtected && sendPasswordSeparately
+    })
+      .then((data) => {
+        setMessage({ type: 'success', text: data.message || 'Notification sent successfully!' })
+        setSelectedVideoName('')
+        setSelectedVideoId('')
+        setSendPasswordSeparately(false)
       })
-
-      setMessage({ type: 'success', text: data.message || 'Notification sent successfully!' })
-      setSelectedVideoName('')
-      setSelectedVideoId('')
-      setSendPasswordSeparately(false)
-    } catch (error) {
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to send notification' })
-    } finally {
-      setLoading(false)
-    }
+      .catch((error) => {
+        setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to send notification' })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   const handleViewSharePage = () => {
@@ -140,6 +145,9 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   }
 
   const handleToggleApproval = async () => {
+    // Prevent double-clicks during approval toggle
+    if (isTogglingApproval) return
+
     const isCurrentlyApproved = project.status === 'APPROVED'
 
     if (isCurrentlyApproved) {
@@ -152,46 +160,52 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
       }
 
       setIsTogglingApproval(true)
-      try {
-        await apiPatch(`/api/projects/${project.id}`, { status: 'APPROVED' })
 
-        // Refresh project data
-        await onRefresh?.()
-        router.refresh()
-
-        alert('Project approved successfully')
-      } catch (error) {
-        alert('Failed to approve project')
-      } finally {
-        setIsTogglingApproval(false)
-      }
+      // Approve project in background without blocking UI
+      apiPatch(`/api/projects/${project.id}`, { status: 'APPROVED' })
+        .then(() => {
+          alert('Project approved successfully')
+          // Refresh in background
+          onRefresh?.()
+          router.refresh()
+        })
+        .catch((error) => {
+          alert('Failed to approve project')
+        })
+        .finally(() => {
+          setIsTogglingApproval(false)
+        })
     }
   }
 
   const handleUnapprove = async (unapproveVideos: boolean) => {
+    // Prevent double-clicks during unapproval
+    if (isTogglingApproval) return
+
     setIsTogglingApproval(true)
     setShowUnapproveModal(false)
 
-    try {
-      const data = await apiPost(`/api/projects/${project.id}/unapprove`, { unapproveVideos })
-
-      // Refresh project data
-      await onRefresh?.()
-      router.refresh()
-
-      // Show appropriate success message
-      if (data.unapprovedVideos && data.unapprovedCount > 0) {
-        alert(`Project unapproved successfully. ${data.unapprovedCount} video(s) were also unapproved.`)
-      } else if (data.unapprovedVideos && data.unapprovedCount === 0) {
-        alert('Project unapproved successfully. No videos were approved.')
-      } else {
-        alert('Project unapproved successfully. Videos remain approved.')
-      }
-    } catch (error) {
-      alert('Failed to unapprove project')
-    } finally {
-      setIsTogglingApproval(false)
-    }
+    // Unapprove project in background without blocking UI
+    apiPost(`/api/projects/${project.id}/unapprove`, { unapproveVideos })
+      .then((data) => {
+        // Show appropriate success message
+        if (data.unapprovedVideos && data.unapprovedCount > 0) {
+          alert(`Project unapproved successfully. ${data.unapprovedCount} video(s) were also unapproved.`)
+        } else if (data.unapprovedVideos && data.unapprovedCount === 0) {
+          alert('Project unapproved successfully. No videos were approved.')
+        } else {
+          alert('Project unapproved successfully. Videos remain approved.')
+        }
+        // Refresh in background
+        onRefresh?.()
+        router.refresh()
+      })
+      .catch((error) => {
+        alert('Failed to unapprove project')
+      })
+      .finally(() => {
+        setIsTogglingApproval(false)
+      })
   }
 
   const handleUnapproveProjectOnly = () => {
@@ -207,6 +221,9 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   }
 
   const handleDelete = async () => {
+    // Prevent double-clicks during deletion
+    if (isDeleting) return
+
     if (!confirm(
       'Are you sure you want to delete this project? This will permanently delete all videos and files. This action cannot be undone.'
     )) {
@@ -219,16 +236,18 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
     }
 
     setIsDeleting(true)
-    try {
-      await apiDelete(`/api/projects/${project.id}`)
 
-      // Redirect to admin page after successful deletion
-      router.push('/admin/projects')
-      router.refresh()
-    } catch (error) {
-      alert('Failed to delete project')
-      setIsDeleting(false)
-    }
+    // Delete project in background without blocking UI
+    apiDelete(`/api/projects/${project.id}`)
+      .then(() => {
+        // Redirect to admin page after successful deletion
+        router.push('/admin/projects')
+        router.refresh()
+      })
+      .catch((error) => {
+        alert('Failed to delete project')
+        setIsDeleting(false)
+      })
   }
 
   return (

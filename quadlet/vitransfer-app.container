@@ -31,9 +31,11 @@ Environment=STORAGE_ROOT=/app/uploads
 Environment=NEXT_PUBLIC_APP_URL=http://localhost:4321
 Environment=APP_PORT=4321
 
-# Admin credentials - CHANGE THESE
-Environment=ADMIN_EMAIL=admin@example.com
-Environment=ADMIN_PASSWORD=changeme123
+# Admin credentials - REQUIRED: CHANGE THESE BEFORE STARTING
+# The application will NOT start without valid credentials
+Environment=ADMIN_EMAIL=CHANGE_THIS_ADMIN_EMAIL
+Environment=ADMIN_PASSWORD=CHANGE_THIS_ADMIN_PASSWORD
+Environment=ADMIN_NAME=Admin
 
 # Security secrets - CHANGE ALL OF THESE (use 'openssl rand -hex 32' to generate)
 Environment=ENCRYPTION_KEY=CHANGE_THIS_64_CHAR_HEX_KEY_USE_OPENSSL_RAND_HEX_32

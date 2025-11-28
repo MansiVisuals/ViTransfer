@@ -31,16 +31,41 @@ export async function getProjectRecipients(projectId: string): Promise<Recipient
 
 /**
  * Get the primary recipient for a project
+ * Optimized to fetch only the primary recipient instead of all recipients
  */
 export async function getPrimaryRecipient(projectId: string): Promise<Recipient | null> {
-  const recipients = await getProjectRecipients(projectId)
+  // Try to fetch primary recipient first (most common case)
+  const primary = await prisma.projectRecipient.findFirst({
+    where: { projectId, isPrimary: true }
+  })
 
-  if (recipients.length === 0) {
+  if (primary) {
+    return {
+      id: primary.id,
+      email: primary.email,
+      name: primary.name,
+      isPrimary: primary.isPrimary,
+      receiveNotifications: primary.receiveNotifications
+    }
+  }
+
+  // Fallback: if no primary, get first recipient by creation date
+  const fallback = await prisma.projectRecipient.findFirst({
+    where: { projectId },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  if (!fallback) {
     return null
   }
 
-  // Return primary recipient if exists, otherwise first recipient
-  return recipients.find(r => r.isPrimary) || recipients[0]
+  return {
+    id: fallback.id,
+    email: fallback.email,
+    name: fallback.name,
+    isPrimary: fallback.isPrimary,
+    receiveNotifications: fallback.receiveNotifications
+  }
 }
 
 /**

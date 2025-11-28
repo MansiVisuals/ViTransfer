@@ -356,10 +356,25 @@ export async function logSecurityEvent(params: {
 
 export async function getSecuritySettings() {
   const now = Date.now()
+
+  // Check in-memory cache first (fastest)
   if (securitySettingsCache.expiresAt > now) {
     return securitySettingsCache.value
   }
 
+  // Check Redis cache (shared across instances)
+  const redis = getRedis()
+  const REDIS_KEY = 'app:security_settings'
+  const cached = await redis.get(REDIS_KEY)
+
+  if (cached) {
+    const parsed = JSON.parse(cached)
+    securitySettingsCache.value = parsed
+    securitySettingsCache.expiresAt = now + SECURITY_SETTINGS_CACHE_TTL_MS
+    return parsed
+  }
+
+  // Fetch from database (slowest, only when both caches miss)
   const settings = await prisma.securitySettings.findUnique({
     where: { id: 'default' },
     select: {
@@ -380,9 +395,12 @@ export async function getSecuritySettings() {
     trackAnalytics: settings?.trackAnalytics ?? true
   }
 
+  // Cache in both Redis and memory
   securitySettingsCache.value = value
   securitySettingsCache.expiresAt = now + SECURITY_SETTINGS_CACHE_TTL_MS
   securitySettingsCache.version = settings?.updatedAt?.toISOString()
+
+  await redis.setex(REDIS_KEY, 300, JSON.stringify(value)) // 5 min Redis cache
 
   return value
 }

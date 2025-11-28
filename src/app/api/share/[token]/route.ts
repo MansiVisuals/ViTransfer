@@ -176,17 +176,18 @@ export async function GET(
       sortedVideosByName[key] = videosByName[key]
     })
 
-    const smtpConfigured = await isSmtpConfigured()
-
-    const globalSettings = await prisma.settings.findUnique({
-      where: { id: 'default' },
-      select: {
-        companyName: true,
-        defaultPreviewResolution: true,
-      },
-    })
-
-    const primaryRecipient = await getPrimaryRecipient(project.id)
+    // Parallelize independent queries for better performance
+    const [smtpConfigured, globalSettings, primaryRecipient] = await Promise.all([
+      isSmtpConfigured(),
+      prisma.settings.findUnique({
+        where: { id: 'default' },
+        select: {
+          companyName: true,
+          defaultPreviewResolution: true,
+        },
+      }),
+      getPrimaryRecipient(project.id)
+    ])
 
     let allRecipients: Array<{id: string, name: string | null}> = []
     if (project.sharePassword || isAdmin) {

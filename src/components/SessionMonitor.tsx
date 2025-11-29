@@ -2,18 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/lib/token-store'
+import { getAccessToken, getRefreshToken, clearTokens } from '@/lib/token-store'
 
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes
 const CHECK_INTERVAL = 30 * 1000 // 30 seconds
-const REFRESH_INTERVAL = 10 * 60 * 1000 // 10 minutes
 
 export default function SessionMonitor() {
   const router = useRouter()
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
   const lastActivityRef = useRef<number>(Date.now())
-  const lastRefreshRef = useRef<number>(Date.now())
 
   useEffect(() => {
     const onActivity = () => {
@@ -40,54 +38,13 @@ export default function SessionMonitor() {
       }
     }, CHECK_INTERVAL)
 
-    const refreshTimer = setInterval(() => {
-      const timeSinceActivity = Date.now() - lastActivityRef.current
-      const timeSinceRefresh = Date.now() - lastRefreshRef.current
-      if (timeSinceActivity < INACTIVITY_TIMEOUT && timeSinceRefresh >= REFRESH_INTERVAL) {
-        refreshTokens()
-      }
-    }, CHECK_INTERVAL)
-
-    refreshTokens() // initial
-
     return () => {
       activityEvents.forEach(event => {
         document.removeEventListener(event, onActivity, { capture: true } as any)
       })
       clearInterval(inactivityTimer)
-      clearInterval(refreshTimer)
     }
   }, [])
-
-  async function refreshTokens() {
-    const refreshToken = getRefreshToken()
-    if (!refreshToken) return
-
-    try {
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${refreshToken}`,
-        },
-      })
-
-      if (!response.ok) {
-        handleLogout()
-        return
-      }
-
-      const data = await response.json()
-      if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
-        setTokens({
-          accessToken: data.tokens.accessToken,
-          refreshToken: data.tokens.refreshToken,
-        })
-        lastRefreshRef.current = Date.now()
-      }
-    } catch (error) {
-      // ignore transient failures
-    }
-  }
 
   async function handleLogout() {
     const accessToken = getAccessToken()

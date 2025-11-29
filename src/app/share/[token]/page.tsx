@@ -43,11 +43,14 @@ export default function SharePage() {
   const [adminUser, setAdminUser] = useState<any>(null)
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
+  const [activeVideosRaw, setActiveVideosRaw] = useState<any[]>([])
+  const [tokensLoading, setTokensLoading] = useState(false)
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const visitLoggedRef = useRef(false)
   const storageKey = token || ''
+  const tokenCacheRef = useRef<Map<string, any>>(new Map())
 
   // Load stored token once (persist across refresh)
   useEffect(() => {
@@ -256,7 +259,7 @@ export default function SharePage() {
         setActiveVideoName(videoNameToUse)
 
         const videos = project.videosByName[videoNameToUse]
-        setActiveVideos(videos)
+        setActiveVideosRaw(videos)
 
         // If URL specifies a version, calculate the index for initial selection
         if (urlVersion !== null && videos) {
@@ -274,11 +277,104 @@ export default function SharePage() {
         // Keep activeVideos in sync when project data refreshes (ensures updated thumbnails/tokens)
         const videos = project.videosByName[activeVideoName]
         if (videos) {
-          setActiveVideos(videos)
+          setActiveVideosRaw(videos)
         }
       }
     }
   }, [project, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
+
+  const fetchVideoToken = async (videoId: string, quality: string) => {
+    if (!shareToken) return ''
+    const response = await fetch(`/api/share/${token}/video-token?videoId=${videoId}&quality=${quality}`, {
+      headers: {
+        Authorization: `Bearer ${shareToken}`,
+      }
+    })
+    if (!response.ok) return ''
+    const data = await response.json()
+    return data.token || ''
+  }
+
+  const fetchTokensForVideos = async (videos: any[]) => {
+    if (!shareToken) return videos
+
+    return Promise.all(
+      videos.map(async (video: any) => {
+        const cached = tokenCacheRef.current.get(video.id)
+        if (cached) {
+          return cached
+        }
+
+        try {
+          let streamToken720p = ''
+          let streamToken1080p = ''
+          let downloadToken = null
+
+          if (video.approved) {
+            const originalToken = await fetchVideoToken(video.id, 'original')
+            streamToken720p = originalToken
+            streamToken1080p = originalToken
+            downloadToken = originalToken
+          } else {
+            const [token720, token1080] = await Promise.all([
+              fetchVideoToken(video.id, '720p'),
+              fetchVideoToken(video.id, '1080p'),
+            ])
+            streamToken720p = token720
+            streamToken1080p = token1080
+          }
+
+          let thumbnailUrl = null
+          if (video.thumbnailPath) {
+            const thumbToken = await fetchVideoToken(video.id, 'thumbnail')
+            if (thumbToken) {
+              thumbnailUrl = `/api/content/${thumbToken}`
+            }
+          }
+
+          const tokenized = {
+            ...video,
+            streamUrl720p: streamToken720p ? `/api/content/${streamToken720p}` : '',
+            streamUrl1080p: streamToken1080p ? `/api/content/${streamToken1080p}` : '',
+            downloadUrl: downloadToken ? `/api/content/${downloadToken}?download=true` : null,
+            thumbnailUrl,
+          }
+
+          tokenCacheRef.current.set(video.id, tokenized)
+          return tokenized
+        } catch (error) {
+          return video
+        }
+      })
+    )
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadTokens() {
+      if (!activeVideosRaw || activeVideosRaw.length === 0) {
+        setTokensLoading(false)
+        return
+      }
+      if (!shareToken) {
+        setTokensLoading(true)
+        return
+      }
+      setTokensLoading(true)
+      const tokenized = await fetchTokensForVideos(activeVideosRaw)
+      if (isMounted) {
+        setActiveVideos(tokenized)
+      }
+      setTokensLoading(false)
+    }
+
+    loadTokens()
+
+    return () => {
+      isMounted = false
+    }
+  }, [activeVideosRaw, shareToken])
 
   // Record analytics visit once per page load (deduped server-side)
   useEffect(() => {
@@ -307,7 +403,7 @@ export default function SharePage() {
   // Handle video selection
   const handleVideoSelect = (videoName: string) => {
     setActiveVideoName(videoName)
-    setActiveVideos(project.videosByName[videoName])
+    setActiveVideosRaw(project.videosByName[videoName])
   }
 
   async function handleSendOtp(e: React.FormEvent) {
@@ -665,7 +761,7 @@ export default function SharePage() {
             <Card className="bg-card border-border">
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
-                  No videos are ready for review yet. Please check back later.
+                  {tokensLoading ? 'Loading video...' : 'No videos are ready for review yet. Please check back later.'}
                 </p>
               </CardContent>
             </Card>

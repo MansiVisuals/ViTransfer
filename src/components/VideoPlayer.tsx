@@ -72,6 +72,9 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
   const lastTimeUpdateRef = useRef(0) // Throttle time updates
+  const previousVideoNameRef = useRef<string | null>(null)
+  const currentTimeRef = useRef(0)
+  const selectedVideoIdRef = useRef<string | null>(null)
 
   const buildAuthHeaders = (shareTokenOverride?: string | null) => {
     const headers: Record<string, string> = {}
@@ -100,6 +103,21 @@ export default function VideoPlayer({
       }))
     }
   }, [selectedVideo?.id])
+
+  useEffect(() => {
+    selectedVideoIdRef.current = selectedVideo?.id ?? null
+  }, [selectedVideo?.id])
+
+  useEffect(() => {
+    if (!activeVideoName) return
+    if (previousVideoNameRef.current && previousVideoNameRef.current !== activeVideoName) {
+      setSelectedVideoIndex(0)
+      setVideoUrl('')
+      setCurrentTime(0)
+      currentTimeRef.current = 0
+    }
+    previousVideoNameRef.current = activeVideoName
+  }, [activeVideoName])
 
   // Safety check: ensure selectedVideo exists before accessing properties
   const isVideoApproved = selectedVideo ? (selectedVideo as any).approved === true : false
@@ -130,6 +148,7 @@ export default function VideoPlayer({
         if (url) {
           // Reset player state
           setCurrentTime(0)
+          currentTimeRef.current = 0
 
           // Update video URL - this will trigger React to update the video element's src
           setVideoUrl(url)
@@ -186,7 +205,7 @@ export default function VideoPlayer({
   useEffect(() => {
     const handleGetCurrentTime = (e: CustomEvent) => {
       if (e.detail.callback) {
-        e.detail.callback(currentTime, selectedVideo.id)
+        e.detail.callback(currentTimeRef.current, selectedVideoIdRef.current)
       }
     }
 
@@ -194,13 +213,13 @@ export default function VideoPlayer({
     return () => {
       window.removeEventListener('getCurrentTime' as any, handleGetCurrentTime as EventListener)
     }
-  }, [currentTime, selectedVideo.id])
+  }, [])
 
   // Expose selected video ID for approval
   useEffect(() => {
     const handleGetSelectedVideoId = (e: CustomEvent) => {
       if (e.detail.callback) {
-        e.detail.callback(selectedVideo.id)
+        e.detail.callback(selectedVideoIdRef.current)
       }
     }
 
@@ -208,7 +227,7 @@ export default function VideoPlayer({
     return () => {
       window.removeEventListener('getSelectedVideoId' as any, handleGetSelectedVideoId as EventListener)
     }
-  }, [selectedVideo.id])
+  }, [])
 
   // Handle seek to timestamp requests from comments
   useEffect(() => {
@@ -247,7 +266,9 @@ export default function VideoPlayer({
       const now = Date.now()
       // Throttle to update max every 200ms instead of 60 times per second
       if (now - lastTimeUpdateRef.current > 200) {
-        setCurrentTime(videoRef.current.currentTime)
+        const time = videoRef.current.currentTime
+        setCurrentTime(time)
+        currentTimeRef.current = time
         lastTimeUpdateRef.current = now
       }
     }
@@ -367,7 +388,7 @@ export default function VideoPlayer({
             controls
             controlsList={!isAdmin ? "nodownload" : undefined}
             playsInline
-            preload="auto"
+            preload="metadata"
             style={{
               objectFit: 'contain',
               backgroundColor: '#000',

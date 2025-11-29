@@ -60,7 +60,6 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
-  const [currentTime, setCurrentTime] = useState(0)
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [showInfoDialog, setShowInfoDialog] = useState(false)
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false)
@@ -113,7 +112,6 @@ export default function VideoPlayer({
     if (previousVideoNameRef.current && previousVideoNameRef.current !== activeVideoName) {
       setSelectedVideoIndex(0)
       setVideoUrl('')
-      setCurrentTime(0)
       currentTimeRef.current = 0
     }
     previousVideoNameRef.current = activeVideoName
@@ -147,7 +145,6 @@ export default function VideoPlayer({
 
         if (url) {
           // Reset player state
-          setCurrentTime(0)
           currentTimeRef.current = 0
 
           // Update video URL - this will trigger React to update the video element's src
@@ -160,14 +157,6 @@ export default function VideoPlayer({
 
     loadVideoUrl()
   }, [selectedVideo, defaultQuality])
-
-  // Separate effect to reload video when URL changes
-  // This ensures the video element has been updated by React before we call load()
-  useEffect(() => {
-    if (videoRef.current && videoUrl) {
-      videoRef.current.load()
-    }
-  }, [videoUrl])
 
   // Handle initial seek from URL parameters (only once on mount)
   useEffect(() => {
@@ -266,9 +255,7 @@ export default function VideoPlayer({
       const now = Date.now()
       // Throttle to update max every 200ms instead of 60 times per second
       if (now - lastTimeUpdateRef.current > 200) {
-        const time = videoRef.current.currentTime
-        setCurrentTime(time)
-        currentTimeRef.current = time
+        currentTimeRef.current = videoRef.current.currentTime
         lastTimeUpdateRef.current = now
       }
     }

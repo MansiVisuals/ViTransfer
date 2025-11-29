@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Mail, Edit, Trash2, Plus, Star, Check, Bell, BellOff } from 'lucide-react'
-import { apiPost, apiPatch, apiDelete } from '@/lib/api-client'
+import { apiFetch, apiPost, apiPatch, apiDelete } from '@/lib/api-client'
 
 interface Recipient {
   id?: string
@@ -38,7 +38,7 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
   const loadRecipients = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/projects/${projectId}/recipients`)
+      const response = await apiFetch(`/api/projects/${projectId}/recipients`)
       if (response.ok) {
         const data = await response.json()
         const loadedRecipients = data.recipients || []

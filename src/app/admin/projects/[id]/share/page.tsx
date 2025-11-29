@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VideoPlayer from '@/components/VideoPlayer'
@@ -319,63 +319,58 @@ export default function AdminSharePage() {
 
   const projectUrl = `/admin/projects/${id}`
 
-  const layoutClasses = project.hideFeedback
-    ? 'flex flex-col max-w-7xl mx-auto w-full'
-    : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'
-
   const clientDisplayName = (() => {
     const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
     return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
   })()
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="default"
-            className="px-3"
-            onClick={() => router.push(projectUrl)}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Back to Project</span>
-            <span className="sm:hidden">Back</span>
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
-              {project.title}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Share View
-            </p>
-          </div>
-        </div>
+    <div className="h-screen bg-background flex flex-col lg:flex-row overflow-hidden">
+      {/* Video Sidebar */}
+      {project.videosByName && hasMultipleVideos && (
+        <VideoSidebar
+          videosByName={project.videosByName}
+          activeVideoName={activeVideoName}
+          onVideoSelect={handleVideoSelect}
+          className="w-64 flex-shrink-0"
+        />
+      )}
 
-        {/* Main Content - Full height flex layout */}
-        <div className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden">
-          {/* Left: Video Sidebar + Player */}
-          <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-w-0">
-            {/* Video Sidebar */}
-            {project.videosByName && hasMultipleVideos && (
-              <VideoSidebar
-                videosByName={project.videosByName}
-                activeVideoName={activeVideoName}
-                onVideoSelect={handleVideoSelect}
-                className="lg:max-h-[calc(100vh-12rem)]"
-              />
-            )}
-
-            {/* Video Player */}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 min-h-0 flex flex-col">
+          {/* Header */}
+          <div className="mb-6 flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="default"
+              className="px-3"
+              onClick={() => router.push(projectUrl)}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Back to Project</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
             <div className="flex-1 min-w-0">
-              {readyVideos.length === 0 ? (
-                <Card className="bg-card border-border rounded-lg">
-                  <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No videos are ready for review yet. Please check back later.</p>
-                  </CardContent>
-                </Card>
-              ) : (
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
+                {project.title}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Share View
+              </p>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          {readyVideos.length === 0 ? (
+            <Card className="bg-card border-border rounded-lg">
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">No videos are ready for review yet. Please check back later.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col max-w-7xl mx-auto w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
+              <div className={project.hideFeedback ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}
@@ -396,32 +391,31 @@ export default function AdminSharePage() {
                   onApprove={undefined}
                   hideDownloadButton={true}
                 />
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Right: Comments Section */}
-          {!project.hideFeedback && (
-            <div className="lg:w-96 flex-shrink-0">
-              <CommentSection
-                key={activeVideoName}
-                projectId={project.id}
-                projectSlug={project.slug}
-                comments={filteredComments}
-                clientName={clientDisplayName}
-                clientEmail={project.recipients?.[0]?.email}
-                isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
-                restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                videos={readyVideos}
-                isAdminView={true}
-                companyName={companyName}
-                clientCompanyName={project.companyName}
-                smtpConfigured={project.smtpConfigured}
-                isPasswordProtected={!!project.sharePassword}
-                adminUser={adminUser}
-                recipients={project.recipients || []}
-                shareToken={null}
-              />
+              {!project.hideFeedback && (
+                <div className="lg:sticky lg:top-6 lg:self-start">
+                  <CommentSection
+                    key={activeVideoName}
+                    projectId={project.id}
+                    projectSlug={project.slug}
+                    comments={filteredComments}
+                    clientName={clientDisplayName}
+                    clientEmail={project.recipients?.[0]?.email}
+                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
+                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+                    videos={readyVideos}
+                    isAdminView={true}
+                    companyName={companyName}
+                    clientCompanyName={project.companyName}
+                    smtpConfigured={project.smtpConfigured}
+                    isPasswordProtected={!!project.sharePassword}
+                    adminUser={adminUser}
+                    recipients={project.recipients || []}
+                    shareToken={null}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

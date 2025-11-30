@@ -169,6 +169,7 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
 
+    const originalPath = video.originalStoragePath
     let filePath: string | null = null
     let filename: string | null = null
     let contentType = 'video/mp4'
@@ -201,8 +202,11 @@ export async function GET(
       // Handle video download/stream
       if (verifiedToken.quality === 'thumbnail') {
         filePath = video.thumbnailPath
-      } else if (video.approved) {
-        filePath = video.originalStoragePath
+      } else if (isDownload && isAdminRequest && originalPath) {
+        // Admin downloads should always use the original file, even before approval
+        filePath = originalPath
+      } else if (video.approved && originalPath) {
+        filePath = originalPath
       } else {
         filePath = video.preview1080Path || video.preview720Path
       }

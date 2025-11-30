@@ -343,10 +343,27 @@ export async function finalizeVideo(
   metadata: VideoMetadata,
   resolution: string
 ): Promise<void> {
+  // Preserve user-supplied thumbnails (assets) when reprocessing so we don't overwrite them
+  const existingThumbnail = await prisma.video.findUnique({
+    where: { id: videoId },
+    select: { thumbnailPath: true },
+  })
+
+  const hasCustomThumbnail = existingThumbnail?.thumbnailPath
+    ? !!(await prisma.videoAsset.findFirst({
+        where: {
+          videoId,
+          storagePath: existingThumbnail.thumbnailPath,
+        },
+        select: { id: true },
+      }))
+    : false
+
   const updateData: any = {
     status: 'READY',
     processingProgress: 100,
-    thumbnailPath,
+    // Keep custom thumbnails; only overwrite system-generated ones
+    thumbnailPath: hasCustomThumbnail ? existingThumbnail?.thumbnailPath : thumbnailPath,
     duration: metadata.duration,
     width: metadata.width,
     height: metadata.height,

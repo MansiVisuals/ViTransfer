@@ -73,11 +73,23 @@ export async function POST(
     const reprocessed = []
 
     for (const video of videosToReprocess) {
+      // Preserve user-uploaded thumbnails (asset-based) so reprocessing doesn't delete them
+      const hasCustomThumbnail = video.thumbnailPath
+        ? !!(await prisma.videoAsset.findFirst({
+            where: {
+              videoId: video.id,
+              storagePath: video.thumbnailPath,
+            },
+            select: { id: true },
+          }))
+        : false
+
       // Delete old preview files (keep original safe)
       const filesToDelete = [
         video.preview720Path,
         video.preview1080Path,
-        video.thumbnailPath,
+        // Only delete system-generated thumbnails; keep custom assets intact
+        hasCustomThumbnail ? null : video.thumbnailPath,
       ].filter(Boolean) as string[]
 
       await Promise.allSettled(
@@ -91,7 +103,8 @@ export async function POST(
           status: 'PROCESSING',
           preview720Path: null,
           preview1080Path: null,
-          thumbnailPath: null,
+          // Keep custom thumbnails; regenerate only system thumbnails
+          thumbnailPath: hasCustomThumbnail ? video.thumbnailPath : null,
         },
       })
 

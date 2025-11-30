@@ -12,6 +12,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const STREAM_HIGH_WATER_MARK = 1 * 1024 * 1024 // 1MB stream buffer
+const STREAM_CHUNK_SIZE = 4 * 1024 * 1024 // 4MB chunks for smooth scrubbing/streaming
+const DOWNLOAD_CHUNK_SIZE = 50 * 1024 * 1024 // 50MB chunks
 
 /**
  * Convert Node.js ReadStream to Web ReadableStream
@@ -167,6 +169,7 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 404 })
     }
 
+    const originalPath = video.originalStoragePath
     let filePath: string | null = null
     let filename: string | null = null
     let contentType = 'video/mp4'
@@ -199,8 +202,11 @@ export async function GET(
       // Handle video download/stream
       if (verifiedToken.quality === 'thumbnail') {
         filePath = video.thumbnailPath
-      } else if (video.approved) {
-        filePath = video.originalStoragePath
+      } else if (isDownload && isAdminRequest && originalPath) {
+        // Admin downloads should always use the original file, even before approval
+        filePath = originalPath
+      } else if (video.approved && originalPath) {
+        filePath = originalPath
       } else {
         filePath = video.preview1080Path || video.preview720Path
       }
@@ -222,38 +228,6 @@ export async function GET(
       return NextResponse.json({ error: 'Thumbnails cannot be downloaded directly' }, { status: 403 })
     }
 
-    if (isDownload) {
-      // Use asset filename if available, otherwise generate from video info
-      const rawFilename = filename || (video.approved
-        ? video.originalFileName
-        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`)
-      const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
-
-      await trackVideoAccess({
-        videoId: verifiedToken.videoId,
-        projectId: verifiedToken.projectId,
-        sessionId,
-        tokenId: token,
-        request,
-        quality: verifiedToken.quality,
-        bandwidth: stat.size,
-        eventType: 'DOWNLOAD_COMPLETE'
-      }).catch(() => {})
-
-      const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
-      const readableStream = createWebReadableStream(fileStream)
-
-      return new NextResponse(readableStream, {
-        headers: {
-          'Content-Type': contentType,
-          'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
-          'Content-Length': stat.size.toString(),
-          'X-Content-Type-Options': 'nosniff',
-          'Cache-Control': 'private, no-cache',
-        },
-      })
-    }
-
     const range = request.headers.get('range')
 
     const isThumbnail = verifiedToken.quality === 'thumbnail'
@@ -261,12 +235,91 @@ export async function GET(
       ? 'private, no-store, must-revalidate'
       : 'public, max-age=3600'
 
+    if (isDownload) {
+      // Use asset filename if available, otherwise generate from video info
+      const rawFilename = filename || (video.approved
+        ? video.originalFileName
+        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`)
+      const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
+
+      // For non-asset streams, determine Content-Type based on quality
+      if (!assetId) {
+        contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+      }
+
+      const trackDownloadOnce = async () => {
+        if (!isAdminRequest) {
+          await trackVideoAccess({
+            videoId: verifiedToken.videoId,
+            projectId: verifiedToken.projectId,
+            sessionId,
+            tokenId: token,
+            request,
+            quality: verifiedToken.quality,
+            bandwidth: stat.size,
+            eventType: 'DOWNLOAD_COMPLETE'
+          }).catch(() => {})
+        }
+      }
+
+      // If no Range header, stream entire file with 200 so downloads aren't truncated
+      if (!range) {
+        await trackDownloadOnce()
+
+        const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
+        const readableStream = createWebReadableStream(fileStream)
+
+        return new NextResponse(readableStream, {
+          headers: {
+            'Content-Type': contentType,
+            'Content-Length': stat.size.toString(),
+            'Accept-Ranges': 'bytes',
+            'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
+            'Cache-Control': 'private, no-cache',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'SAMEORIGIN',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+          },
+        })
+      }
+
+      // If client requested range, serve in 16MB chunks to keep UI responsive
+      const rawRange = range || 'bytes=0-'
+      const parts = rawRange.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const requestedEnd = parts[1] ? parseInt(parts[1], 10) : start + DOWNLOAD_CHUNK_SIZE - 1
+      const end = Math.min(requestedEnd, start + DOWNLOAD_CHUNK_SIZE - 1, stat.size - 1)
+      const chunksize = (end - start) + 1
+
+      if (start === 0) {
+        await trackDownloadOnce()
+      }
+
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })
+      const readableStream = createWebReadableStream(fileStream)
+
+      return new NextResponse(readableStream, {
+        status: 206,
+        headers: {
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize.toString(),
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
+          'Cache-Control': 'private, no-cache',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Referrer-Policy': 'strict-origin-when-cross-origin',
+        },
+      })
+    }
+
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
-      const requestedEnd = parts[1] ? parseInt(parts[1], 10) : stat.size - 1
-      const maxChunkSize = 90 * 1024 * 1024
-      const end = Math.min(requestedEnd, start + maxChunkSize - 1, stat.size - 1)
+      const requestedEnd = parts[1] ? parseInt(parts[1], 10) : start + STREAM_CHUNK_SIZE - 1
+      // Cap chunk size so scrubbing doesn't request the entire remainder of the file
+      const end = Math.min(requestedEnd, start + STREAM_CHUNK_SIZE - 1, stat.size - 1)
       const chunksize = (end - start) + 1
 
       const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })

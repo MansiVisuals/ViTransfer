@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { generateVideoAccessToken } from '@/lib/video-access'
 import { isSmtpConfigured, getRateLimitSettings, getShareTokenTtlSeconds } from '@/lib/settings'
 import { getCurrentUserFromRequest, getShareContext, signShareToken } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
@@ -81,74 +80,20 @@ export async function GET(
       }, { status: 401 })
     }
 
-    const sessionId = accessCheck.shareTokenSessionId || `share:${project.id}:${token}`
+    const videosSanitizedBase = project.videos.map((video: any) => ({
+      ...video,
+      originalFileSize: video.originalFileSize.toString(),
+      streamUrl720p: '',
+      streamUrl1080p: '',
+      downloadUrl: null,
+      thumbnailUrl: null,
+      preview720Path: undefined,
+      preview1080Path: undefined,
+      originalStoragePath: undefined,
+      thumbnailPath: undefined,
+    }))
 
-    const videosWithTokens = await Promise.all(
-      project.videos.map(async (video: any) => {
-        let streamToken720p: string
-        let streamToken1080p: string
-        let downloadToken: string | null = null
-
-        if (video.approved) {
-          const originalToken = await generateVideoAccessToken(
-            video.id,
-            project.id,
-            'original',
-            request,
-            accessCheck.shareTokenSessionId || sessionId
-          )
-
-          streamToken720p = originalToken
-          streamToken1080p = originalToken
-          downloadToken = originalToken
-        } else {
-          streamToken720p = await generateVideoAccessToken(
-            video.id,
-            project.id,
-            '720p',
-            request,
-            accessCheck.shareTokenSessionId || sessionId
-          )
-
-          streamToken1080p = await generateVideoAccessToken(
-            video.id,
-            project.id,
-            '1080p',
-            request,
-            accessCheck.shareTokenSessionId || sessionId
-          )
-        }
-
-        let thumbnailUrl: string | null = null
-        if (video.thumbnailPath) {
-          const thumbnailToken = await generateVideoAccessToken(
-            video.id,
-            project.id,
-            'thumbnail',
-            request,
-            sessionId!
-          )
-          thumbnailUrl = `/api/content/${thumbnailToken}`
-        }
-
-        return {
-          ...video,
-          originalFileSize: video.originalFileSize.toString(),
-
-          streamUrl720p: `/api/content/${streamToken720p}`,
-          streamUrl1080p: `/api/content/${streamToken1080p}`,
-          downloadUrl: downloadToken ? `/api/content/${downloadToken}?download=true` : null,
-          thumbnailUrl,
-
-          preview720Path: undefined,
-          preview1080Path: undefined,
-          originalStoragePath: undefined,
-          thumbnailPath: undefined,
-        }
-      })
-    )
-
-    const videosByName = videosWithTokens.reduce((acc: any, video: any) => {
+    const videosByName = videosSanitizedBase.reduce((acc: any, video: any) => {
       const name = video.name
       if (!acc[name]) {
         acc[name] = []
@@ -200,7 +145,7 @@ export async function GET(
         }))
     }
 
-    const sanitizedVideos = isGuest ? videosWithTokens.map(video => ({
+    const sanitizedVideos = isGuest ? videosSanitizedBase.map(video => ({
       id: video.id,
       name: video.name,
       version: video.version,
@@ -214,7 +159,7 @@ export async function GET(
       streamUrl1080p: video.streamUrl1080p,
       downloadUrl: video.downloadUrl,
       thumbnailUrl: video.thumbnailUrl,
-    })) : videosWithTokens
+    })) : videosSanitizedBase
 
     const sanitizedVideosByName = isGuest ? Object.keys(sortedVideosByName).reduce((acc: any, name: string) => {
       acc[name] = sortedVideosByName[name].map(video => ({
@@ -284,7 +229,7 @@ export async function GET(
         projectId: project.id,
         permissions: ['view', 'comment', 'download'],
         guest: false,
-        sessionId,
+        sessionId: accessCheck.shareTokenSessionId || `share:${project.id}:${token}`,
         authMode: projectMeta.authMode,
         ttlSeconds: shareTtlSeconds,
       })

@@ -179,6 +179,17 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     }
   }
 
+  const triggerDownload = (url: string) => {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = ''
+    link.rel = 'noopener'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const handleDownloadVideo = async (videoId: string) => {
     // Prevent multiple simultaneous download requests
     if (downloadingId) return
@@ -199,7 +210,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         return response.json()
       })
       .then(({ url }) => {
-        window.open(url, '_blank')
+        triggerDownload(url)
       })
       .catch((error) => {
         console.error('Download error:', error)

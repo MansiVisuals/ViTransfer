@@ -385,11 +385,26 @@ export async function requireShareToken(request: NextRequest) {
 }
 
 function remainingTtl(token: string, secret: string | undefined | null): number {
-  if (!secret) return 0
+  const fallbackTtl = 60 // Ensure a valid TTL even if token parsing fails
+
+  if (!secret) {
+    console.warn('[AUTH] Missing JWT secret while computing remaining TTL')
+    return fallbackTtl
+  }
+
   const decoded = jwt.decode(token) as jwt.JwtPayload | null
-  if (!decoded?.exp) return 0
+  if (!decoded?.exp) {
+    console.warn('[AUTH] Token missing exp claim while computing remaining TTL')
+    return fallbackTtl
+  }
+
   const now = Math.floor(Date.now() / 1000)
-  return Math.max(decoded.exp - now, 0)
+  const ttl = decoded.exp - now
+  if (ttl <= 0) {
+    return 0
+  }
+
+  return ttl
 }
 
 async function storeTokenFingerprint(userId: string, refreshToken: string, fingerprintHash: string): Promise<void> {

@@ -42,6 +42,11 @@ export async function revokeToken(token: string, expiresIn: number): Promise<voi
 
   // Store with TTL equal to token expiration time
   // Value is timestamp of revocation for audit purposes
+  if (!Number.isFinite(expiresIn) || expiresIn <= 0) {
+    console.warn('[AUTH] Skipping token revocation due to invalid TTL', { expiresIn, key })
+    return
+  }
+
   await redis.setex(key, expiresIn, Date.now().toString())
 }
 

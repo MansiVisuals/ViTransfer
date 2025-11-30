@@ -102,7 +102,7 @@ export function VideoAssetDownloadModal({
       }
 
       const { url: downloadUrl } = await response.json()
-      window.open(downloadUrl, '_blank')
+      triggerDownload(downloadUrl)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     }
@@ -124,7 +124,7 @@ export function VideoAssetDownloadModal({
       }
 
       const { url: downloadUrl } = await response.json()
-      window.open(downloadUrl, '_blank')
+      triggerDownload(downloadUrl)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Download failed')
     }
@@ -157,7 +157,7 @@ export function VideoAssetDownloadModal({
       const { url: downloadUrl } = await response.json()
 
       // Direct download via window.open (streaming, non-blocking, supports multiple simultaneous downloads)
-      window.open(downloadUrl, '_blank')
+      triggerDownload(downloadUrl)
 
       // Close modal shortly after initiating download
       setTimeout(() => {
@@ -177,6 +177,17 @@ export function VideoAssetDownloadModal({
   const getCategoryLabel = (category: string | null) => {
     if (!category) return 'Other'
     return category.charAt(0).toUpperCase() + category.slice(1)
+  }
+
+  const triggerDownload = (url: string) => {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = ''
+    link.rel = 'noopener'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   if (!isOpen) return null

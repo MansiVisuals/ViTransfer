@@ -140,8 +140,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
           videoId: videoId,
         },
 
-        // Chunk size: 90MB (self-hosted, no Cloudflare limit)
-        chunkSize: 90 * 1024 * 1024,
+        chunkSize: 50 * 1024 * 1024,
 
         // Store upload URL in localStorage for resume after browser close
         storeFingerprintForResuming: true,

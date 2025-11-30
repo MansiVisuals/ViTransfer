@@ -100,7 +100,7 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
           filetype: file.type || 'application/octet-stream',
           assetId: assetId,
         },
-        chunkSize: 90 * 1024 * 1024,
+        chunkSize: 50 * 1024 * 1024,
         storeFingerprintForResuming: true,
         removeFingerprintOnSuccess: true,
 

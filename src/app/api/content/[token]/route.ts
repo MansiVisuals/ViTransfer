@@ -12,7 +12,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const STREAM_HIGH_WATER_MARK = 1 * 1024 * 1024 // 1MB stream buffer
-const STREAM_CHUNK_SIZE = 4 * 1024 * 1024 // 4MB per range chunk to keep scrubbing responsive on modest uplinks
+const STREAM_CHUNK_SIZE = 4 * 1024 * 1024 // 4MB chunks for smooth scrubbing/streaming
+const DOWNLOAD_CHUNK_SIZE = 16 * 1024 * 1024 // 16MB chunks for faster downloads without locking UI
 
 /**
  * Convert Node.js ReadStream to Web ReadableStream
@@ -223,14 +224,35 @@ export async function GET(
       return NextResponse.json({ error: 'Thumbnails cannot be downloaded directly' }, { status: 403 })
     }
 
+    const range = request.headers.get('range')
+
+    const isThumbnail = verifiedToken.quality === 'thumbnail'
+    const cacheControl = isThumbnail
+      ? 'private, no-store, must-revalidate'
+      : 'public, max-age=3600'
+
     if (isDownload) {
+      // Serve downloads in larger ranged chunks for speed, but keep chunked to avoid blocking the UI tab
+      const rawRange = range || 'bytes=0-'
+      const parts = rawRange.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const requestedEnd = parts[1] ? parseInt(parts[1], 10) : start + DOWNLOAD_CHUNK_SIZE - 1
+      const end = Math.min(requestedEnd, start + DOWNLOAD_CHUNK_SIZE - 1, stat.size - 1)
+      const chunksize = (end - start) + 1
+
       // Use asset filename if available, otherwise generate from video info
       const rawFilename = filename || (video.approved
         ? video.originalFileName
         : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`)
       const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
 
-      if (!isAdminRequest) {
+      // For non-asset streams, determine Content-Type based on quality
+      if (!assetId) {
+        contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+      }
+
+      // Track once per download (first chunk only) and skip admin sessions
+      if (!isAdminRequest && start === 0) {
         await trackVideoAccess({
           videoId: verifiedToken.videoId,
           projectId: verifiedToken.projectId,
@@ -243,26 +265,24 @@ export async function GET(
         }).catch(() => {})
       }
 
-      const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })
       const readableStream = createWebReadableStream(fileStream)
 
       return new NextResponse(readableStream, {
+        status: 206,
         headers: {
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize.toString(),
           'Content-Type': contentType,
           'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
-          'Content-Length': stat.size.toString(),
-          'X-Content-Type-Options': 'nosniff',
           'Cache-Control': 'private, no-cache',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'SAMEORIGIN',
+          'Referrer-Policy': 'strict-origin-when-cross-origin',
         },
       })
     }
-
-    const range = request.headers.get('range')
-
-    const isThumbnail = verifiedToken.quality === 'thumbnail'
-    const cacheControl = isThumbnail
-      ? 'private, no-store, must-revalidate'
-      : 'public, max-age=3600'
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')

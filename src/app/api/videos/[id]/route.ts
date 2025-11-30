@@ -248,7 +248,23 @@ export async function DELETE(
 
       // Delete thumbnail
       if (video.thumbnailPath) {
-        await deleteFile(video.thumbnailPath)
+        const thumbnailSharedAssets = await prisma.videoAsset.count({
+          where: {
+            storagePath: video.thumbnailPath,
+            videoId: { not: id },
+          },
+        })
+        const thumbnailSharedVideos = await prisma.video.count({
+          where: {
+            thumbnailPath: video.thumbnailPath,
+            id: { not: id },
+          },
+        })
+
+        // Only delete if no other assets or videos reference this thumbnail path
+        if (thumbnailSharedAssets === 0 && thumbnailSharedVideos === 0) {
+          await deleteFile(video.thumbnailPath)
+        }
       }
     } catch (error) {
       console.error(`Failed to delete files for video ${video.id}:`, error)

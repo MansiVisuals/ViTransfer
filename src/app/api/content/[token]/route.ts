@@ -230,16 +230,18 @@ export async function GET(
         : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`)
       const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
 
-      await trackVideoAccess({
-        videoId: verifiedToken.videoId,
-        projectId: verifiedToken.projectId,
-        sessionId,
-        tokenId: token,
-        request,
-        quality: verifiedToken.quality,
-        bandwidth: stat.size,
-        eventType: 'DOWNLOAD_COMPLETE'
-      }).catch(() => {})
+      if (!isAdminRequest) {
+        await trackVideoAccess({
+          videoId: verifiedToken.videoId,
+          projectId: verifiedToken.projectId,
+          sessionId,
+          tokenId: token,
+          request,
+          quality: verifiedToken.quality,
+          bandwidth: stat.size,
+          eventType: 'DOWNLOAD_COMPLETE'
+        }).catch(() => {})
+      }
 
       const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
       const readableStream = createWebReadableStream(fileStream)

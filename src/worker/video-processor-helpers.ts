@@ -356,7 +356,7 @@ export async function finalizeVideo(
           storagePath: existingThumbnail.thumbnailPath,
         },
         select: { id: true },
-      }))
+      })) || existingThumbnail.thumbnailPath.includes('/videos/assets/')
     : false
 
   const updateData: any = {

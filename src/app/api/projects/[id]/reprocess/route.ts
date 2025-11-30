@@ -81,7 +81,7 @@ export async function POST(
               storagePath: video.thumbnailPath,
             },
             select: { id: true },
-          }))
+          })) || video.thumbnailPath.includes('/videos/assets/')
         : false
 
       // Delete old preview files (keep original safe)

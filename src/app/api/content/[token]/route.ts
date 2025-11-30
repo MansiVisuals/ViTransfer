@@ -12,6 +12,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const STREAM_HIGH_WATER_MARK = 1 * 1024 * 1024 // 1MB stream buffer
+const STREAM_CHUNK_SIZE = 4 * 1024 * 1024 // 4MB per range chunk to keep scrubbing responsive on modest uplinks
 
 /**
  * Convert Node.js ReadStream to Web ReadableStream
@@ -264,9 +265,9 @@ export async function GET(
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
-      const requestedEnd = parts[1] ? parseInt(parts[1], 10) : stat.size - 1
-      const maxChunkSize = 90 * 1024 * 1024
-      const end = Math.min(requestedEnd, start + maxChunkSize - 1, stat.size - 1)
+      const requestedEnd = parts[1] ? parseInt(parts[1], 10) : start + STREAM_CHUNK_SIZE - 1
+      // Cap chunk size so scrubbing doesn't request the entire remainder of the file
+      const end = Math.min(requestedEnd, start + STREAM_CHUNK_SIZE - 1, stat.size - 1)
       const chunksize = (end - start) + 1
 
       const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 const STREAM_HIGH_WATER_MARK = 1 * 1024 * 1024 // 1MB stream buffer
 const STREAM_CHUNK_SIZE = 4 * 1024 * 1024 // 4MB chunks for smooth scrubbing/streaming
-const DOWNLOAD_CHUNK_SIZE = 16 * 1024 * 1024 // 16MB chunks for faster downloads without locking UI
+const DOWNLOAD_CHUNK_SIZE = 50 * 1024 * 1024 // 50MB chunks
 
 /**
  * Convert Node.js ReadStream to Web ReadableStream

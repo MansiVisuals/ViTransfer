@@ -101,11 +101,12 @@ export async function POST(
 
     // Store token in Redis with asset IDs and metadata (15 minute TTL)
     const redis = getRedis()
+    const sessionId = accessCheck.shareTokenSessionId || (accessCheck.isAdmin ? `admin:${Date.now()}` : `guest:${Date.now()}`)
     const tokenData = {
       videoId,
       projectId: project.id,
       assetIds,
-      sessionId: accessCheck.shareTokenSessionId || `guest:${Date.now()}`,
+      sessionId,
       createdAt: Date.now(),
     }
 

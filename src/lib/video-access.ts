@@ -293,10 +293,15 @@ export async function trackVideoAccess(params: {
   bandwidth?: number
   eventType: 'PAGE_VISIT' | 'DOWNLOAD_COMPLETE'
 }) {
-  const { videoId, projectId, bandwidth, eventType } = params
+  const { videoId, projectId, bandwidth, eventType, sessionId } = params
 
   const settings = await getSecuritySettings()
   if (!settings.trackAnalytics) {
+    return
+  }
+
+  // Avoid inflating metrics with admin activity (admin sessions prefixed with "admin:")
+  if (sessionId?.startsWith('admin:')) {
     return
   }
 

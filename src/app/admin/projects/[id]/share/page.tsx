@@ -30,9 +30,13 @@ export default function AdminSharePage() {
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
+  const [activeVideosRaw, setActiveVideosRaw] = useState<any[]>([])
+  const [tokensLoading, setTokensLoading] = useState(false)
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [adminUser, setAdminUser] = useState<any>(null)
+  const tokenCacheRef = useRef<Map<string, any>>(new Map())
+  const sessionIdRef = useRef<string>(`admin:${Date.now()}`)
 
   // Fetch comments separately for security (same pattern as public share)
   const fetchComments = async () => {
@@ -52,71 +56,8 @@ export default function AdminSharePage() {
     }
   }
 
-  // Generate video access tokens for admin (client-side)
-  const generateAdminVideoTokens = async (videos: any[]) => {
-    const sessionId = `admin:${Date.now()}`
-
-    return Promise.all(
-      videos.map(async (video: any) => {
-        try {
-          // Generate tokens for each quality
-          const response720p = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=720p&sessionId=${sessionId}`)
-          const response1080p = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=1080p&sessionId=${sessionId}`)
-
-          let streamToken720p = ''
-          let streamToken1080p = ''
-          let downloadToken = null
-
-          if (response720p.ok) {
-            const data720p = await response720p.json()
-            streamToken720p = data720p.token
-          }
-
-          if (response1080p.ok) {
-            const data1080p = await response1080p.json()
-            streamToken1080p = data1080p.token
-          }
-
-          // For approved videos, use original file
-          if (video.approved && response1080p.ok) {
-            const responseOriginal = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=original&sessionId=${sessionId}`)
-            if (responseOriginal.ok) {
-              const dataOriginal = await responseOriginal.json()
-              downloadToken = dataOriginal.token
-            }
-          }
-
-          // Generate thumbnail token
-          let thumbnailUrl = null
-          if (video.thumbnailPath) {
-            const responseThumbnail = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`)
-            if (responseThumbnail.ok) {
-              const dataThumbnail = await responseThumbnail.json()
-              thumbnailUrl = `/api/content/${dataThumbnail.token}`
-            }
-          }
-
-          return {
-            ...video,
-            streamUrl720p: streamToken720p ? `/api/content/${streamToken720p}` : '',
-            streamUrl1080p: streamToken1080p ? `/api/content/${streamToken1080p}` : '',
-            downloadUrl: downloadToken ? `/api/content/${downloadToken}?download=true` : null,
-            thumbnailUrl,
-          }
-        } catch (error) {
-          // Return video without tokens if generation fails
-          return video
-        }
-      })
-    )
-  }
-
-  // Transform videos array to videosByName structure (same as public share)
-  const transformProjectData = async (projectData: any) => {
-    // Generate tokens for all videos
-    const videosWithTokens = await generateAdminVideoTokens(projectData.videos)
-
-    const videosByName = videosWithTokens.reduce((acc: any, video: any) => {
+  const transformProjectData = (projectData: any) => {
+    const videosByName = projectData.videos.reduce((acc: any, video: any) => {
       const name = video.name
       if (!acc[name]) {
         acc[name] = []
@@ -134,6 +75,72 @@ export default function AdminSharePage() {
       ...projectData,
       videosByName
     }
+  }
+
+  const fetchTokensForVideos = async (videos: any[]) => {
+    const sessionId = sessionIdRef.current
+
+    return Promise.all(
+      videos.map(async (video: any) => {
+        const cached = tokenCacheRef.current.get(video.id)
+        if (cached) {
+          return cached
+        }
+
+        try {
+          const [response720p, response1080p] = await Promise.all([
+            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=720p&sessionId=${sessionId}`),
+            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=1080p&sessionId=${sessionId}`)
+          ])
+
+          let streamToken720p = ''
+          let streamToken1080p = ''
+          let downloadToken = null
+
+          if (response720p.ok) {
+            const data720p = await response720p.json()
+            streamToken720p = data720p.token
+          }
+
+          if (response1080p.ok) {
+            const data1080p = await response1080p.json()
+            streamToken1080p = data1080p.token
+          }
+
+          if (video.approved) {
+            const responseOriginal = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=original&sessionId=${sessionId}`)
+            if (responseOriginal.ok) {
+              const dataOriginal = await responseOriginal.json()
+              downloadToken = dataOriginal.token
+              streamToken720p = streamToken720p || dataOriginal.token
+              streamToken1080p = streamToken1080p || dataOriginal.token
+            }
+          }
+
+          let thumbnailUrl = null
+          if (video.thumbnailPath) {
+            const responseThumbnail = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`)
+            if (responseThumbnail.ok) {
+              const dataThumbnail = await responseThumbnail.json()
+              thumbnailUrl = `/api/content/${dataThumbnail.token}`
+            }
+          }
+
+          const tokenized = {
+            ...video,
+            streamUrl720p: streamToken720p ? `/api/content/${streamToken720p}` : '',
+            streamUrl1080p: streamToken1080p ? `/api/content/${streamToken1080p}` : '',
+            downloadUrl: downloadToken ? `/api/content/${downloadToken}?download=true` : null,
+            thumbnailUrl,
+          }
+
+          tokenCacheRef.current.set(video.id, tokenized)
+          return tokenized
+        } catch (error) {
+          return video
+        }
+      })
+    )
   }
 
   // Load project data, settings, and admin user
@@ -171,7 +178,7 @@ export default function AdminSharePage() {
           }
 
           if (isMounted) {
-            const transformedData = await transformProjectData(projectData)
+            const transformedData = transformProjectData(projectData)
             setProject(transformedData)
 
             // Use project/company fallback for studio name and preview quality
@@ -204,16 +211,12 @@ export default function AdminSharePage() {
       const videoNames = Object.keys(project.videosByName)
       if (videoNames.length === 0) return
 
-      // Determine which video group should be active
       if (!activeVideoName) {
         let videoNameToUse: string | null = null
 
-        // Priority 1: URL parameter for video name
         if (urlVideoName && project.videosByName[urlVideoName]) {
           videoNameToUse = urlVideoName
-        }
-        // Priority 2: Saved video name from recent approval
-        else {
+        } else {
           const savedVideoName = sessionStorage.getItem('approvedVideoName')
           if (savedVideoName) {
             sessionStorage.removeItem('approvedVideoName')
@@ -223,15 +226,13 @@ export default function AdminSharePage() {
           }
         }
 
-        // Priority 3: First unapproved video (admin needs to review), fallback to first video
         if (!videoNameToUse) {
-          // Sort video names: unapproved first, then approved
           const sortedVideoNames = videoNames.sort((nameA, nameB) => {
             const hasApprovedA = project.videosByName[nameA].some((v: any) => v.approved)
             const hasApprovedB = project.videosByName[nameB].some((v: any) => v.approved)
 
             if (hasApprovedA !== hasApprovedB) {
-              return hasApprovedA ? 1 : -1 // unapproved first (approved = 1 goes after)
+              return hasApprovedA ? 1 : -1
             }
             return 0
           })
@@ -241,9 +242,8 @@ export default function AdminSharePage() {
         setActiveVideoName(videoNameToUse)
 
         const videos = project.videosByName[videoNameToUse]
-        setActiveVideos(videos)
+        setActiveVideosRaw(videos)
 
-        // If URL specifies a version, calculate the index for initial selection
         if (urlVersion !== null && videos) {
           const targetIndex = videos.findIndex((v: any) => v.version === urlVersion)
           if (targetIndex !== -1) {
@@ -251,24 +251,46 @@ export default function AdminSharePage() {
           }
         }
 
-        // Set initial seek time if URL parameter exists
         if (urlTimestamp !== null) {
           setInitialSeekTime(urlTimestamp)
         }
       } else {
-        // Keep activeVideos in sync when project data refreshes (ensures updated thumbnails/tokens)
         const videos = project.videosByName[activeVideoName]
         if (videos) {
-          setActiveVideos(videos)
+          setActiveVideosRaw(videos)
         }
       }
     }
   }, [project, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
 
+  // Tokenize active videos lazily
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadTokens() {
+      if (!activeVideosRaw || activeVideosRaw.length === 0) {
+        setTokensLoading(false)
+        return
+      }
+      setTokensLoading(true)
+      const tokenized = await fetchTokensForVideos(activeVideosRaw)
+      if (isMounted) {
+        setActiveVideos(tokenized)
+      }
+      setTokensLoading(false)
+    }
+
+    loadTokens()
+
+    return () => {
+      isMounted = false
+    }
+  }, [activeVideosRaw])
+
   // Handle video selection (identical to public share)
   const handleVideoSelect = (videoName: string) => {
     setActiveVideoName(videoName)
-    setActiveVideos(project.videosByName[videoName])
+    setActiveVideosRaw(project.videosByName[videoName])
   }
 
   // Show loading state while project loads
@@ -319,63 +341,60 @@ export default function AdminSharePage() {
 
   const projectUrl = `/admin/projects/${id}`
 
-  const layoutClasses = project.hideFeedback
-    ? 'flex flex-col max-w-7xl mx-auto w-full'
-    : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'
-
   const clientDisplayName = (() => {
     const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
     return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
   })()
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="default"
-            className="px-3"
-            onClick={() => router.push(projectUrl)}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Back to Project</span>
-            <span className="sm:hidden">Back</span>
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
-              {project.title}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Share View
-            </p>
-          </div>
-        </div>
+    <div className="h-screen bg-background flex flex-col lg:flex-row overflow-hidden">
+      {/* Video Sidebar */}
+      {project.videosByName && hasMultipleVideos && (
+        <VideoSidebar
+          videosByName={project.videosByName}
+          activeVideoName={activeVideoName}
+          onVideoSelect={handleVideoSelect}
+          className="w-64 flex-shrink-0"
+        />
+      )}
 
-        {/* Main Content - Full height flex layout */}
-        <div className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden">
-          {/* Left: Video Sidebar + Player */}
-          <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-w-0">
-            {/* Video Sidebar */}
-            {project.videosByName && hasMultipleVideos && (
-              <VideoSidebar
-                videosByName={project.videosByName}
-                activeVideoName={activeVideoName}
-                onVideoSelect={handleVideoSelect}
-                className="lg:max-h-[calc(100vh-12rem)]"
-              />
-            )}
-
-            {/* Video Player */}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 min-h-0 flex flex-col">
+          {/* Header */}
+          <div className="mb-6 flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="default"
+              className="px-3"
+              onClick={() => router.push(projectUrl)}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Back to Project</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
             <div className="flex-1 min-w-0">
-              {readyVideos.length === 0 ? (
-                <Card className="bg-card border-border rounded-lg">
-                  <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No videos are ready for review yet. Please check back later.</p>
-                  </CardContent>
-                </Card>
-              ) : (
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
+                {project.title}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Share View
+              </p>
+            </div>
+          </div>
+
+          {/* Main Content */}
+            {readyVideos.length === 0 ? (
+              <Card className="bg-card border-border rounded-lg">
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    {tokensLoading ? 'Loading video...' : 'No videos are ready for review yet. Please check back later.'}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col max-w-7xl mx-auto w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
+              <div className={project.hideFeedback ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}
@@ -396,32 +415,31 @@ export default function AdminSharePage() {
                   onApprove={undefined}
                   hideDownloadButton={true}
                 />
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Right: Comments Section */}
-          {!project.hideFeedback && (
-            <div className="lg:w-96 flex-shrink-0">
-              <CommentSection
-                key={activeVideoName}
-                projectId={project.id}
-                projectSlug={project.slug}
-                comments={filteredComments}
-                clientName={clientDisplayName}
-                clientEmail={project.recipients?.[0]?.email}
-                isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
-                restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                videos={readyVideos}
-                isAdminView={true}
-                companyName={companyName}
-                clientCompanyName={project.companyName}
-                smtpConfigured={project.smtpConfigured}
-                isPasswordProtected={!!project.sharePassword}
-                adminUser={adminUser}
-                recipients={project.recipients || []}
-                shareToken={null}
-              />
+              {!project.hideFeedback && (
+                <div className="lg:sticky lg:top-6 lg:self-start">
+                  <CommentSection
+                    key={activeVideoName}
+                    projectId={project.id}
+                    projectSlug={project.slug}
+                    comments={filteredComments}
+                    clientName={clientDisplayName}
+                    clientEmail={project.recipients?.[0]?.email}
+                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
+                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+                    videos={readyVideos}
+                    isAdminView={true}
+                    companyName={companyName}
+                    clientCompanyName={project.companyName}
+                    smtpConfigured={project.smtpConfigured}
+                    isPasswordProtected={!!project.sharePassword}
+                    adminUser={adminUser}
+                    recipients={project.recipients || []}
+                    shareToken={null}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

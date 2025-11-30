@@ -5,6 +5,20 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2025-12-01
+
+### Fixed
+- Stop video player resets when switching videos and align the admin share layout with the public share view.
+- Bind fallback share tokens to the correct session and reduce token churn on share pages to avoid unexpected access denials.
+- Preserve custom thumbnail assets during reprocess and when deleting older versions so copied thumbnails stay valid; keep shared thumbnail files intact when deleting a video if other assets or videos still reference the same storage path.
+- Allow admins to download original files via the content endpoint even before approval; admin panel downloads avoid popups and stay responsive.
+- Exclude admin activity from analytics and tag admin download sessions to keep metrics clean.
+
+### Changed
+- Stream/download pipeline tuned for reliability and speed: streaming chunks capped at 4MB, download chunks capped at 50MB, full-file downloads when no Range header is sent, and downloads trigger without opening new tabs.
+- Admin/download UX and performance improvements: faster downloads, responsive UI, safer chunking, and admin download tagging.
+- Token revocation TTL handling tightened to avoid stale tokens.
+
 ## [0.5.5] - 2025-11-22
 
 ### Added

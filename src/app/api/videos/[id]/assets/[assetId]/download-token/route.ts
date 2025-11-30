@@ -61,13 +61,14 @@ export async function POST(
       }
     }
 
-    // Generate video access token (we use video access tokens for assets too)
+    // Generate video access token (we use video access tokens for assets too); tag admin sessions
+    const sessionId = accessCheck.shareTokenSessionId || (accessCheck.isAdmin ? `admin:${Date.now()}` : `guest:${Date.now()}`)
     const token = await generateVideoAccessToken(
       videoId,
       project.id,
       'original',
       request,
-      accessCheck.shareTokenSessionId || `guest:${Date.now()}`
+      sessionId
     )
 
     // Return download URL with asset ID parameter

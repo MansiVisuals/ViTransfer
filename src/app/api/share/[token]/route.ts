@@ -229,7 +229,7 @@ export async function GET(
         projectId: project.id,
         permissions: ['view', 'comment', 'download'],
         guest: false,
-        sessionId,
+        sessionId: accessCheck.shareTokenSessionId || `share:${project.id}:${token}`,
         authMode: projectMeta.authMode,
         ttlSeconds: shareTtlSeconds,
       })

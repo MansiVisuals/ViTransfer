@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allow admins to download original files via the content endpoint even before approval to keep admin workflows unblocked.
 - Prevent token/session churn on share pages and bind fallback tokens to the correct session to avoid unexpected access denials.
 - Stop video player resets when switching videos; admin share layout now matches the public share view.
+- Exclude admin activity from analytics to keep metrics clean.
 
 ### Changed
 - Stream/download pipeline tuned for reliability: smaller streaming chunks (4MB), download chunks capped at 50MB, and full-file downloads when no Range header is sent.

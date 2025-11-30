@@ -298,14 +298,25 @@ export default function VideoPlayer({
           setCheckingAssets(false)
           if (!hasAssets) {
             // Direct download if no assets
-            window.open(downloadUrl, '_blank')
+            triggerDownload(downloadUrl)
           }
         })
       return
     }
 
     // Direct download if no assets or not allowed
-    window.open(downloadUrl, '_blank')
+    triggerDownload(downloadUrl)
+  }
+
+  const triggerDownload = (url: string) => {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = ''
+    link.rel = 'noopener'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const handleApprove = async () => {

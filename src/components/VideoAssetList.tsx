@@ -153,6 +153,17 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     return <File className="h-5 w-5 text-muted-foreground flex-shrink-0" />
   }
 
+  const triggerDownload = (url: string) => {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = ''
+    link.rel = 'noopener'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const handleDownload = async (assetId: string, fileName: string) => {
     // Generate download token in background without blocking UI
     apiFetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
@@ -165,7 +176,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
         return response.json()
       })
       .then(({ url }) => {
-        window.open(url, '_blank')
+        triggerDownload(url)
       })
       .catch((err) => {
         alert('Failed to download asset')

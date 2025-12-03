@@ -2,7 +2,7 @@ import { prisma } from '../lib/db'
 import { sendEmail } from '../lib/email'
 import { generateAdminSummaryEmail } from '../lib/email-templates'
 import { generateShareUrl } from '../lib/url'
-import { getPeriodString, shouldSendNow, sendNotificationsWithRetry } from './notification-helpers'
+import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
 
 /**
  * Process admin notification summaries
@@ -82,7 +82,9 @@ export async function processAdminNotifications() {
           notifications: []
         }
       }
-      projectGroups[projectId].notifications.push(notification.data)
+      projectGroups[projectId].notifications.push(
+        normalizeNotificationDataTimecode(notification.data)
+      )
     }
 
     // Get all admins

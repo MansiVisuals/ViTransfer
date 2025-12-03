@@ -148,11 +148,24 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     upload.metadata?.filetype as string || 'video/mp4'
   )
 
+  // Update video status to PROCESSING since upload is complete and job will be queued
+  await prisma.video.update({
+    where: { id: videoId },
+    data: {
+      status: 'PROCESSING',
+      processingProgress: 0,
+    },
+  })
+
+  console.log(`[UPLOAD] Video ${videoId} upload complete, status updated to PROCESSING`)
+
   await videoQueue.add('process-video', {
     videoId: video.id,
     originalStoragePath: video.originalStoragePath,
     projectId: video.projectId,
   })
+
+  console.log(`[UPLOAD] Video ${videoId} queued for worker processing`)
 
   await cleanupTUSFile(tusFilePath)
 

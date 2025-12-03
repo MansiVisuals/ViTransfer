@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Comment, Video } from '@prisma/client'
 import { useRouter } from 'next/navigation'
 import { apiPost, apiDelete } from '@/lib/api-client'
+import { secondsToTimecode } from '@/lib/timecode'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -43,7 +44,7 @@ export function useCommentManagement({
   // State
   const [optimisticComments, setOptimisticComments] = useState<CommentWithReplies[]>([])
   const [newComment, setNewComment] = useState('')
-  const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null)
+  const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null) // Internal: still use seconds for video player integration
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [hasAutoFilledTimestamp, setHasAutoFilledTimestamp] = useState(false)
@@ -220,12 +221,17 @@ export function useCommentManagement({
 
     // OPTIMISTIC UPDATE
     const isInternalComment = useAdminAuth || !!adminUser
+    // Convert seconds to timecode for API and storage
+    const selectedVideo = videos.find(v => v.id === validatedVideoId)
+    const fps = selectedVideo?.fps || 24 // Default to 24fps if not available
+    const timecode = selectedTimestamp !== null ? secondsToTimecode(selectedTimestamp, fps) : '00:00:00:00'
+
     const optimisticComment: CommentWithReplies = {
       id: `temp-${Date.now()}`,
       projectId,
       videoId: validatedVideoId,
       videoVersion: videos.find(v => v.id === validatedVideoId)?.version || null,
-      timestamp: selectedTimestamp,
+      timecode,
       content: newComment,
       authorName: isInternalComment
         ? (adminUser!.name || 'Admin')
@@ -253,11 +259,16 @@ export function useCommentManagement({
     setReplyingToCommentId(null)
 
     try {
+      // Convert timestamp to timecode for API
+      const commentVideo = videos.find(v => v.id === commentVideoId)
+      const fps = commentVideo?.fps || 24
+      const commentTimecode = commentTimestamp !== null ? secondsToTimecode(commentTimestamp, fps) : '00:00:00:00'
+
       // Build request body - only include fields with values
       const requestBody: any = {
         projectId,
         videoId: commentVideoId,
-        timestamp: commentTimestamp,
+        timecode: commentTimecode,
         content: commentContent,
         isInternal: isInternalComment,
       }

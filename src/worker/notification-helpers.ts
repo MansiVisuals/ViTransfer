@@ -1,4 +1,5 @@
 import { prisma } from '../lib/db'
+import { secondsToTimecode, parseTimecodeInput, isValidTimecode } from '../lib/timecode'
 
 const MAX_ATTEMPTS = 3
 
@@ -79,6 +80,59 @@ export function shouldSendNow(
 
   // Last sent was before this target - send now
   return true
+}
+
+/**
+ * Normalize queued notification payloads to ensure they include timecode.
+ * Older queue entries stored a numeric timestamp; convert those on the fly
+ * so emails consistently show the new HH:MM:SS:FF format.
+ */
+export function normalizeNotificationDataTimecode(data: any) {
+  if (!data) return data
+
+  const normalized = { ...data }
+
+  const normalizeValue = (value: any) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (isValidTimecode(trimmed)) return trimmed
+      if (!Number.isNaN(Number(trimmed)) && !trimmed.includes(':')) {
+        return secondsToTimecode(parseFloat(trimmed), 24)
+      }
+      try {
+        return parseTimecodeInput(trimmed, 24)
+      } catch {
+        return trimmed
+      }
+    }
+    if (typeof value === 'number') {
+      return secondsToTimecode(value, 24)
+    }
+    return value
+  }
+
+  if (!normalized.timecode && normalized.timestamp !== undefined) {
+    normalized.timecode = normalizeValue(normalized.timestamp)
+  } else if (normalized.timecode) {
+    normalized.timecode = normalizeValue(normalized.timecode)
+  }
+
+  if (normalized.parentComment) {
+    const parent = normalized.parentComment as any
+    if (!parent.timecode && parent.timestamp !== undefined) {
+      normalized.parentComment = {
+        ...parent,
+        timecode: normalizeValue(parent.timestamp),
+      }
+    } else if (parent.timecode) {
+      normalized.parentComment = {
+        ...parent,
+        timecode: normalizeValue(parent.timecode),
+      }
+    }
+  }
+
+  return normalized
 }
 
 /**

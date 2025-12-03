@@ -3,7 +3,7 @@ import { sendEmail } from '../lib/email'
 import { generateNotificationSummaryEmail } from '../lib/email-templates'
 import { getProjectRecipients } from '../lib/recipients'
 import { generateShareUrl } from '../lib/url'
-import { getPeriodString, shouldSendNow, sendNotificationsWithRetry } from './notification-helpers'
+import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
 
 /**
  * Process client notification summaries
@@ -113,7 +113,9 @@ export async function processClientNotifications() {
         isClientNotification: true,
         logPrefix: '[CLIENT]  ',
         onSuccess: async () => {
-          const notifications = project.notificationQueue.map(n => n.data as any)
+          const notifications = project.notificationQueue.map(n =>
+            normalizeNotificationDataTimecode(n.data as any)
+          )
 
           for (const recipient of recipients) {
             const html = generateNotificationSummaryEmail({

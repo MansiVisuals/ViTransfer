@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
 import { Clock, Send } from 'lucide-react'
-import { formatTimestamp } from '@/lib/utils'
+import { secondsToTimecode, formatTimecodeDisplay } from '@/lib/timecode'
 
 interface CommentInputProps {
   newComment: string
@@ -150,12 +150,12 @@ export default function CommentInput({
         </div>
       )}
 
-      {/* Timestamp indicator */}
+      {/* Timecode indicator */}
       {selectedTimestamp !== null && selectedTimestamp !== undefined && !currentVideoRestricted && (
         <div className="flex items-center gap-2 mb-2 text-sm">
           <Clock className="w-4 h-4 text-warning" />
           <span className="text-warning">
-            Comment at {formatTimestamp(selectedTimestamp)}
+            Comment at {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, 24), true, true)}
           </span>
           <Button
             onClick={onClearTimestamp}

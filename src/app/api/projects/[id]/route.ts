@@ -6,6 +6,7 @@ import { encrypt, decrypt } from '@/lib/encryption'
 import { isSmtpConfigured } from '@/lib/email'
 import { invalidateProjectSessions } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
+import { sanitizeComment } from '@/lib/comment-sanitization'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -108,6 +109,15 @@ export async function GET(
     // Check SMTP configuration status
     const smtpConfigured = await isSmtpConfigured()
 
+    // Determine fallback name for sanitization
+    const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
+    const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
+
+    // Sanitize/normalize comments to ensure timecodes are consistent
+    const sanitizedComments = project.comments.map((comment: any) =>
+      sanitizeComment(comment, true, true, fallbackName)
+    )
+
     // Convert BigInt fields to strings for JSON serialization
     const projectData = {
       ...project,
@@ -115,6 +125,7 @@ export async function GET(
         ...video,
         originalFileSize: video.originalFileSize.toString(),
       })),
+      comments: sanitizedComments,
       // Password decryption moved to separate endpoint: GET /api/projects/[id]/password
       // This reduces XSS attack surface and prevents password exposure in DevTools
       // Include SMTP status for frontend to disable/enable notification features

@@ -11,6 +11,36 @@
  * - src/app/api/comments/[id]/route.ts
  * - src/app/api/share/[token]/comments/route.ts
  */
+import { secondsToTimecode, parseTimecodeInput, isValidTimecode } from './timecode'
+
+// Fallback for legacy comments that still have a numeric timestamp column
+const normalizeTimecode = (comment: any): string => {
+  if (comment.timecode && typeof comment.timecode === 'string') {
+    const trimmed = comment.timecode.trim()
+
+    if (isValidTimecode(trimmed)) {
+      return trimmed
+    }
+
+    // Handle legacy seconds stored as a string (e.g., "36" or "36.5")
+    if (!Number.isNaN(Number(trimmed)) && !trimmed.includes(':')) {
+      return secondsToTimecode(parseFloat(trimmed), 24)
+    }
+
+    // Attempt to normalize other partial formats (MM:SS, HH:MM:SS)
+    try {
+      return parseTimecodeInput(trimmed, 24)
+    } catch {
+      // Fall through to default below
+    }
+  }
+
+  if (typeof comment.timestamp === 'number') {
+    return secondsToTimecode(comment.timestamp, 24)
+  }
+
+  return '00:00:00:00'
+}
 
 export function sanitizeComment(
   comment: any,
@@ -18,12 +48,14 @@ export function sanitizeComment(
   isAuthenticated: boolean,
   clientName?: string
 ) {
+  const normalizedTimecode = normalizeTimecode(comment)
+
   const sanitized: any = {
     id: comment.id,
     projectId: comment.projectId,
     videoId: comment.videoId,
     videoVersion: comment.videoVersion,
-    timestamp: comment.timestamp,
+    timecode: normalizedTimecode,
     content: comment.content,
     isInternal: comment.isInternal,
     createdAt: comment.createdAt,

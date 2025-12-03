@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import DOMPurify from 'isomorphic-dompurify'
+import { isValidTimecode } from '@/lib/timecode'
 
 /**
  * Input Validation Schemas
@@ -174,7 +175,9 @@ export const createCommentSchema = z.object({
   projectId: cuidSchema,
   videoId: cuidSchema, // Required - all comments must be video-specific
   videoVersion: z.number().int().positive().optional(),
-  timestamp: z.number().min(0).optional().nullable(),
+  timecode: z.string().refine(isValidTimecode, {
+    message: 'Invalid timecode format. Expected HH:MM:SS:FF'
+  }),
   content: contentSchema,
   authorName: safeStringSchema(1, 255).optional().nullable(),
   authorEmail: emailSchema.optional().nullable(),

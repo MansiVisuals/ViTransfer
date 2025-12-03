@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -34,7 +34,7 @@
     "isomorphic-dompurify": "^2.31.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.553.0",
-    "next": "^16.0.1",
+    "next": "^16.0.7",
     "nodemailer": "^7.0.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -2,7 +2,8 @@
 
 import { Comment } from '@prisma/client'
 import { Clock, Trash2, CornerDownRight } from 'lucide-react'
-import { formatTimestamp, getUserColor } from '@/lib/utils'
+import { getUserColor } from '@/lib/utils'
+import { timecodeToSeconds, formatTimecodeDisplay } from '@/lib/timecode'
 import DOMPurify from 'dompurify'
 
 type CommentWithReplies = Comment & {
@@ -91,8 +92,11 @@ export default function MessageBubble({
   const textColor = 'text-gray-900 dark:text-gray-100'
 
   const handleTimestampClick = () => {
-    if (comment.timestamp !== null && comment.timestamp !== undefined && onSeekToTimestamp) {
-      onSeekToTimestamp(comment.timestamp, comment.videoId, comment.videoVersion)
+    if (comment.timecode && onSeekToTimestamp) {
+      // Convert timecode to seconds for video player seeking
+      // Use 24fps as default (video player will handle the actual seek)
+      const seconds = timecodeToSeconds(comment.timecode, 24)
+      onSeekToTimestamp(seconds, comment.videoId, comment.videoVersion)
     }
   }
 
@@ -148,16 +152,16 @@ export default function MessageBubble({
             )
           })()}
 
-          {/* Timestamp Badge (if present) */}
-          {comment.timestamp !== null && comment.timestamp !== undefined && (
+          {/* Timecode Badge (if present) */}
+          {comment.timecode && (
             <button
               onClick={handleTimestampClick}
               className="flex items-center gap-1 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
-              title="Seek to this timestamp"
+              title="Seek to this timecode"
             >
               <Clock className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
               <span className="text-xs underline decoration-dotted font-medium text-orange-600 dark:text-orange-400">
-                {formatTimestamp(comment.timestamp)}
+                {formatTimecodeDisplay(comment.timecode, true, true)}
               </span>
             </button>
           )}

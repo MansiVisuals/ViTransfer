@@ -386,7 +386,7 @@ export async function sendCommentNotificationEmail({
   versionLabel,
   authorName,
   commentContent,
-  timestamp,
+  timecode,
   shareUrl,
 }: {
   clientEmail: string
@@ -396,7 +396,7 @@ export async function sendCommentNotificationEmail({
   versionLabel: string
   authorName: string
   commentContent: string
-  timestamp?: number | null
+  timecode?: string | null
   shareUrl: string
 }) {
   const settings = await getEmailSettings()
@@ -404,9 +404,7 @@ export async function sendCommentNotificationEmail({
 
   const subject = `New Comment: ${projectTitle}`
 
-  const timestampText = timestamp !== null && timestamp !== undefined
-    ? `at ${Math.floor(timestamp / 60)}:${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
-    : ''
+  const timecodeText = timecode ? `at ${timecode}` : ''
 
   const html = renderEmailShell({
     companyName,
@@ -428,7 +426,7 @@ export async function sendCommentNotificationEmail({
           <strong>${escapeHtml(projectTitle)}</strong>
         </div>
         <div style="font-size: 14px; color: #6b7280;">
-          ${escapeHtml(videoName)} <span style="color: #9ca3af;">${escapeHtml(versionLabel)}</span>${timestampText ? ` <span style="color: #9ca3af;">• ${timestampText}</span>` : ''}
+          ${escapeHtml(videoName)} <span style="color: #9ca3af;">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: #9ca3af;">• ${timecodeText}</span>` : ''}
         </div>
       </div>
 
@@ -467,7 +465,7 @@ export async function sendAdminCommentNotificationEmail({
   videoName,
   versionLabel,
   commentContent,
-  timestamp,
+  timecode,
   shareUrl,
 }: {
   adminEmails: string[]
@@ -477,7 +475,7 @@ export async function sendAdminCommentNotificationEmail({
   videoName: string
   versionLabel: string
   commentContent: string
-  timestamp?: number | null
+  timecode?: string | null
   shareUrl: string
 }) {
   const settings = await getEmailSettings()
@@ -485,9 +483,7 @@ export async function sendAdminCommentNotificationEmail({
 
   const subject = `Client Feedback: ${projectTitle}`
 
-  const timestampText = timestamp !== null && timestamp !== undefined
-    ? `at ${Math.floor(timestamp / 60)}:${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
-    : ''
+  const timecodeText = timecode ? `at ${timecode}` : ''
 
   const html = renderEmailShell({
     companyName,
@@ -513,7 +509,7 @@ export async function sendAdminCommentNotificationEmail({
           <strong>${escapeHtml(projectTitle)}</strong>
         </div>
         <div style="font-size: 14px; color: #6b7280;">
-          ${escapeHtml(videoName)} <span style="color: #9ca3af;">${escapeHtml(versionLabel)}</span>${timestampText ? ` <span style="color: #9ca3af;">• ${timestampText}</span>` : ''}
+          ${escapeHtml(videoName)} <span style="color: #9ca3af;">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: #9ca3af;">• ${timecodeText}</span>` : ''}
         </div>
       </div>
 

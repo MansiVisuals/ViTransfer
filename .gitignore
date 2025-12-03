@@ -49,6 +49,7 @@ uploads/
 minio-data/
 postgres-data/
 redis-data/
+intergrations/
 
 # Prisma
 prisma/.env

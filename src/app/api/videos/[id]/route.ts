@@ -9,6 +9,56 @@ export const runtime = 'nodejs'
 
 
 
+// GET /api/videos/[id] - Get video status (for polling during processing)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // SECURITY: Require admin authentication
+  const authResult = await requireApiAdmin(request)
+  if (authResult instanceof Response) {
+    return authResult
+  }
+
+  // Rate limit status checks (allow frequent polling)
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 120, // Allow 2 requests per second for polling
+    message: 'Too many video status requests. Please slow down.',
+  }, 'video-status')
+  if (rateLimitResult) return rateLimitResult
+
+  try {
+    const { id } = await params
+    
+    const video = await prisma.video.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        processingProgress: true,
+        processingError: true,
+        duration: true,
+        width: true,
+        height: true,
+      }
+    })
+
+    if (!video) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(video)
+  } catch (error) {
+    console.error('Error fetching video status:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch video status' },
+      { status: 500 }
+    )
+  }
+}
+
 // Helper: Check if all videos have at least one approved version
 async function checkAllVideosApproved(projectId: string): Promise<boolean> {
   const allVideos = await prisma.video.findMany({

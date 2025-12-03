@@ -61,7 +61,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
         versionLabel,
         authorName: comment.authorName || 'Admin',
         commentContent: comment.content,
-        timestamp: comment.timestamp,
+        timecode: comment.timecode,
         shareUrl,
       }).then(result => {
         if (result.success) {
@@ -93,7 +93,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
       videoName,
       versionLabel,
       commentContent: comment.content,
-      timestamp: comment.timestamp,
+      timecode: comment.timecode,
       shareUrl,
     })
 
@@ -122,14 +122,14 @@ export async function queueNotification(context: NotificationContext) {
   if (isReply && comment.parentId) {
     const parentComment = await prisma.comment.findUnique({
       where: { id: comment.parentId },
-      select: { authorName: true, content: true, timestamp: true }
+      select: { authorName: true, content: true, timecode: true }
     })
 
     if (parentComment) {
       parentCommentData = {
         authorName: parentComment.authorName || 'Client',
         content: parentComment.content,
-        timestamp: parentComment.timestamp
+        timecode: parentComment.timecode
       }
     }
   }
@@ -147,7 +147,7 @@ export async function queueNotification(context: NotificationContext) {
         authorName: comment.authorName || (comment.isInternal ? 'Admin' : 'Client'),
         authorEmail: comment.authorEmail,
         content: comment.content,
-        timestamp: comment.timestamp,
+        timecode: comment.timecode,
         isReply,
         parentCommentId: comment.parentId,
         parentComment: parentCommentData,

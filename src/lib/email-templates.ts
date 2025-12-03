@@ -4,6 +4,7 @@
  */
 
 import { escapeHtml, renderEmailShell } from './email'
+import { formatTimecodeDisplay } from './timecode'
 
 interface NotificationData {
   type: 'CLIENT_COMMENT' | 'ADMIN_REPLY' | 'VIDEO_APPROVED' | 'VIDEO_UNAPPROVED' | 'PROJECT_APPROVED'
@@ -12,7 +13,7 @@ interface NotificationData {
   authorName: string
   authorEmail?: string
   content?: string
-  timestamp?: number
+  timecode?: string | null
   isReply?: boolean
   approved?: boolean
   approvedVideos?: Array<{ id: string; name: string }>
@@ -42,11 +43,9 @@ interface AdminSummaryData {
   }>
 }
 
-function formatTimestamp(seconds?: number | null): string {
-  if (seconds === null || seconds === undefined) return ''
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
+function formatTimecodeForEmail(timecode?: string | null): string {
+  if (!timecode) return ''
+  return formatTimecodeDisplay(timecode)
 }
 
 /**
@@ -92,7 +91,7 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
     return `
       <div style="padding:10px 0;">
         <div style="font-size:13px; color:#6b7280; margin-bottom:4px;">
-          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timestamp ? ` • ${formatTimestamp(n.timestamp)}` : ''}
+          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timecode ? ` • ${formatTimecodeForEmail(n.timecode)}` : ''}
         </div>
         <div style="font-size:14px; font-weight:700; color:#111827; margin-bottom:2px;">${escapeHtml(n.authorName)}</div>
         ${isReply ? `<div style="font-size:12px; color:#6b7280; margin-bottom:6px;">Replying to ${escapeHtml(n.parentComment!.authorName)} — "${escapeHtml(n.parentComment!.content.substring(0, 60))}${n.parentComment!.content.length > 60 ? '...' : ''}"</div>` : ''}
@@ -145,7 +144,7 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
     const items = project.notifications.map((n, index) => `
       <div style="padding:10px 0;${index > 0 ? ' border-top:1px solid #e5e7eb; margin-top:8px;' : ''}">
         <div style="font-size:13px; color:#6b7280; margin-bottom:4px;">
-          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timestamp ? ` • ${formatTimestamp(n.timestamp)}` : ''}
+          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timecode ? ` • ${formatTimecodeForEmail(n.timecode)}` : ''}
         </div>
         <div style="margin-bottom:4px;">
           <span style="font-size:14px; font-weight:700; color:#111827;">${escapeHtml(n.authorName)}</span>

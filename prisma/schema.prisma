@@ -180,7 +180,7 @@ model Comment {
   projectId    String
   videoId      String // All comments must be video-specific
   videoVersion Int? // track which version this comment was for
-  timestamp    Float? // in seconds
+  timecode     String // HH:MM:SS:FF format (e.g., "00:00:32:15" for 32 seconds 15 frames at given FPS)
   content      String
   authorName   String? // made optional to allow anonymous comments
   authorEmail  String?

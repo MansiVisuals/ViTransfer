@@ -41,7 +41,7 @@ export const ALLOWED_ASSET_TYPES = {
     mimeTypes: ['text/plain', 'text/vtt', 'application/x-subrip', 'application/octet-stream']
   },
   project: {
-    extensions: ['.prproj', '.aep', '.fcp', '.davinci', '.zip', '.rar', '.7z'],
+    extensions: ['.prproj', '.aep', '.fcp', '.drp', '.drt', '.dra', '.zip', '.rar', '.7z'],
     mimeTypes: ['application/octet-stream', 'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed']
   },
   document: {

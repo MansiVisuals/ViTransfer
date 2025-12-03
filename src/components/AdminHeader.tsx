@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/components/AuthProvider'
 import { Button } from '@/components/ui/button'
-import { LogOut, User, Settings, Users, FolderKanban, BarChart3, Shield } from 'lucide-react'
+import { LogOut, User, Settings, Users, FolderKanban, BarChart3, Shield, Workflow } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -38,6 +38,7 @@ export default function AdminHeader() {
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
     { href: '/admin/users', label: 'Users', icon: Users },
+    { href: '/admin/integrations', label: 'Integrations', icon: Workflow },
   ]
 
   // Add Security link if enabled

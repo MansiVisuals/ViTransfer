@@ -5,6 +5,27 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2025-12-03
+
+### Added
+- **Admin Integrations Page**: New dedicated page announcing upcoming professional NLE integrations
+  - DaVinci Resolve Studio and Adobe Premiere Pro integrations coming beginning of 2026
+  - Direct timeline comment import, project management, and render/upload workflows
+  - Integrations offered as one-time purchase to support continued development
+  - Web app remains free and open-source
+- **Enhanced Asset Support**: Expanded project asset validation to support DaVinci Resolve formats
+  - Added support for .drp (DaVinci Resolve Project), .drt (DaVinci Resolve Template), and .dra (DaVinci Resolve Archive) files
+  - Updated file validation logic to recognize professional NLE project formats
+- **Timecode Format Migration**: Migrated comment timestamps to standardized timecode format (HH:MM:SS or MM:SS)
+  - Introduced comprehensive timecode utility library for parsing and formatting
+  - Updated comment display, input, and email notifications to use timecode format
+  - Improved readability and professional appearance across all comment interfaces
+
+### Changed
+- Navigation updated to include Integrations link in admin header
+- Comment sanitization enhanced to preserve timecode format in notifications
+- Email templates updated to display timestamps in human-readable timecode format
+
 ## [0.6.2] - 2025-12-01
 
 ### Fixed

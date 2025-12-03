@@ -33,7 +33,7 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 - **Security Features** - Rate limiting, hotlink protection, security event logging, encrypted credentials, and token based authentication with IP binding
 - **Version Control** - Multiple video versions per project with revision tracking and optional max revision limits
 - **Guest Controls** - View only guest access with optional restriction to latest version only
-- **Asset Management** - Attach images, audio, subtitles, project files (Premiere, DaVinci, Final Cut), and documents with magic byte validation
+- **Asset Management** - Attach images, audio, subtitles, project files (Premiere, DaVinci Resolve, Final Cut), and documents with magic byte validation
 - **Custom Thumbnails** - Set per version thumbnails from uploaded image assets
 - **Flexible Settings** - Per project and global configuration with override capabilities
 

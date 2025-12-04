@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Play, ChevronDown, ChevronUp, GripVertical, CheckCircle2 } from 'lucide-react'
+import { Play, ChevronDown, ChevronUp, GripVertical, CheckCircle2, ArrowUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 interface VideoGroup {
   name: string
@@ -28,6 +29,7 @@ export default function VideoSidebar({
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const [sidebarWidth, setSidebarWidth] = useState(256) // Default 256px (w-64)
   const [isResizing, setIsResizing] = useState(false)
+  const [sortMode, setSortMode] = useState<'date' | 'alphabetical'>('date')
   const sidebarRef = useRef<HTMLElement>(null)
 
   const videoGroups: VideoGroup[] = Object.entries(videosByName).map(([name, videos]) => ({
@@ -35,6 +37,25 @@ export default function VideoSidebar({
     videos,
     versionCount: videos.length
   }))
+
+  // Sort video groups based on sort mode
+  const sortedVideoGroups = (groups: VideoGroup[]) => {
+    return [...groups].sort((a, b) => {
+      if (sortMode === 'alphabetical') {
+        return a.name.localeCompare(b.name)
+      } else {
+        // Sort by upload date (newest first)
+        // Get the most recent video from each group
+        const latestA = a.videos.reduce((latest, v) =>
+          new Date(v.createdAt) > new Date(latest.createdAt) ? v : latest
+        )
+        const latestB = b.videos.reduce((latest, v) =>
+          new Date(v.createdAt) > new Date(latest.createdAt) ? v : latest
+        )
+        return new Date(latestB.createdAt).getTime() - new Date(latestA.createdAt).getTime()
+      }
+    })
+  }
 
   // Load saved width from localStorage
   useEffect(() => {
@@ -103,17 +124,32 @@ export default function VideoSidebar({
         )}
       >
         <div className="p-6 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Videos</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {videoGroups.length} {videoGroups.length === 1 ? 'video' : 'videos'}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Videos</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {videoGroups.length} {videoGroups.length === 1 ? 'video' : 'videos'}
+              </p>
+            </div>
+            {videoGroups.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSortMode(current => current === 'date' ? 'alphabetical' : 'date')}
+                className="text-muted-foreground hover:text-foreground -mr-2"
+                title={sortMode === 'date' ? 'Sort alphabetically' : 'Sort by upload date'}
+              >
+                <ArrowUpDown className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <nav className="p-3">
           {(() => {
             // Split videos into For Review and Approved groups
-            const forReview = videoGroups.filter(g => !g.videos.some((v: any) => v.approved === true))
-            const approved = videoGroups.filter(g => g.videos.some((v: any) => v.approved === true))
+            const forReview = sortedVideoGroups(videoGroups.filter(g => !g.videos.some((v: any) => v.approved === true)))
+            const approved = sortedVideoGroups(videoGroups.filter(g => g.videos.some((v: any) => v.approved === true)))
 
             const renderVideoButton = (group: VideoGroup) => {
               const hasApprovedVideo = group.videos.some((v: any) => v.approved === true)
@@ -225,8 +261,8 @@ export default function VideoSidebar({
           <div className="border-t border-border">
             {(() => {
               // Split videos into For Review and Approved groups
-              const forReview = videoGroups.filter(g => !g.videos.some((v: any) => v.approved === true))
-              const approved = videoGroups.filter(g => g.videos.some((v: any) => v.approved === true))
+              const forReview = sortedVideoGroups(videoGroups.filter(g => !g.videos.some((v: any) => v.approved === true)))
+              const approved = sortedVideoGroups(videoGroups.filter(g => g.videos.some((v: any) => v.approved === true)))
 
               const renderVideoButton = (group: VideoGroup, isLast: boolean) => {
                 const hasApprovedVideo = group.videos.some((v: any) => v.approved === true)

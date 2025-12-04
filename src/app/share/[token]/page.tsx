@@ -130,6 +130,9 @@ export default function SharePage() {
         }
         setProject(projectData)
 
+        // Clear token cache to force re-fetch of video tokens with updated approval status
+        tokenCacheRef.current.clear()
+
         // Fetch comments after project loads (if not hidden)
         if (!projectData.hideFeedback) {
           fetchComments()
@@ -274,14 +277,14 @@ export default function SharePage() {
           setInitialSeekTime(urlTimestamp)
         }
       } else {
-        // Keep activeVideos in sync when project data refreshes (ensures updated thumbnails/tokens)
+        // Keep activeVideos in sync when project data refreshes (ensures updated approval status/thumbnails/tokens)
         const videos = project.videosByName[activeVideoName]
         if (videos) {
           setActiveVideosRaw(videos)
         }
       }
     }
-  }, [project, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
+  }, [project?.videosByName, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
 
   const fetchVideoToken = async (videoId: string, quality: string) => {
     if (!shareToken) return ''

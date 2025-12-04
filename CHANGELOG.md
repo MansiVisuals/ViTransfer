@@ -5,6 +5,31 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2025-12-05
+
+### Added
+- **Share Page Video Sorting**: Sort toggle button for video sidebar (upload date ↔ alphabetical)
+  - Default to upload date (newest first)
+  - Sort applied within "For Review" and "Approved" sections
+  - Works on both public and admin share views
+  - Sort button only shows when multiple videos exist
+
+### Fixed
+- **Timecode Conversion**: Fix timecode conversion for non-even FPS values (23.98, 29.97)
+- **Automatic State Updates**: Approval changes now reflect immediately on share page without page refresh
+  - Clear token cache when refreshing project data after approval
+  - Video tokens are re-fetched with updated approval status
+- **Project Password Handling**: Simplified project password handling in settings
+  - Load decrypted password directly for admin users
+  - Password field now works like any other setting field
+  - Fixed issue where editing other settings required password to be revealed first
+
+### Changed
+- Updated Docker base image to node:24.11.1-alpine3.23
+
+### Removed
+- Unused `/api/projects/[id]/password` endpoint (functionality merged into main project API)
+
 ## [0.6.3] - 2025-12-03
 
 ### Added

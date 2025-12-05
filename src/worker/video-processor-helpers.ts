@@ -5,7 +5,6 @@ import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import { TEMP_DIR } from './cleanup'
-import { fileTypeFromFile } from 'file-type'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
 
@@ -111,6 +110,7 @@ export async function downloadAndValidateVideo(
   // Validate file content (magic bytes)
   debugLog('Validating magic bytes...')
 
+  const { fileTypeFromFile } = await import('file-type')
   const fileType = await fileTypeFromFile(tempInputPath)
   if (!fileType) {
     throw new Error('Could not determine file type from content')

@@ -118,6 +118,9 @@ export async function GET(
       sanitizeComment(comment, true, true, fallbackName)
     )
 
+    // Decrypt password for admin users (needed for settings form)
+    const decryptedPassword = project.sharePassword ? decrypt(project.sharePassword) : null
+
     // Convert BigInt fields to strings for JSON serialization
     const projectData = {
       ...project,
@@ -126,9 +129,7 @@ export async function GET(
         originalFileSize: video.originalFileSize.toString(),
       })),
       comments: sanitizedComments,
-      // Password decryption moved to separate endpoint: GET /api/projects/[id]/password
-      // This reduces XSS attack surface and prevents password exposure in DevTools
-      // Include SMTP status for frontend to disable/enable notification features
+      sharePassword: decryptedPassword,
       smtpConfigured,
     }
 

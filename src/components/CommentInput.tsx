@@ -58,11 +58,15 @@ export default function CommentInput({
 }: CommentInputProps) {
   if (commentsDisabled) return null
 
+  // Check if name selection is required but not provided
+  const isNameRequired = showAuthorInput && namedRecipients.length > 0 && nameSource === 'none'
+  const canSubmit = !loading && newComment.trim() && !isNameRequired
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       // Prevent multiple submissions while loading
-      if (!loading && newComment.trim()) {
+      if (canSubmit) {
         onSubmit()
       }
     }
@@ -183,7 +187,7 @@ export default function CommentInput({
             <Button
               onClick={onSubmit}
               variant="default"
-              disabled={loading || !newComment.trim()}
+              disabled={!canSubmit}
               className="self-end"
               size="icon"
             >
@@ -191,9 +195,15 @@ export default function CommentInput({
             </Button>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-2">
-            Press Enter to send, Shift+Enter for new line
-          </p>
+          {isNameRequired ? (
+            <p className="text-xs text-warning mt-2">
+              Please select your name from the dropdown above before sending
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-2">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+          )}
         </>
       )}
     </div>

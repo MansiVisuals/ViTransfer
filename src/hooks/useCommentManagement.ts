@@ -205,6 +205,12 @@ export function useCommentManagement({
       return
     }
 
+    // Prevent anonymous comments when named recipients are available
+    if (!useAdminAuth && isPasswordProtected && namedRecipients.length > 0 && nameSource === 'none') {
+      alert('Please select your name from the dropdown or choose "Custom Name" before commenting.')
+      return
+    }
+
     const validatedVideoId: string = selectedVideoId
 
     // Check if commenting on latest version only

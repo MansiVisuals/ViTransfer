@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
 import { Clock, Send } from 'lucide-react'
-import { secondsToTimecode, formatTimecodeDisplay } from '@/lib/timecode'
+import { secondsToTimecode, formatTimecodeDisplay, getTimecodeLabel } from '@/lib/timecode'
 
 interface CommentInputProps {
   newComment: string
@@ -16,6 +16,7 @@ interface CommentInputProps {
   // Timestamp
   selectedTimestamp: number | null
   onClearTimestamp: () => void
+  selectedVideoFps: number // FPS of the currently selected video
 
   // Reply state
   replyingToComment: Comment | null
@@ -43,6 +44,7 @@ export default function CommentInput({
   loading,
   selectedTimestamp,
   onClearTimestamp,
+  selectedVideoFps,
   replyingToComment,
   onCancelReply,
   showAuthorInput,
@@ -159,7 +161,10 @@ export default function CommentInput({
         <div className="flex items-center gap-2 mb-2 text-sm">
           <Clock className="w-4 h-4 text-warning" />
           <span className="text-warning">
-            Comment at {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, 24), true, true)}
+            Comment at {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, selectedVideoFps))}
+          </span>
+          <span className="text-xs text-muted-foreground ml-1 px-1.5 py-0.5 bg-muted rounded">
+            {getTimecodeLabel(selectedVideoFps)}
           </span>
           <Button
             onClick={onClearTimestamp}

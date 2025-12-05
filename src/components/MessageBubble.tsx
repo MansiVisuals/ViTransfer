@@ -161,7 +161,7 @@ export default function MessageBubble({
             >
               <Clock className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
               <span className="text-xs underline decoration-dotted font-medium text-orange-600 dark:text-orange-400">
-                {formatTimecodeDisplay(comment.timecode, true, true)}
+                {formatTimecodeDisplay(comment.timecode)}
               </span>
             </button>
           )}

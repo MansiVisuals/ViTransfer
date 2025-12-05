@@ -412,11 +412,16 @@ export function useCommentManagement({
     }
   }
 
+  // Get FPS of currently selected video
+  const selectedVideo = videos.find(v => v.id === selectedVideoId)
+  const selectedVideoFps = selectedVideo?.fps || 24
+
   return {
     comments,
     newComment,
     selectedTimestamp,
     selectedVideoId,
+    selectedVideoFps,
     loading,
     replyingToCommentId,
     authorName,

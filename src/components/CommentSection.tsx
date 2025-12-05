@@ -56,6 +56,7 @@ export default function CommentSection({
     newComment,
     selectedTimestamp,
     selectedVideoId,
+    selectedVideoFps,
     loading,
     replyingToCommentId,
     authorName,
@@ -345,6 +346,7 @@ export default function CommentSection({
           loading={loading}
           selectedTimestamp={selectedTimestamp}
           onClearTimestamp={handleClearTimestamp}
+          selectedVideoFps={selectedVideoFps}
           replyingToComment={replyingToComment}
           onCancelReply={handleCancelReply}
           showAuthorInput={!isAdminView && isPasswordProtected}

@@ -378,10 +378,14 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
           )}
 
           {video.status === 'READY' && (
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
               <div>
                 <p className="text-muted-foreground">Duration</p>
                 <p className="font-medium">{formatDuration(video.duration)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">FPS</p>
+                <p className="font-medium">{video.fps ? `${video.fps.toFixed(2)}` : 'N/A'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Resolution</p>

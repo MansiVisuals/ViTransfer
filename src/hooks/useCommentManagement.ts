@@ -174,6 +174,9 @@ export function useCommentManagement({
     setNewComment(value)
 
     if (value.length > 0 && !hasAutoFilledTimestamp && selectedTimestamp === null) {
+      // Pause video and capture timestamp when user starts typing
+      window.dispatchEvent(new CustomEvent('pauseVideoForComment'))
+
       window.dispatchEvent(
         new CustomEvent('getCurrentTime', {
           detail: {

@@ -250,6 +250,20 @@ export default function VideoPlayer({
     }
   }, [selectedVideo.id, displayVideos])
 
+  // Pause video when user starts typing a comment
+  useEffect(() => {
+    const handlePauseForComment = () => {
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause()
+      }
+    }
+
+    window.addEventListener('pauseVideoForComment', handlePauseForComment)
+    return () => {
+      window.removeEventListener('pauseVideoForComment', handlePauseForComment)
+    }
+  }, [])
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const now = Date.now()

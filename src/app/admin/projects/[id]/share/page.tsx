@@ -420,7 +420,6 @@ export default function AdminSharePage() {
               {!project.hideFeedback && (
                 <div className="lg:sticky lg:top-6 lg:self-start">
                   <CommentSection
-                    key={activeVideoName}
                     projectId={project.id}
                     projectSlug={project.slug}
                     comments={filteredComments}

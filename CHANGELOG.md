@@ -5,12 +5,22 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2025-12-05
+
+### Fixed
+- **CRITICAL**: Re-fixed file-type ESM import issue in Docker worker
+  - Static imports were accidentally reintroduced, breaking the worker again
+  - Restored dynamic imports (`await import('file-type')`) for ESM compatibility
+  - Static imports cause ERR_PACKAGE_PATH_NOT_EXPORTED error with tsx in Docker
+  - Affects asset-processor.ts and video-processor-helpers.ts
+  - Worker now starts correctly in Docker environments
+
 ## [0.6.5] - 2025-12-05
 
 ### Fixed
-- **Worker ESM Import**: Fix file-type package import error in worker process
-  - Changed from static import to dynamic import for ESM compatibility
-  - Resolves ERR_PACKAGE_PATH_NOT_EXPORTED error on worker startup
+- **CRITICAL**: Fixed file-type ESM import issue in Docker worker (initial fix)
+  - Changed to dynamic imports (`await import('file-type')`) for ESM compatibility
+  - Note: This fix was accidentally reverted in working tree, necessitating v0.6.6
 
 ## [0.6.4] - 2025-12-05
 

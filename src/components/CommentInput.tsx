@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
 import { Clock, Send } from 'lucide-react'
-import { secondsToTimecode, formatTimecodeDisplay, getTimecodeLabel } from '@/lib/timecode'
+import { secondsToTimecode, formatTimecodeDisplay, getTimecodeLabel, isDropFrame } from '@/lib/timecode'
 
 interface CommentInputProps {
   newComment: string
@@ -158,22 +158,31 @@ export default function CommentInput({
 
       {/* Timecode indicator */}
       {selectedTimestamp !== null && selectedTimestamp !== undefined && !currentVideoRestricted && (
-        <div className="flex items-center gap-2 mb-2 text-sm">
-          <Clock className="w-4 h-4 text-warning" />
-          <span className="text-warning">
-            Comment at {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, selectedVideoFps))}
-          </span>
-          <span className="text-xs text-muted-foreground ml-1 px-1.5 py-0.5 bg-muted rounded">
-            {getTimecodeLabel(selectedVideoFps)}
-          </span>
-          <Button
-            onClick={onClearTimestamp}
-            variant="ghost"
-            size="xs"
-            className="text-muted-foreground"
-          >
-            Clear
-          </Button>
+        <div className="mb-2">
+          {/* Format hint */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider">
+              {isDropFrame(selectedVideoFps) ? 'HH:MM:SS;FF' : 'HH:MM:SS:FF'}
+            </span>
+            <span className="text-[10px] text-muted-foreground/50">
+              (Hours:Minutes:Seconds{isDropFrame(selectedVideoFps) ? ';' : ':'}Frames)
+            </span>
+          </div>
+          {/* Timecode value */}
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-warning" />
+            <span className="text-warning font-mono">
+              {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, selectedVideoFps))}
+            </span>
+            <Button
+              onClick={onClearTimestamp}
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground"
+            >
+              Clear
+            </Button>
+          </div>
         </div>
       )}
 

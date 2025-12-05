@@ -218,7 +218,7 @@ export default function AdminVideoManager({
                   {editingGroupName !== groupName && (
                     <p className="text-sm text-muted-foreground mt-1">
                       {groupVideos.length} {groupVideos.length === 1 ? 'version' : 'versions'} •
-                      Latest: v{latestVideo.version}
+                      Latest: {latestVideo.versionLabel || `v${latestVideo.version}`}
                       {enableRevisions && maxRevisions && (
                         <> • Revisions {groupVideos.length}/{maxRevisions}</>
                       )}

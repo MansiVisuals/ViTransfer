@@ -64,78 +64,72 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 - **Video access** audit trail
 - **Security events dashboard** for admins
 
-## Known CVEs and Risk Assessment
+## Vulnerability Assessment
 
-The following CVEs are present in Alpine Linux packages and dependencies (latest available versions). These are **transitive dependencies** from FFmpeg, Node.js, and Alpine system packages, and are **NOT directly exploitable** in ViTransfer's use case.
+### Docker Scout Scan Results (As of 2025-12-05 - Version 0.6.4)
 
-### CVE Summary (As of 2025-12-05 - Version 0.6.4)
+**Scan Summary:**
+- **Image**: crypt010/vitransfer:0.6.4
+- **Platform**: linux/arm64
+- **Base Image**: node:24.11.1-alpine3.23
+- **Image Size**: 774 MB
+- **Total Packages**: 1308
+- **Vulnerabilities**: 0 Critical | 0 High | 0 Medium | 0 Low | 1 Unspecified
 
-| CVE ID | Severity | Package | Status | Real Risk |
+**Known Vulnerabilities:**
+
+| CVE ID | Severity | Package | Status | Risk Level |
 |--------|----------|---------|--------|-----------|
-| RUSTSEC-2024-0436 | N/A U | cargo/paste@1.0.15 | ⏳ No Fix Available | Very Low |
+| RUSTSEC-2024-0436 | Unspecified | cargo/paste@1.0.15 | No fix available | Very Low |
 
-**Docker Scout Results (v0.6.4):**
-- Image: crypt010/vitransfer:0.6.4
-- Platform: linux/arm64
-- Base: node:24.11.1-alpine3.23
-- Size: 774 MB
-- Packages: 1308
-- Vulnerabilities: 0C | 0H | 0M | 0L | 1U
+### Details: RUSTSEC-2024-0436
 
-### RUSTSEC-2024-0436 - cargo/paste@1.0.15
+**What is it?**
+- Unspecified vulnerability in the `paste` Rust crate (version 1.0.15)
+- Transitive dependency through Alpine FFmpeg package (rav1e encoder component)
+- No CVE score assigned
 
-**Description:**
-- Unspecified vulnerability in the `paste` Rust crate
-- Transitive dependency via FFmpeg's Rust components (rav1e encoder)
-- No CVE score assigned (Unspecified severity)
+**Risk Assessment:**
+- **Exploitability**: Very Low - indirect dependency not accessible via API
+- **Impact**: Minimal - macro helper library used internally by FFmpeg
+- **Attack Vector**: Requires specially crafted video file + FFmpeg processing + container escape
+- **Mitigation**: Sandboxed in containerized environment with limited permissions
 
-**Impact:**
-- Minimal - Macro helper library used internally by FFmpeg
-- Not directly accessible through ViTransfer's API
-- Requires Alpine FFmpeg package update
+## Security Hardening
 
-**Mitigation:**
-- Dependency is sandboxed within FFmpeg's video processing
-- Container runs with limited permissions
-- No known exploits targeting this vulnerability
+### Container Security
+- Base image: node:24.11.1-alpine3.23 with latest security patches
+- Non-root user execution (PUID/PGID support)
+- no-new-privileges security option enabled
+- Regular image rebuilds with security updates
 
-### Why This Has Very Low Risk for ViTransfer
+### Defense in Depth
+- Container isolation
+- Input validation on all uploads
+- Rate limiting on all endpoints
+- File type restrictions
+- Health checks and monitoring
 
-1. **Indirect Dependency**: Transitive dependency via FFmpeg, not ViTransfer code
-2. **Sandboxed Processing**: FFmpeg runs in containerized environment
-3. **No Direct Exposure**: Not accessible via API
-4. **Protected Runtime**: Container runs as non-root user with limited permissions
-5. **No Known Exploits**: No active exploitation in the wild
+## Recommended Actions
 
-### Mitigation Strategy
+### For Production Deployments
 
-1. **Latest Base Image**: Using node:24.11.1-alpine3.23 with latest security patches
-2. **Regular Updates**: Docker images rebuilt with each release
-3. **Defense in Depth**:
-   - Container isolation
-   - Non-root user execution
-   - Input validation
-   - Rate limiting
-   - File type restrictions
+**1. Keep images updated:**
+```bash
+docker pull crypt010/vitransfer:latest
+docker-compose up -d
+```
 
-### User Action Required
+**2. Run security scans:**
+```bash
+docker scout cves crypt010/vitransfer:latest
+```
 
-**For production deployments:**
+**3. Enable HTTPS:**
+- Always use a reverse proxy with TLS/SSL
 
-1. **Keep Docker images updated**: Regularly pull the latest image
-   ```bash
-   docker pull crypt010/vitransfer:latest
-   docker-compose up -d
-   ```
-
-2. **Run vulnerability scans**: Use Docker Scout
-   ```bash
-   docker scout cves crypt010/vitransfer:latest
-   ```
-
-3. **Enable HTTPS**: Always use a reverse proxy with TLS/SSL in production
-
-4. **Regular backups**: Backup database and uploads directory
+**4. Regular backups:**
+- Backup database and uploads directory
 
 ## Security Best Practices
 

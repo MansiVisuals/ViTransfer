@@ -264,6 +264,32 @@ export default function VideoPlayer({
     }
   }, [])
 
+  // Keyboard shortcut: Ctrl+Space for Play/Pause
+  useEffect(() => {
+    const handleKeyboard = (e: KeyboardEvent) => {
+      if (!videoRef.current) return
+
+      const video = videoRef.current
+
+      // Ctrl+Space: Play/Pause
+      if (e.ctrlKey && e.code === 'Space') {
+        e.preventDefault()
+        e.stopPropagation()
+        if (video.paused) {
+          video.play()
+        } else {
+          video.pause()
+        }
+      }
+    }
+
+    // Use capture phase to intercept events before they reach other elements
+    window.addEventListener('keydown', handleKeyboard, { capture: true })
+    return () => {
+      window.removeEventListener('keydown', handleKeyboard, { capture: true })
+    }
+  }, [])
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const now = Date.now()

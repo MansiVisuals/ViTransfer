@@ -158,31 +158,29 @@ export default function CommentInput({
 
       {/* Timecode indicator */}
       {selectedTimestamp !== null && selectedTimestamp !== undefined && !currentVideoRestricted && (
-        <div className="mb-2">
-          {/* Format hint */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider">
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className="w-4 h-4 text-warning flex-shrink-0" />
+          <div className="flex flex-col">
+            {/* Format hint directly above timecode */}
+            <span className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider leading-none mb-0.5">
               {isDropFrame(selectedVideoFps) ? 'HH:MM:SS;FF' : 'HH:MM:SS:FF'}
             </span>
-            <span className="text-[10px] text-muted-foreground/50">
-              (Hours:Minutes:Seconds{isDropFrame(selectedVideoFps) ? ';' : ':'}Frames)
-            </span>
-          </div>
-          {/* Timecode value */}
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-warning" />
+            {/* Timecode value */}
             <span className="text-warning font-mono">
               {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, selectedVideoFps))}
             </span>
-            <Button
-              onClick={onClearTimestamp}
-              variant="ghost"
-              size="xs"
-              className="text-muted-foreground"
-            >
-              Clear
-            </Button>
           </div>
+          <span className="text-[10px] text-muted-foreground/50">
+            (Hours:Minutes:Seconds{isDropFrame(selectedVideoFps) ? ';' : ':'}Frames)
+          </span>
+          <Button
+            onClick={onClearTimestamp}
+            variant="ghost"
+            size="xs"
+            className="text-muted-foreground ml-auto"
+          >
+            Clear
+          </Button>
         </div>
       )}
 

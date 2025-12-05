@@ -2,7 +2,6 @@ import { Job } from 'bullmq'
 import { prisma } from '../lib/db'
 import { downloadFile } from '../lib/storage'
 import { ALLOWED_ASSET_TYPES } from '../lib/file-validation'
-import { fileTypeFromFile } from 'file-type'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
@@ -56,6 +55,7 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       console.log('[WORKER DEBUG] Validating asset magic bytes...')
     }
 
+    const { fileTypeFromFile } = await import('file-type')
     const fileType = await fileTypeFromFile(tempFilePath)
 
     if (!fileType) {

@@ -35,13 +35,22 @@ export function secondsToTimecode(seconds: number, fps: number = 24): string {
   }
 
   const totalFrames = Math.round(seconds * fps)
-  const frames = totalFrames % fps
+  const roundedFps = Math.round(fps)
   const totalSeconds = Math.floor(totalFrames / fps)
+  let frames = totalFrames - (totalSeconds * roundedFps)
+
+  // Handle edge case where frames might be negative or >= fps due to rounding
+  if (frames < 0) {
+    frames = 0
+  } else if (frames >= roundedFps) {
+    frames = roundedFps - 1
+  }
+
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const secs = totalSeconds % 60
 
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(frames).padStart(2, '0')}`
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(Math.floor(frames)).padStart(2, '0')}`
 }
 
 /**

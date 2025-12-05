@@ -65,6 +65,12 @@ export default function CommentInput({
   const canSubmit = !loading && newComment.trim() && !isNameRequired
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Allow Ctrl+Space and other Ctrl shortcuts to pass through to VideoPlayer
+    if (e.ctrlKey) {
+      // Don't handle Ctrl shortcuts here - let them bubble to VideoPlayer
+      return
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       // Prevent multiple submissions while loading
@@ -158,29 +164,31 @@ export default function CommentInput({
 
       {/* Timecode indicator */}
       {selectedTimestamp !== null && selectedTimestamp !== undefined && !currentVideoRestricted && (
-        <div className="flex items-center gap-2 mb-2">
-          <Clock className="w-4 h-4 text-warning flex-shrink-0" />
-          <div className="flex flex-col">
-            {/* Format hint directly above timecode */}
-            <span className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider leading-none mb-0.5">
+        <div className="mb-2">
+          {/* Format hint - aligned to match timecode position */}
+          <div className="flex items-center gap-3 mb-0.5 ml-7">
+            <span className="text-sm text-muted-foreground/60 font-mono">
               {isDropFrame(selectedVideoFps) ? 'HH:MM:SS;FF' : 'HH:MM:SS:FF'}
             </span>
-            {/* Timecode value */}
-            <span className="text-warning font-mono">
-              {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, selectedVideoFps))}
+            <span className="text-sm text-muted-foreground/50">
+              (Hours:Minutes:Seconds{isDropFrame(selectedVideoFps) ? ';' : ':'}Frames)
             </span>
           </div>
-          <span className="text-[10px] text-muted-foreground/50">
-            (Hours:Minutes:Seconds{isDropFrame(selectedVideoFps) ? ';' : ':'}Frames)
-          </span>
-          <Button
-            onClick={onClearTimestamp}
-            variant="ghost"
-            size="xs"
-            className="text-muted-foreground ml-auto"
-          >
-            Clear
-          </Button>
+          {/* Timecode value with clock and clear button */}
+          <div className="flex items-center gap-3">
+            <Clock className="w-4 h-4 text-warning flex-shrink-0" />
+            <span className="text-warning font-mono text-sm">
+              {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, selectedVideoFps))}
+            </span>
+            <Button
+              onClick={onClearTimestamp}
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground"
+            >
+              Clear
+            </Button>
+          </div>
         </div>
       )}
 
@@ -213,7 +221,7 @@ export default function CommentInput({
             </p>
           ) : (
             <p className="text-xs text-muted-foreground mt-2">
-              Press Enter to send, Shift+Enter for new line
+              Press Enter to send, Shift+Enter for new line, Ctrl+Space to play/pause video
             </p>
           )}
         </>

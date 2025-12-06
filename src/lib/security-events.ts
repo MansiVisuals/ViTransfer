@@ -20,6 +20,7 @@ export type SecurityEventType =
   | 'PASSKEY_DELETED'
 
   // Share Page Password Events
+  | 'PASSWORD_ACCESS'
   | 'PASSWORD_RATE_LIMIT_HIT'
   | 'FAILED_PASSWORD_ATTEMPT'
   | 'PASSWORD_LOCKOUT'
@@ -30,6 +31,7 @@ export type SecurityEventType =
   | 'OTP_VERIFICATION_FAILED'
   | 'OTP_VERIFICATION_SUCCESS'
   | 'UNAUTHORIZED_OTP_REQUEST'
+  | 'GUEST_ACCESS'
 
   // Video Access Events
   | 'HOTLINK_DETECTED'
@@ -88,13 +90,13 @@ export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMet
   PASSKEY_LOGIN_SUCCESS: {
     label: 'Admin Passkey Auth Login Success',
     description: 'Administrator successfully authenticated using passkey (biometric or security key).',
-    category: 'Passkey Auth',
+    category: 'Admin Auth',
     severity: 'INFO',
   },
   PASSKEY_LOGIN_FAILED: {
     label: 'Admin Passkey Auth Login Failed',
     description: 'Admin passkey authentication failed - invalid credential, expired challenge, or verification error.',
-    category: 'Passkey Auth',
+    category: 'Admin Auth',
     severity: 'WARNING',
   },
   PASSKEY_DELETE_UNAUTHORIZED: {
@@ -111,55 +113,67 @@ export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMet
   },
 
   // Share Page Password Events
+  PASSWORD_ACCESS: {
+    label: 'Share Password Auth Login Success',
+    description: 'Share page access granted after valid password authentication.',
+    category: 'Share Auth',
+    severity: 'INFO',
+  },
   PASSWORD_RATE_LIMIT_HIT: {
-    label: 'Share Password Rate Limited',
-    description: 'Too many failed password attempts on share page - temporarily blocked.',
+    label: 'Share Password Auth Rate Limited',
+    description: 'Too many failed share password attempts - temporarily blocked.',
     category: 'Share Auth',
     severity: 'WARNING',
   },
   FAILED_PASSWORD_ATTEMPT: {
-    label: 'Share Password Failed',
-    description: 'Incorrect password entered on share page access attempt.',
+    label: 'Share Password Auth Login Failed',
+    description: 'Incorrect password entered for share page access.',
     category: 'Share Auth',
     severity: 'WARNING',
   },
   PASSWORD_LOCKOUT: {
-    label: 'Share Password Lockout',
-    description: 'Share page access locked due to excessive failed password attempts.',
+    label: 'Share Password Auth Lockout',
+    description: 'Share page password authentication locked due to excessive failed attempts.',
     category: 'Share Auth',
     severity: 'CRITICAL',
   },
 
   // Share Page OTP Events
   OTP_RATE_LIMIT_HIT: {
-    label: 'OTP Rate Limited',
-    description: 'Too many failed OTP verification attempts - temporarily blocked.',
+    label: 'Share OTP Auth Rate Limited',
+    description: 'Too many failed OTP verification attempts for share page - temporarily blocked.',
     category: 'Share Auth',
     severity: 'WARNING',
   },
   OTP_SENT: {
-    label: 'OTP Code Sent',
-    description: 'One-time password code sent to recipient email for share page access.',
+    label: 'Share OTP Auth Code Sent',
+    description: 'One-time password code sent to recipient email for share page authentication.',
     category: 'Share Auth',
     severity: 'INFO',
   },
   OTP_VERIFICATION_FAILED: {
-    label: 'OTP Verification Failed',
+    label: 'Share OTP Auth Failed',
     description: 'Incorrect or expired OTP code entered during share page authentication.',
     category: 'Share Auth',
     severity: 'WARNING',
   },
   OTP_VERIFICATION_SUCCESS: {
-    label: 'OTP Verification Success',
-    description: 'Valid OTP code verified - share page access granted.',
+    label: 'Share OTP Auth Success',
+    description: 'Share page access granted after valid OTP verification.',
     category: 'Share Auth',
     severity: 'INFO',
   },
   UNAUTHORIZED_OTP_REQUEST: {
-    label: 'Unauthorized OTP Request',
+    label: 'Unauthorized Share OTP Request',
     description: 'OTP code requested for email not authorized as project recipient.',
     category: 'Share Auth',
     severity: 'WARNING',
+  },
+  GUEST_ACCESS: {
+    label: 'Share Guest Access Granted',
+    description: 'Guest session created for share page with limited access.',
+    category: 'Share Auth',
+    severity: 'INFO',
   },
 
   // Video Access Events

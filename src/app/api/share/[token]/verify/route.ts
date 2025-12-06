@@ -212,6 +212,18 @@ export async function POST(
       ttlSeconds: shareTokenTtl,
     })
 
+    // Log successful password-based access
+    await logSecurityEvent({
+      type: 'PASSWORD_ACCESS',
+      severity: 'INFO',
+      projectId: project.id,
+      ipAddress: getClientIpAddress(request),
+      details: {
+        shareToken: token,
+      },
+      wasBlocked: false,
+    })
+
     return NextResponse.json({ success: true, shareToken })
   } catch (error) {
     console.error('Error verifying share password:', error)

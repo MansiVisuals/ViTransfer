@@ -4,6 +4,8 @@ import crypto from 'crypto'
 import { rateLimit } from '@/lib/rate-limit'
 import { signShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
+import { logSecurityEvent } from '@/lib/video-access'
+import { getClientIpAddress } from '@/lib/utils'
 export const runtime = 'nodejs'
 
 
@@ -55,6 +57,18 @@ export async function POST(
       guest: true,
       sessionId: crypto.randomBytes(16).toString('base64url'),
       ttlSeconds,
+    })
+
+    await logSecurityEvent({
+      type: 'GUEST_ACCESS',
+      severity: 'INFO',
+      projectId: project.id,
+      ipAddress: getClientIpAddress(request),
+      details: {
+        shareToken: token,
+        guestMode: true,
+      },
+      wasBlocked: false,
     })
 
     return NextResponse.json({ success: true, shareToken })

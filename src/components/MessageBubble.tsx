@@ -103,7 +103,7 @@ export default function MessageBubble({
   return (
     <div className={`flex ${alignment} w-full`} id={`comment-${comment.id}`}>
       <div className="max-w-[85%] md:max-w-[75%]">
-        {/* Name and version header */}
+        {/* Name and company header */}
         <div className={`flex ${headerAlign} items-center gap-2 mb-1 px-1`}>
           <span className="text-sm font-semibold text-foreground">
             {effectiveAuthorName || 'Anonymous'}
@@ -112,12 +112,6 @@ export default function MessageBubble({
             <>
               <span className="text-xs text-muted-foreground">•</span>
               <span className="text-xs text-muted-foreground">{displayCompanyName}</span>
-            </>
-          )}
-          {comment.videoVersion && (
-            <>
-              <span className="text-xs text-muted-foreground">•</span>
-              <span className="text-xs text-muted-foreground">v{comment.videoVersion}</span>
             </>
           )}
         </div>

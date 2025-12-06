@@ -54,9 +54,22 @@ export function useCommentManagement({
   const displayClientName = isPasswordProtected ? clientName : 'Client'
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
 
-  const [authorName, setAuthorName] = useState('')
-  const [nameSource, setNameSource] = useState<'recipient' | 'custom' | 'none'>('none')
-  const [selectedRecipientId, setSelectedRecipientId] = useState('')
+  // Load persisted name selection from sessionStorage (survives commenting but not page refresh)
+  const storageKey = `comment-name-${projectId}`
+  const loadPersistedName = () => {
+    if (typeof window === 'undefined') return null
+    try {
+      const stored = sessionStorage.getItem(storageKey)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  }
+
+  const persistedName = loadPersistedName()
+  const [authorName, setAuthorName] = useState(persistedName?.authorName || '')
+  const [nameSource, setNameSource] = useState<'recipient' | 'custom' | 'none'>(persistedName?.nameSource || 'none')
+  const [selectedRecipientId, setSelectedRecipientId] = useState(persistedName?.selectedRecipientId || '')
 
   // Merge real comments with optimistic comments
   // Remove optimistic comments that have been confirmed by the server
@@ -380,15 +393,32 @@ export function useCommentManagement({
 
   const handleNameSourceChange = (source: 'recipient' | 'custom' | 'none', recipientId?: string) => {
     setNameSource(source)
+    let newAuthorName = ''
+    let newRecipientId = ''
+
     if (source === 'custom') {
-      setAuthorName('')
+      newAuthorName = ''
     } else if (source === 'none') {
-      setAuthorName('')
-      setSelectedRecipientId('')
+      newAuthorName = ''
+      newRecipientId = ''
     } else if (recipientId) {
-      setSelectedRecipientId(recipientId)
+      newRecipientId = recipientId
       const selected = namedRecipients.find(r => r.id === recipientId)
-      setAuthorName(selected?.name || '')
+      newAuthorName = selected?.name || ''
+    }
+
+    setAuthorName(newAuthorName)
+    setSelectedRecipientId(newRecipientId)
+
+    // Persist to sessionStorage
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify({
+        nameSource: source,
+        authorName: newAuthorName,
+        selectedRecipientId: newRecipientId,
+      }))
+    } catch {
+      // Ignore storage errors
     }
   }
 
@@ -427,6 +457,24 @@ export function useCommentManagement({
     }
   }
 
+  // Wrapper for setAuthorName that also persists to sessionStorage
+  const handleAuthorNameChange = (name: string) => {
+    setAuthorName(name)
+
+    // Persist to sessionStorage when custom name is being typed
+    if (nameSource === 'custom') {
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify({
+          nameSource,
+          authorName: name,
+          selectedRecipientId,
+        }))
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  }
+
   // Get FPS of currently selected video
   const selectedVideo = videos.find(v => v.id === selectedVideoId)
   const selectedVideoFps = selectedVideo?.fps || 24
@@ -449,7 +497,7 @@ export function useCommentManagement({
     handleCancelReply,
     handleClearTimestamp,
     handleDeleteComment,
-    setAuthorName,
+    setAuthorName: handleAuthorNameChange,
     handleNameSourceChange,
   }
 }

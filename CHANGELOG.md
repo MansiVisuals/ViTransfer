@@ -5,6 +5,26 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.7] - 2025-12-06
+
+### Added
+- Security dashboard overhaul with event tracking, rate-limit visibility/unblock, and IP/domain blocklists (UI + APIs). Migration: `20251206000000_add_ip_domain_blocklists`.
+- Share auth logging: successful password and guest access now generate security events.
+- Keyboard shortcut: Ctrl+Space toggles play/pause even while typing comments.
+- FPS now shown in admin video metadata; video list displays custom version labels when available.
+
+### Changed
+- Standardized security event labels across admin/share auth (password, OTP, guest, passkey); clear existing security events after upgrading to avoid mixed legacy labels in the dashboard.
+- Timecode: full drop-frame support (29.97/59.94) with `HH:MM:SS;FF` parsing/formatting; format hints repositioned and aligned with timecode display; DF/NDF badge removed in favor of contextual hint; format hint sits above the timecode.
+- Comment UX: auto-pause video when typing comments; added format hint sizing tweaks; version label shown instead of raw version number in lists.
+- Admin share view: fixed optimistic comment persistence when switching videos.
+
+### Fixed
+- Comment system: improved optimistic updates/deduping, prevent anonymous comments when a recipient name is required, clear optimistic comments on server responses, and cancel pending notifications on deletion to avoid duplicate emails.
+
+### Security
+- Consistent naming for admin/share auth events (password/OTP/guest/passkey); blocklist APIs cached with Redis and invalidated on updates.
+
 ## [0.6.6] - 2025-12-05
 
 ### Fixed

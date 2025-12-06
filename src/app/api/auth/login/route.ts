@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyCredentials, issueAdminTokens } from '@/lib/auth'
 import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { validateRequest, loginSchema } from '@/lib/validation'
+import { logSecurityEvent } from '@/lib/video-access'
+import { getClientIpAddress } from '@/lib/utils'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -50,10 +52,23 @@ export async function POST(request: NextRequest) {
     // This prevents brute-force attacks via browser rotation
     const rateLimitCheck = await checkRateLimit(request, 'login', email)
     if (rateLimitCheck.limited) {
+      const ipAddress = getClientIpAddress(request)
+
+      await logSecurityEvent({
+        type: 'ADMIN_LOGIN_RATE_LIMIT_HIT',
+        severity: 'WARNING',
+        ipAddress,
+        details: {
+          email,
+          retryAfter: rateLimitCheck.retryAfter,
+        },
+        wasBlocked: true,
+      })
+
       return NextResponse.json(
-        { 
+        {
           error: 'Too many failed login attempts for this account. Please try again later.',
-          retryAfter: rateLimitCheck.retryAfter 
+          retryAfter: rateLimitCheck.retryAfter
         },
         {
           status: 429,
@@ -72,6 +87,17 @@ export async function POST(request: NextRequest) {
       // This prevents attackers from bypassing via browser rotation
       await incrementRateLimit(request, 'login', email)
 
+      const ipAddress = getClientIpAddress(request)
+      await logSecurityEvent({
+        type: 'ADMIN_PASSWORD_LOGIN_FAILED',
+        severity: 'WARNING',
+        ipAddress,
+        details: {
+          email,
+        },
+        wasBlocked: false,
+      })
+
       return NextResponse.json(
         { error: 'Invalid username/email or password' },
         { status: 401 }
@@ -84,6 +110,18 @@ export async function POST(request: NextRequest) {
 
     const fingerprint = fingerprintHash(request.headers.get('user-agent') || 'unknown')
     const tokens = await issueAdminTokens(user, fingerprint)
+
+    const ipAddress = getClientIpAddress(request)
+    await logSecurityEvent({
+      type: 'ADMIN_PASSWORD_LOGIN_SUCCESS',
+      severity: 'INFO',
+      ipAddress,
+      details: {
+        userId: user.id,
+        email: user.email,
+      },
+      wasBlocked: false,
+    })
 
     // Return user data (without password)
     return NextResponse.json({

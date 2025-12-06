@@ -367,12 +367,8 @@ export async function GET(
       },
     })
   } catch (error) {
-    await logSecurityEvent({
-      type: 'STREAM_ERROR',
-      severity: 'CRITICAL',
-      ipAddress: getClientIpAddress(request),
-      details: { error: error instanceof Error ? error.message : 'Unknown error' }
-    })
+    // Stream errors are technical issues, not security events
+    console.error('[STREAM] Video streaming error:', error)
 
     return NextResponse.json({ error: 'Failed to stream video' }, { status: 500 })
   }

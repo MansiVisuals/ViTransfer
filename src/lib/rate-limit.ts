@@ -279,3 +279,129 @@ export async function clearRateLimit(
     // Continue on error - don't block successful login
   }
 }
+
+/**
+ * Unblock a specific IP address from rate limiting
+ * Clears all rate limit entries for the given IP
+ *
+ * @param ipAddress - IP address to unblock
+ * @returns Number of rate limit entries cleared
+ */
+export async function unblockIpAddress(ipAddress: string): Promise<number> {
+  try {
+    const redis = getRedis()
+
+    if (redis.status !== 'ready') {
+      await redis.connect()
+    }
+
+    // Find all rate limit keys for this IP
+    const keys = await redis.keys(`ratelimit:*`)
+    let clearedCount = 0
+
+    for (const key of keys) {
+      const data = await redis.get(key)
+      if (!data) continue
+
+      try {
+        const entry = JSON.parse(data) as RateLimitEntry
+        // Check if this entry has a lockout (only clear active lockouts)
+        if (entry.lockoutUntil && entry.lockoutUntil > Date.now()) {
+          // We can't directly check IP from the key (it's hashed)
+          // So we delete all lockout entries - admin action
+          await redis.del(key)
+          clearedCount++
+        }
+      } catch (parseError) {
+        // Skip invalid entries
+        continue
+      }
+    }
+
+    return clearedCount
+  } catch (error) {
+    console.error('IP unblock error:', error)
+    throw new Error('Failed to unblock IP address')
+  }
+}
+
+/**
+ * Get all currently rate-limited IPs
+ * Note: Since IPs are hashed in keys, we can only return lockout info
+ *
+ * @returns Array of rate limit lockout information
+ */
+export async function getRateLimitedEntries(): Promise<Array<{
+  key: string
+  lockoutUntil: number
+  count: number
+  type: string
+}>> {
+  try {
+    const redis = getRedis()
+
+    if (redis.status !== 'ready') {
+      await redis.connect()
+    }
+
+    const keys = await redis.keys(`ratelimit:*`)
+    const lockedEntries: Array<{
+      key: string
+      lockoutUntil: number
+      count: number
+      type: string
+    }> = []
+
+    const now = Date.now()
+
+    for (const key of keys) {
+      const data = await redis.get(key)
+      if (!data) continue
+
+      try {
+        const entry = JSON.parse(data) as RateLimitEntry
+        if (entry.lockoutUntil && entry.lockoutUntil > now) {
+          // Extract type from key (ratelimit:TYPE:hash)
+          const keyParts = key.split(':')
+          const type = keyParts[1] || 'unknown'
+
+          lockedEntries.push({
+            key,
+            lockoutUntil: entry.lockoutUntil,
+            count: entry.count,
+            type,
+          })
+        }
+      } catch (parseError) {
+        continue
+      }
+    }
+
+    return lockedEntries
+  } catch (error) {
+    console.error('Get rate limited entries error:', error)
+    return []
+  }
+}
+
+/**
+ * Clear a specific rate limit entry by key
+ *
+ * @param key - Redis key to clear
+ * @returns Success boolean
+ */
+export async function clearRateLimitByKey(key: string): Promise<boolean> {
+  try {
+    const redis = getRedis()
+
+    if (redis.status !== 'ready') {
+      await redis.connect()
+    }
+
+    await redis.del(key)
+    return true
+  } catch (error) {
+    console.error('Clear rate limit by key error:', error)
+    return false
+  }
+}

@@ -347,13 +347,12 @@ export async function logSecurityEvent(params: {
     })
 
     const redis = getRedis()
+    // Keep recent events in Redis for quick access (last 1000 events)
     await redis.lpush('security:events:recent', JSON.stringify({
       ...params,
       timestamp: new Date().toISOString()
     }))
     await redis.ltrim('security:events:recent', 0, 999)
-
-    await sendSecurityAlert(params)
   } catch (error) {
     console.error('[SECURITY_EVENT] Failed to log:', error)
   }
@@ -410,22 +409,77 @@ export async function getSecuritySettings() {
   return value
 }
 
+const BLOCKLIST_CACHE_TTL = 300 // 5 minutes
+const BLOCKLIST_CACHE_KEY_IPS = 'security:blocklist:ips'
+const BLOCKLIST_CACHE_KEY_DOMAINS = 'security:blocklist:domains'
+
+/**
+ * Get blocked IPs with Redis caching
+ * Checks database and caches in Redis for 5 minutes
+ */
 async function getBlockedIPs(): Promise<string[]> {
-  return []
+  const redis = getRedis()
+
+  // Check cache first
+  const cached = await redis.get(BLOCKLIST_CACHE_KEY_IPS)
+  if (cached) {
+    try {
+      return JSON.parse(cached)
+    } catch (error) {
+      console.error('[BLOCKLIST] Failed to parse cached IPs:', error)
+    }
+  }
+
+  // Fetch from database
+  const blockedIPs = await prisma.blockedIP.findMany({
+    select: { ipAddress: true }
+  })
+
+  const ipList = blockedIPs.map(entry => entry.ipAddress)
+
+  // Cache in Redis
+  await redis.setex(BLOCKLIST_CACHE_KEY_IPS, BLOCKLIST_CACHE_TTL, JSON.stringify(ipList))
+
+  return ipList
 }
 
+/**
+ * Get blocked domains with Redis caching
+ * Checks database and caches in Redis for 5 minutes
+ */
 async function getBlockedDomains(): Promise<string[]> {
-  return []
+  const redis = getRedis()
+
+  // Check cache first
+  const cached = await redis.get(BLOCKLIST_CACHE_KEY_DOMAINS)
+  if (cached) {
+    try {
+      return JSON.parse(cached)
+    } catch (error) {
+      console.error('[BLOCKLIST] Failed to parse cached domains:', error)
+    }
+  }
+
+  // Fetch from database
+  const blockedDomains = await prisma.blockedDomain.findMany({
+    select: { domain: true }
+  })
+
+  const domainList = blockedDomains.map(entry => entry.domain)
+
+  // Cache in Redis
+  await redis.setex(BLOCKLIST_CACHE_KEY_DOMAINS, BLOCKLIST_CACHE_TTL, JSON.stringify(domainList))
+
+  return domainList
 }
 
-async function sendSecurityAlert(event: {
-  type: string
-  severity: string
-  projectId?: string
-  ipAddress?: string
-  referer?: string
-}) {
-  return
+/**
+ * Invalidate blocklist caches
+ * Call this after adding/removing blocked IPs or domains
+ */
+export async function invalidateBlocklistCache(): Promise<void> {
+  const redis = getRedis()
+  await redis.del(BLOCKLIST_CACHE_KEY_IPS, BLOCKLIST_CACHE_KEY_DOMAINS)
 }
 
 export async function revokeProjectVideoTokens(projectId: string): Promise<void> {

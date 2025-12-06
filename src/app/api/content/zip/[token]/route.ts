@@ -46,12 +46,8 @@ export async function GET(
     const rawTokenData = await redis.get(tokenKey)
 
     if (!rawTokenData) {
-      await logSecurityEvent({
-        type: 'INVALID_DOWNLOAD_TOKEN',
-        severity: 'WARNING',
-        ipAddress: getClientIpAddress(request),
-        details: { tokenType: 'zip', reason: 'expired or invalid' },
-      })
+      // Invalid/expired download token - not a security event, just expired link
+      console.warn('[DOWNLOAD] Invalid or expired zip download token')
       return NextResponse.json({ error: 'Invalid or expired download link' }, { status: 403 })
     }
 
@@ -124,13 +120,8 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error('ZIP download error:', error)
-    await logSecurityEvent({
-      type: 'DOWNLOAD_ERROR',
-      severity: 'CRITICAL',
-      ipAddress: getClientIpAddress(request),
-      details: { error: error instanceof Error ? error.message : 'Unknown error' },
-    })
+    // Download errors are technical issues, not security events
+    console.error('[DOWNLOAD] ZIP download error:', error)
     return NextResponse.json({ error: 'Download failed' }, { status: 500 })
   }
 }

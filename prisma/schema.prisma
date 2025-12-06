@@ -327,6 +327,26 @@ model SecurityEvent {
   @@index([severity])
 }
 
+model BlockedIP {
+  id        String   @id @default(cuid())
+  ipAddress String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+  createdBy String? // Admin user ID who blocked this IP
+
+  @@index([ipAddress])
+}
+
+model BlockedDomain {
+  id        String   @id @default(cuid())
+  domain    String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+  createdBy String? // Admin user ID who blocked this domain
+
+  @@index([domain])
+}
+
 model VideoAnalytics {
   id String @id @default(cuid())
 

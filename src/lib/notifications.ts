@@ -3,6 +3,7 @@ import { prisma } from './db'
 import { sendCommentNotificationEmail, sendAdminCommentNotificationEmail, sendProjectApprovedEmail, sendAdminProjectApprovedEmail } from './email'
 import { getProjectRecipients } from './recipients'
 import { generateShareUrl } from './url'
+import { getRedis } from './redis'
 
 interface NotificationContext {
   comment: Comment
@@ -26,6 +27,15 @@ interface ApprovalNotificationContext {
  */
 export async function sendImmediateNotification(context: NotificationContext) {
   const { comment, project, video } = context
+
+  // Check if notification was cancelled before sending
+  const redis = getRedis()
+  const notificationData = await redis.get(`comment_notification:${comment.id}`)
+
+  if (!notificationData) {
+    console.log(`[IMMEDIATE] Comment ${comment.id} notification was cancelled, skipping send`)
+    return
+  }
 
   // Get recipients with notifications enabled
   const allRecipients = await getProjectRecipients(comment.projectId)

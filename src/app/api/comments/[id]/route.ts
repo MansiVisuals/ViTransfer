@@ -6,6 +6,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { sanitizeCommentHtml } from '@/lib/security/html-sanitization'
+import { cancelCommentNotification } from '@/lib/comment-helpers'
 import { getRedis } from '@/lib/redis'
 export const runtime = 'nodejs'
 
@@ -228,6 +229,9 @@ export async function DELETE(
     }
 
     const projectId = existingComment.projectId
+
+    // Cancel any pending notifications for this comment
+    await cancelCommentNotification(id)
 
     // Delete the comment and its replies (cascade)
     await prisma.comment.delete({

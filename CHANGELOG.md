@@ -5,6 +5,13 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.8] - 2025-12-06
+
+### Fixed
+- Public share page comment system: real-time updates now work without manual refresh
+- Comment name selection: custom names and recipient selections now persist across comment submissions via sessionStorage
+- Comment display: removed version label (v1, v2, etc.) from comment header while preserving version filtering logic
+
 ## [0.6.7] - 2025-12-06
 
 ### Added

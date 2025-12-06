@@ -159,6 +159,7 @@ export async function sanitizeAndValidateContent(params: {
 /**
  * Handle comment notifications
  * Sends notifications immediately or queues them based on schedule
+ * Also tracks pending notifications in Redis for cancellation support
  */
 export async function handleCommentNotifications(params: {
   comment: any
@@ -177,6 +178,15 @@ export async function handleCommentNotifications(params: {
       console.log('[COMMENT-NOTIFICATION] Skipping - SMTP not configured')
       return
     }
+
+    // Track this comment's notification in Redis (for deletion cancellation)
+    const redis = getRedis()
+    await redis.set(
+      `comment_notification:${comment.id}`,
+      JSON.stringify({ commentId: comment.id, projectId, videoId, queued: true }),
+      'EX',
+      3600 // Expire after 1 hour (covers all notification schedules)
+    )
 
     // Get project with notification schedule
     const project = await prisma.project.findUnique({
@@ -234,6 +244,44 @@ export async function handleCommentNotifications(params: {
   } catch (emailError) {
     // Don't fail the request if notification processing fails
     console.error('[COMMENT-NOTIFICATION] Error processing notification:', emailError)
+  }
+}
+
+/**
+ * Cancel pending notification for a deleted comment
+ * Removes from notification queue and marks as cancelled in Redis
+ */
+export async function cancelCommentNotification(commentId: string): Promise<void> {
+  try {
+    const redis = getRedis()
+
+    // Check if notification is pending
+    const notificationData = await redis.get(`comment_notification:${commentId}`)
+
+    if (!notificationData) {
+      console.log(`[CANCEL-NOTIFICATION] No pending notification for comment ${commentId}`)
+      return
+    }
+
+    console.log(`[CANCEL-NOTIFICATION] Cancelling notification for comment ${commentId}`)
+
+    // Delete from notification queue if it exists
+    await prisma.notificationQueue.deleteMany({
+      where: {
+        data: {
+          path: ['commentId'],
+          equals: commentId
+        }
+      }
+    })
+
+    // Mark as cancelled in Redis
+    await redis.del(`comment_notification:${commentId}`)
+
+    console.log(`[CANCEL-NOTIFICATION] Successfully cancelled notification for comment ${commentId}`)
+  } catch (error) {
+    console.error('[CANCEL-NOTIFICATION] Error cancelling notification:', error)
+    // Don't throw - deletion should succeed even if notification cancellation fails
   }
 }
 

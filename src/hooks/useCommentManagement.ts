@@ -59,23 +59,31 @@ export function useCommentManagement({
   const [selectedRecipientId, setSelectedRecipientId] = useState('')
 
   // Merge real comments with optimistic comments
-  // Check both top-level comments AND replies to avoid duplicates
+  // Remove optimistic comments that have been confirmed by the server
   const activeOptimisticComments = optimisticComments.filter(oc => {
-    // Check top-level comments
-    const hasRealVersionTopLevel = initialComments.some(rc =>
-      rc.content === oc.content &&
-      Math.abs(new Date(rc.createdAt).getTime() - new Date(oc.createdAt).getTime()) < 5000
-    )
-
-    // Check nested replies
-    const hasRealVersionInReplies = initialComments.some(rc =>
-      rc.replies?.some((reply: any) =>
-        reply.content === oc.content &&
-        Math.abs(new Date(reply.createdAt).getTime() - new Date(oc.createdAt).getTime()) < 5000
+    // If this optimistic comment has a temp ID, check if a real version exists
+    if (oc.id.startsWith('temp-')) {
+      // Check top-level comments for matching content and similar timestamp
+      const hasRealVersionTopLevel = initialComments.some(rc =>
+        rc.content === oc.content &&
+        rc.videoId === oc.videoId &&
+        Math.abs(new Date(rc.createdAt).getTime() - new Date(oc.createdAt).getTime()) < 10000
       )
-    )
 
-    return !hasRealVersionTopLevel && !hasRealVersionInReplies
+      // Check nested replies for matching content and similar timestamp
+      const hasRealVersionInReplies = initialComments.some(rc =>
+        rc.replies?.some((reply: any) =>
+          reply.content === oc.content &&
+          reply.videoId === oc.videoId &&
+          Math.abs(new Date(reply.createdAt).getTime() - new Date(oc.createdAt).getTime()) < 10000
+        )
+      )
+
+      return !hasRealVersionTopLevel && !hasRealVersionInReplies
+    }
+
+    // Keep non-temp comments (shouldn't happen, but safe fallback)
+    return true
   })
 
   // Merge optimistic comments properly (nest replies under parent comments)
@@ -284,7 +292,7 @@ export function useCommentManagement({
 
       // Add optional fields only if they have values
       if (isInternalComment) {
-        requestBody.authorName = companyName || adminUser!.name || 'Admin'
+        requestBody.authorName = adminUser!.name || 'Admin'
       } else {
         if (authorName) requestBody.authorName = authorName
         if (clientEmail) requestBody.authorEmail = clientEmail
@@ -307,23 +315,30 @@ export function useCommentManagement({
               Authorization: `Bearer ${shareToken}`,
             },
             body: JSON.stringify(requestBody),
-          }).then(response => {
+          }).then(async response => {
             if (!response.ok) {
-              return response.json().catch(() => ({})).then(err => {
-                throw new Error(err.error || 'Failed to submit comment')
-              })
+              const err = await response.json().catch(() => ({}))
+              throw new Error(err.error || 'Failed to submit comment')
             }
-            return response
+            return response.json() // Return the updated comments list
           })
         : useAdminAuth
-        ? apiPost('/api/comments', requestBody)
+        ? apiPost('/api/comments', requestBody) // apiPost already returns parsed JSON
         : Promise.reject(new Error('Authentication required to submit comment'))
 
       // Handle submission result in background
       submitPromise
-        .then(() => {
+        .then((updatedComments) => {
+          // Clear the optimistic comment immediately since we have real data
+          setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
+
           // Refresh in background (non-blocking)
           router.refresh()
+
+          // Trigger immediate update with the fresh comments data
+          window.dispatchEvent(new CustomEvent('commentPosted', {
+            detail: { comments: updatedComments }
+          }))
         })
         .catch((error) => {
           // Remove optimistic comment and restore form on error

@@ -3,6 +3,7 @@ import { sendEmail } from '../lib/email'
 import { generateNotificationSummaryEmail } from '../lib/email-templates'
 import { getProjectRecipients } from '../lib/recipients'
 import { generateShareUrl } from '../lib/url'
+import { getRedis } from '../lib/redis'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
 
 /**
@@ -95,7 +96,39 @@ export async function processClientNotifications() {
 
       const period = getPeriodString(project.clientNotificationSchedule)
       const shareUrl = await generateShareUrl(project.slug)
-      const notificationIds = project.notificationQueue.map(n => n.id)
+
+      // Filter out cancelled notifications
+      const redis = getRedis()
+      const validNotifications = []
+      const cancelledNotificationIds = []
+
+      for (const notification of project.notificationQueue) {
+        const commentId = (notification.data as any).commentId
+        if (commentId) {
+          const notificationData = await redis.get(`comment_notification:${commentId}`)
+          if (!notificationData) {
+            console.log(`[CLIENT]   Skipping cancelled notification for comment ${commentId}`)
+            cancelledNotificationIds.push(notification.id)
+            continue
+          }
+        }
+        validNotifications.push(notification)
+      }
+
+      // Clean up cancelled notifications from queue
+      if (cancelledNotificationIds.length > 0) {
+        await prisma.notificationQueue.deleteMany({
+          where: { id: { in: cancelledNotificationIds } }
+        })
+        console.log(`[CLIENT]   Removed ${cancelledNotificationIds.length} cancelled notification(s)`)
+      }
+
+      if (validNotifications.length === 0) {
+        console.log(`[CLIENT]   No valid notifications to send (all cancelled)`)
+        continue
+      }
+
+      const notificationIds = validNotifications.map(n => n.id)
 
       // Increment attempt counter before sending
       await prisma.notificationQueue.updateMany({
@@ -113,7 +146,7 @@ export async function processClientNotifications() {
         isClientNotification: true,
         logPrefix: '[CLIENT]  ',
         onSuccess: async () => {
-          const notifications = project.notificationQueue.map(n =>
+          const notifications = validNotifications.map(n =>
             normalizeNotificationDataTimecode(n.data as any)
           )
 

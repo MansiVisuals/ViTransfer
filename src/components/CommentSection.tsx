@@ -118,17 +118,28 @@ export default function CommentSection({
     setLocalComments(initialComments)
   }, [initialComments])
 
-  // Listen for immediate comment updates (delete, approve, etc.)
+  // Listen for immediate comment updates (delete, approve, post, etc.)
   useEffect(() => {
+    const handleCommentPosted = (e: CustomEvent) => {
+      // Use the comments data from the event if available, otherwise refetch
+      if (e.detail?.comments) {
+        setLocalComments(e.detail.comments)
+      } else {
+        fetchComments()
+      }
+    }
+
     const handleCommentUpdate = () => {
       fetchComments()
     }
 
     window.addEventListener('commentDeleted', handleCommentUpdate)
+    window.addEventListener('commentPosted', handleCommentPosted as EventListener)
     window.addEventListener('videoApprovalChanged', handleCommentUpdate)
 
     return () => {
       window.removeEventListener('commentDeleted', handleCommentUpdate)
+      window.removeEventListener('commentPosted', handleCommentPosted as EventListener)
       window.removeEventListener('videoApprovalChanged', handleCommentUpdate)
     }
   }, [projectId])

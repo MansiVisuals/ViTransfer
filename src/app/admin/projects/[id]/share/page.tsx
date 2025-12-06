@@ -205,6 +205,30 @@ export default function AdminSharePage() {
     }
   }, [id])
 
+  // Listen for comment updates (post, delete, etc.)
+  useEffect(() => {
+    const handleCommentPosted = (e: CustomEvent) => {
+      // Use the comments data from the event if available, otherwise refetch
+      if (e.detail?.comments) {
+        setComments(e.detail.comments)
+      } else {
+        fetchComments()
+      }
+    }
+
+    const handleCommentDeleted = () => {
+      fetchComments()
+    }
+
+    window.addEventListener('commentPosted', handleCommentPosted as EventListener)
+    window.addEventListener('commentDeleted', handleCommentDeleted)
+
+    return () => {
+      window.removeEventListener('commentPosted', handleCommentPosted as EventListener)
+      window.removeEventListener('commentDeleted', handleCommentDeleted)
+    }
+  }, [id])
+
   // Set active video when project loads, handling URL parameters
   useEffect(() => {
     if (project?.videosByName) {

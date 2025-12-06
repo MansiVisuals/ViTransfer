@@ -2,6 +2,7 @@ import { prisma } from '../lib/db'
 import { sendEmail } from '../lib/email'
 import { generateAdminSummaryEmail } from '../lib/email-templates'
 import { generateShareUrl } from '../lib/url'
+import { getRedis } from '../lib/redis'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
 
 /**
@@ -71,9 +72,40 @@ export async function processAdminNotifications() {
 
     console.log(`[ADMIN] Found ${pendingNotifications.length} pending notification(s)`)
 
+    // Filter out cancelled notifications
+    const redis = getRedis()
+    const validNotifications = []
+    const cancelledNotificationIds = []
+
+    for (const notification of pendingNotifications) {
+      const commentId = (notification.data as any).commentId
+      if (commentId) {
+        const notificationData = await redis.get(`comment_notification:${commentId}`)
+        if (!notificationData) {
+          console.log(`[ADMIN]   Skipping cancelled notification for comment ${commentId}`)
+          cancelledNotificationIds.push(notification.id)
+          continue
+        }
+      }
+      validNotifications.push(notification)
+    }
+
+    // Clean up cancelled notifications from queue
+    if (cancelledNotificationIds.length > 0) {
+      await prisma.notificationQueue.deleteMany({
+        where: { id: { in: cancelledNotificationIds } }
+      })
+      console.log(`[ADMIN]   Removed ${cancelledNotificationIds.length} cancelled notification(s)`)
+    }
+
+    if (validNotifications.length === 0) {
+      console.log(`[ADMIN]   No valid notifications to send (all cancelled)`)
+      return
+    }
+
     // Group notifications by project
     const projectGroups: Record<string, any> = {}
-    for (const notification of pendingNotifications) {
+    for (const notification of validNotifications) {
       const projectId = notification.projectId
       if (!projectGroups[projectId]) {
         projectGroups[projectId] = {
@@ -99,7 +131,7 @@ export async function processAdminNotifications() {
     }
 
     const period = getPeriodString(settings.adminNotificationSchedule)
-    const notificationIds = pendingNotifications.map(n => n.id)
+    const notificationIds = validNotifications.map(n => n.id)
 
     // Increment attempt counter before sending
     await prisma.notificationQueue.updateMany({
@@ -107,8 +139,8 @@ export async function processAdminNotifications() {
       data: { adminAttempts: { increment: 1 } }
     })
 
-    const currentAttempts = pendingNotifications[0]?.adminAttempts + 1 || 1
-    console.log(`[ADMIN] Attempt #${currentAttempts} for ${pendingNotifications.length} notification(s)`)
+    const currentAttempts = validNotifications[0]?.adminAttempts + 1 || 1
+    console.log(`[ADMIN] Attempt #${currentAttempts} for ${validNotifications.length} notification(s)`)
 
     // Send summary to each admin
     const result = await sendNotificationsWithRetry({

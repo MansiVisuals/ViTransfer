@@ -54,13 +54,13 @@ export interface SecurityEventMetadata {
 export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMetadata> = {
   // Admin Login Events
   ADMIN_PASSWORD_LOGIN_SUCCESS: {
-    label: 'Admin Login Success',
+    label: 'Admin Basic Auth Login Success',
     description: 'Administrator successfully logged in using username/email and password.',
     category: 'Admin Auth',
     severity: 'INFO',
   },
   ADMIN_PASSWORD_LOGIN_FAILED: {
-    label: 'Admin Login Failed',
+    label: 'Admin Basic Auth Login Failed',
     description: 'Failed administrator login attempt - incorrect username/email or password.',
     category: 'Admin Auth',
     severity: 'WARNING',
@@ -86,14 +86,14 @@ export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMet
     severity: 'WARNING',
   },
   PASSKEY_LOGIN_SUCCESS: {
-    label: 'Passkey Login Success',
-    description: 'User successfully authenticated using passkey (biometric or security key).',
+    label: 'Admin Passkey Auth Login Success',
+    description: 'Administrator successfully authenticated using passkey (biometric or security key).',
     category: 'Passkey Auth',
     severity: 'INFO',
   },
   PASSKEY_LOGIN_FAILED: {
-    label: 'Passkey Login Failed',
-    description: 'Passkey authentication failed - invalid credential, expired challenge, or verification error.',
+    label: 'Admin Passkey Auth Login Failed',
+    description: 'Admin passkey authentication failed - invalid credential, expired challenge, or verification error.',
     category: 'Passkey Auth',
     severity: 'WARNING',
   },

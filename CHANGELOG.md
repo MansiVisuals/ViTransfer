@@ -5,6 +5,16 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-12-07
+
+### Changed
+- IP and domain blocklists moved into Security Settings with dedicated management UI, inline add/remove, and loading states; Security Events page now focuses on event history and rate limits only
+- Rate limit controls refreshed automatically on load and lay out responsively alongside filters and actions
+
+### Fixed
+- Admin project view now updates comments immediately when new comments are posted, avoiding stale threads until the next full refresh
+- Hotlink blocklist forms stack cleanly on mobile and include clearer lock expiration messaging in rate limit details
+
 ## [0.6.9] - 2025-12-07
 
 ### Fixed

@@ -404,14 +404,20 @@ export default function SecurityEventsClient() {
                 </select>
               </div>
 
-              <div className="flex items-end gap-2">
-                <Button onClick={loadEvents} variant="outline" disabled={loading}>
+              <div className="flex flex-wrap items-stretch sm:items-end gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={loadEvents}
+                  variant="outline"
+                  disabled={loading}
+                  className="w-full sm:w-auto"
+                >
                   <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
                 <Button
                   onClick={() => setShowRateLimits(!showRateLimits)}
                   variant={showRateLimits ? 'default' : 'outline'}
+                  className="w-full sm:w-auto"
                 >
                   <Unlock className="w-4 h-4 mr-2" />
                   Rate Limits ({rateLimits.length})
@@ -419,6 +425,7 @@ export default function SecurityEventsClient() {
                 <Button
                   onClick={() => setShowBlocklists(!showBlocklists)}
                   variant={showBlocklists ? 'default' : 'outline'}
+                  className="w-full sm:w-auto"
                 >
                   <Ban className="w-4 h-4 mr-2" />
                   Blocklists ({blockedIPs.length + blockedDomains.length})

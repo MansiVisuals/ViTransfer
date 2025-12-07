@@ -16,7 +16,7 @@ interface UseCommentManagementProps {
   videos: Video[]
   clientEmail?: string
   isPasswordProtected: boolean
-  adminUser: any
+  adminUser?: any
   recipients: Array<{ id: string; name: string | null }>
   clientName: string
   restrictToLatestVersion: boolean
@@ -31,7 +31,7 @@ export function useCommentManagement({
   videos,
   clientEmail,
   isPasswordProtected,
-  adminUser,
+  adminUser = null,
   recipients,
   clientName,
   restrictToLatestVersion,

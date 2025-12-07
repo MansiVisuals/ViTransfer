@@ -524,7 +524,7 @@ export default function SecurityEventsClient() {
               {/* Blocked IPs Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Blocked IP Addresses</h3>
-                <form onSubmit={handleAddIP} className="flex gap-2 mb-4">
+                <form onSubmit={handleAddIP} className="flex flex-col sm:flex-row gap-2 mb-4">
                   <input
                     type="text"
                     value={newIP}
@@ -539,7 +539,7 @@ export default function SecurityEventsClient() {
                     placeholder="Reason (optional)"
                     className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
                   />
-                  <Button type="submit">
+                  <Button type="submit" className="sm:w-auto">
                     <Plus className="w-4 h-4 mr-2" />
                     Add
                   </Button>
@@ -550,9 +550,9 @@ export default function SecurityEventsClient() {
                   <div className="space-y-2">
                     {blockedIPs.map((ip) => (
                       <div key={ip.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="font-mono font-medium">{ip.ipAddress}</div>
-                          {ip.reason && <div className="text-sm text-muted-foreground mt-1">{ip.reason}</div>}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-mono font-medium break-all">{ip.ipAddress}</div>
+                          {ip.reason && <div className="text-sm text-muted-foreground mt-1 break-words">{ip.reason}</div>}
                           <div className="text-xs text-muted-foreground mt-1">
                             Added {formatDateTime(ip.createdAt)}
                           </div>
@@ -561,6 +561,7 @@ export default function SecurityEventsClient() {
                           onClick={() => handleRemoveIP(ip.id)}
                           variant="outline"
                           size="sm"
+                          className="flex-shrink-0"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -573,7 +574,7 @@ export default function SecurityEventsClient() {
               {/* Blocked Domains Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Blocked Domains</h3>
-                <form onSubmit={handleAddDomain} className="flex gap-2 mb-4">
+                <form onSubmit={handleAddDomain} className="flex flex-col sm:flex-row gap-2 mb-4">
                   <input
                     type="text"
                     value={newDomain}
@@ -588,7 +589,7 @@ export default function SecurityEventsClient() {
                     placeholder="Reason (optional)"
                     className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
                   />
-                  <Button type="submit">
+                  <Button type="submit" className="sm:w-auto">
                     <Plus className="w-4 h-4 mr-2" />
                     Add
                   </Button>
@@ -599,9 +600,9 @@ export default function SecurityEventsClient() {
                   <div className="space-y-2">
                     {blockedDomains.map((domain) => (
                       <div key={domain.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="font-mono font-medium">{domain.domain}</div>
-                          {domain.reason && <div className="text-sm text-muted-foreground mt-1">{domain.reason}</div>}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-mono font-medium break-all">{domain.domain}</div>
+                          {domain.reason && <div className="text-sm text-muted-foreground mt-1 break-words">{domain.reason}</div>}
                           <div className="text-xs text-muted-foreground mt-1">
                             Added {formatDateTime(domain.createdAt)}
                           </div>
@@ -610,6 +611,7 @@ export default function SecurityEventsClient() {
                           onClick={() => handleRemoveDomain(domain.id)}
                           variant="outline"
                           size="sm"
+                          className="flex-shrink-0"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

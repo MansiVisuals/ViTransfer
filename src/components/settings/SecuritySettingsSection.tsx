@@ -1,3 +1,4 @@
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,6 +32,21 @@ interface SecuritySettingsSectionProps {
   setTrackSecurityLogs: (value: boolean) => void
   viewSecurityEvents: boolean
   setViewSecurityEvents: (value: boolean) => void
+  blockedIPs: Array<{ id: string; ipAddress: string; reason: string | null; createdAt: string }>
+  blockedDomains: Array<{ id: string; domain: string; reason: string | null; createdAt: string }>
+  newIP: string
+  setNewIP: (value: string) => void
+  newIPReason: string
+  setNewIPReason: (value: string) => void
+  newDomain: string
+  setNewDomain: (value: string) => void
+  newDomainReason: string
+  setNewDomainReason: (value: string) => void
+  onAddIP: (e: React.FormEvent) => void
+  onRemoveIP: (id: string) => void
+  onAddDomain: (e: React.FormEvent) => void
+  onRemoveDomain: (id: string) => void
+  blocklistsLoading: boolean
 }
 
 export function SecuritySettingsSection({
@@ -60,6 +76,21 @@ export function SecuritySettingsSection({
   setTrackSecurityLogs,
   viewSecurityEvents,
   setViewSecurityEvents,
+  blockedIPs,
+  blockedDomains,
+  newIP,
+  setNewIP,
+  newIPReason,
+  setNewIPReason,
+  newDomain,
+  setNewDomain,
+  newDomainReason,
+  setNewDomainReason,
+  onAddIP,
+  onRemoveIP,
+  onAddDomain,
+  onRemoveDomain,
+  blocklistsLoading,
 }: SecuritySettingsSectionProps) {
   return (
     <Card className="border-border">
@@ -150,6 +181,119 @@ export function SecuritySettingsSection({
             <p className="text-xs text-muted-foreground">
               Controls how the system handles hotlinking attempts. Log Only is recommended for monitoring.
             </p>
+            <div className="mt-4 space-y-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Hotlink Blocklists</h4>
+                {blocklistsLoading && <span className="text-xs text-muted-foreground">Refreshing...</span>}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Blocked IP Addresses</p>
+                  <form
+                    onSubmit={onAddIP}
+                    className="flex flex-col gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={newIP}
+                      onChange={(e) => setNewIP(e.target.value)}
+                      placeholder="IP Address (e.g., 192.168.1.1)"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                    />
+                    <input
+                      type="text"
+                      value={newIPReason}
+                      onChange={(e) => setNewIPReason(e.target.value)}
+                      placeholder="Reason (optional)"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md w-full sm:w-auto"
+                    >
+                      Add
+                    </button>
+                  </form>
+                  {blockedIPs.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">No blocked IPs</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {blockedIPs.map(ip => (
+                        <div key={ip.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-sm break-all">{ip.ipAddress}</div>
+                            {ip.reason && <div className="text-xs text-muted-foreground mt-1 break-words">{ip.reason}</div>}
+                            <div className="text-[11px] text-muted-foreground mt-1">
+                              Added {new Date(ip.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onRemoveIP(ip.id)}
+                            className="text-sm text-destructive border border-destructive px-2 py-1 rounded-md hover:bg-destructive/10"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Blocked Domains</p>
+                  <form
+                    onSubmit={onAddDomain}
+                    className="flex flex-col gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={newDomain}
+                      onChange={(e) => setNewDomain(e.target.value)}
+                      placeholder="Domain (e.g., example.com)"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                    />
+                    <input
+                      type="text"
+                      value={newDomainReason}
+                      onChange={(e) => setNewDomainReason(e.target.value)}
+                      placeholder="Reason (optional)"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md w-full sm:w-auto"
+                    >
+                      Add
+                    </button>
+                  </form>
+                  {blockedDomains.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">No blocked domains</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {blockedDomains.map(domain => (
+                        <div key={domain.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-sm break-all">{domain.domain}</div>
+                            {domain.reason && <div className="text-xs text-muted-foreground mt-1 break-words">{domain.reason}</div>}
+                            <div className="text-[11px] text-muted-foreground mt-1">
+                              Added {new Date(domain.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onRemoveDomain(domain.id)}
+                            className="text-sm text-destructive border border-destructive px-2 py-1 rounded-md hover:bg-destructive/10"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">

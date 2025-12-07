@@ -135,7 +135,8 @@ export async function GET(
     ])
 
     let allRecipients: Array<{id: string, name: string | null}> = []
-    if (project.sharePassword || isAdmin) {
+    // Include recipients for all authenticated users (guest mode is the only restriction)
+    if (!isGuest) {
       const recipients = await getProjectRecipients(project.id)
       allRecipients = recipients
         .filter(r => r.id)
@@ -191,7 +192,7 @@ export async function GET(
       guestMode: project.guestMode || false,
       isGuest: isGuest,
 
-      ...((project.sharePassword || isAdmin) && !isGuest ? {
+      ...(!isGuest ? {
         clientName: project.companyName || primaryRecipient?.name || 'Client',
         clientEmail: primaryRecipient?.email || null,
         companyName: project.companyName || null,

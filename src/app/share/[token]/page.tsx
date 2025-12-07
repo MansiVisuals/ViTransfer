@@ -40,7 +40,6 @@ export default function SharePage() {
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [companyName, setCompanyName] = useState('Studio')
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
-  const [adminUser, setAdminUser] = useState<any>(null)
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [activeVideosRaw, setActiveVideosRaw] = useState<any[]>([])
@@ -61,33 +60,6 @@ export default function SharePage() {
     }
   }, [storageKey])
 
-  // Detect if an admin session is present so admin comments stay internal
-  useEffect(() => {
-    let isMounted = true
-
-    const loadAdminUser = async () => {
-      try {
-        const response = await fetch('/api/auth/session', {
-          headers: { 'Cache-Control': 'no-store' },
-        })
-        if (!isMounted) return
-        if (response.ok) {
-          const data = await response.json()
-          setAdminUser(data.user)
-        } else {
-          setAdminUser(null)
-        }
-      } catch {
-        // Ignore session lookup failures for public viewers
-      }
-    }
-
-    loadAdminUser()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
 
   // Fetch comments separately for security
   const fetchComments = async () => {
@@ -833,7 +805,6 @@ export default function SharePage() {
                   clientCompanyName={project.companyName}
                   smtpConfigured={project.smtpConfigured}
                   isPasswordProtected={isPasswordProtected || false}
-                  adminUser={adminUser}
                   recipients={project.recipients || []}
                   shareToken={shareToken}
                 />

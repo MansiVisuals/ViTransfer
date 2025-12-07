@@ -5,6 +5,26 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.9] - 2025-12-07
+
+### Fixed
+- OTP-only projects now correctly display name selection dropdown in comment section
+- Recipients API now returns data for all authenticated modes (PASSWORD, OTP, BOTH, NONE), not just password-protected projects
+- Security dashboard blocklist forms no longer overflow on mobile devices
+- Blocklist item text (IP addresses and domains) now wraps properly on small screens
+
+### Changed
+- Removed admin session detection from public share page for cleaner code separation
+- Public share page now treats all users (including admins) as clients - admins should use dedicated admin share page
+- Made `adminUser` parameter optional in comment management hook for better backwards compatibility
+- Improved responsive layout for security blocklist UI (stacks vertically on mobile, horizontal on desktop)
+
+### Technical
+- Updated share API route to include recipients for all non-guest authenticated users
+- Added `flex-col sm:flex-row` responsive classes to blocklist forms
+- Added `min-w-0`, `break-all`, and `break-words` classes to prevent text overflow in blocklist items
+- Made `adminUser` optional with default `null` value in `useCommentManagement` hook
+
 ## [0.6.8] - 2025-12-06
 
 ### Fixed

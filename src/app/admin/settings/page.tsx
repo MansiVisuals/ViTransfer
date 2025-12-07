@@ -47,6 +47,20 @@ interface SecuritySettings {
   viewSecurityEvents: boolean
 }
 
+interface BlockedIP {
+  id: string
+  ipAddress: string
+  reason: string | null
+  createdAt: string
+}
+
+interface BlockedDomain {
+  id: string
+  domain: string
+  reason: string | null
+  createdAt: string
+}
+
 export default function GlobalSettingsPage() {
   const router = useRouter()
 
@@ -93,6 +107,13 @@ export default function GlobalSettingsPage() {
   const [trackAnalytics, setTrackAnalytics] = useState(true)
   const [trackSecurityLogs, setTrackSecurityLogs] = useState(true)
   const [viewSecurityEvents, setViewSecurityEvents] = useState(false)
+  const [blockedIPs, setBlockedIPs] = useState<BlockedIP[]>([])
+  const [blockedDomains, setBlockedDomains] = useState<BlockedDomain[]>([])
+  const [newIP, setNewIP] = useState('')
+  const [newIPReason, setNewIPReason] = useState('')
+  const [newDomain, setNewDomain] = useState('')
+  const [newDomainReason, setNewDomainReason] = useState('')
+  const [blocklistsLoading, setBlocklistsLoading] = useState(false)
 
   // Collapsible section state (all collapsed by default)
   const [showCompanyBranding, setShowCompanyBranding] = useState(false)
@@ -160,6 +181,118 @@ export default function GlobalSettingsPage() {
 
     loadSettings()
   }, [])
+
+  const loadBlocklists = async () => {
+    setBlocklistsLoading(true)
+    try {
+      const [ipsResponse, domainsResponse] = await Promise.all([
+        apiFetch('/api/security/blocklist/ips'),
+        apiFetch('/api/security/blocklist/domains')
+      ])
+
+      if (ipsResponse.ok) {
+        const ipsData = await ipsResponse.json()
+        setBlockedIPs(ipsData.blockedIPs || [])
+      }
+
+      if (domainsResponse.ok) {
+        const domainsData = await domainsResponse.json()
+        setBlockedDomains(domainsData.blockedDomains || [])
+      }
+    } catch (err) {
+      // keep prior state on failure
+    } finally {
+      setBlocklistsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showSecuritySettings) {
+      loadBlocklists()
+    }
+  }, [showSecuritySettings])
+
+  const handleAddIP = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newIP.trim()) return
+
+    try {
+      const response = await apiFetch('/api/security/blocklist/ips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ipAddress: newIP.trim(), reason: newIPReason.trim() || null })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        setError(error.error || 'Failed to block IP')
+        return
+      }
+
+      setNewIP('')
+      setNewIPReason('')
+      loadBlocklists()
+    } catch {
+      setError('Failed to block IP address')
+    }
+  }
+
+  const handleRemoveIP = async (id: string) => {
+    if (!confirm('Remove this IP from blocklist?')) return
+
+    try {
+      await apiFetch('/api/security/blocklist/ips', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+
+      loadBlocklists()
+    } catch {
+      setError('Failed to remove IP from blocklist')
+    }
+  }
+
+  const handleAddDomain = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newDomain.trim()) return
+
+    try {
+      const response = await apiFetch('/api/security/blocklist/domains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: newDomain.trim(), reason: newDomainReason.trim() || null })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        setError(error.error || 'Failed to block domain')
+        return
+      }
+
+      setNewDomain('')
+      setNewDomainReason('')
+      loadBlocklists()
+    } catch {
+      setError('Failed to block domain')
+    }
+  }
+
+  const handleRemoveDomain = async (id: string) => {
+    if (!confirm('Remove this domain from blocklist?')) return
+
+    try {
+      await apiFetch('/api/security/blocklist/domains', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+
+      loadBlocklists()
+    } catch {
+      setError('Failed to remove domain from blocklist')
+    }
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -434,6 +567,21 @@ export default function GlobalSettingsPage() {
             setTrackSecurityLogs={setTrackSecurityLogs}
             viewSecurityEvents={viewSecurityEvents}
             setViewSecurityEvents={setViewSecurityEvents}
+            blockedIPs={blockedIPs}
+            blockedDomains={blockedDomains}
+            newIP={newIP}
+            setNewIP={setNewIP}
+            newIPReason={newIPReason}
+            setNewIPReason={setNewIPReason}
+            newDomain={newDomain}
+            setNewDomain={setNewDomain}
+            newDomainReason={newDomainReason}
+            setNewDomainReason={setNewDomainReason}
+            onAddIP={handleAddIP}
+            onRemoveIP={handleRemoveIP}
+            onAddDomain={handleAddDomain}
+            onRemoveDomain={handleRemoveDomain}
+            blocklistsLoading={blocklistsLoading}
           />
         </div>
 

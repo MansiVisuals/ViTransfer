@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, Unlock, Tag, Ban, Plus } from 'lucide-react'
+import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, Unlock, Tag } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { apiDelete, apiFetch } from '@/lib/api-client'
 import {
@@ -77,20 +77,6 @@ interface RateLimitEntry {
   type: string
 }
 
-interface BlockedIP {
-  id: string
-  ipAddress: string
-  reason: string | null
-  createdAt: string
-}
-
-interface BlockedDomain {
-  id: string
-  domain: string
-  reason: string | null
-  createdAt: string
-}
-
 export default function SecurityEventsClient() {
   const [events, setEvents] = useState<SecurityEvent[]>([])
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, pages: 0 })
@@ -102,13 +88,6 @@ export default function SecurityEventsClient() {
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set())
   const [rateLimits, setRateLimits] = useState<RateLimitEntry[]>([])
   const [showRateLimits, setShowRateLimits] = useState(false)
-  const [blockedIPs, setBlockedIPs] = useState<BlockedIP[]>([])
-  const [blockedDomains, setBlockedDomains] = useState<BlockedDomain[]>([])
-  const [showBlocklists, setShowBlocklists] = useState(false)
-  const [newIP, setNewIP] = useState('')
-  const [newIPReason, setNewIPReason] = useState('')
-  const [newDomain, setNewDomain] = useState('')
-  const [newDomainReason, setNewDomainReason] = useState('')
 
   const loadEvents = async () => {
     setLoading(true)
@@ -165,107 +144,6 @@ export default function SecurityEventsClient() {
     }
   }
 
-  const loadBlocklists = async () => {
-    try {
-      const [ipsResponse, domainsResponse] = await Promise.all([
-        apiFetch('/api/security/blocklist/ips'),
-        apiFetch('/api/security/blocklist/domains')
-      ])
-
-      if (ipsResponse.ok) {
-        const ipsData = await ipsResponse.json()
-        setBlockedIPs(ipsData.blockedIPs || [])
-      }
-
-      if (domainsResponse.ok) {
-        const domainsData = await domainsResponse.json()
-        setBlockedDomains(domainsData.blockedDomains || [])
-      }
-    } catch (error) {
-      console.error('Error loading blocklists:', error)
-    }
-  }
-
-  const handleAddIP = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newIP.trim()) return
-
-    try {
-      const response = await apiFetch('/api/security/blocklist/ips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ipAddress: newIP.trim(), reason: newIPReason.trim() || null })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        alert(error.error || 'Failed to block IP')
-        return
-      }
-
-      setNewIP('')
-      setNewIPReason('')
-      loadBlocklists()
-    } catch (error) {
-      alert('Failed to block IP address')
-    }
-  }
-
-  const handleRemoveIP = async (id: string) => {
-    if (!confirm('Remove this IP from blocklist?')) return
-
-    try {
-      await apiDelete('/api/security/blocklist/ips', {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      })
-
-      loadBlocklists()
-    } catch (error) {
-      alert('Failed to remove IP from blocklist')
-    }
-  }
-
-  const handleAddDomain = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newDomain.trim()) return
-
-    try {
-      const response = await apiFetch('/api/security/blocklist/domains', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: newDomain.trim(), reason: newDomainReason.trim() || null })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        alert(error.error || 'Failed to block domain')
-        return
-      }
-
-      setNewDomain('')
-      setNewDomainReason('')
-      loadBlocklists()
-    } catch (error) {
-      alert('Failed to block domain')
-    }
-  }
-
-  const handleRemoveDomain = async (id: string) => {
-    if (!confirm('Remove this domain from blocklist?')) return
-
-    try {
-      await apiDelete('/api/security/blocklist/domains', {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      })
-
-      loadBlocklists()
-    } catch (error) {
-      alert('Failed to remove domain from blocklist')
-    }
-  }
-
   useEffect(() => {
     loadEvents()
   }, [pagination.page, filterType, filterSeverity])
@@ -276,11 +154,10 @@ export default function SecurityEventsClient() {
     }
   }, [showRateLimits])
 
+  // Prime rate limit data so counts show immediately
   useEffect(() => {
-    if (showBlocklists) {
-      loadBlocklists()
-    }
-  }, [showBlocklists])
+    loadRateLimits()
+  }, [])
 
   const toggleDetails = (eventId: string) => {
     setExpandedDetails(prev => {
@@ -373,9 +250,9 @@ export default function SecurityEventsClient() {
             <CardTitle>Filters & Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-sm font-medium mb-2 block">Event Type</label>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium mb-2 block">Event Type</label>
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
@@ -421,14 +298,6 @@ export default function SecurityEventsClient() {
                 >
                   <Unlock className="w-4 h-4 mr-2" />
                   Rate Limits ({rateLimits.length})
-                </Button>
-                <Button
-                  onClick={() => setShowBlocklists(!showBlocklists)}
-                  variant={showBlocklists ? 'default' : 'outline'}
-                  className="w-full sm:w-auto"
-                >
-                  <Ban className="w-4 h-4 mr-2" />
-                  Blocklists ({blockedIPs.length + blockedDomains.length})
                 </Button>
               </div>
             </div>
@@ -500,133 +369,26 @@ export default function SecurityEventsClient() {
                             Locked until: {new Date(entry.lockoutUntil).toLocaleString()}
                           </div>
                         </div>
-                        <Button
-                          onClick={() => handleUnblockRateLimit(entry.key)}
-                          variant="outline"
-                          size="sm"
-                          className="w-full sm:w-auto"
-                        >
-                          <Unlock className="w-4 h-4 mr-2" />
-                          Unblock
-                        </Button>
+                        {entry.lockoutUntil > Date.now() ? (
+                          <Button
+                            onClick={() => handleUnblockRateLimit(entry.key)}
+                            variant="outline"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                          >
+                            <Unlock className="w-4 h-4 mr-2" />
+                            Unblock
+                          </Button>
+                        ) : (
+                          <div className="text-xs text-muted-foreground text-right">
+                            Lock expired
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Blocklists Panel */}
-        {showBlocklists && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>IP & Domain Blocklists</CardTitle>
-              <CardDescription>
-                Manage blocked IP addresses and domains
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Blocked IPs Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Blocked IP Addresses</h3>
-                <form onSubmit={handleAddIP} className="flex flex-col sm:flex-row gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={newIP}
-                    onChange={(e) => setNewIP(e.target.value)}
-                    placeholder="IP Address (e.g., 192.168.1.1)"
-                    className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  />
-                  <input
-                    type="text"
-                    value={newIPReason}
-                    onChange={(e) => setNewIPReason(e.target.value)}
-                    placeholder="Reason (optional)"
-                    className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  />
-                  <Button type="submit" className="sm:w-auto">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add
-                  </Button>
-                </form>
-                {blockedIPs.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground text-sm">No blocked IPs</div>
-                ) : (
-                  <div className="space-y-2">
-                    {blockedIPs.map((ip) => (
-                      <div key={ip.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-mono font-medium break-all">{ip.ipAddress}</div>
-                          {ip.reason && <div className="text-sm text-muted-foreground mt-1 break-words">{ip.reason}</div>}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Added {formatDateTime(ip.createdAt)}
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => handleRemoveIP(ip.id)}
-                          variant="outline"
-                          size="sm"
-                          className="flex-shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Blocked Domains Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Blocked Domains</h3>
-                <form onSubmit={handleAddDomain} className="flex flex-col sm:flex-row gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={newDomain}
-                    onChange={(e) => setNewDomain(e.target.value)}
-                    placeholder="Domain (e.g., example.com)"
-                    className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  />
-                  <input
-                    type="text"
-                    value={newDomainReason}
-                    onChange={(e) => setNewDomainReason(e.target.value)}
-                    placeholder="Reason (optional)"
-                    className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  />
-                  <Button type="submit" className="sm:w-auto">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add
-                  </Button>
-                </form>
-                {blockedDomains.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground text-sm">No blocked domains</div>
-                ) : (
-                  <div className="space-y-2">
-                    {blockedDomains.map((domain) => (
-                      <div key={domain.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-mono font-medium break-all">{domain.domain}</div>
-                          {domain.reason && <div className="text-sm text-muted-foreground mt-1 break-words">{domain.reason}</div>}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Added {formatDateTime(domain.createdAt)}
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => handleRemoveDomain(domain.id)}
-                          variant="outline"
-                          size="sm"
-                          className="flex-shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
         )}

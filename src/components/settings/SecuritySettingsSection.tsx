@@ -189,22 +189,28 @@ export function SecuritySettingsSection({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">Blocked IP Addresses</p>
-                  <form onSubmit={onAddIP} className="flex flex-col sm:flex-row gap-2">
+                  <form
+                    onSubmit={onAddIP}
+                    className="flex flex-col gap-2"
+                  >
                     <input
                       type="text"
                       value={newIP}
                       onChange={(e) => setNewIP(e.target.value)}
                       placeholder="IP Address (e.g., 192.168.1.1)"
-                      className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
                     <input
                       type="text"
                       value={newIPReason}
                       onChange={(e) => setNewIPReason(e.target.value)}
                       placeholder="Reason (optional)"
-                      className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
-                    <button type="submit" className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md">
+                    <button
+                      type="submit"
+                      className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md w-full sm:w-auto"
+                    >
                       Add
                     </button>
                   </form>
@@ -236,22 +242,28 @@ export function SecuritySettingsSection({
 
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">Blocked Domains</p>
-                  <form onSubmit={onAddDomain} className="flex flex-col sm:flex-row gap-2">
+                  <form
+                    onSubmit={onAddDomain}
+                    className="flex flex-col gap-2"
+                  >
                     <input
                       type="text"
                       value={newDomain}
                       onChange={(e) => setNewDomain(e.target.value)}
                       placeholder="Domain (e.g., example.com)"
-                      className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
                     <input
                       type="text"
                       value={newDomainReason}
                       onChange={(e) => setNewDomainReason(e.target.value)}
                       placeholder="Reason (optional)"
-                      className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
-                    <button type="submit" className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md">
+                    <button
+                      type="submit"
+                      className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md w-full sm:w-auto"
+                    >
                       Add
                     </button>
                   </form>

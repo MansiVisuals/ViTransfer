@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import * as tus from 'tus-js-client'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
@@ -39,6 +39,12 @@ export function useAssetUploadQueue({
   const [queue, setQueue] = useState<QueuedUpload[]>([])
   const uploadRefsMap = useRef<Map<string, tus.Upload>>(new Map())
   const assetIdsMap = useRef<Map<string, string>>(new Map())
+  const queueRef = useRef(queue)
+
+  // Keep queueRef in sync with queue state
+  useEffect(() => {
+    queueRef.current = queue
+  }, [queue])
 
   // Add file to queue
   const addToQueue = useCallback((file: File, category: string): string => {
@@ -62,20 +68,28 @@ export function useAssetUploadQueue({
 
     setQueue(prev => [...prev, newUpload])
 
-    // Auto-start if under concurrent limit
-    setTimeout(() => {
-      const currentUploading = queue.filter(u => u.status === 'uploading').length
-      if (currentUploading < maxConcurrent) {
-        startUpload(uploadId)
-      }
-    }, 100)
-
     return uploadId
-  }, [videoId, queue, maxConcurrent])
+  }, [videoId])
+
+  // Auto-start queued uploads when slots are available
+  useEffect(() => {
+    const currentUploading = queue.filter(u => u.status === 'uploading').length
+    const queuedUploads = queue.filter(u => u.status === 'queued')
+
+    // Start queued uploads if we have available slots
+    if (currentUploading < maxConcurrent && queuedUploads.length > 0) {
+      const slotsAvailable = maxConcurrent - currentUploading
+      const uploadsToStart = queuedUploads.slice(0, slotsAvailable)
+
+      uploadsToStart.forEach(upload => {
+        startUpload(upload.id)
+      })
+    }
+  }, [queue, maxConcurrent])
 
   // Start an upload
   const startUpload = useCallback(async (uploadId: string) => {
-    const upload = queue.find(u => u.id === uploadId)
+    const upload = queueRef.current.find(u => u.id === uploadId)
     if (!upload || upload.status === 'uploading') return
 
     try {
@@ -154,13 +168,7 @@ export function useAssetUploadQueue({
             onUploadComplete()
           }
 
-          // Start next queued upload if any
-          setTimeout(() => {
-            const nextQueued = queue.find(u => u.status === 'queued')
-            if (nextQueued) {
-              startUpload(nextQueued.id)
-            }
-          }, 100)
+          // useEffect will auto-start next queued upload
         },
 
         onError: async (error) => {
@@ -265,17 +273,8 @@ export function useAssetUploadQueue({
     // Remove from queue
     setQueue(prev => prev.filter(u => u.id !== uploadId))
 
-    // Start next queued upload if any
-    setTimeout(() => {
-      const currentUploading = queue.filter(u => u.status === 'uploading').length
-      if (currentUploading < maxConcurrent) {
-        const nextQueued = queue.find(u => u.status === 'queued')
-        if (nextQueued) {
-          startUpload(nextQueued.id)
-        }
-      }
-    }, 100)
-  }, [queue, videoId, maxConcurrent, startUpload])
+    // useEffect will auto-start next queued upload
+  }, [videoId])
 
   // Remove completed upload from queue
   const removeCompleted = useCallback((uploadId: string) => {

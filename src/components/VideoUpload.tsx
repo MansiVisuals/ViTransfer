@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -10,6 +10,7 @@ import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
+import { ensureFreshUploadOnContextChange, clearFileContext } from '@/lib/tus-context'
 
 interface VideoUploadProps {
   projectId: string
@@ -31,6 +32,23 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
   const [versionLabel, setVersionLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+
+  // Warn before leaving page if upload is in progress
+  useEffect(() => {
+    if (uploading || paused) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault()
+        e.returnValue = '' // Chrome requires returnValue to be set
+        return '' // Some browsers use the return value
+      }
+
+      window.addEventListener('beforeunload', handleBeforeUnload)
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+      }
+    }
+  }, [uploading, paused])
 
   // Validate video file format
   async function validateVideoFile(file: File): Promise<{ valid: boolean; error?: string }> {
@@ -111,6 +129,9 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         throw new Error(validation.error || 'Invalid video file')
       }
 
+      // Check if file was uploaded to different project and clear TUS fingerprint if needed
+      ensureFreshUploadOnContextChange(file, projectId)
+
       // Step 1: Create video record (uses centralized API client with bearer auth)
       const { videoId } = await apiPost('/api/videos', {
         projectId,
@@ -174,6 +195,10 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         onSuccess: () => {
           setUploading(false)
           setProgress(100)
+
+          // Clear file context since upload completed
+          clearFileContext(file)
+
           setFile(null)
           setVersionLabel('')
           uploadRef.current = null

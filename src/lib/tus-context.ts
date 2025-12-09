@@ -10,7 +10,7 @@
  * TUS format: tus-br-{name}-{type}-{size}-{lastModified}-{endpoint}
  */
 export function generateFileFingerprint(file: File, endpoint: string = '/api/uploads'): string {
-  return `tus-br-${file.name}-${file.type}-${file.size}-${file.lastModified || 0}-${endpoint}`
+  return ['tus-br', file.name, file.type, file.size, file.lastModified, endpoint].join('-')
 }
 
 /**

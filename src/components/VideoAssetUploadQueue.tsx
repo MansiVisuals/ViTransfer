@@ -7,24 +7,13 @@ import { Input } from './ui/input'
 import { Upload, Trash2 } from 'lucide-react'
 import { useAssetUploadQueue } from '@/hooks/useAssetUploadQueue'
 import { VideoAssetUploadItem } from './VideoAssetUploadItem'
-import { ALLOWED_ASSET_EXTENSIONS, validateAssetExtension, detectAssetCategory } from '@/lib/asset-validation'
+import { validateAssetExtension, detectAssetCategory } from '@/lib/asset-validation'
 
 interface VideoAssetUploadQueueProps {
   videoId: string
   onUploadComplete?: () => void
   maxConcurrent?: number
 }
-
-const CATEGORY_OPTIONS = [
-  { value: '', label: 'Other' },
-  { value: 'thumbnail', label: 'Thumbnail (JPG, PNG only)' },
-  { value: 'image', label: 'Image' },
-  { value: 'video', label: 'Video (B-roll, Uncut, Extras)' },
-  { value: 'audio', label: 'Audio/Music' },
-  { value: 'subtitle', label: 'Subtitles/Captions' },
-  { value: 'project', label: 'Project File (Premiere, DaVinci, Final Cut)' },
-  { value: 'document', label: 'Document' },
-]
 
 export function VideoAssetUploadQueue({
   videoId,
@@ -33,7 +22,6 @@ export function VideoAssetUploadQueue({
 }: VideoAssetUploadQueueProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [category, setCategory] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -56,7 +44,6 @@ export function VideoAssetUploadQueue({
   const handleFileSelect = (files: FileList | File[] | null) => {
     if (!files || files.length === 0) {
       setSelectedFiles([])
-      setCategory('')
       setError(null)
       return
     }
@@ -64,12 +51,6 @@ export function VideoAssetUploadQueue({
     const fileArray = Array.from(files)
     setSelectedFiles(fileArray)
     setError(null)
-
-    // Auto-detect category from first file if user hasn't manually selected one
-    if (!category && fileArray.length > 0) {
-      const detectedCategory = detectAssetCategory(fileArray[0].name)
-      setCategory(detectedCategory)
-    }
   }
 
   function validateAssetFile(file: File): { valid: boolean; error?: string } {
@@ -77,7 +58,9 @@ export function VideoAssetUploadQueue({
       return { valid: false, error: 'File is empty' }
     }
 
-    return validateAssetExtension(file.name, category)
+    // Don't validate against category - just check if file type is allowed
+    // This allows mixing different file types
+    return validateAssetExtension(file.name)
   }
 
   const handleAddToQueue = () => {
@@ -86,14 +69,16 @@ export function VideoAssetUploadQueue({
     let hasErrors = false
     const errors: string[] = []
 
-    // Validate and add all files to queue
+    // Validate and add all files to queue with auto-detected category per file
     selectedFiles.forEach(file => {
       const validation = validateAssetFile(file)
       if (!validation.valid) {
         hasErrors = true
         errors.push(`${file.name}: ${validation.error}`)
       } else {
-        addToQueue(file, category || '')
+        // Auto-detect category for each file individually
+        const fileCategory = detectAssetCategory(file.name)
+        addToQueue(file, fileCategory || '')
       }
     })
 
@@ -104,7 +89,6 @@ export function VideoAssetUploadQueue({
 
     // Reset form
     setSelectedFiles([])
-    setCategory('')
     setError(null)
 
     // Reset file input
@@ -160,21 +144,11 @@ export function VideoAssetUploadQueue({
           </div>
         )}
 
-        {/* Category Selection */}
-        <div className="space-y-2">
-          <Label htmlFor={`category-${videoId}`}>Category (Optional)</Label>
-          <select
-            id={`category-${videoId}`}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            {CATEGORY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+        {/* Info message - categories are auto-detected */}
+        <div className="p-3 bg-muted/50 border border-muted rounded-md">
+          <p className="text-sm text-muted-foreground">
+            <strong>Note:</strong> File categories are automatically detected based on file type. You can select multiple files of different types (images, videos, documents, etc.)
+          </p>
         </div>
 
         {/* File Selection */}

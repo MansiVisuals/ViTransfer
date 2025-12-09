@@ -9,7 +9,7 @@ import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
 import { Trash2, CheckCircle2, XCircle, Pencil, MessageSquare, Upload, Download } from 'lucide-react'
 import { apiPost, apiPatch, apiDelete, apiFetch } from '@/lib/api-client'
-import { VideoAssetUpload } from './VideoAssetUpload'
+import { VideoAssetUploadQueue } from './VideoAssetUploadQueue'
 import { VideoAssetList } from './VideoAssetList'
 
 interface VideoListProps {
@@ -405,10 +405,10 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
             <div className="mt-4 pt-4 border-t space-y-4">
               <div>
                 <h5 className="text-sm font-medium mb-3">Upload Additional Assets</h5>
-                <VideoAssetUpload
+                <VideoAssetUploadQueue
                   videoId={video.id}
+                  maxConcurrent={3}
                   onUploadComplete={() => {
-                    setUploadingAssetsFor(null)
                     setAssetRefreshTrigger(prev => prev + 1) // Trigger asset list refresh
                     onRefresh?.()
                   }}

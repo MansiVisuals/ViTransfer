@@ -148,8 +148,8 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
       let lastTime = startTime
 
       const upload = new tus.Upload(file, {
-        // TUS server endpoint
-        endpoint: '/api/uploads',
+        // TUS server endpoint (absolute URL for fingerprint consistency)
+        endpoint: `${window.location.origin}/api/uploads`,
 
         // Retry configuration - exponential backoff
         retryDelays: [0, 1000, 3000, 5000, 10000],

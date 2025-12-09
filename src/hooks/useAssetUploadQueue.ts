@@ -146,7 +146,7 @@ export function useAssetUploadQueue({
       let lastTime = startTime
 
       const tusUpload = new tus.Upload(upload.file, {
-        endpoint: '/api/uploads',
+        endpoint: `${window.location.origin}/api/uploads`,
         retryDelays: [0, 1000, 3000, 5000, 10000],
         metadata: {
           filename: upload.file.name,

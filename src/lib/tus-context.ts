@@ -6,53 +6,28 @@
  */
 
 /**
- * Generate simple fingerprint for a file (matches TUS approach)
+ * Generate TUS fingerprint for a file (matches TUS library format exactly)
+ * TUS format: tus-br-{name}-{type}-{size}-{lastModified}-{endpoint}
  */
-export function generateFileFingerprint(file: File): string {
-  return `${file.name}-${file.size}-${file.lastModified || 0}`
+export function generateFileFingerprint(file: File, endpoint: string = '/api/uploads'): string {
+  return `tus-br-${file.name}-${file.type}-${file.size}-${file.lastModified || 0}-${endpoint}`
 }
 
 /**
  * Get TUS fingerprint key for a file
  * TUS stores with keys like: "tus::{fingerprint}::..."
  */
-function getTUSFingerprintKey(file: File): string | null {
-  try {
-    const fingerprint = generateFileFingerprint(file)
+function getTUSFingerprintKey(file: File, endpoint: string = '/api/uploads'): string | null {
+  const fingerprint = generateFileFingerprint(file, endpoint)
 
-    // Scan localStorage for TUS keys matching this file
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith('tus::') && key.includes(fingerprint)) {
-        return key
-      }
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith('tus::') && key.includes(fingerprint)) {
+      return key
     }
-
-    // Fallback: try to find any tus key (TUS might use different fingerprint format)
-    // We'll match by file name and size
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith('tus::')) {
-        try {
-          const value = localStorage.getItem(key)
-          if (value) {
-            const data = JSON.parse(value)
-            // Check if this TUS entry matches our file
-            if (data.size === file.size) {
-              return key
-            }
-          }
-        } catch {
-          continue
-        }
-      }
-    }
-
-    return null
-  } catch (error) {
-    console.error('Error finding TUS fingerprint:', error)
-    return null
   }
+
+  return null
 }
 
 /**
@@ -63,10 +38,9 @@ export function clearTUSFingerprint(file: File): void {
     const key = getTUSFingerprintKey(file)
     if (key) {
       localStorage.removeItem(key)
-      console.log('[TUS] Cleared fingerprint for context change:', file.name)
     }
   } catch (error) {
-    console.error('Error clearing TUS fingerprint:', error)
+    // Silent failure
   }
 }
 
@@ -86,7 +60,7 @@ export function storeFileContext(file: File, context: string): void {
     const key = `vitransfer-context:${fingerprint}`
     localStorage.setItem(key, context)
   } catch (error) {
-    console.error('Error storing file context:', error)
+    // Silent failure
   }
 }
 
@@ -99,7 +73,6 @@ export function getFileContext(file: File): string | null {
     const key = `vitransfer-context:${fingerprint}`
     return localStorage.getItem(key)
   } catch (error) {
-    console.error('Error getting file context:', error)
     return null
   }
 }
@@ -113,7 +86,7 @@ export function clearFileContext(file: File): void {
     const key = `vitransfer-context:${fingerprint}`
     localStorage.removeItem(key)
   } catch (error) {
-    console.error('Error clearing file context:', error)
+    // Silent failure
   }
 }
 
@@ -125,7 +98,6 @@ export function ensureFreshUploadOnContextChange(file: File, newContext: string)
 
   if (lastContext && lastContext !== newContext) {
     // Context changed! Clear TUS fingerprint to force fresh upload
-    console.log(`[TUS] Context changed from "${lastContext}" to "${newContext}" - forcing fresh upload`)
     clearTUSFingerprint(file)
   }
 
@@ -149,11 +121,7 @@ export function clearStaleContextData(): void {
     }
 
     keysToRemove.forEach(key => localStorage.removeItem(key))
-
-    if (keysToRemove.length > 0) {
-      console.log(`[TUS] Cleared ${keysToRemove.length} stale context records`)
-    }
   } catch (error) {
-    console.error('Error clearing stale context data:', error)
+    // Silent failure
   }
 }

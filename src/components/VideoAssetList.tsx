@@ -107,6 +107,18 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     return category.charAt(0).toUpperCase() + category.slice(1)
   }
 
+  const canSetAsThumbnail = (asset: VideoAsset) => {
+    const fileType = asset.fileType?.toLowerCase() || ''
+    const fileName = asset.fileName.toLowerCase()
+    const ext = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')) : ''
+
+    // Align with API requirements: only JPG/PNG assets can become thumbnails
+    const allowedThumbnailMimeTypes = ['image/jpeg', 'image/png', 'image/jpg']
+    const allowedThumbnailExtensions = ['.jpg', '.jpeg', '.png']
+
+    return allowedThumbnailMimeTypes.includes(fileType) || allowedThumbnailExtensions.includes(ext)
+  }
+
   const formatFileSizeBigInt = (bytes: string) => {
     return formatFileSize(Number(bytes))
   }
@@ -220,16 +232,6 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
       })
   }
 
-  const canSetAsThumbnail = (category: string | null, fileType: string) => {
-    // Only assets with 'thumbnail' category can be set as video thumbnail
-    if (category !== 'thumbnail') {
-      return false
-    }
-
-    // Verify it's actually an image file (check if it starts with 'image/')
-    return fileType.toLowerCase().startsWith('image/')
-  }
-
   const isCurrentThumbnail = (asset: VideoAsset) => {
     if (!currentThumbnailPath) return false
     // Check if this asset's storage path matches the video's thumbnailPath
@@ -296,7 +298,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
-                {canSetAsThumbnail(asset.category, asset.fileType) && (
+                {canSetAsThumbnail(asset) && (
                   <Button
                     type="button"
                     variant="ghost"

@@ -10,7 +10,14 @@ import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
-import { ensureFreshUploadOnContextChange, clearFileContext } from '@/lib/tus-context'
+import {
+  ensureFreshUploadOnContextChange,
+  clearFileContext,
+  clearTUSFingerprint,
+  getUploadMetadata,
+  storeUploadMetadata,
+  clearUploadMetadata,
+} from '@/lib/tus-context'
 
 interface VideoUploadProps {
   projectId: string
@@ -117,6 +124,10 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
       return
     }
 
+    const trimmedVideoName = videoName.trim()
+    const trimmedVersionLabel = versionLabel.trim()
+    const contextKey = `${projectId}:${trimmedVideoName}:${trimmedVersionLabel || 'auto'}`
+
     setUploading(true)
     setProgress(0)
     setError(null)
@@ -130,17 +141,44 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
       }
 
       // Check if file was uploaded to different project and clear TUS fingerprint if needed
-      ensureFreshUploadOnContextChange(file, projectId)
+      ensureFreshUploadOnContextChange(file, contextKey)
 
-      // Step 1: Create video record (uses centralized API client with bearer auth)
-      const { videoId } = await apiPost('/api/videos', {
-        projectId,
-        versionLabel,
-        originalFileName: file.name,
-        originalFileSize: file.size,
-        name: videoName, // Include video name for multi-video support
-      })
-      videoIdRef.current = videoId
+      const existingMetadata = getUploadMetadata(file)
+      const canResumeExisting =
+        existingMetadata?.projectId === projectId &&
+        !!existingMetadata.videoId &&
+        existingMetadata?.targetName === trimmedVideoName &&
+        (existingMetadata.versionLabel || '') === (trimmedVersionLabel || '')
+      let createdVideoRecord = false
+
+      // Step 1: Reuse existing video record if we have metadata, otherwise create a new one
+      if (canResumeExisting) {
+        videoIdRef.current = existingMetadata!.videoId
+        // Refresh metadata timestamp so it stays valid
+        storeUploadMetadata(file, {
+          videoId: existingMetadata!.videoId,
+          projectId,
+          versionLabel: existingMetadata?.versionLabel || trimmedVersionLabel,
+          targetName: trimmedVideoName,
+        })
+      } else {
+        const { videoId } = await apiPost('/api/videos', {
+          projectId,
+          versionLabel: trimmedVersionLabel,
+          originalFileName: file.name,
+          originalFileSize: file.size,
+          name: trimmedVideoName, // Include video name for multi-video support
+        })
+        videoIdRef.current = videoId
+        createdVideoRecord = true
+
+        storeUploadMetadata(file, {
+          videoId,
+          projectId,
+          versionLabel: trimmedVersionLabel,
+          targetName: trimmedVideoName,
+        })
+      }
 
       // Step 2: Upload with TUS protocol
       const startTime = Date.now()
@@ -158,7 +196,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         metadata: {
           filename: file.name,
           filetype: file.type || 'video/mp4',
-          videoId: videoId,
+          videoId: videoIdRef.current!,
         },
 
         chunkSize: 50 * 1024 * 1024,
@@ -167,11 +205,18 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
         storeFingerprintForResuming: true,
         removeFingerprintOnSuccess: true,
 
-        // Custom headers for authentication
-        headers: (() => {
+        // Ensure auth header is sent for resume/HEAD requests too
+        onBeforeRequest: (req) => {
+          const xhr = req.getUnderlyingObject()
           const token = getAccessToken()
-          return token ? { Authorization: `Bearer ${token}` } : undefined
-        })(),
+          if (token) {
+            if (xhr?.setRequestHeader) {
+              xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+            } else {
+              req.setHeader('Authorization', `Bearer ${token}`)
+            }
+          }
+        },
 
         // Progress callback
         onProgress: (bytesUploaded, bytesTotal) => {
@@ -185,7 +230,8 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
 
           if (timeDiff > 0.5) { // Update every 0.5 seconds
             const speedMBps = (bytesDiff / timeDiff) / (1024 * 1024)
-            setUploadSpeed(Math.round(speedMBps * 10) / 10) // Round to 1 decimal
+            const stableSpeed = speedMBps > 0.05 ? Math.round(speedMBps * 10) / 10 : 0
+            setUploadSpeed(stableSpeed)
             lastLoaded = bytesUploaded
             lastTime = now
           }
@@ -198,6 +244,8 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
 
           // Clear file context since upload completed
           clearFileContext(file)
+          clearUploadMetadata(file)
+          clearTUSFingerprint(file)
 
           setFile(null)
           setVersionLabel('')
@@ -233,17 +281,37 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
             errorMessage = 'Server error. Check server logs for details.'
           }
 
-          if (videoIdRef.current) {
+          const statusCode = (error as any)?.originalResponse?.getStatus?.()
+
+          // If we tried to resume an old session and it's gone, clear local resume data
+          if (canResumeExisting && (statusCode === 404 || statusCode === 410)) {
+            clearUploadMetadata(file)
+            clearTUSFingerprint(file)
+            errorMessage = 'Upload session expired. Please restart the upload.'
+          } else if (createdVideoRecord && videoIdRef.current) {
+            // Only clean up DB record if we created it in this attempt
             try {
               await apiDelete(`/api/videos/${videoIdRef.current}`)
               videoIdRef.current = null
             } catch {}
+            clearUploadMetadata(file)
+            clearTUSFingerprint(file)
           }
 
           setError(errorMessage)
           setUploading(false)
+          uploadRef.current = null
         },
       })
+
+      const previousUploads = await upload.findPreviousUploads()
+      if (previousUploads.length > 0) {
+        upload.resumeFromPreviousUpload(previousUploads[0])
+      } else if (!createdVideoRecord && canResumeExisting) {
+        // We expected to resume but no session exists; clear stale metadata so next attempt starts fresh
+        clearUploadMetadata(file)
+        clearTUSFingerprint(file)
+      }
 
       // Store upload reference for pause/resume
       uploadRef.current = upload
@@ -291,6 +359,11 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
     setProgress(0)
     setUploadSpeed(0)
     setError(null)
+    if (file) {
+      clearUploadMetadata(file)
+      clearTUSFingerprint(file)
+      clearFileContext(file)
+    }
   }
 
   // Drag and drop handlers
@@ -391,14 +464,14 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
       {uploading && (
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span>
+            <span className="text-muted-foreground">
               {paused ? 'Paused' : 'Uploading...'}
             </span>
             <span className="font-medium">{progress}%</span>
           </div>
           <div className="relative h-4 w-full overflow-hidden rounded-full bg-secondary">
             <div
-              className="h-full bg-primary transition-all"
+              className={`h-full transition-all ${paused ? 'bg-warning' : 'bg-primary'}`}
               style={{
                 width: `${progress}%`,
                 backgroundImage: paused ? 'none' : 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 20px)',

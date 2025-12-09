@@ -14,6 +14,23 @@ export function generateFileFingerprint(file: File, endpoint?: string): string {
   return ['tus-br', file.name, file.type, file.size, file.lastModified, tusEndpoint].join('-')
 }
 
+const UPLOAD_META_PREFIX = 'vitransfer-upload:'
+
+export interface StoredUploadMetadata {
+  videoId: string
+  projectId?: string
+  assetId?: string
+  versionLabel?: string
+  category?: string
+  targetName?: string
+  createdAt: number
+}
+
+function getUploadMetadataKey(file: File, endpoint?: string): string {
+  const fingerprint = generateFileFingerprint(file, endpoint)
+  return `${UPLOAD_META_PREFIX}${fingerprint}`
+}
+
 /**
  * Get TUS fingerprint key for a file
  * TUS stores with keys like: "tus::{fingerprint}::..."
@@ -100,6 +117,7 @@ export function ensureFreshUploadOnContextChange(file: File, newContext: string)
   if (lastContext && lastContext !== newContext) {
     // Context changed! Clear TUS fingerprint to force fresh upload
     clearTUSFingerprint(file)
+    clearUploadMetadata(file)
   }
 
   // Store new context
@@ -123,6 +141,66 @@ export function clearStaleContextData(): void {
 
     keysToRemove.forEach(key => localStorage.removeItem(key))
   } catch (error) {
+    // Silent failure
+  }
+}
+
+/**
+ * Store upload metadata so we can resume with the same video record after refresh
+ */
+export function storeUploadMetadata(
+  file: File,
+  metadata: Omit<StoredUploadMetadata, 'createdAt'>,
+  endpoint?: string
+): void {
+  try {
+    const key = getUploadMetadataKey(file, endpoint)
+    const payload: StoredUploadMetadata = {
+      ...metadata,
+      createdAt: Date.now(),
+    }
+    localStorage.setItem(key, JSON.stringify(payload))
+  } catch {
+    // Silent failure
+  }
+}
+
+/**
+ * Get stored upload metadata for a file (clears stale entries older than 7 days)
+ */
+export function getUploadMetadata(file: File, endpoint?: string): StoredUploadMetadata | null {
+  try {
+    const key = getUploadMetadataKey(file, endpoint)
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+
+    const metadata = JSON.parse(raw) as StoredUploadMetadata
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000
+
+    if (!metadata?.videoId) {
+      localStorage.removeItem(key)
+      return null
+    }
+
+    if (metadata.createdAt && Date.now() - metadata.createdAt > oneWeekMs) {
+      localStorage.removeItem(key)
+      return null
+    }
+
+    return metadata
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Clear upload metadata for a file
+ */
+export function clearUploadMetadata(file: File, endpoint?: string): void {
+  try {
+    const key = getUploadMetadataKey(file, endpoint)
+    localStorage.removeItem(key)
+  } catch {
     // Silent failure
   }
 }

@@ -32,7 +32,7 @@ export function VideoAssetUploadQueue({
   maxConcurrent = 3
 }: VideoAssetUploadQueueProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [category, setCategory] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -53,17 +53,22 @@ export function VideoAssetUploadQueue({
     onUploadComplete,
   })
 
-  const handleFileSelect = (file: File | null) => {
-    setSelectedFile(file)
-    setError(null)
-    if (file) {
-      // Only auto-detect category if user hasn't manually selected one
-      if (!category) {
-        const detectedCategory = detectAssetCategory(file.name)
-        setCategory(detectedCategory)
-      }
-    } else {
+  const handleFileSelect = (files: FileList | File[] | null) => {
+    if (!files || files.length === 0) {
+      setSelectedFiles([])
       setCategory('')
+      setError(null)
+      return
+    }
+
+    const fileArray = Array.from(files)
+    setSelectedFiles(fileArray)
+    setError(null)
+
+    // Auto-detect category from first file if user hasn't manually selected one
+    if (!category && fileArray.length > 0) {
+      const detectedCategory = detectAssetCategory(fileArray[0].name)
+      setCategory(detectedCategory)
     }
   }
 
@@ -76,20 +81,29 @@ export function VideoAssetUploadQueue({
   }
 
   const handleAddToQueue = () => {
-    if (!selectedFile) return
+    if (selectedFiles.length === 0) return
 
-    // Validate file type
-    const validation = validateAssetFile(selectedFile)
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid file type')
+    let hasErrors = false
+    const errors: string[] = []
+
+    // Validate and add all files to queue
+    selectedFiles.forEach(file => {
+      const validation = validateAssetFile(file)
+      if (!validation.valid) {
+        hasErrors = true
+        errors.push(`${file.name}: ${validation.error}`)
+      } else {
+        addToQueue(file, category || '')
+      }
+    })
+
+    if (hasErrors) {
+      setError(errors.join('\n'))
       return
     }
 
-    // Add to queue
-    addToQueue(selectedFile, category || '')
-
     // Reset form
-    setSelectedFile(null)
+    setSelectedFiles([])
     setCategory('')
     setError(null)
 
@@ -118,8 +132,7 @@ export function VideoAssetUploadQueue({
     setIsDragging(false)
 
     if (e.dataTransfer.files.length > 0) {
-      const droppedFile = e.dataTransfer.files[0]
-      handleFileSelect(droppedFile)
+      handleFileSelect(e.dataTransfer.files)
     }
   }
 
@@ -166,13 +179,14 @@ export function VideoAssetUploadQueue({
 
         {/* File Selection */}
         <div className="space-y-2">
-          <Label htmlFor={`asset-file-${videoId}`}>Asset File</Label>
+          <Label htmlFor={`asset-file-${videoId}`}>Asset Files (Multiple)</Label>
           <div className="flex items-center gap-2">
             <Input
               ref={fileInputRef}
               id={`asset-file-${videoId}`}
               type="file"
-              onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+              multiple
+              onChange={(e) => handleFileSelect(e.target.files)}
               className="hidden"
             />
             <Button
@@ -182,18 +196,18 @@ export function VideoAssetUploadQueue({
               className="w-full"
             >
               <Upload className="w-4 h-4 mr-2" />
-              {selectedFile ? 'Change File' : 'Drag & Drop or Click to Choose'}
+              {selectedFiles.length > 0 ? 'Change Files' : 'Drag & Drop or Click to Choose'}
             </Button>
           </div>
-          {selectedFile && (
+          {selectedFiles.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              Selected: {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+              Selected: {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} ({(selectedFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(2)} MB total)
             </p>
           )}
         </div>
 
         {/* Add to Queue Button */}
-        {selectedFile && (
+        {selectedFiles.length > 0 && (
           <Button
             type="button"
             onClick={handleAddToQueue}

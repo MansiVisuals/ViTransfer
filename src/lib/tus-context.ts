@@ -9,15 +9,16 @@
  * Generate TUS fingerprint for a file (matches TUS library format exactly)
  * TUS format: tus-br-{name}-{type}-{size}-{lastModified}-{endpoint}
  */
-export function generateFileFingerprint(file: File, endpoint: string = '/api/uploads'): string {
-  return ['tus-br', file.name, file.type, file.size, file.lastModified, endpoint].join('-')
+export function generateFileFingerprint(file: File, endpoint?: string): string {
+  const tusEndpoint = endpoint || (typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads')
+  return ['tus-br', file.name, file.type, file.size, file.lastModified, tusEndpoint].join('-')
 }
 
 /**
  * Get TUS fingerprint key for a file
  * TUS stores with keys like: "tus::{fingerprint}::..."
  */
-function getTUSFingerprintKey(file: File, endpoint: string = '/api/uploads'): string | null {
+function getTUSFingerprintKey(file: File, endpoint?: string): string | null {
   const fingerprint = generateFileFingerprint(file, endpoint)
 
   for (let i = 0; i < localStorage.length; i++) {

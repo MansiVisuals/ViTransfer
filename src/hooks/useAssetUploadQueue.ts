@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import * as tus from 'tus-js-client'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
+import { ensureFreshUploadOnContextChange, clearFileContext } from '@/lib/tus-context'
 
 export interface QueuedUpload {
   id: string
@@ -87,12 +88,36 @@ export function useAssetUploadQueue({
     }
   }, [queue, maxConcurrent])
 
+  // Warn before leaving page if uploads are in progress
+  useEffect(() => {
+    const hasActiveUploads = queue.some(u =>
+      u.status === 'uploading' || u.status === 'queued' || u.status === 'paused'
+    )
+
+    if (hasActiveUploads) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault()
+        e.returnValue = '' // Chrome requires returnValue to be set
+        return '' // Some browsers use the return value
+      }
+
+      window.addEventListener('beforeunload', handleBeforeUnload)
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+      }
+    }
+  }, [queue])
+
   // Start an upload
   const startUpload = useCallback(async (uploadId: string) => {
     const upload = queueRef.current.find(u => u.id === uploadId)
     if (!upload || upload.status === 'uploading') return
 
     try {
+      // Check if file was uploaded to different video and clear TUS fingerprint if needed
+      ensureFreshUploadOnContextChange(upload.file, videoId)
+
       // Update status to uploading
       setQueue(prev => prev.map(u =>
         u.id === uploadId
@@ -163,6 +188,9 @@ export function useAssetUploadQueue({
 
           uploadRefsMap.current.delete(uploadId)
           assetIdsMap.current.delete(uploadId)
+
+          // Clear file context since upload completed
+          clearFileContext(upload.file)
 
           if (onUploadComplete) {
             onUploadComplete()

@@ -154,9 +154,7 @@ export function VideoAssetUploadItem({
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">
-                {upload.status === 'uploading' && upload.uploadSpeed > 0
-                  ? `${upload.uploadSpeed} MB/s`
-                  : ' '}
+                {upload.status === 'paused' ? 'Paused' : 'Uploading...'}
               </span>
               <span className="font-medium">{upload.progress}%</span>
             </div>
@@ -177,6 +175,21 @@ export function VideoAssetUploadItem({
                 }}
               />
             </div>
+
+            {/* Speed and ETA (match video upload pattern) */}
+            {upload.status === 'uploading' && upload.uploadSpeed > 0 && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Speed: {upload.uploadSpeed} MB/s</span>
+                <span>
+                  {(() => {
+                    const remainingBytes = upload.file.size * (1 - upload.progress / 100)
+                    const seconds = remainingBytes / (upload.uploadSpeed * 1024 * 1024)
+                    const eta = Math.max(0, Math.ceil(seconds))
+                    return eta > 0 ? `Estimated: ${eta} seconds` : 'Estimated: <1 second'
+                  })()}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

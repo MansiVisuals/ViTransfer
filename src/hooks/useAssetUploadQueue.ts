@@ -2,7 +2,14 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import * as tus from 'tus-js-client'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
-import { ensureFreshUploadOnContextChange, clearFileContext } from '@/lib/tus-context'
+import {
+  ensureFreshUploadOnContextChange,
+  clearFileContext,
+  getUploadMetadata,
+  storeUploadMetadata,
+  clearUploadMetadata,
+  clearTUSFingerprint,
+} from '@/lib/tus-context'
 
 export interface QueuedUpload {
   id: string
@@ -116,7 +123,14 @@ export function useAssetUploadQueue({
 
     try {
       // Check if file was uploaded to different video and clear TUS fingerprint if needed
-      ensureFreshUploadOnContextChange(upload.file, videoId)
+      ensureFreshUploadOnContextChange(upload.file, `${videoId}:${upload.category || 'default'}`)
+
+      const existingMetadata = getUploadMetadata(upload.file)
+      const canResumeExisting =
+        existingMetadata?.videoId === videoId &&
+        !!existingMetadata.assetId &&
+        (existingMetadata.category || null) === (upload.category || null)
+      let createdAssetRecord = false
 
       // Update status to uploading
       setQueue(prev => prev.map(u =>
@@ -125,20 +139,33 @@ export function useAssetUploadQueue({
           : u
       ))
 
-      // Create asset record
-      const response = await apiPost(`/api/videos/${videoId}/assets`, {
-        fileName: upload.file.name,
-        fileSize: upload.file.size,
-        category: upload.category || null,
-      })
+      // Create asset record if we don't have one stored
+      let assetId: string
+      if (canResumeExisting) {
+        assetId = existingMetadata!.assetId!
+        assetIdsMap.current.set(uploadId, assetId)
+        storeUploadMetadata(upload.file, {
+          videoId,
+          assetId,
+          category: upload.category,
+        })
+      } else {
+        const response = await apiPost(`/api/videos/${videoId}/assets`, {
+          fileName: upload.file.name,
+          fileSize: upload.file.size,
+          category: upload.category || null,
+        })
 
-      const { assetId } = response
-      assetIdsMap.current.set(uploadId, assetId)
+        assetId = response.assetId
+        assetIdsMap.current.set(uploadId, assetId)
+        createdAssetRecord = true
 
-      // Update with assetId
-      setQueue(prev => prev.map(u =>
-        u.id === uploadId ? { ...u, assetId } : u
-      ))
+        storeUploadMetadata(upload.file, {
+          videoId,
+          assetId,
+          category: upload.category,
+        })
+      }
 
       // Start TUS upload
       const startTime = Date.now()
@@ -174,7 +201,15 @@ export function useAssetUploadQueue({
 
           setQueue(prev => prev.map(u =>
             u.id === uploadId
-              ? { ...u, progress: percentage, uploadSpeed: Math.round(speedMBps * 10) / 10 }
+              ? {
+                  ...u,
+                  progress: percentage,
+                  // Keep last stable speed to avoid flicker between 0 and a value
+                  uploadSpeed:
+                    speedMBps > 0.05
+                      ? Math.round(speedMBps * 10) / 10
+                      : u.uploadSpeed
+                }
               : u
           ))
         },
@@ -191,6 +226,8 @@ export function useAssetUploadQueue({
 
           // Clear file context since upload completed
           clearFileContext(upload.file)
+          clearUploadMetadata(upload.file)
+          clearTUSFingerprint(upload.file)
 
           if (onUploadComplete) {
             onUploadComplete()
@@ -216,13 +253,24 @@ export function useAssetUploadQueue({
             errorMessage = error.message
           }
 
+          const statusCode = (error as any)?.originalResponse?.getStatus?.()
+
           // Clean up asset record on error
-          const assetId = assetIdsMap.current.get(uploadId)
-          if (assetId) {
-            try {
-              await apiDelete(`/api/videos/${videoId}/assets/${assetId}`)
-              assetIdsMap.current.delete(uploadId)
-            } catch {}
+          const currentAssetId = assetIdsMap.current.get(uploadId)
+          if (currentAssetId) {
+            // If resume session is gone, clear local resume data and keep the DB record (user can retry fresh)
+            if (canResumeExisting && (statusCode === 404 || statusCode === 410)) {
+              clearUploadMetadata(upload.file)
+              clearTUSFingerprint(upload.file)
+              errorMessage = 'Upload session expired. Please restart the upload.'
+            } else if (createdAssetRecord) {
+              try {
+                await apiDelete(`/api/videos/${videoId}/assets/${currentAssetId}`)
+              } catch {}
+              clearUploadMetadata(upload.file)
+              clearTUSFingerprint(upload.file)
+            }
+            assetIdsMap.current.delete(uploadId)
           }
 
           setQueue(prev => prev.map(u =>
@@ -245,6 +293,15 @@ export function useAssetUploadQueue({
           }
         },
       })
+
+      const previousUploads = await tusUpload.findPreviousUploads()
+      if (previousUploads.length > 0) {
+        tusUpload.resumeFromPreviousUpload(previousUploads[0])
+      } else if (!createdAssetRecord && canResumeExisting) {
+        // We expected to resume but no session exists; clear stale metadata so next attempt starts fresh
+        clearUploadMetadata(upload.file)
+        clearTUSFingerprint(upload.file)
+      }
 
       uploadRefsMap.current.set(uploadId, tusUpload)
       tusUpload.start()
@@ -300,6 +357,13 @@ export function useAssetUploadQueue({
 
     // Remove from queue
     setQueue(prev => prev.filter(u => u.id !== uploadId))
+
+    const upload = queueRef.current.find(u => u.id === uploadId)
+    if (upload) {
+      clearUploadMetadata(upload.file)
+      clearTUSFingerprint(upload.file)
+      clearFileContext(upload.file)
+    }
 
     // useEffect will auto-start next queued upload
   }, [videoId])

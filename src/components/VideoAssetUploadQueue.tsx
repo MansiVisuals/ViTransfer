@@ -144,13 +144,6 @@ export function VideoAssetUploadQueue({
           </div>
         )}
 
-        {/* Info message - categories are auto-detected */}
-        <div className="p-3 bg-muted/50 border border-muted rounded-md">
-          <p className="text-sm text-muted-foreground">
-            <strong>Note:</strong> File categories are automatically detected based on file type. You can select multiple files of different types (images, videos, documents, etc.)
-          </p>
-        </div>
-
         {/* File Selection */}
         <div className="space-y-2">
           <Label htmlFor={`asset-file-${videoId}`}>Asset Files (Multiple)</Label>

@@ -24,6 +24,11 @@ interface MessageBubbleProps {
   formatMessageTime: (date: Date) => string
   commentsDisabled: boolean
   isViewerMessage: boolean // Is this the viewer's own message?
+  // Props for extended bubble with replies
+  replies?: Comment[]
+  repliesExpanded?: boolean
+  onToggleReplies?: () => void
+  onDeleteReply?: (replyId: string) => void
 }
 
 /**
@@ -56,7 +61,12 @@ export default function MessageBubble({
   formatMessageTime,
   commentsDisabled,
   isViewerMessage,
+  replies,
+  repliesExpanded,
+  onToggleReplies,
+  onDeleteReply,
 }: MessageBubbleProps) {
+  const hasReplies = replies && replies.length > 0
   // Determine which company name to show
   const displayCompanyName = isStudio ? studioCompanyName : clientCompanyName
 
@@ -102,7 +112,7 @@ export default function MessageBubble({
 
   return (
     <div className={`flex ${alignment} w-full`} id={`comment-${comment.id}`}>
-      <div className="max-w-[85%] md:max-w-[75%]">
+      <div className={isViewerMessage ? "max-w-[90%]" : "max-w-[90%]"}>
         {/* Name and company header */}
         <div className={`flex ${headerAlign} items-center gap-2 mb-1 px-1`}>
           <span className="text-sm font-semibold text-foreground">
@@ -118,9 +128,8 @@ export default function MessageBubble({
 
         {/* Message Card with colored left border */}
         <div className={`${bubbleBg} ${borderColor} border-l-4 rounded-lg p-3 shadow-sm`}>
-          {/* Reply Preview at top if replying */}
+          {/* Simple reply indicator */}
           {isReply && parentComment && (() => {
-            // Get effective parent author name
             const parentEffectiveName = parentComment.authorName ||
               (parentComment.isInternal && (parentComment as any).user ?
                 ((parentComment as any).user.name || (parentComment as any).user.email) :
@@ -129,25 +138,16 @@ export default function MessageBubble({
             return (
               <div
                 onClick={() => onScrollToComment?.(parentComment.id)}
-                className="mb-2 pb-2 border-b border-gray-400/60 dark:border-gray-500/60 cursor-pointer hover:opacity-80 transition-opacity"
+                className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground/70 cursor-pointer hover:text-muted-foreground transition-colors"
               >
-                <div className="flex items-start gap-1.5">
-                  <CornerDownRight className="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-600 dark:text-gray-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold mb-0.5 text-gray-700 dark:text-gray-300">
-                      Replying to {parentEffectiveName || 'Anonymous'}
-                    </p>
-                    <p className="text-xs line-clamp-2 leading-snug text-gray-600 dark:text-gray-400">
-                      {parentComment.content}
-                    </p>
-                  </div>
-                </div>
+                <CornerDownRight className="w-3 h-3" />
+                <span>Reply to {parentEffectiveName || 'Anonymous'}</span>
               </div>
             )
           })()}
 
-          {/* Timecode Badge (if present) */}
-          {comment.timecode && (
+          {/* Timecode Badge (only for parent comments, not replies) */}
+          {!isReply && comment.timecode && (
             <button
               onClick={handleTimestampClick}
               className="flex items-center gap-1 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -165,6 +165,67 @@ export default function MessageBubble({
             className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${textColor}`}
             dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.content) }}
           />
+
+          {/* Replies Section - Extends parent bubble */}
+          {hasReplies && (
+            <div className="mt-3 pt-3 border-t border-gray-300/40 dark:border-gray-600/40">
+              {/* Collapsible Header */}
+              <button
+                onClick={onToggleReplies}
+                className="flex items-center justify-between w-full mb-2 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity"
+              >
+                <span className={textColor}>
+                  {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
+                </span>
+                <span className={textColor}>{repliesExpanded ? '▼' : '▶'}</span>
+              </button>
+
+              {/* Reply List */}
+              {repliesExpanded && (
+                <div className="space-y-3">
+                  {replies.map((reply) => {
+                    const replyIsViewerMessage = reply.isInternal === comment.isInternal
+                    const replyEffectiveName = reply.authorName ||
+                      (reply.isInternal && (reply as any).user ?
+                        ((reply as any).user.name || (reply as any).user.email) :
+                        null)
+
+                    return (
+                      <div key={reply.id} className="pl-3">
+                        {/* Reply Author */}
+                        <div className="flex items-center gap-2 mb-1">
+                          <CornerDownRight className="w-3 h-3 opacity-50" />
+                          <span className="text-xs font-semibold opacity-80">
+                            {replyEffectiveName || 'Anonymous'}
+                          </span>
+                          <span className="text-xs opacity-50">
+                            {formatMessageTime(reply.createdAt)}
+                          </span>
+                          {onDeleteReply && (
+                            <>
+                              <span className="text-xs opacity-30">•</span>
+                              <button
+                                onClick={() => onDeleteReply(reply.id)}
+                                className="text-xs opacity-50 hover:opacity-100 hover:text-destructive transition-all flex items-center gap-1"
+                                title="Delete reply"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {/* Reply Content */}
+                        <div
+                          className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${textColor}`}
+                          dangerouslySetInnerHTML={{ __html: sanitizeContent(reply.content) }}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Message Time, Reply & Delete Buttons - Below card */}

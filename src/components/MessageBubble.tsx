@@ -1,7 +1,7 @@
 'use client'
 
 import { Comment } from '@prisma/client'
-import { Clock, Trash2, CornerDownRight } from 'lucide-react'
+import { Clock, Trash2, CornerDownRight, ChevronDown, ChevronRight } from 'lucide-react'
 import { getUserColor } from '@/lib/utils'
 import { timecodeToSeconds, formatTimecodeDisplay } from '@/lib/timecode'
 import DOMPurify from 'dompurify'
@@ -177,7 +177,11 @@ export default function MessageBubble({
                 <span className={textColor}>
                   {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
                 </span>
-                <span className={textColor}>{repliesExpanded ? '▼' : '▶'}</span>
+                {repliesExpanded ? (
+                  <ChevronDown className={`w-3 h-3 ${textColor}`} />
+                ) : (
+                  <ChevronRight className={`w-3 h-3 ${textColor}`} />
+                )}
               </button>
 
               {/* Reply List */}

@@ -174,27 +174,18 @@ export default function CommentSection({
     return mergedComments.filter(comment => comment.videoId === selectedVideoId)
   })()
 
-  // Flatten ALL messages (parents + replies) and sort chronologically
-  // This makes it feel like a real chat where replies appear at the bottom
-  const flattenedMessages: Array<{ comment: CommentWithReplies; isReply: boolean }> = []
-
-  displayComments.forEach(comment => {
-    // Add parent comment
-    flattenedMessages.push({ comment, isReply: false })
-
-    // Add all replies
-    if (comment.replies && comment.replies.length > 0) {
-      comment.replies.forEach((reply: any) => {
-        flattenedMessages.push({ comment: reply, isReply: true })
-      })
-    }
+  // Sort top-level comments chronologically
+  const sortedComments = [...displayComments].sort((a, b) => {
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   })
 
-  // Sort ALL messages chronologically (parents and replies mixed)
-  flattenedMessages.sort((a, b) => {
-    const timeA = new Date(a.comment.createdAt).getTime()
-    const timeB = new Date(b.comment.createdAt).getTime()
-    return timeA - timeB
+  // Sort replies under each parent chronologically
+  sortedComments.forEach(comment => {
+    if (comment.replies && comment.replies.length > 0) {
+      comment.replies.sort((a: Comment, b: Comment) => {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      })
+    }
   })
 
   // Auto-scroll to bottom when new comments appear
@@ -220,6 +211,16 @@ export default function CommentSection({
     : undefined
 
   const replyingToComment = mergedComments.find(c => c.id === replyingToCommentId) || null
+
+  // Track which comments have expanded replies (default: all expanded)
+  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
+
+  const toggleReplies = (commentId: string) => {
+    setExpandedReplies(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }))
+  }
 
   // Format message time
   const formatMessageTime = (date: Date) => {
@@ -307,40 +308,63 @@ export default function CommentSection({
           </div>
         )}
 
-        {/* Messages Area - Chat Style */}
+        {/* Messages Area - Threaded Conversations */}
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-gray-50 dark:bg-gray-900/30">
-          {flattenedMessages.length === 0 ? (
+          {sortedComments.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
             </div>
           ) : (
             <>
-              {flattenedMessages.map(({ comment, isReply }) => {
-                const parentComment = isReply && comment.parentId
-                  ? mergedComments.find(c => c.id === comment.parentId)
-                  : null
-
-                // Viewer's own messages: admin sees their internal messages, client sees their non-internal messages
+              {sortedComments.map((comment) => {
                 const isViewerMessage = isAdminView ? comment.isInternal : !comment.isInternal
+                const hasReplies = comment.replies && comment.replies.length > 0
+                const repliesExpanded = expandedReplies[comment.id] ?? true // Default to expanded
 
                 return (
-                  <MessageBubble
-                    key={comment.id}
-                    comment={comment}
-                    isReply={isReply}
-                    isStudio={comment.isInternal}
-                    studioCompanyName={companyName}
-                    clientCompanyName={clientCompanyName}
-                    parentComment={parentComment}
-                    onReply={!isReply ? () => handleReply(comment.id, comment.videoId) : undefined}
-                    onSeekToTimestamp={handleSeekToTimestamp}
-                    onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
-                    onScrollToComment={handleScrollToComment}
-                    formatMessageTime={formatMessageTime}
-                    commentsDisabled={commentsDisabled}
-                    isViewerMessage={isViewerMessage}
-                  />
+                  <div key={comment.id}>
+                    {/* Parent Bubble that extends with replies */}
+                    {!hasReplies ? (
+                      // No replies - use normal MessageBubble
+                      <MessageBubble
+                        comment={comment}
+                        isReply={false}
+                        isStudio={comment.isInternal}
+                        studioCompanyName={companyName}
+                        clientCompanyName={clientCompanyName}
+                        parentComment={null}
+                        onReply={() => handleReply(comment.id, comment.videoId)}
+                        onSeekToTimestamp={handleSeekToTimestamp}
+                        onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
+                        onScrollToComment={handleScrollToComment}
+                        formatMessageTime={formatMessageTime}
+                        commentsDisabled={commentsDisabled}
+                        isViewerMessage={isViewerMessage}
+                      />
+                    ) : (
+                      // Has replies - render extended bubble
+                      <MessageBubble
+                        comment={comment}
+                        isReply={false}
+                        isStudio={comment.isInternal}
+                        studioCompanyName={companyName}
+                        clientCompanyName={clientCompanyName}
+                        parentComment={null}
+                        onReply={() => handleReply(comment.id, comment.videoId)}
+                        onSeekToTimestamp={handleSeekToTimestamp}
+                        onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
+                        onScrollToComment={handleScrollToComment}
+                        formatMessageTime={formatMessageTime}
+                        commentsDisabled={commentsDisabled}
+                        isViewerMessage={isViewerMessage}
+                        replies={comment.replies}
+                        repliesExpanded={repliesExpanded}
+                        onToggleReplies={() => toggleReplies(comment.id)}
+                        onDeleteReply={isAdminView ? handleDeleteComment : undefined}
+                      />
+                    )}
+                  </div>
                 )
               })}
               {/* Invisible anchor for auto-scroll */}

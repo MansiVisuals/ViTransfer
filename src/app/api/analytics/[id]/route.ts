@@ -57,6 +57,13 @@ export async function GET(
                 name: true,
                 versionLabel: true,
                 originalFileName: true,
+                assets: {
+                  select: {
+                    id: true,
+                    fileName: true,
+                    category: true,
+                  },
+                },
               },
             },
           },
@@ -128,15 +135,34 @@ export async function GET(
       createdAt: access.createdAt,
     }))
 
-    const downloadEvents = project.analytics.map(download => ({
-      id: download.id,
-      type: 'DOWNLOAD' as const,
-      videoName: download.video.name,
-      versionLabel: download.video.versionLabel,
-      assetId: download.assetId,
-      assetIds: download.assetIds ? JSON.parse(download.assetIds) : undefined,
-      createdAt: download.createdAt,
-    }))
+    const downloadEvents = project.analytics.map(download => {
+      let assetFileName: string | undefined
+      let assetFileNames: string[] | undefined
+
+      if (download.assetId) {
+        // Single asset download
+        const asset = download.video.assets.find(a => a.id === download.assetId)
+        assetFileName = asset?.fileName
+      } else if (download.assetIds) {
+        // Multiple asset download (ZIP)
+        const assetIdArray = JSON.parse(download.assetIds) as string[]
+        assetFileNames = assetIdArray
+          .map(id => download.video.assets.find(a => a.id === id)?.fileName)
+          .filter((name): name is string => !!name)
+      }
+
+      return {
+        id: download.id,
+        type: 'DOWNLOAD' as const,
+        videoName: download.video.name,
+        versionLabel: download.video.versionLabel,
+        assetId: download.assetId,
+        assetIds: download.assetIds ? JSON.parse(download.assetIds) : undefined,
+        assetFileName,
+        assetFileNames,
+        createdAt: download.createdAt,
+      }
+    })
 
     // Merge and sort all activity by timestamp (newest first)
     const allActivity = [...authEvents, ...downloadEvents].sort(

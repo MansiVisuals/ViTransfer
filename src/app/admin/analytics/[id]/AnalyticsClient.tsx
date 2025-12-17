@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft, Mail, Lock, UserCircle, Users, Globe } from 'lucide-react'
+import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft, Mail, Lock, UserCircle, Users, Globe, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
 
@@ -33,6 +33,8 @@ interface DownloadActivity {
   versionLabel: string
   assetId?: string | null
   assetIds?: string[]
+  assetFileName?: string
+  assetFileNames?: string[]
   createdAt: Date
 }
 
@@ -63,19 +65,27 @@ interface AnalyticsData {
 }
 
 function getAccessMethodColor(method: string): string {
-  const map: Record<string, string> = {
-    'OTP': 'bg-primary-visible text-primary border-2 border-primary-visible',
-    'PASSWORD': 'bg-warning-visible text-warning border-2 border-warning-visible',
-    'GUEST': 'bg-muted text-muted-foreground border-2 border-border',
-    'NONE': 'bg-success-visible text-success border-2 border-success-visible',
-  }
-  return map[method] || 'bg-muted text-muted-foreground border border-border'
+  // All auth/visit events use primary (blue) color for easy visual distinction from downloads
+  return 'bg-primary-visible text-primary border-2 border-primary-visible'
 }
 
 export default function AnalyticsClient({ id }: { id: string }) {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+
+  const toggleExpand = (itemId: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -243,39 +253,114 @@ export default function AnalyticsClient({ id }: { id: string }) {
               {activity.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No activity yet</p>
               ) : (
-                <div className="space-y-2 overflow-y-auto">
-                  {activity.map((event) => (
-                    <div key={event.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border text-sm">
-                      {event.type === 'AUTH' ? (
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${getAccessMethodColor(event.accessMethod)}`}>
-                            {event.accessMethod}
+                <div className="space-y-2">
+                  {activity.map((event) => {
+                    const isExpanded = expandedItems.has(event.id)
+                    return (
+                      <div
+                        key={event.id}
+                        className="rounded-lg border text-sm hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => toggleExpand(event.id)}
+                      >
+                        <div className="flex items-center gap-3 p-3">
+                          {/* Badge - left aligned */}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${event.type === 'AUTH' ? getAccessMethodColor(event.accessMethod) : 'bg-success-visible text-success border-2 border-success-visible'}`}>
+                            {event.type === 'AUTH' ? (
+                              event.accessMethod === 'OTP' ? 'Email OTP' :
+                              event.accessMethod === 'PASSWORD' ? 'Password' :
+                              event.accessMethod === 'GUEST' ? 'Guest Access' :
+                              'Public Access'
+                            ) : (
+                              <>
+                                <Download className="w-3 h-3 inline mr-1" />
+                                {event.assetIds ? 'ZIP' : event.assetId ? 'Asset' : 'Video'}
+                              </>
+                            )}
                           </span>
-                          {event.email && (
-                            <div className="truncate min-w-0">
-                              <span className="text-muted-foreground">{event.email}</span>
-                            </div>
+
+                          {/* Text - centered, grows to fill space */}
+                          <div className="flex-1 min-w-0 flex items-center justify-center">
+                            <span className="text-muted-foreground text-sm truncate">
+                              {event.type === 'AUTH' ? (
+                                event.email ? (
+                                  isExpanded ? event.email : `${event.email.substring(0, 20)}${event.email.length > 20 ? '...' : ''}`
+                                ) : (
+                                  event.accessMethod === 'GUEST' ? 'Guest visitor' : 'Public visitor'
+                                )
+                              ) : (
+                                isExpanded ? event.videoName : `${event.videoName.substring(0, 25)}${event.videoName.length > 25 ? '...' : ''}`
+                              )}
+                            </span>
+                          </div>
+
+                          {/* Date/Time - before chevron */}
+                          <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                            {formatDateTime(event.createdAt)}
+                          </div>
+
+                          {/* Chevron - right aligned */}
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           )}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 bg-success-visible text-success border-2 border-success-visible">
-                            <Download className="w-3 h-3 inline mr-1" />
-                            {event.assetIds ? 'ZIP' : event.assetId ? 'ASSET' : 'VIDEO'}
-                          </span>
-                          <div className="truncate min-w-0">
-                            <span className="text-muted-foreground">{event.videoName} - {event.versionLabel}</span>
+
+                        {isExpanded && (
+                          <div className="px-4 pb-4 pt-3 border-t bg-muted/30">
+                            {event.type === 'AUTH' ? (
+                              <div className="space-y-2">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-semibold text-foreground min-w-[80px]">Action</span>
+                                  <span className="text-sm text-muted-foreground">Accessed the project</span>
+                                </div>
+                                {event.email && (
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs font-semibold text-foreground min-w-[80px]">Email</span>
+                                    <span className="text-sm text-muted-foreground break-all">{event.email}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-semibold text-foreground min-w-[80px]">Video</span>
+                                  <span className="text-sm text-muted-foreground">{event.videoName} ({event.versionLabel})</span>
+                                </div>
+
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-semibold text-foreground min-w-[80px]">Content</span>
+                                  <div className="flex-1">
+                                    {event.assetFileNames && event.assetFileNames.length > 0 ? (
+                                      <div>
+                                        <p className="text-sm text-muted-foreground mb-2">
+                                          ZIP archive with {event.assetFileNames.length} asset{event.assetFileNames.length !== 1 ? 's' : ''}
+                                        </p>
+                                        <div className="space-y-1 pl-3 border-l-2 border-border">
+                                          {event.assetFileNames.map((fileName, idx) => (
+                                            <div key={idx} className="text-sm text-muted-foreground break-all font-mono text-xs">
+                                              {fileName}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : event.assetFileName ? (
+                                      <div className="text-sm text-muted-foreground">
+                                        <p className="mb-1">Single asset file</p>
+                                        <p className="font-mono text-xs break-all pl-3 border-l-2 border-border">{event.assetFileName}</p>
+                                      </div>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground">Full video file</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                      <div className="text-left sm:text-right flex-shrink-0">
-                        <div className="text-xs text-muted-foreground flex items-center gap-1 sm:justify-end">
-                          <Calendar className="w-3 h-3" />
-                          <span className="whitespace-nowrap">{formatDateTime(event.createdAt)}</span>
-                        </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>

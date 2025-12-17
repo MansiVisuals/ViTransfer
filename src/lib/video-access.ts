@@ -292,8 +292,10 @@ export async function trackVideoAccess(params: {
   quality: string
   bandwidth?: number
   eventType: 'PAGE_VISIT' | 'DOWNLOAD_COMPLETE'
+  assetId?: string // Single asset download
+  assetIds?: string[] // Multiple assets downloaded as ZIP
 }) {
-  const { videoId, projectId, bandwidth, eventType, sessionId } = params
+  const { videoId, projectId, bandwidth, eventType, sessionId, assetId, assetIds } = params
 
   const settings = await getSecuritySettings()
   if (!settings.trackAnalytics) {
@@ -310,6 +312,8 @@ export async function trackVideoAccess(params: {
       videoId,
       projectId,
       eventType,
+      assetId,
+      assetIds: assetIds ? JSON.stringify(assetIds) : undefined,
     }
   })
 }

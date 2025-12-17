@@ -4,7 +4,7 @@ import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
-import { logSecurityEvent } from '@/lib/video-access'
+import { logSecurityEvent, trackVideoAccess } from '@/lib/video-access'
 import archiver from 'archiver'
 import { Readable } from 'stream'
 
@@ -52,7 +52,7 @@ export async function GET(
     }
 
     const tokenData = JSON.parse(rawTokenData)
-    const { videoId, projectId, assetIds } = tokenData
+    const { videoId, projectId, assetIds, sessionId } = tokenData
 
     // Get video with project
     const video = await prisma.video.findUnique({
@@ -74,6 +74,19 @@ export async function GET(
 
     if (assets.length === 0) {
       return NextResponse.json({ error: 'No valid assets found' }, { status: 404 })
+    }
+
+    // Track download analytics (sessionId check handles admin filtering automatically)
+    if (sessionId) {
+      await trackVideoAccess({
+        videoId,
+        projectId,
+        sessionId,
+        request,
+        quality: 'assets',
+        eventType: 'DOWNLOAD_COMPLETE',
+        assetIds: assetIds,
+      }).catch(() => {})
     }
 
     // Create ZIP archive with streaming (no memory buffer)

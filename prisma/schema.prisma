@@ -360,11 +360,18 @@ model VideoAnalytics {
   // Event types: PAGE_VISIT, DOWNLOAD_COMPLETE
   eventType String
 
+  // Optional: Single asset ID for individual asset downloads
+  assetId String?
+
+  // Optional: Multiple asset IDs for ZIP downloads (JSON array)
+  assetIds String?
+
   createdAt DateTime @default(now())
 
   @@index([projectId, createdAt])
   @@index([videoId, createdAt])
   @@index([eventType])
+  @@index([assetId])
 }
 
 model SharePageAccess {

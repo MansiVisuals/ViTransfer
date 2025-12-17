@@ -257,7 +257,8 @@ export async function GET(
             request,
             quality: verifiedToken.quality,
             bandwidth: stat.size,
-            eventType: 'DOWNLOAD_COMPLETE'
+            eventType: 'DOWNLOAD_COMPLETE',
+            assetId: assetId || undefined,
           }).catch(() => {})
         }
       }

@@ -46,7 +46,6 @@ export async function GET(
         },
         sharePageAccesses: {
           orderBy: { createdAt: 'desc' },
-          take: 20,
         },
         analytics: {
           where: { eventType: 'DOWNLOAD_COMPLETE' },
@@ -120,13 +119,29 @@ export async function GET(
 
     const totalDownloads = project.analytics.length
 
-    // Recent access activity (authentication events)
-    const recentAccesses = project.sharePageAccesses.map(access => ({
+    // Combine authentication events and download events into single activity feed
+    const authEvents = project.sharePageAccesses.map(access => ({
       id: access.id,
+      type: 'AUTH' as const,
       accessMethod: access.accessMethod,
       email: access.email,
       createdAt: access.createdAt,
     }))
+
+    const downloadEvents = project.analytics.map(download => ({
+      id: download.id,
+      type: 'DOWNLOAD' as const,
+      videoName: download.video.name,
+      versionLabel: download.video.versionLabel,
+      assetId: download.assetId,
+      assetIds: download.assetIds ? JSON.parse(download.assetIds) : undefined,
+      createdAt: download.createdAt,
+    }))
+
+    // Merge and sort all activity by timestamp (newest first)
+    const allActivity = [...authEvents, ...downloadEvents].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
 
     const displayName = project.companyName || project.recipients[0]?.name || project.recipients[0]?.email || 'Client'
 
@@ -139,14 +154,14 @@ export async function GET(
         status: project.status,
       },
       stats: {
-        totalAccesses: project.sharePageAccesses.length,
-        uniqueAccesses: uniqueSessions,
+        totalVisits: project.sharePageAccesses.length,
+        uniqueVisits: uniqueSessions,
         accessByMethod,
         totalDownloads,
         videoCount: project.videos.length,
       },
       videoStats,
-      recentAccesses,
+      activity: allActivity,
     })
   } catch (error) {
     return NextResponse.json(

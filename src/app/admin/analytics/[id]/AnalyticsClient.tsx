@@ -18,12 +18,25 @@ interface VideoStats {
   }>
 }
 
-interface RecentAccess {
+interface AuthActivity {
   id: string
+  type: 'AUTH'
   accessMethod: 'OTP' | 'PASSWORD' | 'GUEST' | 'NONE'
   email: string | null
   createdAt: Date
 }
+
+interface DownloadActivity {
+  id: string
+  type: 'DOWNLOAD'
+  videoName: string
+  versionLabel: string
+  assetId?: string | null
+  assetIds?: string[]
+  createdAt: Date
+}
+
+type Activity = AuthActivity | DownloadActivity
 
 interface AnalyticsData {
   project: {
@@ -34,8 +47,8 @@ interface AnalyticsData {
     status: string
   }
   stats: {
-    totalAccesses: number
-    uniqueAccesses: number
+    totalVisits: number
+    uniqueVisits: number
     accessByMethod: {
       OTP: number
       PASSWORD: number
@@ -46,7 +59,7 @@ interface AnalyticsData {
     videoCount: number
   }
   videoStats: VideoStats[]
-  recentAccesses: RecentAccess[]
+  activity: Activity[]
 }
 
 function getAccessMethodColor(method: string): string {
@@ -106,7 +119,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
     )
   }
 
-  const { project, stats, videoStats, recentAccesses } = data
+  const { project, stats, videoStats, activity } = data
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,24 +143,24 @@ export default function AnalyticsClient({ id }: { id: string }) {
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Accesses</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Visits</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalAccesses.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{stats.totalVisits.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.uniqueAccesses} unique sessions
+                {stats.uniqueVisits} unique sessions
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unique Users</CardTitle>
+              <CardTitle className="text-sm font-medium">Unique Visitors</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.uniqueAccesses.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{stats.uniqueVisits.toLocaleString()}</div>
             </CardContent>
           </Card>
 
@@ -168,55 +181,6 @@ export default function AnalyticsClient({ id }: { id: string }) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.videoCount}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mb-6 sm:mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Access Methods</CardTitle>
-              <CardDescription>How clients authenticated to view this project</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary-visible rounded-md">
-                    <Mail className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Email OTP</p>
-                    <p className="text-lg font-bold">{stats.accessByMethod.OTP}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-warning-visible rounded-md">
-                    <Lock className="w-4 h-4 text-warning" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Password</p>
-                    <p className="text-lg font-bold">{stats.accessByMethod.PASSWORD}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-muted rounded-md">
-                    <UserCircle className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Guest</p>
-                    <p className="text-lg font-bold">{stats.accessByMethod.GUEST}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-success-visible rounded-md">
-                    <Globe className="w-4 h-4 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Public</p>
-                    <p className="text-lg font-bold">{stats.accessByMethod.NONE}</p>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -272,30 +236,42 @@ export default function AnalyticsClient({ id }: { id: string }) {
 
           <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle>Recent Access Activity</CardTitle>
-              <CardDescription>Last 20 authentication events</CardDescription>
+              <CardTitle>Project Activity</CardTitle>
+              <CardDescription>All authentication and download events</CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-hidden">
-              {recentAccesses.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No access events yet</p>
+              {activity.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No activity yet</p>
               ) : (
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {recentAccesses.map((access) => (
-                    <div key={access.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border text-sm">
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${getAccessMethodColor(access.accessMethod)}`}>
-                          {access.accessMethod}
-                        </span>
-                        {access.email && (
+                <div className="space-y-2 overflow-y-auto">
+                  {activity.map((event) => (
+                    <div key={event.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border text-sm">
+                      {event.type === 'AUTH' ? (
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${getAccessMethodColor(event.accessMethod)}`}>
+                            {event.accessMethod}
+                          </span>
+                          {event.email && (
+                            <div className="truncate min-w-0">
+                              <span className="text-muted-foreground">{event.email}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 bg-success-visible text-success border-2 border-success-visible">
+                            <Download className="w-3 h-3 inline mr-1" />
+                            {event.assetIds ? 'ZIP' : event.assetId ? 'ASSET' : 'VIDEO'}
+                          </span>
                           <div className="truncate min-w-0">
-                            <span className="text-muted-foreground">{access.email}</span>
+                            <span className="text-muted-foreground">{event.videoName} - {event.versionLabel}</span>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <div className="text-left sm:text-right flex-shrink-0">
                         <div className="text-xs text-muted-foreground flex items-center gap-1 sm:justify-end">
                           <Calendar className="w-3 h-3" />
-                          <span className="whitespace-nowrap">{formatDateTime(access.createdAt)}</span>
+                          <span className="whitespace-nowrap">{formatDateTime(event.createdAt)}</span>
                         </div>
                       </div>
                     </div>

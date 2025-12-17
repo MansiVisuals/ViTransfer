@@ -14,8 +14,8 @@ interface ProjectAnalytics {
   recipientEmail: string | null
   status: string
   videoCount: number
-  totalAccesses: number
-  uniqueAccesses: number
+  totalVisits: number
+  uniqueVisits: number
   accessByMethod: {
     OTP: number
     PASSWORD: number
@@ -51,7 +51,7 @@ export default function AnalyticsDashboard() {
 
   // Calculate aggregate stats
   const totalProjects = projects.length
-  const totalAccesses = projects.reduce((sum, p) => sum + p.totalAccesses, 0)
+  const totalVisits = projects.reduce((sum, p) => sum + p.totalVisits, 0)
   const totalDownloads = projects.reduce((sum, p) => sum + p.totalDownloads, 0)
   const totalVideos = projects.reduce((sum, p) => sum + p.videoCount, 0)
 
@@ -106,10 +106,10 @@ export default function AnalyticsDashboard() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Accesses</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Visits</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalAccesses.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{totalVisits.toLocaleString()}</div>
             </CardContent>
           </Card>
 
@@ -233,8 +233,8 @@ export default function AnalyticsDashboard() {
                           <Eye className="w-4 h-4 text-primary" />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Accesses</p>
-                          <p className="text-lg font-bold">{project.totalAccesses}</p>
+                          <p className="text-xs text-muted-foreground">Visits</p>
+                          <p className="text-lg font-bold">{project.totalVisits}</p>
                         </div>
                       </div>
 

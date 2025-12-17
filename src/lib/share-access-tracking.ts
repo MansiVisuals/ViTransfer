@@ -4,7 +4,7 @@ import { getSecuritySettings } from './video-access'
 
 export async function trackSharePageAccess(params: {
   projectId: string
-  accessMethod: 'OTP' | 'PASSWORD' | 'GUEST'
+  accessMethod: 'OTP' | 'PASSWORD' | 'GUEST' | 'NONE'
   email?: string
   sessionId: string
   request: NextRequest

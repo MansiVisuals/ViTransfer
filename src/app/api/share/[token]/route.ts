@@ -74,7 +74,8 @@ export async function GET(
     const { isAdmin } = accessCheck
 
     // Track share page access for projects with no authentication (authMode = NONE)
-    if (projectMeta.authMode === 'NONE' && !isAdmin) {
+    // Only track as NONE if guest mode is disabled; otherwise let guest endpoint track as GUEST
+    if (projectMeta.authMode === 'NONE' && !projectMeta.guestMode && !isAdmin) {
       // Use Redis for 30-minute deduplication
       const redis = getRedis()
       const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] ||

@@ -44,7 +44,12 @@ export async function GET(
           where: { isPrimary: true },
           take: 1,
         },
+        sharePageAccesses: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        },
         analytics: {
+          where: { eventType: 'DOWNLOAD_COMPLETE' },
           orderBy: { createdAt: 'desc' },
           include: {
             video: {
@@ -83,14 +88,12 @@ export async function GET(
 
       // Get all analytics for these video IDs
       const videoAnalytics = project.analytics.filter(a => videoIds.includes(a.videoId))
-      const totalDownloads = videoAnalytics.filter(a => a.eventType === 'DOWNLOAD_COMPLETE').length
-      const totalPageVisits = videoAnalytics.filter(a => a.eventType === 'PAGE_VISIT').length
-      const lastAccessed = videoAnalytics[0]?.createdAt || null
+      const totalDownloads = videoAnalytics.length
 
       // Per-version breakdown
       const versionStats = versions.map(version => {
         const versionAnalytics = project.analytics.filter(a => a.videoId === version.id)
-        const downloads = versionAnalytics.filter(a => a.eventType === 'DOWNLOAD_COMPLETE').length
+        const downloads = versionAnalytics.length
         return {
           id: version.id,
           versionLabel: version.versionLabel,
@@ -101,21 +104,27 @@ export async function GET(
       return {
         videoName,
         totalDownloads,
-        totalPageVisits,
-        lastAccessed,
         versions: versionStats,
       }
     })
 
-    const totalPageVisits = project.analytics.filter(a => a.eventType === 'PAGE_VISIT').length
-    const totalDownloads = project.analytics.filter(a => a.eventType === 'DOWNLOAD_COMPLETE').length
+    // Calculate share page access stats
+    const uniqueSessions = new Set(project.sharePageAccesses.map(a => a.sessionId)).size
 
-    const recentActivity = project.analytics.slice(0, 20).map(event => ({
-      id: event.id,
-      eventType: event.eventType,
-      videoName: event.video?.name || 'Unknown',
-      videoLabel: event.video?.versionLabel || 'Unknown',
-      createdAt: event.createdAt,
+    const accessByMethod = {
+      OTP: project.sharePageAccesses.filter(a => a.accessMethod === 'OTP').length,
+      PASSWORD: project.sharePageAccesses.filter(a => a.accessMethod === 'PASSWORD').length,
+      GUEST: project.sharePageAccesses.filter(a => a.accessMethod === 'GUEST').length,
+    }
+
+    const totalDownloads = project.analytics.length
+
+    // Recent access activity (authentication events)
+    const recentAccesses = project.sharePageAccesses.map(access => ({
+      id: access.id,
+      accessMethod: access.accessMethod,
+      email: access.email,
+      createdAt: access.createdAt,
     }))
 
     const displayName = project.companyName || project.recipients[0]?.name || project.recipients[0]?.email || 'Client'
@@ -129,12 +138,14 @@ export async function GET(
         status: project.status,
       },
       stats: {
-        totalPageVisits,
+        totalAccesses: project.sharePageAccesses.length,
+        uniqueAccesses: uniqueSessions,
+        accessByMethod,
         totalDownloads,
         videoCount: project.videos.length,
       },
       videoStats,
-      recentActivity,
+      recentAccesses,
     })
   } catch (error) {
     return NextResponse.json(

@@ -78,6 +78,7 @@ model Project {
   analytics         VideoAnalytics[]
   recipients        ProjectRecipient[] // Multiple email recipients
   notificationQueue NotificationQueue[] // Pending notifications
+  sharePageAccesses SharePageAccess[] // Share page authentication tracking
 }
 
 enum ProjectStatus {
@@ -364,6 +365,32 @@ model VideoAnalytics {
   @@index([projectId, createdAt])
   @@index([videoId, createdAt])
   @@index([eventType])
+}
+
+model SharePageAccess {
+  id String @id @default(cuid())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Authentication method used: OTP, PASSWORD, GUEST
+  accessMethod String
+
+  // Email address (only for OTP authentication)
+  email String?
+
+  // JWT session ID for unique session tracking
+  sessionId String
+
+  // Client metadata
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([projectId, accessMethod])
+  @@index([sessionId])
 }
 
 model PasskeyCredential {

@@ -47,7 +47,6 @@ export default function SharePage() {
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
-  const visitLoggedRef = useRef(false)
   const storageKey = token || ''
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
 
@@ -374,30 +373,6 @@ export default function SharePage() {
       isMounted = false
     }
   }, [activeVideosRaw, shareToken])
-
-  // Record analytics visit once per page load (deduped server-side)
-  useEffect(() => {
-    if (visitLoggedRef.current) return
-    if (!token || !project?.id || !activeVideoName || !shareToken) return
-
-    const videosForActive = project.videosByName?.[activeVideoName]
-    if (!videosForActive || videosForActive.length === 0) return
-
-    const targetVideoId = videosForActive[0]?.id
-    if (!targetVideoId) return
-
-    visitLoggedRef.current = true
-    fetch('/api/analytics/visit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${shareToken}`
-      },
-      body: JSON.stringify({ projectId: project.id, videoId: targetVideoId }),
-    }).catch(() => {
-      // ignore analytics failure
-    })
-  }, [project?.id, project?.videosByName, activeVideoName, token, shareToken])
 
   // Handle video selection
   const handleVideoSelect = (videoName: string) => {

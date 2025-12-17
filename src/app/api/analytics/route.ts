@@ -34,7 +34,14 @@ export async function GET(request: NextRequest) {
           where: { isPrimary: true },
           take: 1,
         },
+        sharePageAccesses: {
+          select: {
+            accessMethod: true,
+            sessionId: true,
+          },
+        },
         analytics: {
+          where: { eventType: 'DOWNLOAD_COMPLETE' },
           select: {
             eventType: true,
           },
@@ -46,9 +53,20 @@ export async function GET(request: NextRequest) {
     })
 
     const projectsWithAnalytics = projects.map(project => {
-      const totalDownloads = project.analytics.filter(a => a.eventType === 'DOWNLOAD_COMPLETE').length
-      const totalPageVisits = project.analytics.filter(a => a.eventType === 'PAGE_VISIT').length
+      const totalDownloads = project.analytics.length
       const displayName = project.companyName || project.recipients[0]?.name || project.recipients[0]?.email || 'Client'
+
+      // Calculate unique sessions (unique users who accessed the share page)
+      const uniqueSessions = new Set(
+        project.sharePageAccesses.map(a => a.sessionId)
+      ).size
+
+      // Count by access method
+      const accessByMethod = {
+        OTP: project.sharePageAccesses.filter(a => a.accessMethod === 'OTP').length,
+        PASSWORD: project.sharePageAccesses.filter(a => a.accessMethod === 'PASSWORD').length,
+        GUEST: project.sharePageAccesses.filter(a => a.accessMethod === 'GUEST').length,
+      }
 
       return {
         id: project.id,
@@ -57,8 +75,10 @@ export async function GET(request: NextRequest) {
         recipientEmail: project.companyName ? null : project.recipients[0]?.email || null,
         status: project.status,
         videoCount: project.videos.length,
+        totalAccesses: project.sharePageAccesses.length,
+        uniqueAccesses: uniqueSessions,
+        accessByMethod,
         totalDownloads,
-        totalPageVisits,
         updatedAt: project.updatedAt,
       }
     })

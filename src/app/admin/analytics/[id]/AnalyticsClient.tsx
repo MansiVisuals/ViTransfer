@@ -4,15 +4,13 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft } from 'lucide-react'
+import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft, Mail, Lock, UserCircle, Users } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
 
 interface VideoStats {
   videoName: string
   totalDownloads: number
-  totalPageVisits: number
-  lastAccessed: Date | null
   versions: Array<{
     id: string
     versionLabel: string
@@ -20,11 +18,10 @@ interface VideoStats {
   }>
 }
 
-interface RecentActivity {
+interface RecentAccess {
   id: string
-  eventType: string
-  videoName: string
-  videoLabel: string
+  accessMethod: 'OTP' | 'PASSWORD' | 'GUEST'
+  email: string | null
   createdAt: Date
 }
 
@@ -37,28 +34,27 @@ interface AnalyticsData {
     status: string
   }
   stats: {
-    totalPageVisits: number
+    totalAccesses: number
+    uniqueAccesses: number
+    accessByMethod: {
+      OTP: number
+      PASSWORD: number
+      GUEST: number
+    }
     totalDownloads: number
     videoCount: number
   }
   videoStats: VideoStats[]
-  recentActivity: RecentActivity[]
+  recentAccesses: RecentAccess[]
 }
 
-function formatEventType(eventType: string): string {
+function getAccessMethodColor(method: string): string {
   const map: Record<string, string> = {
-    'PAGE_VISIT': 'Project Visit',
-    'DOWNLOAD_COMPLETE': 'Download',
+    'OTP': 'bg-primary-visible text-primary border-2 border-primary-visible',
+    'PASSWORD': 'bg-warning-visible text-warning border-2 border-warning-visible',
+    'GUEST': 'bg-muted text-muted-foreground border-2 border-border',
   }
-  return map[eventType] || eventType
-}
-
-function getEventColor(eventType: string): string {
-  const map: Record<string, string> = {
-    'PAGE_VISIT': 'bg-primary-visible text-primary border-2 border-primary-visible',
-    'DOWNLOAD_COMPLETE': 'bg-success-visible text-success border-2 border-success-visible',
-  }
-  return map[eventType] || 'bg-muted text-muted-foreground border border-border'
+  return map[method] || 'bg-muted text-muted-foreground border border-border'
 }
 
 export default function AnalyticsClient({ id }: { id: string }) {
@@ -108,7 +104,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
     )
   }
 
-  const { project, stats, videoStats, recentActivity } = data
+  const { project, stats, videoStats, recentAccesses } = data
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,14 +125,27 @@ export default function AnalyticsClient({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-3 mb-6 sm:mb-8">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Project Visits</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Accesses</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalPageVisits.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{stats.totalAccesses.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.uniqueAccesses} unique sessions
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Unique Users</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.uniqueAccesses.toLocaleString()}</div>
             </CardContent>
           </Card>
 
@@ -157,6 +166,46 @@ export default function AnalyticsClient({ id }: { id: string }) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.videoCount}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mb-6 sm:mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Access Methods</CardTitle>
+              <CardDescription>How clients authenticated to view this project</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary-visible rounded-md">
+                    <Mail className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email OTP</p>
+                    <p className="text-lg font-bold">{stats.accessByMethod.OTP}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-warning-visible rounded-md">
+                    <Lock className="w-4 h-4 text-warning" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Password</p>
+                    <p className="text-lg font-bold">{stats.accessByMethod.PASSWORD}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-muted rounded-md">
+                    <UserCircle className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Guest</p>
+                    <p className="text-lg font-bold">{stats.accessByMethod.GUEST}</p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -183,14 +232,10 @@ export default function AnalyticsClient({ id }: { id: string }) {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3">
+                      <div className="mb-3">
                         <div className="text-sm">
                           <div className="text-xs text-muted-foreground mb-1">Total Downloads</div>
                           <div className="font-medium text-base sm:text-lg">{video.totalDownloads}</div>
-                        </div>
-                        <div className="text-sm">
-                          <div className="text-xs text-muted-foreground mb-1">Total Views</div>
-                          <div className="font-medium text-base sm:text-lg">{video.totalPageVisits}</div>
                         </div>
                       </div>
 
@@ -207,13 +252,6 @@ export default function AnalyticsClient({ id }: { id: string }) {
                           </div>
                         </div>
                       )}
-
-                      {video.lastAccessed && (
-                        <div className="mt-3 pt-3 border-t text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="break-all">Last accessed: {formatDateTime(video.lastAccessed)}</span>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -223,29 +261,30 @@ export default function AnalyticsClient({ id }: { id: string }) {
 
           <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Last 20 events</CardDescription>
+              <CardTitle>Recent Access Activity</CardTitle>
+              <CardDescription>Last 20 authentication events</CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-hidden">
-              {recentActivity.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No activity yet</p>
+              {recentAccesses.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No access events yet</p>
               ) : (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {recentActivity.map((event) => (
-                    <div key={event.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border text-sm">
+                  {recentAccesses.map((access) => (
+                    <div key={access.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg border text-sm">
                       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${getEventColor(event.eventType)}`}>
-                          {formatEventType(event.eventType)}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${getAccessMethodColor(access.accessMethod)}`}>
+                          {access.accessMethod}
                         </span>
-                        <div className="truncate min-w-0">
-                          <span className="font-medium">{event.videoName}</span>
-                          <span className="text-muted-foreground ml-1.5">({event.videoLabel})</span>
-                        </div>
+                        {access.email && (
+                          <div className="truncate min-w-0">
+                            <span className="text-muted-foreground">{access.email}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
                         <div className="text-xs text-muted-foreground flex items-center gap-1 sm:justify-end">
                           <Calendar className="w-3 h-3" />
-                          <span className="whitespace-nowrap">{formatDateTime(event.createdAt)}</span>
+                          <span className="whitespace-nowrap">{formatDateTime(access.createdAt)}</span>
                         </div>
                       </div>
                     </div>

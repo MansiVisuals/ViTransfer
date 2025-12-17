@@ -115,6 +115,7 @@ export async function GET(
       OTP: project.sharePageAccesses.filter(a => a.accessMethod === 'OTP').length,
       PASSWORD: project.sharePageAccesses.filter(a => a.accessMethod === 'PASSWORD').length,
       GUEST: project.sharePageAccesses.filter(a => a.accessMethod === 'GUEST').length,
+      NONE: project.sharePageAccesses.filter(a => a.accessMethod === 'NONE').length,
     }
 
     const totalDownloads = project.analytics.length

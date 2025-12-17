@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
         OTP: project.sharePageAccesses.filter(a => a.accessMethod === 'OTP').length,
         PASSWORD: project.sharePageAccesses.filter(a => a.accessMethod === 'PASSWORD').length,
         GUEST: project.sharePageAccesses.filter(a => a.accessMethod === 'GUEST').length,
+        NONE: project.sharePageAccesses.filter(a => a.accessMethod === 'NONE').length,
       }
 
       return {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft, Mail, Lock, UserCircle, Users } from 'lucide-react'
+import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft, Mail, Lock, UserCircle, Users, Globe } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
 
@@ -20,7 +20,7 @@ interface VideoStats {
 
 interface RecentAccess {
   id: string
-  accessMethod: 'OTP' | 'PASSWORD' | 'GUEST'
+  accessMethod: 'OTP' | 'PASSWORD' | 'GUEST' | 'NONE'
   email: string | null
   createdAt: Date
 }
@@ -40,6 +40,7 @@ interface AnalyticsData {
       OTP: number
       PASSWORD: number
       GUEST: number
+      NONE: number
     }
     totalDownloads: number
     videoCount: number
@@ -53,6 +54,7 @@ function getAccessMethodColor(method: string): string {
     'OTP': 'bg-primary-visible text-primary border-2 border-primary-visible',
     'PASSWORD': 'bg-warning-visible text-warning border-2 border-warning-visible',
     'GUEST': 'bg-muted text-muted-foreground border-2 border-border',
+    'NONE': 'bg-success-visible text-success border-2 border-success-visible',
   }
   return map[method] || 'bg-muted text-muted-foreground border border-border'
 }
@@ -177,7 +179,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
               <CardDescription>How clients authenticated to view this project</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary-visible rounded-md">
                     <Mail className="w-4 h-4 text-primary" />
@@ -203,6 +205,15 @@ export default function AnalyticsClient({ id }: { id: string }) {
                   <div>
                     <p className="text-xs text-muted-foreground">Guest</p>
                     <p className="text-lg font-bold">{stats.accessByMethod.GUEST}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-success-visible rounded-md">
+                    <Globe className="w-4 h-4 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Public</p>
+                    <p className="text-lg font-bold">{stats.accessByMethod.NONE}</p>
                   </div>
                 </div>
               </div>

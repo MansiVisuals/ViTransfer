@@ -5,6 +5,9 @@ import { getCurrentUserFromRequest, getShareContext, signShareToken } from '@/li
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
+import { trackSharePageAccess } from '@/lib/share-access-tracking'
+import { getRedis } from '@/lib/redis'
+import crypto from 'crypto'
 export const runtime = 'nodejs'
 
 
@@ -69,6 +72,32 @@ export async function GET(
     }
 
     const { isAdmin } = accessCheck
+
+    // Track share page access for projects with no authentication (authMode = NONE)
+    if (projectMeta.authMode === 'NONE' && !isAdmin) {
+      // Use Redis for 30-minute deduplication
+      const redis = getRedis()
+      const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                       request.headers.get('x-real-ip') ||
+                       'unknown'
+      const dedupeKey = `share_access:${projectMeta.id}:${ipAddress}`
+      const alreadyTracked = await redis.get(dedupeKey)
+
+      if (!alreadyTracked) {
+        // Generate a session ID for this access
+        const sessionId = crypto.randomBytes(16).toString('base64url')
+
+        await trackSharePageAccess({
+          projectId: projectMeta.id,
+          accessMethod: 'NONE',
+          sessionId,
+          request,
+        })
+
+        // Set 30-minute deduplication window
+        await redis.set(dedupeKey, '1', 'EX', 30 * 60)
+      }
+    }
 
     const hasShareSession = !!shareContext
     if (projectMeta.guestMode && !isAdmin && !hasShareSession && !isGuest) {

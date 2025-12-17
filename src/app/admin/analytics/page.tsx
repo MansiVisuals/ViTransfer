@@ -20,6 +20,7 @@ interface ProjectAnalytics {
     OTP: number
     PASSWORD: number
     GUEST: number
+    NONE: number
   }
   totalDownloads: number
   updatedAt: Date

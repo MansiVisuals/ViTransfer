@@ -1,4 +1,5 @@
 import { getRedis } from './redis'
+import { prisma } from './db'
 
 /**
  * Session Invalidation Utilities
@@ -13,8 +14,9 @@ import { getRedis } from './redis'
  * Invalidation Triggers:
  * 1. Session timeout changes → Invalidate ALL sessions globally
  * 2. Project password changes → Invalidate all sessions for that project
- * 3. Hotlink protection changes → Invalidate ALL sessions (more restrictive)
- * 4. Password attempt changes → Clear rate limit counters
+ * 3. Project auth mode changes → Invalidate all sessions for that project
+ * 4. Hotlink protection changes → Invalidate ALL sessions (more restrictive)
+ * 5. Password attempt changes → Clear rate limit counters
  */
 
 /**
@@ -167,5 +169,67 @@ export async function getSessionStats(): Promise<{
       totalSessions: 0,
       sessionsByProject: {}
     }
+  }
+}
+
+/**
+ * Invalidate all share token sessions for a specific project
+ * by revoking their sessionIds in Redis
+ *
+ * Use when:
+ * - Project auth mode changes
+ * - Project password changes
+ * - Project security settings change
+ *
+ * @param projectId - The project ID to invalidate sessions for
+ * @returns Number of sessions invalidated
+ */
+export async function invalidateShareTokensByProject(projectId: string): Promise<number> {
+  try {
+    const redis = getRedis()
+
+    // Get all unique session IDs for this project
+    const sessions = await prisma.sharePageAccess.findMany({
+      where: { projectId },
+      select: { sessionId: true },
+      distinct: ['sessionId']
+    })
+
+    if (sessions.length === 0) {
+      return 0
+    }
+
+    // Revoke each session in Redis with TTL
+    // Use conservative TTL of 7 days to outlast any possible token
+    const ttl = 7 * 24 * 60 * 60 // 7 days in seconds
+    const pipeline = redis.pipeline()
+
+    for (const session of sessions) {
+      pipeline.setex(`revoked:share_session:${session.sessionId}`, ttl, '1')
+    }
+
+    await pipeline.exec()
+
+    console.log(`[SESSION_INVALIDATION] Invalidated ${sessions.length} share sessions for project ${projectId}`)
+    return sessions.length
+  } catch (error) {
+    console.error('[SESSION_INVALIDATION] Error invalidating share sessions:', error)
+    throw error
+  }
+}
+
+/**
+ * Check if a share session is revoked
+ * @param sessionId - The session ID to check
+ * @returns true if session is revoked
+ */
+export async function isShareSessionRevoked(sessionId: string): Promise<boolean> {
+  try {
+    const redis = getRedis()
+    const exists = await redis.exists(`revoked:share_session:${sessionId}`)
+    return exists === 1
+  } catch (error) {
+    console.error('[SESSION_INVALIDATION] Error checking session revocation:', error)
+    return false // Fail open to avoid blocking legitimate access on Redis errors
   }
 }

@@ -6,6 +6,7 @@ import { prisma, setDatabaseUserContext } from './db'
 import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
 import { getRedis } from './redis'
+import { isShareSessionRevoked } from './session-invalidation'
 
 export interface AuthUser {
   id: string
@@ -147,6 +148,12 @@ export async function verifyShareToken(token: string): Promise<SharePayload | nu
     const decoded = jwt.verify(token, SHARE_TOKEN_SECRET, { algorithms: ['HS256'] }) as SharePayload
     if (decoded.type !== 'share') return null
     if (await isTokenRevoked(token)) return null
+
+    // Check if session is revoked (auth mode changes, etc.)
+    if (decoded.sessionId && await isShareSessionRevoked(decoded.sessionId)) {
+      return null
+    }
+
     return decoded
   } catch {
     return null

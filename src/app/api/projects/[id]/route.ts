@@ -4,7 +4,7 @@ import { deleteFile, deleteDirectory } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { isSmtpConfigured } from '@/lib/email'
-import { invalidateProjectSessions } from '@/lib/session-invalidation'
+import { invalidateProjectSessions, invalidateShareTokensByProject } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { z } from 'zod'
@@ -284,71 +284,93 @@ export async function PATCH(
       updateData.allowAssetDownload = validatedBody.allowAssetDownload
     }
 
-    // Handle password update - only update if actually changed
+    // Handle password, authMode, and guest settings updates
+    // Fetch current project once if any security field is being updated
     let passwordWasChanged = false
-    if (validatedBody.sharePassword !== undefined) {
-      // Get current project to compare password
+    let authModeWasChanged = false
+    let guestModeWasChanged = false
+    let guestLatestOnlyWasChanged = false
+
+    if (validatedBody.sharePassword !== undefined || validatedBody.authMode !== undefined || validatedBody.guestMode !== undefined || validatedBody.guestLatestOnly !== undefined) {
+      // Get current project state (single query for all security checks)
       const currentProject = await prisma.project.findUnique({
         where: { id },
-        select: { sharePassword: true }
+        select: { authMode: true, sharePassword: true, guestMode: true, guestLatestOnly: true }
       })
 
       if (!currentProject) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 })
       }
 
-      // Decrypt current password for comparison
-      const currentPassword = currentProject.sharePassword ? decrypt(currentProject.sharePassword) : null
+      // Handle password update - only update if actually changed
+      if (validatedBody.sharePassword !== undefined) {
+        // Decrypt current password for comparison
+        const currentPassword = currentProject.sharePassword ? decrypt(currentProject.sharePassword) : null
 
-      // Only update if password actually changed
-      if (validatedBody.sharePassword === null || validatedBody.sharePassword === '') {
-        // Clearing password
-        if (currentPassword !== null) {
-          updateData.sharePassword = null
-          passwordWasChanged = true
-        }
-      } else {
-        // Setting/updating password - only if different from current
-        if (validatedBody.sharePassword !== currentPassword) {
-          updateData.sharePassword = encrypt(validatedBody.sharePassword)
-          passwordWasChanged = true
+        // Only update if password actually changed
+        if (validatedBody.sharePassword === null || validatedBody.sharePassword === '') {
+          // Clearing password
+          if (currentPassword !== null) {
+            updateData.sharePassword = null
+            passwordWasChanged = true
+          }
+        } else {
+          // Setting/updating password - only if different from current
+          if (validatedBody.sharePassword !== currentPassword) {
+            updateData.sharePassword = encrypt(validatedBody.sharePassword)
+            passwordWasChanged = true
+          }
         }
       }
-    }
 
-    // Handle authentication mode
-    if (validatedBody.authMode !== undefined) {
-      // Validate that password modes have a password when being set
-      const newAuthMode = validatedBody.authMode
-      const newPassword = validatedBody.sharePassword !== undefined ? validatedBody.sharePassword : undefined
+      // Handle authentication mode
+      if (validatedBody.authMode !== undefined) {
+        // Detect if authMode actually changed
+        if (currentProject.authMode !== validatedBody.authMode) {
+          authModeWasChanged = true
+        }
 
-      // Get current password if not being changed
-      if (newPassword === undefined && (newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH')) {
-        const currentProject = await prisma.project.findUnique({
-          where: { id },
-          select: { sharePassword: true }
-        })
-        const currentPassword = currentProject?.sharePassword ? decrypt(currentProject.sharePassword) : null
+        // Validate that password modes have a password when being set
+        const newAuthMode = validatedBody.authMode
+        const newPassword = validatedBody.sharePassword !== undefined ? validatedBody.sharePassword : undefined
 
-        if (!currentPassword) {
+        // Get current password if not being changed
+        if (newPassword === undefined && (newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH')) {
+          const currentPassword = currentProject?.sharePassword ? decrypt(currentProject.sharePassword) : null
+
+          if (!currentPassword) {
+            return NextResponse.json(
+              { error: 'Password authentication mode requires a password' },
+              { status: 400 }
+            )
+          }
+        } else if ((newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH') && (!newPassword || newPassword === '')) {
           return NextResponse.json(
             { error: 'Password authentication mode requires a password' },
             { status: 400 }
           )
         }
-      } else if ((newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH') && (!newPassword || newPassword === '')) {
-        return NextResponse.json(
-          { error: 'Password authentication mode requires a password' },
-          { status: 400 }
-        )
+
+        updateData.authMode = validatedBody.authMode
       }
 
-      updateData.authMode = validatedBody.authMode
-    }
+      // Handle guest mode
+      if (validatedBody.guestMode !== undefined) {
+        // Detect if guestMode actually changed
+        if (currentProject.guestMode !== validatedBody.guestMode) {
+          guestModeWasChanged = true
+        }
+        updateData.guestMode = validatedBody.guestMode
+      }
 
-    // Handle guest mode
-    if (validatedBody.guestMode !== undefined) {
-      updateData.guestMode = validatedBody.guestMode
+      // Handle guest latest only restriction
+      if (validatedBody.guestLatestOnly !== undefined) {
+        // Detect if guestLatestOnly actually changed
+        if (currentProject.guestLatestOnly !== validatedBody.guestLatestOnly) {
+          guestLatestOnlyWasChanged = true
+        }
+        updateData.guestLatestOnly = validatedBody.guestLatestOnly
+      }
     }
 
     // Separate validation when only password is being cleared without authMode change
@@ -365,11 +387,6 @@ export async function PATCH(
           { status: 400 }
         )
       }
-    }
-
-    // Handle guest latest only restriction
-    if (validatedBody.guestLatestOnly !== undefined) {
-      updateData.guestLatestOnly = validatedBody.guestLatestOnly
     }
 
     // Handle client notification schedule
@@ -389,16 +406,31 @@ export async function PATCH(
       data: updateData,
     })
 
-    // SECURITY: After password is updated in DB, invalidate ALL sessions for this project
-    // This prevents race condition where client could authenticate with old password
-    // after sessions are invalidated but before DB is updated
-    if (passwordWasChanged) {
+    // SECURITY: After password, authMode, guestMode, or guestLatestOnly is updated in DB, invalidate ALL sessions for this project
+    // This prevents clients from using old authentication/authorization even though security rules changed
+    if (passwordWasChanged || authModeWasChanged || guestModeWasChanged || guestLatestOnlyWasChanged) {
       try {
-        const invalidatedCount = await invalidateProjectSessions(id)
-        console.log(`[SECURITY] Project password changed - invalidated ${invalidatedCount} sessions for project ${id}`)
+        // Invalidate JWT-based share sessions
+        const shareSessionsInvalidated = await invalidateShareTokensByProject(id)
+
+        // Also invalidate any legacy Redis sessions
+        const legacySessionsInvalidated = await invalidateProjectSessions(id)
+
+        // Log the security action
+        const changes: string[] = []
+        if (passwordWasChanged) changes.push('password')
+        if (authModeWasChanged) changes.push('auth mode')
+        if (guestModeWasChanged) changes.push('guest mode')
+        if (guestLatestOnlyWasChanged) changes.push('guest latest only')
+        const changeReason = changes.join(' and ') + ' changed'
+
+        console.log(
+          `[SECURITY] Project ${changeReason} - invalidated ${shareSessionsInvalidated} share sessions ` +
+          `and ${legacySessionsInvalidated} legacy sessions for project ${id}`
+        )
       } catch (error) {
-        console.error('[SECURITY] Failed to invalidate project sessions after password change:', error)
-        // Don't fail the request if session invalidation fails
+        console.error('[SECURITY] Failed to invalidate project sessions after security change:', error)
+        // Don't fail the request if session invalidation fails - security change is more important
       }
 
     }

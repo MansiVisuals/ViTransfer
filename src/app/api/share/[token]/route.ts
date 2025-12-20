@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { isSmtpConfigured, getRateLimitSettings, getShareTokenTtlSeconds } from '@/lib/settings'
-import { getCurrentUserFromRequest, getShareContext, signShareToken } from '@/lib/auth'
+import { getCurrentUserFromRequest, getShareContext, signShareToken, parseBearerToken } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
@@ -49,6 +49,26 @@ export async function GET(
     const shareContext = await getShareContext(request)
     const isGuest = !!shareContext?.guest
 
+    // SECURITY: If user sent a bearer token but it failed verification (revoked, expired, invalid),
+    // handle based on current authMode:
+    // - NONE auth: Ignore invalid token, proceed as if no token sent
+    // - PASSWORD/OTP/BOTH: Return 401 to force re-authentication
+    const bearerToken = parseBearerToken(request)
+    if (bearerToken && !shareContext && projectMeta.authMode !== 'NONE') {
+      const currentUser = await getCurrentUserFromRequest(request)
+      const isAdmin = currentUser?.role === 'ADMIN'
+
+      if (!isAdmin) {
+        // Token was sent but invalid/revoked - force re-authentication
+        return NextResponse.json({
+          error: 'Session expired or invalid. Please authenticate again.',
+          requiresPassword: true,
+          authMode: projectMeta.authMode || 'PASSWORD',
+          guestMode: projectMeta.guestMode || false
+        }, { status: 401 })
+      }
+    }
+
     const project = await fetchProjectWithVideos(
       token,
       isGuest,
@@ -85,8 +105,9 @@ export async function GET(
       const alreadyTracked = await redis.get(dedupeKey)
 
       if (!alreadyTracked) {
-        // Generate a session ID for this access
-        const sessionId = crypto.randomBytes(16).toString('base64url')
+        // CRITICAL: Use deterministic sessionId for NONE authMode
+        // This must match the sessionId used in JWT token for session invalidation to work
+        const sessionId = `none:${projectMeta.id}:${ipAddress}`
 
         await trackSharePageAccess({
           projectId: projectMeta.id,
@@ -101,6 +122,8 @@ export async function GET(
     }
 
     const hasShareSession = !!shareContext
+    // If guestMode is enabled, require guest token (restricted access)
+    // This applies to ALL authModes - guest restrictions are independent of auth requirements
     if (projectMeta.guestMode && !isAdmin && !hasShareSession && !isGuest) {
       return NextResponse.json({
         error: 'Guest entry required',
@@ -255,12 +278,23 @@ export async function GET(
 
     // If no share token present, issue a short-lived viewer token (view-only) for this project
     if (!shareContext && !isAdmin) {
+      // CRITICAL: For NONE authMode, use deterministic sessionId based on IP
+      // This must match the sessionId used in SharePageAccess tracking
+      let sessionId = accessCheck.shareTokenSessionId || `share:${project.id}:${token}`
+
+      if (projectMeta.authMode === 'NONE') {
+        const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                         request.headers.get('x-real-ip') ||
+                         'unknown'
+        sessionId = `none:${projectMeta.id}:${ipAddress}`
+      }
+
       const shareToken = signShareToken({
         shareId: token,
         projectId: project.id,
         permissions: ['view', 'comment', 'download'],
         guest: false,
-        sessionId: accessCheck.shareTokenSessionId || `share:${project.id}:${token}`,
+        sessionId,
         authMode: projectMeta.authMode,
         ttlSeconds: shareTtlSeconds,
       })

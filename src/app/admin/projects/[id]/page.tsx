@@ -25,7 +25,7 @@ export default function ProjectPage() {
   const [shareUrl, setShareUrl] = useState('')
   const [companyName, setCompanyName] = useState('Studio')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
-  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('status')
+  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
   const [adminUser, setAdminUser] = useState<any>(null)
 
   // Derive active videos from selected video name (synchronous, no useEffect delay)

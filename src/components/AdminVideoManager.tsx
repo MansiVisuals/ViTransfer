@@ -41,7 +41,7 @@ export default function AdminVideoManager({
   companyName = 'Studio',
   onVideoSelect,
   onRefresh,
-  sortMode = 'status',
+  sortMode = 'alphabetical',
   maxRevisions,
   enableRevisions
 }: AdminVideoManagerProps) {

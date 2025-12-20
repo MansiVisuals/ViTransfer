@@ -29,7 +29,7 @@ export default function VideoSidebar({
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const [sidebarWidth, setSidebarWidth] = useState(256) // Default 256px (w-64)
   const [isResizing, setIsResizing] = useState(false)
-  const [sortMode, setSortMode] = useState<'date' | 'alphabetical'>('date')
+  const [sortMode, setSortMode] = useState<'date' | 'alphabetical'>('alphabetical')
   const sidebarRef = useRef<HTMLElement>(null)
 
   const videoGroups: VideoGroup[] = Object.entries(videosByName).map(([name, videos]) => ({

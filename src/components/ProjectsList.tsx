@@ -25,7 +25,7 @@ interface ProjectsListProps {
 }
 
 export default function ProjectsList({ projects }: ProjectsListProps) {
-  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('status')
+  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
 
   const sortedProjects = [...projects].sort((a, b) => {
     if (sortMode === 'alphabetical') {

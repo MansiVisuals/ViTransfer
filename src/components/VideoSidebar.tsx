@@ -24,7 +24,7 @@ export default function VideoSidebar({
   activeVideoName,
   onVideoSelect,
   className,
-  initialCollapsed = false,
+  initialCollapsed = true,
 }: VideoSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const [sidebarWidth, setSidebarWidth] = useState(256) // Default 256px (w-64)
@@ -244,16 +244,19 @@ export default function VideoSidebar({
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="w-full p-4 flex items-center justify-between text-left hover:bg-accent transition-colors"
         >
-          <div>
-            <p className="text-sm font-medium text-foreground">{activeVideoName}</p>
-            <p className="text-xs text-muted-foreground">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground mb-1">
+              {isCollapsed ? 'Tap to select video' : 'Currently viewing'}
+            </p>
+            <p className="text-sm font-medium text-foreground truncate">{activeVideoName}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {videoGroups.find(g => g.name === activeVideoName)?.versionCount || 0} versions
             </p>
           </div>
           {isCollapsed ? (
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            <ChevronDown className="w-5 h-5 text-muted-foreground shrink-0 ml-3" />
           ) : (
-            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            <ChevronUp className="w-5 h-5 text-muted-foreground shrink-0 ml-3" />
           )}
         </button>
 
@@ -271,7 +274,7 @@ export default function VideoSidebar({
                     key={group.name}
                     onClick={() => {
                       onVideoSelect(group.name)
-                      // Don't collapse - keep dropdown open for easy video switching
+                      setIsCollapsed(true) // Auto-collapse after selection to show video player
                     }}
                     className={cn(
                       'w-full text-left p-4 transition-colors',
@@ -331,6 +334,7 @@ export default function VideoSidebar({
                           key={group.name}
                           onClick={() => {
                             onVideoSelect(group.name)
+                            setIsCollapsed(true) // Auto-collapse after selection to show video player
                           }}
                           className={cn(
                             'w-full text-left p-4 transition-colors',

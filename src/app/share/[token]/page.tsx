@@ -530,10 +530,13 @@ export default function SharePage() {
               {authMode === 'OTP' && 'Enter your email to receive an access code.'}
               {authMode === 'BOTH' && 'Choose your preferred authentication method.'}
             </p>
+            <p className="text-xs text-muted-foreground mt-3 px-4">
+              This authentication is for project recipients only.
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Password Authentication */}
-            {(authMode === 'PASSWORD' || authMode === 'BOTH') && (
+            {/* Password Authentication - hide when OTP code is being entered */}
+            {(authMode === 'PASSWORD' || authMode === 'BOTH') && !otpSent && (
               <div className="space-y-4">
                 {authMode === 'BOTH' && (
                   <div className="flex items-center gap-2">
@@ -562,8 +565,8 @@ export default function SharePage() {
               </div>
             )}
 
-            {/* Divider for BOTH mode */}
-            {authMode === 'BOTH' && (
+            {/* Divider for BOTH mode - hide when OTP code is being entered */}
+            {authMode === 'BOTH' && !otpSent && (
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-border"></div>
@@ -608,7 +611,7 @@ export default function SharePage() {
                   <form onSubmit={handleOtpSubmit} className="space-y-4">
                     <div className="space-y-3">
                       <p className="text-sm text-muted-foreground text-center">
-                        If an account exists for <span className="font-medium text-foreground">{email}</span>, you will receive a verification code shortly.
+                        If a recipient exists with <span className="font-medium text-foreground">{email}</span>, you will receive a verification code shortly.
                       </p>
                       <OTPInput
                         value={otp}
@@ -662,16 +665,15 @@ export default function SharePage() {
                     <div className="w-full border-t border-border"></div>
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    <span className="bg-card px-2 text-muted-foreground">Not a recipient?</span>
                   </div>
                 </div>
                 <Button
                   type="button"
-                  variant="outline"
                   size="default"
                   onClick={handleGuestEntry}
                   disabled={loading}
-                  className="w-full"
+                  className="w-full bg-warning text-warning-foreground hover:bg-warning/90 shadow-elevation hover:shadow-elevation-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-elevation transition-all duration-200"
                 >
                   Continue as Guest
                 </Button>

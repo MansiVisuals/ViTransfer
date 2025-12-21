@@ -5,6 +5,73 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-12-21
+
+### Added
+- Multiple asset upload queue with concurrent upload support
+  - Upload multiple assets at once with progress tracking
+  - Support for mixed file types (video/image/subtitle) in single selection
+  - Auto-detected categories for uploaded files
+  - Improved upload queue UI with auto-start functionality
+- Analytics improvements for share page tracking
+  - Track public share pages with authMode NONE
+  - Asset download tracking (individual assets and ZIP downloads)
+  - Unified activity feed showing authentication and download events
+  - Changed "Accesses" to "Visits" and "Unique Users" to "Unique Visitors"
+  - Expandable activity entries with click-to-expand details
+  - Display asset filenames in download analytics
+- Expanded keyboard shortcuts for video playback with speed control and frame stepping
+  - Ctrl+, / Ctrl+. to decrease/increase playback speed by 0.25x (range: 0.25x - 2.0x)
+  - Ctrl+J / Ctrl+L to step backward/forward one frame when paused (uses actual video FPS)
+  - Speed indicator overlay shows current playback rate when different from 1.0x
+  - Shortcuts help button with HelpCircle icon displays all available keyboard shortcuts
+- Allow image assets to be set as project thumbnails
+
+### Changed
+- Mobile video dropdown now starts collapsed by default and auto-collapses after video selection
+  - Added contextual labels: "Tap to select video" when collapsed, "Currently viewing" when expanded
+  - Improves mobile UX by prioritizing video player visibility
+- Share page authentication UI clarity improvements
+  - Added "This authentication is for project recipients only" message
+  - Guest button styled with orange (warning) color to stand out
+  - Separator text changed from "Or" to "Not a recipient?" for better context
+  - Password/OTP fields hidden when OTP code is being entered (BOTH mode)
+  - Changed "account" to "recipient" in OTP verification message
+- Default sorting set to alphabetical across all pages (projects, videos, versions)
+- Replace chevron emoji with Lucide icons throughout UI
+- Improved comment reply UI with extended bubble design
+- Analytics UI revamped with unified activity feed
+  - Removed Access Methods card (redundant with activity feed)
+  - Renamed "Recent Access Activity" to "Project Activity"
+  - Shows ALL activity with no pagination limit
+  - Download events show type (VIDEO/ASSET/ZIP) with appropriate icons
+  - Simplified color scheme: blue for visits, green for downloads
+  - Improved expanded details layout with clear labels
+
+### Fixed
+- TUS upload resume handling and fingerprint detection
+  - Fixed fingerprint format to match library exactly
+  - Use absolute URL for TUS endpoint to fix fingerprint matching
+  - Prevent TUS from resuming uploads to wrong video/project
+- Upload queue auto-start bug fixed
+- Double tracking for NONE projects with guest mode
+  - Only track as NONE when guest mode is disabled
+  - When guest mode enabled, let guest endpoint track as GUEST
+- TypeScript error: Added NONE to access method types
+
+### Security
+- Updated Next.js to fix security vulnerabilities
+- Session invalidation now triggered when security settings change
+  - Password changes invalidate all project sessions
+  - Auth mode changes (NONE/PASSWORD/OTP/BOTH) invalidate all project sessions
+  - Guest mode changes invalidate all project sessions
+  - Guest latest-only restriction changes invalidate all project sessions
+  - Uses Redis-based session revocation with 7-day TTL
+  - Deterministic sessionIds for NONE auth mode based on IP address
+  - Invalid tokens handled appropriately based on auth mode (reject for PASSWORD/OTP/BOTH, allow for NONE)
+  - Optimized database queries with single fetch for all security checks
+  - Comprehensive logging shows all changed security fields
+
 ## [0.7.0] - 2025-12-07
 
 ### Changed

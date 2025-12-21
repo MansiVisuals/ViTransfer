@@ -315,6 +315,7 @@ export default function VideoPlayer({
         if (video.paused && selectedVideo?.fps) {
           const frameDuration = 1 / selectedVideo.fps
           video.currentTime = Math.max(0, video.currentTime - frameDuration)
+          currentTimeRef.current = video.currentTime // Update ref for comment timecode
         }
         return
       }
@@ -326,6 +327,7 @@ export default function VideoPlayer({
         if (video.paused && selectedVideo?.fps) {
           const frameDuration = 1 / selectedVideo.fps
           video.currentTime = Math.min(video.duration, video.currentTime + frameDuration)
+          currentTimeRef.current = video.currentTime // Update ref for comment timecode
         }
         return
       }

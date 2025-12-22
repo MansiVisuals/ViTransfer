@@ -109,11 +109,6 @@ systemctl --user daemon-reload
 ### 4. Pull the Docker Image
 
 ```bash
-# Login to Docker Hub (if using private repository)
-podman login docker.io
-# Username: crypt010
-# Password: [your Docker Hub password]
-
 # Pull the image
 podman pull docker.io/crypt010/vitransfer:latest
 ```

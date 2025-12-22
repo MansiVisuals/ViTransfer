@@ -249,14 +249,14 @@ sudo systemctl restart vitransfer-worker.service
 ```bash
 # Backup database
 podman exec vitransfer-postgres pg_dump -U vitransfer vitransfer > vitransfer-backup-$(date +%Y%m%d).sql
-
+```
 
 ### Restore
 
 ```bash
 # Restore database
 cat vitransfer-backup-20250127.sql | podman exec -i vitransfer-postgres psql -U vitransfer vitransfer
-
+```
 
 ## Troubleshooting
 

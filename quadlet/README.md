@@ -86,7 +86,6 @@ Edit each `.container` file and replace the placeholder values:
 ```bash
 # Copy all files to systemd directory
 sudo cp quadlet/*.container /etc/containers/systemd/
-sudo cp quadlet/*.volume /etc/containers/systemd/
 sudo cp quadlet/*.network /etc/containers/systemd/
 
 # Reload systemd to discover new units
@@ -101,7 +100,6 @@ mkdir -p ~/.config/containers/systemd
 
 # Copy files
 cp quadlet/*.container ~/.config/containers/systemd/
-cp quadlet/*.volume ~/.config/containers/systemd/
 cp quadlet/*.network ~/.config/containers/systemd/
 
 # Reload systemd
@@ -111,11 +109,6 @@ systemctl --user daemon-reload
 ### 4. Pull the Docker Image
 
 ```bash
-# Login to Docker Hub (if using private repository)
-podman login docker.io
-# Username: crypt010
-# Password: [your Docker Hub password]
-
 # Pull the image
 podman pull docker.io/crypt010/vitransfer:latest
 ```
@@ -256,9 +249,6 @@ sudo systemctl restart vitransfer-worker.service
 ```bash
 # Backup database
 podman exec vitransfer-postgres pg_dump -U vitransfer vitransfer > vitransfer-backup-$(date +%Y%m%d).sql
-
-# Backup uploads volume
-sudo tar czf vitransfer-uploads-$(date +%Y%m%d).tar.gz -C /var/lib/containers/storage/volumes/vitransfer-uploads/_data .
 ```
 
 ### Restore
@@ -266,9 +256,6 @@ sudo tar czf vitransfer-uploads-$(date +%Y%m%d).tar.gz -C /var/lib/containers/st
 ```bash
 # Restore database
 cat vitransfer-backup-20250127.sql | podman exec -i vitransfer-postgres psql -U vitransfer vitransfer
-
-# Restore uploads
-sudo tar xzf vitransfer-uploads-20250127.tar.gz -C /var/lib/containers/storage/volumes/vitransfer-uploads/_data
 ```
 
 ## Troubleshooting
@@ -332,9 +319,6 @@ sudo systemctl stop vitransfer-*.service
 # Remove containers
 podman rm -f vitransfer-postgres vitransfer-redis vitransfer-app vitransfer-worker
 
-# Remove volumes (WARNING: deletes all data!)
-podman volume rm vitransfer-postgres-data vitransfer-redis-data vitransfer-uploads
-
 # Remove network
 podman network rm vitransfer-internal
 
@@ -351,9 +335,6 @@ sudo systemctl start vitransfer-*.service
 quadlet/
 ├── README.md                           # This file
 ├── vitransfer-network.network          # Network definition
-├── vitransfer-postgres-data.volume     # PostgreSQL data volume
-├── vitransfer-redis-data.volume        # Redis data volume
-├── vitransfer-uploads.volume           # Uploads volume
 ├── vitransfer-postgres.container       # PostgreSQL container
 ├── vitransfer-redis.container          # Redis container
 ├── vitransfer-app.container            # Application container

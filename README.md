@@ -113,9 +113,6 @@ openssl rand -base64 64   # JWT_SECRET
 openssl rand -base64 64   # JWT_REFRESH_SECRET
 openssl rand -base64 64   # SHARE_TOKEN_SECRET
 ```
-# Optional (Cloudflare tunnel integrations):
-# CLOUDFLARE_TUNNEL=false
-# NEXT_PUBLIC_TUS_ENDPOINT=https://uploads.example.com
 
 Replace each placeholder in `.env`:
 - `POSTGRES_PASSWORD=<<REPLACE_WITH_openssl_rand_hex_32>>`

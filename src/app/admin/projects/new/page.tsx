@@ -127,7 +127,8 @@ export default function NewProjectPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Create New Project</CardTitle>
@@ -395,6 +396,7 @@ export default function NewProjectPage() {
             </form>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )

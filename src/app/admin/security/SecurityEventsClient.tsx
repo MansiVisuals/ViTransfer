@@ -201,8 +201,8 @@ export default function SecurityEventsClient() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="mb-6">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="mb-4">
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <Shield className="w-8 h-8" />
             Security Events
@@ -213,7 +213,7 @@ export default function SecurityEventsClient() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <div className="grid gap-4 md:grid-cols-3 mb-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Events</CardTitle>
@@ -245,11 +245,11 @@ export default function SecurityEventsClient() {
         </div>
 
         {/* Filters and Actions */}
-        <Card className="mb-6">
+        <Card className="mb-4">
           <CardHeader>
             <CardTitle>Filters & Actions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-4">
                 <div className="flex-1 min-w-[200px]">
                   <label className="text-sm font-medium mb-2 block">Event Type</label>
@@ -358,7 +358,7 @@ export default function SecurityEventsClient() {
               ) : (
                 <div className="space-y-2">
                   {rateLimits.map((entry) => (
-                    <div key={entry.key} className="border rounded-lg p-3 sm:p-4">
+                    <div key={entry.key} className="border rounded-lg p-2 sm:p-3">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex-1">
                           <div className="font-medium">Type: {entry.type}</div>
@@ -409,8 +409,8 @@ export default function SecurityEventsClient() {
             ) : (
               <div className="space-y-2">
                 {events.map((event) => (
-                  <div key={event.id} className="border rounded-lg p-3 sm:p-4">
-                    <div className="space-y-3">
+                  <div key={event.id} className="border rounded-lg p-2 sm:p-3">
+                    <div className="space-y-2">
                       {/* Header Row - Mobile Optimized */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -439,7 +439,7 @@ export default function SecurityEventsClient() {
                       </div>
 
                       {/* Description */}
-                      <div className="text-sm text-foreground bg-muted/50 rounded p-2 border-l-2 border-primary">
+                      <div className="text-sm text-foreground bg-muted/50 rounded border-l-2 border-primary p-2">
                         {getSecurityEventDescription(event.type)}
                       </div>
 

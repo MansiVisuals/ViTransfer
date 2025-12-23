@@ -9,7 +9,8 @@ export default function IntegrationsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="max-w-4xl mx-auto">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <Workflow className="w-7 h-7 sm:w-8 sm:h-8" />
@@ -90,6 +91,7 @@ export default function IntegrationsPage() {
           >
             <Gift className="w-4 h-4 text-primary" />
           </button>
+        </div>
         </div>
       </div>
 

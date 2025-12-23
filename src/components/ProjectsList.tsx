@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus, ArrowUpDown } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
+import { cn, formatDate } from '@/lib/utils'
 
 interface Project {
   id: string
@@ -26,6 +27,23 @@ interface ProjectsListProps {
 
 export default function ProjectsList({ projects }: ProjectsListProps) {
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+
+  useEffect(() => {
+    const storageKey = 'admin_projects_view'
+    const stored = localStorage.getItem(storageKey)
+
+    if (stored === 'grid' || stored === 'list') {
+      setViewMode(stored)
+      return
+    }
+
+    setViewMode('grid')
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('admin_projects_view', viewMode)
+  }, [viewMode])
 
   const sortedProjects = [...projects].sort((a, b) => {
     if (sortMode === 'alphabetical') {
@@ -42,7 +60,8 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
   return (
     <>
       {projects.length > 0 && (
-        <div className="flex justify-end mb-4">
+        <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
           <Button
             variant="ghost"
             size="sm"
@@ -55,7 +74,12 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
         </div>
       )}
 
-      <div className="grid gap-4 sm:gap-6">
+      <div
+        className={cn(
+          'grid gap-3 sm:gap-4',
+          viewMode === 'grid' && 'sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
+        )}
+      >
         {projects.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -75,12 +99,12 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
 
             return (
               <Link key={project.id} href={`/admin/projects/${project.id}`}>
-                <Card className="hover:shadow-elevation-lg hover:-translate-y-1 hover:border-primary/50 transition-all duration-200 cursor-pointer">
-                  <CardHeader>
+                <Card className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-elevation-lg sm:hover:-translate-y-1">
+                  <CardHeader className="p-3 sm:p-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg sm:text-xl">{project.title}</CardTitle>
-                        <CardDescription className="mt-2 text-sm break-words">
+                        <CardTitle className="text-base sm:text-lg">{project.title}</CardTitle>
+                        <CardDescription className="mt-1 text-sm break-words">
                           {(() => {
                             const primaryRecipient = project.recipients?.find(r => r.isPrimary) || project.recipients?.[0]
                             const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
@@ -101,7 +125,7 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                       </div>
                       <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
                             project.status === 'APPROVED'
                               ? 'bg-success-visible text-success border-2 border-success-visible'
                               : project.status === 'SHARE_ONLY'
@@ -116,7 +140,7 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
                     <div className="flex flex-wrap gap-3 sm:gap-6 text-sm text-muted-foreground">
                       <div>
                         <span className="font-medium">{totalVideos}</span> video

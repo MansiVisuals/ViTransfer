@@ -187,9 +187,9 @@ export default function ProjectPage() {
   const hideFeedback = (project as any).hideFeedback === true
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
+      <div className="min-h-screen bg-background">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
           <Link href="/admin/projects">
             <Button variant="ghost" size="default" className="justify-start px-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -198,7 +198,7 @@ export default function ProjectPage() {
             </Button>
           </Link>
           <Link href={`/admin/projects/${id}/settings`}>
-            <Button variant="outline" size="lg">
+            <Button variant="outline" size="default">
               <Settings className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Project Settings</span>
             </Button>

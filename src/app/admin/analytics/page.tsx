@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { BarChart3, Video, Eye, Download, RefreshCw, ChevronRight } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
+import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 
 interface ProjectAnalytics {
   id: string
@@ -30,6 +31,7 @@ export default function AnalyticsDashboard() {
   const [projects, setProjects] = useState<ProjectAnalytics[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
   const loadAnalytics = async () => {
     setLoading(true)
@@ -48,6 +50,22 @@ export default function AnalyticsDashboard() {
   useEffect(() => {
     loadAnalytics()
   }, [])
+
+  useEffect(() => {
+    const storageKey = 'admin_analytics_view'
+    const stored = localStorage.getItem(storageKey)
+
+    if (stored === 'grid' || stored === 'list') {
+      setViewMode(stored)
+      return
+    }
+
+    setViewMode('grid')
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('admin_analytics_view', viewMode)
+  }, [viewMode])
 
   // Calculate aggregate stats
   const totalProjects = projects.length
@@ -73,8 +91,8 @@ export default function AnalyticsDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="mb-6">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="mb-4">
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <BarChart3 className="w-8 h-8" />
             Analytics Dashboard
@@ -85,7 +103,7 @@ export default function AnalyticsDashboard() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-4 mb-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
@@ -124,7 +142,7 @@ export default function AnalyticsDashboard() {
         </div>
 
         {/* Filters and Actions */}
-        <Card className="mb-6">
+        <Card className="mb-4">
           <CardHeader>
             <CardTitle>Filters & Actions</CardTitle>
           </CardHeader>
@@ -156,6 +174,12 @@ export default function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
+        {projects.length > 0 && (
+          <div className="flex flex-wrap justify-end gap-2 mb-3">
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          </div>
+        )}
+
         {/* Projects List */}
         {filteredProjects.length === 0 ? (
           <Card>
@@ -172,7 +196,13 @@ export default function AnalyticsDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div
+            className={
+              viewMode === 'grid'
+                ? 'grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
+                : 'space-y-3'
+            }
+          >
             {filteredProjects.map((project) => (
               <Link
                 key={project.id}
@@ -180,11 +210,11 @@ export default function AnalyticsDashboard() {
                 className="block group"
               >
                 <Card className="hover:border-primary transition-colors cursor-pointer">
-                  <CardHeader>
+                  <CardHeader className="p-3 sm:p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-lg sm:text-xl truncate group-hover:text-primary transition-colors">
+                          <CardTitle className="text-base sm:text-lg truncate group-hover:text-primary transition-colors">
                             {project.title}
                           </CardTitle>
                           <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -216,35 +246,35 @@ export default function AnalyticsDashboard() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
+                  <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary-visible rounded-md">
+                        <div className="bg-primary-visible rounded-md p-1.5">
                           <Video className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Videos</p>
-                          <p className="text-lg font-bold">{project.videoCount}</p>
+                          <p className="text-base font-semibold">{project.videoCount}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary-visible rounded-md">
+                        <div className="bg-primary-visible rounded-md p-1.5">
                           <Eye className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Visits</p>
-                          <p className="text-lg font-bold">{project.totalVisits}</p>
+                          <p className="text-base font-semibold">{project.totalVisits}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary-visible rounded-md">
+                        <div className="bg-primary-visible rounded-md p-1.5">
                           <Download className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Downloads</p>
-                          <p className="text-lg font-bold">{project.totalDownloads}</p>
+                          <p className="text-base font-semibold">{project.totalDownloads}</p>
                         </div>
                       </div>
                     </div>

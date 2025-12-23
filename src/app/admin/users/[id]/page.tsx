@@ -235,18 +235,19 @@ export default function EditUserPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">Edit Admin User</h1>
-        <p className="text-muted-foreground mt-1 text-sm sm:text-base">Update administrator account details</p>
-      </div>
+    <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold">Edit Admin User</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Update administrator account details</p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>User Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>User Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-destructive-visible border-2 border-destructive-visible text-destructive font-medium px-4 py-3 rounded">
                 {error}
@@ -501,8 +502,9 @@ export default function EditUserPage() {
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

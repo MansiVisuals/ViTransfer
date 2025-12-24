@@ -5,6 +5,13 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2025-12-24
+
+### Changed
+- Admin UI spacing tightened and made consistent across pages; grid view is now the default (with improved mobile layouts)
+- Analytics + security dashboards condensed overview metrics into single cards and reduced filter UI height
+- Share pages: removed footer, moved shortcuts button below the comment field, corrected shortcuts list, and added Ctrl+/ to reset speed to 1x
+
 ## [0.8.0] - 2025-12-21
 
 ### Added

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, FolderKanban, Video, Eye, Download, RefreshCw } from 'lucide-react'
+import { BarChart3, FolderKanban, Video, Eye, Download, RefreshCw, ArrowUpDown } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 import { cn } from '@/lib/utils'
@@ -31,8 +31,8 @@ interface ProjectAnalytics {
 export default function AnalyticsDashboard() {
   const [projects, setProjects] = useState<ProjectAnalytics[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState<string>('')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
   const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
 
@@ -77,12 +77,16 @@ export default function AnalyticsDashboard() {
   const totalVideos = projects.reduce((sum, p) => sum + p.videoCount, 0)
 
   // Filter projects
-  const filteredProjects = filterStatus
-    ? projects.filter(p => p.status === filterStatus)
-    : projects
+  const sortedProjects = [...projects].sort((a, b) => {
+    if (sortMode === 'alphabetical') {
+      return a.title.localeCompare(b.title)
+    }
 
-  // Get unique statuses for filter
-  const uniqueStatuses = Array.from(new Set(projects.map(p => p.status)))
+    const statusPriority = { IN_REVIEW: 1, SHARE_ONLY: 2, APPROVED: 3 } as const
+    const priorityDiff = (statusPriority[a.status as keyof typeof statusPriority] ?? 99) - (statusPriority[b.status as keyof typeof statusPriority] ?? 99)
+    if (priorityDiff !== 0) return priorityDiff
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  })
 
   if (loading) {
     return (
@@ -155,63 +159,52 @@ export default function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Filters and Actions */}
-        <Card className="mb-4">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div className="flex-1 min-w-[180px]">
-                <label className="text-xs font-medium text-muted-foreground block">Status</label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
-                >
-                  <option value="">All Statuses</option>
-                  {uniqueStatuses.map(status => (
-                    <option key={status} value={status}>
-                      {status.replace('_', ' ')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {projects.length > 0 && (
-                  <ViewModeToggle value={viewMode} onChange={setViewMode} />
-                )}
-                <Button onClick={loadAnalytics} variant="outline" size="sm" disabled={loading}>
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline ml-2">Refresh</span>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Projects List */}
-        {filteredProjects.length === 0 ? (
+        {sortedProjects.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground opacity-50 mb-4" />
               <p className="text-muted-foreground">
-                {projects.length === 0 ? 'No analytics data yet' : 'No projects match the selected filters'}
+                No analytics data yet
               </p>
-              {projects.length === 0 && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Analytics will appear once clients start viewing projects
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground mt-2">
+                Analytics will appear once clients start viewing projects
+              </p>
             </CardContent>
           </Card>
         ) : (
-          <div
-            className={
-              viewMode === 'grid'
-                ? 'grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4'
-                : 'space-y-3'
-            }
-          >
-            {filteredProjects.map((project) => (
+          <>
+            <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
+                className="text-muted-foreground hover:text-foreground"
+                title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
+              >
+                <ArrowUpDown className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={loadAnalytics}
+                variant="ghost"
+                size="sm"
+                disabled={loading}
+                className="text-muted-foreground hover:text-foreground"
+                title="Refresh"
+              >
+                <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+              </Button>
+            </div>
+
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4'
+                  : 'space-y-3'
+              }
+            >
+              {sortedProjects.map((project) => (
               <Link
                 key={project.id}
                 href={`/admin/analytics/${project.id}`}
@@ -275,8 +268,9 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
               </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

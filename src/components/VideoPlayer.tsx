@@ -333,14 +333,18 @@ export default function VideoPlayer({
       if (e.ctrlKey && e.code === 'KeyJ') {
         e.preventDefault()
         e.stopPropagation()
-        if (video.paused && selectedVideo?.fps) {
-          const frameDuration = 1 / selectedVideo.fps
-          video.currentTime = Math.max(0, video.currentTime - frameDuration)
-          currentTimeRef.current = video.currentTime // Update ref for comment timecode
-          window.dispatchEvent(new CustomEvent('videoTimeUpdated', {
-            detail: { time: currentTimeRef.current, videoId: selectedVideoIdRef.current }
-          }))
+        if (!selectedVideo?.fps) return
+
+        if (!video.paused) {
+          video.pause()
         }
+
+        const frameDuration = 1 / selectedVideo.fps
+        video.currentTime = Math.max(0, video.currentTime - frameDuration)
+        currentTimeRef.current = video.currentTime // Update ref for comment timecode
+        window.dispatchEvent(new CustomEvent('videoTimeUpdated', {
+          detail: { time: currentTimeRef.current, videoId: selectedVideoIdRef.current }
+        }))
         return
       }
 
@@ -348,14 +352,21 @@ export default function VideoPlayer({
       if (e.ctrlKey && e.code === 'KeyL') {
         e.preventDefault()
         e.stopPropagation()
-        if (video.paused && selectedVideo?.fps) {
-          const frameDuration = 1 / selectedVideo.fps
-          video.currentTime = Math.min(video.duration, video.currentTime + frameDuration)
-          currentTimeRef.current = video.currentTime // Update ref for comment timecode
-          window.dispatchEvent(new CustomEvent('videoTimeUpdated', {
-            detail: { time: currentTimeRef.current, videoId: selectedVideoIdRef.current }
-          }))
+        if (!selectedVideo?.fps) return
+
+        if (!video.paused) {
+          video.pause()
         }
+
+        const frameDuration = 1 / selectedVideo.fps
+        const duration = Number.isFinite(video.duration) ? video.duration : undefined
+        video.currentTime = duration
+          ? Math.min(duration, video.currentTime + frameDuration)
+          : video.currentTime + frameDuration
+        currentTimeRef.current = video.currentTime // Update ref for comment timecode
+        window.dispatchEvent(new CustomEvent('videoTimeUpdated', {
+          detail: { time: currentTimeRef.current, videoId: selectedVideoIdRef.current }
+        }))
         return
       }
     }
@@ -581,7 +592,7 @@ export default function VideoPlayer({
                 <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+L</kbd>
               </div>
               <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border">
-                Frame stepping works when video is paused. Speed range: 0.25x - 2.0x
+                Frame stepping pauses the video automatically. Speed range: 0.25x - 2.0x
               </p>
             </div>
           </DialogContent>

@@ -129,7 +129,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="flex-1 min-h-0 bg-background flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -242,7 +242,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
             <Video className="w-8 h-8 text-primary-foreground animate-pulse" />

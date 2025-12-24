@@ -68,6 +68,8 @@ export default function VideoSidebar({
     }
   }, [])
 
+  const hasExplicitHeightClass = /\b(?:h|max-h)-/.test(className ?? '')
+
   // Handle mouse move for resizing
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -117,9 +119,9 @@ export default function VideoSidebar({
         style={{ width: `${sidebarWidth}px` }}
         className={cn(
           'hidden lg:block bg-card border border-border relative rounded-lg',
-          'sticky top-0 overflow-y-auto',
-          // Default to full screen height, but allow override via className
-          !className?.includes('max-h-') && !className?.includes('h-') && 'h-screen',
+          'overflow-y-auto self-stretch min-h-0',
+          // Default to full viewport height (minus admin header), but allow override via className
+          !hasExplicitHeightClass && 'h-[calc(100dvh-var(--admin-header-height))]',
           className
         )}
       >

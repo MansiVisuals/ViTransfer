@@ -159,7 +159,7 @@ export default function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     )
@@ -167,7 +167,7 @@ export default function ProjectPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">Project not found</p>
@@ -185,9 +185,11 @@ export default function ProjectPage() {
   }) || []
 
   const hideFeedback = (project as any).hideFeedback === true
+  const iconBadgeClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
+  const iconBadgeIconClassName = 'w-4 h-4 text-primary'
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
           <Link href="/admin/projects">
@@ -211,12 +213,12 @@ export default function ProjectPage() {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="flex items-center gap-2 break-words">
-                      <span className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                        <FolderKanban className="w-4 h-4 text-primary" />
-                      </span>
-                      <span className="min-w-0 break-words">{project.title}</span>
-                    </CardTitle>
+	                    <CardTitle className="flex items-center gap-2 break-words">
+	                      <span className={iconBadgeClassName}>
+	                        <FolderKanban className={iconBadgeIconClassName} />
+	                      </span>
+	                      <span className="min-w-0 break-words">{project.title}</span>
+	                    </CardTitle>
                     <p className="text-sm text-muted-foreground mt-2 break-words">{project.description}</p>
                   </div>
                   <span
@@ -259,13 +261,13 @@ export default function ProjectPage() {
             </Card>
 
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <span className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                    <Video className="w-4 h-4 text-primary" />
-                  </span>
-                  Videos
-                </h2>
+	              <div className="flex items-center justify-between mb-4">
+	                <h2 className="text-xl font-semibold flex items-center gap-2">
+	                  <span className={iconBadgeClassName}>
+	                    <Video className={iconBadgeIconClassName} />
+	                  </span>
+	                  Videos
+	                </h2>
                 {project.videos.length > 0 && (
                   <Button
                     variant="ghost"

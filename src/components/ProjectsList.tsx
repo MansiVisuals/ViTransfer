@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, ArrowUpDown, Video, MessageSquare, Clock } from 'lucide-react'
+import { Plus, ArrowUpDown, Video, MessageSquare } from 'lucide-react'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
-import { cn, formatDate } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface Project {
   id: string
@@ -28,7 +28,7 @@ interface ProjectsListProps {
 export default function ProjectsList({ projects }: ProjectsListProps) {
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const metricIconWrapperClassName = 'bg-primary-visible rounded-md p-1.5 flex-shrink-0'
+  const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
 
   useEffect(() => {
@@ -77,10 +77,11 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
       )}
 
       <div
-        className={cn(
-          'grid gap-3 sm:gap-4',
-          viewMode === 'grid' && 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
-        )}
+        className={
+          viewMode === 'grid'
+            ? 'grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4'
+            : 'space-y-3'
+        }
       >
         {projects.length === 0 ? (
           <Card>
@@ -99,15 +100,10 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
             const totalVideos = project.videos.length
 
             return (
-              <Link key={project.id} href={`/admin/projects/${project.id}`}>
+              <Link key={project.id} href={`/admin/projects/${project.id}`} className="block">
                 <Card className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-elevation-lg sm:hover:-translate-y-1">
                   <CardHeader className={cn('p-3 sm:p-4', viewMode === 'grid' && 'p-2 sm:p-3')}>
-                    <div
-                      className={cn(
-                        'justify-between items-start gap-3',
-                        viewMode === 'grid' ? 'flex flex-col sm:flex-row' : 'flex'
-                      )}
-                    >
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <CardTitle className={cn('font-semibold', viewMode === 'grid' ? 'text-sm sm:text-base' : 'text-base sm:text-lg')}>
                           {project.title}
@@ -131,12 +127,7 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                           })()}
                         </CardDescription>
                       </div>
-                      <div
-                        className={cn(
-                          'flex flex-row items-start gap-2',
-                          viewMode === 'grid' ? 'w-full sm:w-auto sm:flex-col sm:items-end' : 'flex-shrink-0'
-                        )}
-                      >
+                      <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
                             project.status === 'APPROVED'
@@ -174,18 +165,6 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                           comment
                           {project._count.comments !== 1 ? 's' : ''}
                         </span>
-                      </div>
-                      <div
-                        className={cn(
-                          'inline-flex items-center gap-2',
-                          viewMode === 'grid' ? 'w-full sm:w-auto sm:ml-auto' : 'ml-auto',
-                          viewMode === 'grid' ? 'text-xs' : 'text-xs sm:text-sm'
-                        )}
-                      >
-                        <span className={metricIconWrapperClassName}>
-                          <Clock className={metricIconClassName} />
-                        </span>
-                        <span>Updated {formatDate(project.updatedAt)}</span>
                       </div>
                     </div>
                   </CardContent>

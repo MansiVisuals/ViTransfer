@@ -3,7 +3,7 @@
 import { AuthProvider } from '@/components/AuthProvider'
 import AdminHeader from '@/components/AdminHeader'
 import SessionMonitor from '@/components/SessionMonitor'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 
 export default function AdminLayout({
@@ -12,6 +12,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const headerRef = useRef<HTMLDivElement>(null)
 
   // Prevent caching of admin pages
   useEffect(() => {
@@ -35,13 +36,37 @@ export default function AdminLayout({
     }
   }, [])
 
+  // Allow components (e.g. share sidebar) to size to viewport minus header.
+  useEffect(() => {
+    const headerEl = headerRef.current
+    if (!headerEl) return
+
+    const update = () => {
+      document.documentElement.style.setProperty('--admin-header-height', `${headerEl.offsetHeight}px`)
+    }
+
+    update()
+
+    const observer = new ResizeObserver(() => update())
+    observer.observe(headerEl)
+
+    return () => {
+      observer.disconnect()
+      document.documentElement.style.setProperty('--admin-header-height', '0px')
+    }
+  }, [])
+
   const hideFooter = pathname?.startsWith('/admin/projects/') && pathname?.endsWith('/share')
 
   return (
     <AuthProvider requireAuth={true}>
-      <div className="min-h-screen bg-background flex flex-col">
-        <AdminHeader />
-        <div className={hideFooter ? 'flex-1' : 'flex-1 lg:pb-16'}>{children}</div>
+      <div className="flex flex-1 min-h-0 bg-background flex-col overflow-x-hidden">
+        <div ref={headerRef}>
+          <AdminHeader />
+        </div>
+        <div className={hideFooter ? 'flex-1 min-h-0 flex flex-col' : 'flex-1 min-h-0 flex flex-col lg:pb-16'}>
+          {children}
+        </div>
         {!hideFooter && (
           <footer className="border-t bg-card mt-4 px-4 py-3 lg:fixed lg:bottom-0 lg:left-0 lg:right-0 lg:z-10 lg:mt-0">
             <div className="max-w-screen-2xl mx-auto text-center text-xs text-muted-foreground space-y-1">

@@ -509,7 +509,7 @@ export default function SharePage() {
   // Show loading state
   if (isPasswordProtected === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     )
@@ -518,7 +518,7 @@ export default function SharePage() {
   // Show authentication prompt
   if (isPasswordProtected && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
         <Card className="bg-card border-border w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -688,7 +688,7 @@ export default function SharePage() {
   // Show project not found
   if (!project) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
         <Card className="bg-card border-border">
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">Project not found</p>
@@ -717,7 +717,7 @@ export default function SharePage() {
   })
 
   return (
-    <div className="h-screen bg-background flex flex-col lg:flex-row overflow-hidden">
+    <div className="flex-1 min-h-0 bg-background flex flex-col lg:flex-row overflow-hidden">
       {/* Video Sidebar - contains both desktop and mobile versions internally */}
       {project.videosByName && (
         <VideoSidebar

@@ -226,12 +226,18 @@ export default function CommentInput({
               Please select your name from the dropdown above before sending
             </p>
           ) : (
-            <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
                 Press Enter to send & Shift+Enter for new line
               </p>
               {showShortcutsButton && onShowShortcuts && (
-                <Button type="button" variant="ghost" size="xs" onClick={onShowShortcuts}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={onShowShortcuts}
+                  className="self-start sm:self-auto"
+                >
                   Shortcuts
                 </Button>
               )}

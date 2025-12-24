@@ -185,6 +185,8 @@ export default function ProjectPage() {
   }) || []
 
   const hideFeedback = (project as any).hideFeedback === true
+  const iconBadgeClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
+  const iconBadgeIconClassName = 'w-4 h-4 text-primary'
 
   return (
     <div className="flex-1 min-h-0 bg-background">
@@ -211,12 +213,12 @@ export default function ProjectPage() {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="flex items-center gap-2 break-words">
-                      <span className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                        <FolderKanban className="w-4 h-4 text-primary" />
-                      </span>
-                      <span className="min-w-0 break-words">{project.title}</span>
-                    </CardTitle>
+	                    <CardTitle className="flex items-center gap-2 break-words">
+	                      <span className={iconBadgeClassName}>
+	                        <FolderKanban className={iconBadgeIconClassName} />
+	                      </span>
+	                      <span className="min-w-0 break-words">{project.title}</span>
+	                    </CardTitle>
                     <p className="text-sm text-muted-foreground mt-2 break-words">{project.description}</p>
                   </div>
                   <span
@@ -259,13 +261,13 @@ export default function ProjectPage() {
             </Card>
 
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <span className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                    <Video className="w-4 h-4 text-primary" />
-                  </span>
-                  Videos
-                </h2>
+	              <div className="flex items-center justify-between mb-4">
+	                <h2 className="text-xl font-semibold flex items-center gap-2">
+	                  <span className={iconBadgeClassName}>
+	                    <Video className={iconBadgeIconClassName} />
+	                  </span>
+	                  Videos
+	                </h2>
                 {project.videos.length > 0 && (
                   <Button
                     variant="ghost"

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, FolderKanban, Video, Eye, Download, RefreshCw, ChevronRight } from 'lucide-react'
+import { BarChart3, FolderKanban, Video, Eye, Download, RefreshCw } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 import { cn } from '@/lib/utils'
@@ -33,6 +33,8 @@ export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
+  const metricIconClassName = 'w-4 h-4 text-primary'
 
   const loadAnalytics = async () => {
     setLoading(true)
@@ -111,8 +113,8 @@ export default function AnalyticsDashboard() {
           <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="flex items-center gap-2">
-                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                  <FolderKanban className="w-4 h-4 text-primary" />
+                <div className={metricIconWrapperClassName}>
+                  <FolderKanban className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Projects</p>
@@ -121,8 +123,8 @@ export default function AnalyticsDashboard() {
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                  <Video className="w-4 h-4 text-primary" />
+                <div className={metricIconWrapperClassName}>
+                  <Video className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Videos</p>
@@ -131,8 +133,8 @@ export default function AnalyticsDashboard() {
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                  <Eye className="w-4 h-4 text-primary" />
+                <div className={metricIconWrapperClassName}>
+                  <Eye className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Visits</p>
@@ -141,8 +143,8 @@ export default function AnalyticsDashboard() {
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                  <Download className="w-4 h-4 text-primary" />
+                <div className={metricIconWrapperClassName}>
+                  <Download className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Downloads</p>
@@ -215,126 +217,61 @@ export default function AnalyticsDashboard() {
                 href={`/admin/analytics/${project.id}`}
                 className="block group"
               >
-                <Card className="hover:border-primary transition-colors cursor-pointer">
-                  <CardHeader className="p-3 sm:p-4">
-                    <div className="flex items-start justify-between gap-4">
+                <Card className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-elevation-lg sm:hover:-translate-y-1">
+                  <CardHeader className={cn('p-3 sm:p-4', viewMode === 'grid' && 'p-2 sm:p-3')}>
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <CardTitle
-                            className={cn(
-                              'transition-colors group-hover:text-primary',
-                              viewMode === 'grid'
-                                ? 'text-sm sm:text-base font-semibold break-words leading-snug'
-                                : 'text-base sm:text-lg truncate'
-                            )}
-                          >
-                            {project.title}
-                          </CardTitle>
-                          <ChevronRight
-                            className={cn(
-                              'w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0',
-                              viewMode === 'grid' && 'hidden sm:block'
-                            )}
-                          />
-                        </div>
-                        <CardDescription
+                        <CardTitle
                           className={cn(
-                            'mt-1',
-                            viewMode === 'grid' ? 'text-xs sm:text-sm break-words' : 'truncate'
+                            'font-semibold transition-colors group-hover:text-primary',
+                            viewMode === 'grid' ? 'text-sm sm:text-base break-words' : 'text-base sm:text-lg'
                           )}
                         >
+                          {project.title}
+                        </CardTitle>
+                        <CardDescription className={cn('mt-1 break-words', viewMode === 'grid' ? 'text-xs sm:text-sm' : 'text-sm')}>
                           {project.recipientEmail ? (
                             <>
-                              {project.recipientName} • {project.recipientEmail}
+                              Client: {project.recipientName}
+                              <span className="hidden sm:inline"> ({project.recipientEmail})</span>
+                              <span className="block sm:hidden text-xs mt-1">{project.recipientEmail}</span>
                             </>
                           ) : (
-                            project.recipientName
+                            `Client: ${project.recipientName}`
                           )}
                         </CardDescription>
                       </div>
-                      <div className="flex-shrink-0">
-                        <span
-                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                            project.status === 'APPROVED'
-                              ? 'bg-success-visible text-success border border-success-visible'
-                              : project.status === 'IN_REVIEW'
-                              ? 'bg-warning-visible text-warning border border-warning-visible'
-                              : project.status === 'SHARE_ONLY'
-                              ? 'bg-primary-visible text-primary border border-primary-visible'
-                              : 'bg-muted text-muted-foreground border border-border'
-                          }`}
-                        >
-                          {project.status.replace('_', ' ')}
-                        </span>
-                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-                    {viewMode === 'grid' ? (
-                      <div className="space-y-2 text-xs text-muted-foreground">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                              <Video className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="truncate">Videos</span>
-                          </div>
-                          <span className="text-foreground font-semibold tabular-nums">{project.videoCount}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                              <Eye className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="truncate">Visits</span>
-                          </div>
-                          <span className="text-foreground font-semibold tabular-nums">{project.totalVisits}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
-                              <Download className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="truncate">Downloads</span>
-                          </div>
-                          <span className="text-foreground font-semibold tabular-nums">{project.totalDownloads}</span>
-                        </div>
+                  <CardContent className={cn('p-3 pt-0 sm:p-4 sm:pt-0', viewMode === 'grid' && 'p-2 pt-0 sm:p-3 sm:pt-0')}>
+                    <div className={cn('flex flex-wrap gap-3 sm:gap-6 text-muted-foreground', viewMode === 'grid' ? 'text-xs sm:text-sm' : 'text-sm')}>
+                      <div className="inline-flex items-center gap-2">
+                        <span className={metricIconWrapperClassName}>
+                          <Video className={metricIconClassName} />
+                        </span>
+                        <span className="font-medium tabular-nums">{project.videoCount}</span>
+                        <span>
+                          video
+                          {project.videoCount !== 1 ? 's' : ''}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary-visible rounded-md p-1.5">
-                            <Video className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Videos</p>
-                            <p className="text-base font-semibold">{project.videoCount}</p>
-                          </div>
-                        </div>
 
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary-visible rounded-md p-1.5">
-                            <Eye className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Visits</p>
-                            <p className="text-base font-semibold">{project.totalVisits}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 col-span-2 sm:col-span-1">
-                          <div className="bg-primary-visible rounded-md p-1.5">
-                            <Download className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Downloads</p>
-                            <p className="text-base font-semibold">{project.totalDownloads}</p>
-                          </div>
-                        </div>
+                      <div className="inline-flex items-center gap-2">
+                        <span className={metricIconWrapperClassName}>
+                          <Eye className={metricIconClassName} />
+                        </span>
+                        <span className="font-medium tabular-nums">{project.totalVisits}</span>
+                        <span>visits</span>
                       </div>
-                    )}
+
+                      <div className="inline-flex items-center gap-2">
+                        <span className={metricIconWrapperClassName}>
+                          <Download className={metricIconClassName} />
+                        </span>
+                        <span className="font-medium tabular-nums">{project.totalDownloads}</span>
+                        <span>downloads</span>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>

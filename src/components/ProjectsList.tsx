@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, ArrowUpDown, Video, MessageSquare, Clock } from 'lucide-react'
+import { Plus, ArrowUpDown, Video, MessageSquare } from 'lucide-react'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
-import { cn, formatDate } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface Project {
   id: string
@@ -28,7 +28,7 @@ interface ProjectsListProps {
 export default function ProjectsList({ projects }: ProjectsListProps) {
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const metricIconWrapperClassName = 'bg-primary-visible rounded-md p-1.5 flex-shrink-0'
+  const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
 
   useEffect(() => {
@@ -165,17 +165,6 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                           comment
                           {project._count.comments !== 1 ? 's' : ''}
                         </span>
-                      </div>
-                      <div
-                        className={cn(
-                          'inline-flex items-center gap-2 w-full sm:w-auto sm:ml-auto',
-                          viewMode === 'grid' ? 'text-xs' : 'text-xs sm:text-sm'
-                        )}
-                      >
-                        <span className={metricIconWrapperClassName}>
-                          <Clock className={metricIconClassName} />
-                        </span>
-                        <span>Updated {formatDate(project.updatedAt)}</span>
                       </div>
                     </div>
                   </CardContent>

@@ -228,7 +228,7 @@ export default function CommentInput({
           ) : (
             <div className="mt-2 flex items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground">
-                Press Enter to send & Shift+Enter for new line
+                Press Enter to send, Shift+Enter for new line, Ctrl+Space to play/pause, Ctrl+J/L to step frames
               </p>
               {showShortcutsButton && onShowShortcuts && (
                 <Button type="button" variant="ghost" size="xs" onClick={onShowShortcuts}>

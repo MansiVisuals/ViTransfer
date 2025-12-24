@@ -221,7 +221,7 @@ export default function SecurityEventsClient() {
           <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
                   <Shield className="w-4 h-4 text-primary" />
                 </div>
                 <div className="min-w-0">
@@ -231,7 +231,7 @@ export default function SecurityEventsClient() {
               </div>
 
               <div className="flex items-center gap-2 min-w-0">
-                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
                   <Tag className="w-4 h-4 text-primary" />
                 </div>
                 <div className="min-w-0">
@@ -241,7 +241,7 @@ export default function SecurityEventsClient() {
               </div>
 
               <div className="flex items-center gap-2 min-w-0 col-span-2 sm:col-span-1">
-                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
                   <XCircle className="w-4 h-4 text-primary" />
                 </div>
                 <div className="min-w-0">

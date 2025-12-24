@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Video, ProjectStatus } from '@prisma/client'
 import { Button } from './ui/button'
-import { Download, Info, CheckCircle2, HelpCircle } from 'lucide-react'
+import { Download, Info, CheckCircle2 } from 'lucide-react'
 import { formatTimestamp, formatFileSize, formatDate } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import {
@@ -12,7 +12,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from './ui/dialog'
 import { VideoAssetDownloadModal } from './VideoAssetDownloadModal'
 import { getAccessToken } from '@/lib/token-store'
@@ -276,7 +275,18 @@ export default function VideoPlayer({
     }
   }, [playbackSpeed])
 
-  // Keyboard shortcuts: Ctrl+Space (play/pause), Ctrl+,/. (speed), Ctrl+/ (reset speed), Ctrl+J/L or Ctrl+←/→ (frame step)
+  useEffect(() => {
+    const handleOpenShortcutsDialog = () => {
+      setShowShortcutsDialog(true)
+    }
+
+    window.addEventListener('openShortcutsDialog', handleOpenShortcutsDialog as EventListener)
+    return () => {
+      window.removeEventListener('openShortcutsDialog', handleOpenShortcutsDialog as EventListener)
+    }
+  }, [])
+
+  // Keyboard shortcuts: Ctrl+Space (play/pause), Ctrl+,/. (speed), Ctrl+/ (reset speed), Ctrl+J/L (frame step)
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
       if (!videoRef.current) return
@@ -320,7 +330,7 @@ export default function VideoPlayer({
       }
 
       // Ctrl+J: Go back one frame
-      if (e.ctrlKey && (e.code === 'KeyJ' || e.code === 'ArrowLeft')) {
+      if (e.ctrlKey && e.code === 'KeyJ') {
         e.preventDefault()
         e.stopPropagation()
         if (video.paused && selectedVideo?.fps) {
@@ -335,7 +345,7 @@ export default function VideoPlayer({
       }
 
       // Ctrl+L: Go forward one frame
-      if (e.ctrlKey && (e.code === 'KeyL' || e.code === 'ArrowRight')) {
+      if (e.ctrlKey && e.code === 'KeyL') {
         e.preventDefault()
         e.stopPropagation()
         if (video.paused && selectedVideo?.fps) {
@@ -537,6 +547,46 @@ export default function VideoPlayer({
 
       {/* Video & Project Information */}
       <div className={`rounded-lg p-4 text-card-foreground flex-shrink-0 ${!isVideoApproved ? 'bg-accent/50 border-2 border-primary/20' : 'bg-card border border-border'}`}>
+        <Dialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog}>
+          <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Keyboard Shortcuts</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Video playback controls
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-muted-foreground">Play / Pause</span>
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+Space</kbd>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-muted-foreground">Decrease Speed</span>
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+,</kbd>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-muted-foreground">Increase Speed</span>
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+.</kbd>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-muted-foreground">Reset Speed</span>
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+/</kbd>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border">
+                <span className="text-muted-foreground">Previous Frame</span>
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+J</kbd>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-muted-foreground">Next Frame</span>
+                <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+L</kbd>
+              </div>
+              <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border">
+                Frame stepping works when video is paused. Speed range: 0.25x - 2.0x
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Header: Version + Action Buttons, then Filename below */}
         <div className="space-y-3 mb-3 pb-3 border-b border-border">
           {/* Top row: Approved Badge + Version Label + Action Buttons */}
@@ -548,62 +598,13 @@ export default function VideoPlayer({
               <span className="text-base font-semibold text-foreground whitespace-nowrap">{displayLabel}</span>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              {/* Shortcuts Dialog Button */}
-              <Dialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <HelpCircle className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Shortcuts</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Keyboard Shortcuts</DialogTitle>
-                    <DialogDescription className="text-muted-foreground">
-                      Video playback controls
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center py-2 border-b border-border">
-                      <span className="text-muted-foreground">Play / Pause</span>
-                      <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+Space</kbd>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border">
-                      <span className="text-muted-foreground">Decrease Speed</span>
-                      <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+,</kbd>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border">
-                      <span className="text-muted-foreground">Increase Speed</span>
-                      <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+.</kbd>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border">
-                      <span className="text-muted-foreground">Reset Speed</span>
-                      <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+/</kbd>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border">
-                      <span className="text-muted-foreground">Previous Frame</span>
-                      <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+J / Ctrl+←</kbd>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-muted-foreground">Next Frame</span>
-                      <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+L / Ctrl+→</kbd>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border">
-                      Frame stepping works when video is paused. Speed range: 0.25x - 2.0x
-                    </p>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
             {/* Info Dialog Button - Hide in guest mode */}
             {!isGuest && (
               <Dialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Info className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Info</span>
-                  </Button>
-                </DialogTrigger>
+                <Button variant="outline" size="sm" onClick={() => setShowInfoDialog(true)}>
+                  <Info className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Info</span>
+                </Button>
                 <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Video Information</DialogTitle>
@@ -721,7 +722,7 @@ export default function VideoPlayer({
                       Approve this video?
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Video: <span className="font-semibold text-foreground">"{(selectedVideo as any).name}"</span>
+                      Video: <span className="font-semibold text-foreground">{(selectedVideo as any).name}</span>
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Version: <span className="font-semibold text-foreground">{selectedVideo.versionLabel}</span>

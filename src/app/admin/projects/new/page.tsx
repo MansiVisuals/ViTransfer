@@ -242,7 +242,7 @@ export default function NewProjectPage() {
                           <div className="flex-1">
                             <p className="text-sm font-medium">Consider Email OTP</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              You've provided a client email. Email OTP provides seamless authentication without sharing passwords.
+                              You&apos;ve provided a client email. Email OTP provides seamless authentication without sharing passwords.
                             </p>
                             <div className="flex gap-2 mt-2">
                               <Button
@@ -333,7 +333,7 @@ export default function NewProjectPage() {
                         )}
                         <p className="text-xs text-muted-foreground">
                           <strong className="text-warning">Important:</strong> Save this password!
-                          You'll need to share it with your client so they can view and approve the project.
+                          You&apos;ll need to share it with your client so they can view and approve the project.
                         </p>
                       </div>
                     )}

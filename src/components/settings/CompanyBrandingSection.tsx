@@ -44,7 +44,7 @@ export function CompanyBrandingSection({ companyName, setCompanyName, show, setS
               placeholder="e.g., Studio, Your Company Name"
             />
             <p className="text-xs text-muted-foreground">
-              This name will be displayed in feedback messages and comments instead of "Studio"
+              This name will be displayed in feedback messages and comments instead of &quot;Studio&quot;
             </p>
           </div>
         </CardContent>

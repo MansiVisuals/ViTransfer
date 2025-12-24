@@ -460,6 +460,7 @@ export default function AdminSharePage() {
                     adminUser={adminUser}
                     recipients={project.recipients || []}
                     shareToken={null}
+                    showShortcutsButton={true}
                   />
                 </div>
               )}

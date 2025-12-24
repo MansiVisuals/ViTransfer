@@ -44,7 +44,7 @@ export function UnapproveModal({
         </div>
 
         <div className="bg-accent/50 border border-border rounded-lg p-3 text-xs text-muted-foreground">
-          <strong>Tip:</strong> Use "Project Only" if you need to make changes to the project without affecting client access to approved videos.
+          <strong>Tip:</strong> Use &quot;Project Only&quot; if you need to make changes to the project without affecting client access to approved videos.
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">

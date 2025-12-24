@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, ArrowUpDown } from 'lucide-react'
+import { Plus, ArrowUpDown, Video, MessageSquare, Clock } from 'lucide-react'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 import { cn, formatDate } from '@/lib/utils'
 
@@ -28,6 +28,8 @@ interface ProjectsListProps {
 export default function ProjectsList({ projects }: ProjectsListProps) {
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const metricIconWrapperClassName = 'bg-primary-visible rounded-md p-1.5 flex-shrink-0'
+  const metricIconClassName = 'w-4 h-4 text-primary'
 
   useEffect(() => {
     const storageKey = 'admin_projects_view'
@@ -77,7 +79,7 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
       <div
         className={cn(
           'grid gap-3 sm:gap-4',
-          viewMode === 'grid' && 'sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
+          viewMode === 'grid' && 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
         )}
       >
         {projects.length === 0 ? (
@@ -94,17 +96,23 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
           </Card>
         ) : (
           sortedProjects.map((project) => {
-            const readyVideos = project.videos.filter((v) => v.status === 'READY').length
             const totalVideos = project.videos.length
 
             return (
               <Link key={project.id} href={`/admin/projects/${project.id}`}>
                 <Card className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-elevation-lg sm:hover:-translate-y-1">
-                  <CardHeader className="p-3 sm:p-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                  <CardHeader className={cn('p-3 sm:p-4', viewMode === 'grid' && 'p-2 sm:p-3')}>
+                    <div
+                      className={cn(
+                        'justify-between items-start gap-3',
+                        viewMode === 'grid' ? 'flex flex-col sm:flex-row' : 'flex'
+                      )}
+                    >
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base sm:text-lg">{project.title}</CardTitle>
-                        <CardDescription className="mt-1 text-sm break-words">
+                        <CardTitle className={cn('font-semibold', viewMode === 'grid' ? 'text-sm sm:text-base' : 'text-base sm:text-lg')}>
+                          {project.title}
+                        </CardTitle>
+                        <CardDescription className={cn('mt-1 break-words', viewMode === 'grid' ? 'text-xs sm:text-sm' : 'text-sm')}>
                           {(() => {
                             const primaryRecipient = project.recipients?.find(r => r.isPrimary) || project.recipients?.[0]
                             const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
@@ -123,12 +131,17 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                           })()}
                         </CardDescription>
                       </div>
-                      <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                      <div
+                        className={cn(
+                          'flex flex-row items-start gap-2',
+                          viewMode === 'grid' ? 'w-full sm:w-auto sm:flex-col sm:items-end' : 'flex-shrink-0'
+                        )}
+                      >
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
                             project.status === 'APPROVED'
                               ? 'bg-success-visible text-success border-2 border-success-visible'
-                              : project.status === 'SHARE_ONLY'
+                            : project.status === 'SHARE_ONLY'
                               ? 'bg-info-visible text-info border-2 border-info-visible'
                               : project.status === 'IN_REVIEW'
                               ? 'bg-primary-visible text-primary border-2 border-primary-visible'
@@ -140,21 +153,39 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-                    <div className="flex flex-wrap gap-3 sm:gap-6 text-sm text-muted-foreground">
-                      <div>
-                        <span className="font-medium">{totalVideos}</span> video
-                        {totalVideos !== 1 ? 's' : ''}
+                  <CardContent className={cn('p-3 pt-0 sm:p-4 sm:pt-0', viewMode === 'grid' && 'p-2 pt-0 sm:p-3 sm:pt-0')}>
+                    <div className={cn('flex flex-wrap gap-3 sm:gap-6 text-muted-foreground', viewMode === 'grid' ? 'text-xs sm:text-sm' : 'text-sm')}>
+                      <div className="inline-flex items-center gap-2">
+                        <span className={metricIconWrapperClassName}>
+                          <Video className={metricIconClassName} />
+                        </span>
+                        <span className="font-medium">{totalVideos}</span>
+                        <span>
+                          video
+                          {totalVideos !== 1 ? 's' : ''}
+                        </span>
                       </div>
-                      <div>
-                        <span className="font-medium">{readyVideos}</span> ready
+                      <div className="inline-flex items-center gap-2">
+                        <span className={metricIconWrapperClassName}>
+                          <MessageSquare className={metricIconClassName} />
+                        </span>
+                        <span className="font-medium">{project._count.comments}</span>
+                        <span>
+                          comment
+                          {project._count.comments !== 1 ? 's' : ''}
+                        </span>
                       </div>
-                      <div>
-                        <span className="font-medium">{project._count.comments}</span> comment
-                        {project._count.comments !== 1 ? 's' : ''}
-                      </div>
-                      <div className="w-full sm:w-auto sm:ml-auto text-xs sm:text-sm">
-                        Updated {formatDate(project.updatedAt)}
+                      <div
+                        className={cn(
+                          'inline-flex items-center gap-2',
+                          viewMode === 'grid' ? 'w-full sm:w-auto sm:ml-auto' : 'ml-auto',
+                          viewMode === 'grid' ? 'text-xs' : 'text-xs sm:text-sm'
+                        )}
+                      >
+                        <span className={metricIconWrapperClassName}>
+                          <Clock className={metricIconClassName} />
+                        </span>
+                        <span>Updated {formatDate(project.updatedAt)}</span>
                       </div>
                     </div>
                   </CardContent>

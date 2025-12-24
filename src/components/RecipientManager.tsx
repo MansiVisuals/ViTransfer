@@ -179,7 +179,7 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
 
       {recipients.length === 0 && !showAddForm ? (
         <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
-          No recipients added yet. Click "Add Recipient" to add one.
+          No recipients added yet. Click &quot;Add Recipient&quot; to add one.
         </div>
       ) : (
         <div className="space-y-2">

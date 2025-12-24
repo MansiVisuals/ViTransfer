@@ -778,13 +778,14 @@ export default function SharePage() {
                     restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                     videos={readyVideos}
                     isAdminView={false}
-                  companyName={companyName}
-                  clientCompanyName={project.companyName}
-                  smtpConfigured={project.smtpConfigured}
-                  isPasswordProtected={isPasswordProtected || false}
-                  recipients={project.recipients || []}
-                  shareToken={shareToken}
-                />
+                    companyName={companyName}
+                    clientCompanyName={project.companyName}
+                    smtpConfigured={project.smtpConfigured}
+                    isPasswordProtected={isPasswordProtected || false}
+                    recipients={project.recipients || []}
+                    shareToken={shareToken}
+                    showShortcutsButton={true}
+                  />
               </div>
             )}
 

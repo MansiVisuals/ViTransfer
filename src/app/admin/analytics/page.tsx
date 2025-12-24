@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, Video, Eye, Download, RefreshCw, ChevronRight } from 'lucide-react'
+import { BarChart3, FolderKanban, Video, Eye, Download, RefreshCw, ChevronRight } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
+import { cn } from '@/lib/utils'
 
 interface ProjectAnalytics {
   id: string
@@ -103,57 +104,65 @@ export default function AnalyticsDashboard() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-4 mb-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalProjects.toLocaleString()}</div>
-            </CardContent>
-          </Card>
+        <Card className="mb-4">
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardTitle className="text-sm font-medium">Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="flex items-center gap-2">
+                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                  <FolderKanban className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Projects</p>
+                  <p className="text-base font-semibold tabular-nums truncate">{totalProjects.toLocaleString()}</p>
+                </div>
+              </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Videos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalVideos.toLocaleString()}</div>
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2">
+                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                  <Video className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Videos</p>
+                  <p className="text-base font-semibold tabular-nums truncate">{totalVideos.toLocaleString()}</p>
+                </div>
+              </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Visits</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalVisits.toLocaleString()}</div>
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2">
+                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                  <Eye className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Visits</p>
+                  <p className="text-base font-semibold tabular-nums truncate">{totalVisits.toLocaleString()}</p>
+                </div>
+              </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Downloads</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalDownloads.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                  <Download className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Downloads</p>
+                  <p className="text-base font-semibold tabular-nums truncate">{totalDownloads.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filters and Actions */}
         <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>Filters & Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-sm font-medium mb-2 block">Project Status</label>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-xs font-medium text-muted-foreground block">Status</label>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-md"
+                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
                 >
                   <option value="">All Statuses</option>
                   {uniqueStatuses.map(status => (
@@ -164,21 +173,18 @@ export default function AnalyticsDashboard() {
                 </select>
               </div>
 
-              <div className="flex items-end gap-2">
-                <Button onClick={loadAnalytics} variant="outline" disabled={loading}>
-                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
+              <div className="flex items-center gap-2">
+                {projects.length > 0 && (
+                  <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                )}
+                <Button onClick={loadAnalytics} variant="outline" size="sm" disabled={loading}>
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline ml-2">Refresh</span>
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {projects.length > 0 && (
-          <div className="flex flex-wrap justify-end gap-2 mb-3">
-            <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          </div>
-        )}
 
         {/* Projects List */}
         {filteredProjects.length === 0 ? (
@@ -199,7 +205,7 @@ export default function AnalyticsDashboard() {
           <div
             className={
               viewMode === 'grid'
-                ? 'grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
+                ? 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4'
                 : 'space-y-3'
             }
           >
@@ -214,12 +220,29 @@ export default function AnalyticsDashboard() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-base sm:text-lg truncate group-hover:text-primary transition-colors">
+                          <CardTitle
+                            className={cn(
+                              'transition-colors group-hover:text-primary',
+                              viewMode === 'grid'
+                                ? 'text-sm sm:text-base font-semibold break-words leading-snug'
+                                : 'text-base sm:text-lg truncate'
+                            )}
+                          >
                             {project.title}
                           </CardTitle>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <ChevronRight
+                            className={cn(
+                              'w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0',
+                              viewMode === 'grid' && 'hidden sm:block'
+                            )}
+                          />
                         </div>
-                        <CardDescription className="truncate mt-1">
+                        <CardDescription
+                          className={cn(
+                            'mt-1',
+                            viewMode === 'grid' ? 'text-xs sm:text-sm break-words' : 'truncate'
+                          )}
+                        >
                           {project.recipientEmail ? (
                             <>
                               {project.recipientName} • {project.recipientEmail}
@@ -247,37 +270,71 @@ export default function AnalyticsDashboard() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary-visible rounded-md p-1.5">
-                          <Video className="w-4 h-4 text-primary" />
+                    {viewMode === 'grid' ? (
+                      <div className="space-y-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                              <Video className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="truncate">Videos</span>
+                          </div>
+                          <span className="text-foreground font-semibold tabular-nums">{project.videoCount}</span>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Videos</p>
-                          <p className="text-base font-semibold">{project.videoCount}</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary-visible rounded-md p-1.5">
-                          <Eye className="w-4 h-4 text-primary" />
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                              <Eye className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="truncate">Visits</span>
+                          </div>
+                          <span className="text-foreground font-semibold tabular-nums">{project.totalVisits}</span>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Visits</p>
-                          <p className="text-base font-semibold">{project.totalVisits}</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary-visible rounded-md p-1.5">
-                          <Download className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Downloads</p>
-                          <p className="text-base font-semibold">{project.totalDownloads}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                              <Download className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="truncate">Downloads</span>
+                          </div>
+                          <span className="text-foreground font-semibold tabular-nums">{project.totalDownloads}</span>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary-visible rounded-md p-1.5">
+                            <Video className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Videos</p>
+                            <p className="text-base font-semibold">{project.videoCount}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary-visible rounded-md p-1.5">
+                            <Eye className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Visits</p>
+                            <p className="text-base font-semibold">{project.totalVisits}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 col-span-2 sm:col-span-1">
+                          <div className="bg-primary-visible rounded-md p-1.5">
+                            <Download className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Downloads</p>
+                            <p className="text-base font-semibold">{project.totalDownloads}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </Link>

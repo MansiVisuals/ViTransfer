@@ -39,7 +39,7 @@ export default function AdminLayout({
 
   return (
     <AuthProvider requireAuth={true}>
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex flex-1 min-h-0 bg-background flex-col overflow-x-hidden">
         <AdminHeader />
         <div className={hideFooter ? 'flex-1' : 'flex-1 lg:pb-16'}>{children}</div>
         {!hideFooter && (

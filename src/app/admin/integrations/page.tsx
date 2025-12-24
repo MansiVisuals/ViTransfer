@@ -8,7 +8,7 @@ export default function IntegrationsPage() {
   const [showPreorderModal, setShowPreorderModal] = useState(false)
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
         <div className="max-w-4xl mx-auto">
         <div className="mb-6 sm:mb-8">

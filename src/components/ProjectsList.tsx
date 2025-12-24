@@ -77,10 +77,11 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
       )}
 
       <div
-        className={cn(
-          'grid gap-3 sm:gap-4',
-          viewMode === 'grid' && 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
-        )}
+        className={
+          viewMode === 'grid'
+            ? 'grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4'
+            : 'space-y-3'
+        }
       >
         {projects.length === 0 ? (
           <Card>
@@ -99,15 +100,10 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
             const totalVideos = project.videos.length
 
             return (
-              <Link key={project.id} href={`/admin/projects/${project.id}`}>
+              <Link key={project.id} href={`/admin/projects/${project.id}`} className="block">
                 <Card className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-elevation-lg sm:hover:-translate-y-1">
                   <CardHeader className={cn('p-3 sm:p-4', viewMode === 'grid' && 'p-2 sm:p-3')}>
-                    <div
-                      className={cn(
-                        'justify-between items-start gap-3',
-                        viewMode === 'grid' ? 'flex flex-col sm:flex-row' : 'flex'
-                      )}
-                    >
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <CardTitle className={cn('font-semibold', viewMode === 'grid' ? 'text-sm sm:text-base' : 'text-base sm:text-lg')}>
                           {project.title}
@@ -131,12 +127,7 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                           })()}
                         </CardDescription>
                       </div>
-                      <div
-                        className={cn(
-                          'flex flex-row items-start gap-2',
-                          viewMode === 'grid' ? 'w-full sm:w-auto sm:flex-col sm:items-end' : 'flex-shrink-0'
-                        )}
-                      >
+                      <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
                             project.status === 'APPROVED'
@@ -177,8 +168,7 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                       </div>
                       <div
                         className={cn(
-                          'inline-flex items-center gap-2',
-                          viewMode === 'grid' ? 'w-full sm:w-auto sm:ml-auto' : 'ml-auto',
+                          'inline-flex items-center gap-2 w-full sm:w-auto sm:ml-auto',
                           viewMode === 'grid' ? 'text-xs' : 'text-xs sm:text-sm'
                         )}
                       >

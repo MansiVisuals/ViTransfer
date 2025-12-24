@@ -159,7 +159,7 @@ export default function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     )
@@ -167,7 +167,7 @@ export default function ProjectPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">Project not found</p>
@@ -187,7 +187,7 @@ export default function ProjectPage() {
   const hideFeedback = (project as any).hideFeedback === true
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
           <Link href="/admin/projects">

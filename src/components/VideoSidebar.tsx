@@ -119,7 +119,7 @@ export default function VideoSidebar({
           'hidden lg:block bg-card border border-border relative rounded-lg',
           'sticky top-0 overflow-y-auto',
           // Default to full screen height, but allow override via className
-          !className?.includes('max-h-') && !className?.includes('h-') && 'h-screen',
+          !className?.includes('max-h-') && !className?.includes('h-') && 'h-full',
           className
         )}
       >

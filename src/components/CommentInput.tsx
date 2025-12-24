@@ -35,6 +35,10 @@ interface CommentInputProps {
   currentVideoRestricted: boolean
   restrictionMessage?: string
   commentsDisabled: boolean
+
+  // Optional shortcuts UI (share pages)
+  showShortcutsButton?: boolean
+  onShowShortcuts?: () => void
 }
 
 export default function CommentInput({
@@ -57,6 +61,8 @@ export default function CommentInput({
   currentVideoRestricted,
   restrictionMessage,
   commentsDisabled,
+  showShortcutsButton = false,
+  onShowShortcuts,
 }: CommentInputProps) {
   if (commentsDisabled) return null
 
@@ -220,9 +226,16 @@ export default function CommentInput({
               Please select your name from the dropdown above before sending
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground mt-2">
-              Press Enter to send, Shift+Enter for new line, Ctrl+Space to play/pause video
-            </p>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Press Enter to send & Shift+Enter for new line
+              </p>
+              {showShortcutsButton && onShowShortcuts && (
+                <Button type="button" variant="ghost" size="xs" onClick={onShowShortcuts}>
+                  Shortcuts
+                </Button>
+              )}
+            </div>
           )}
         </>
       )}

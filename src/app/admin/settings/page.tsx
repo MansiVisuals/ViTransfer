@@ -447,7 +447,8 @@ export default function GlobalSettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="max-w-4xl mx-auto">
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -605,6 +606,7 @@ export default function GlobalSettingsPage() {
             <Save className="w-4 h-4 mr-2" />
             {saving ? 'Saving...' : 'Save All Changes'}
           </Button>
+        </div>
         </div>
       </div>
     </div>

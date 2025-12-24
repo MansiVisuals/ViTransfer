@@ -58,15 +58,15 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
         <p className="text-muted-foreground">Loading users...</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <Users className="w-7 h-7 sm:w-8 sm:h-8" />
@@ -74,7 +74,7 @@ export default function UsersPage() {
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage admin users and their permissions</p>
         </div>
-        <Button variant="default" size="lg" onClick={() => router.push('/admin/users/new')}>
+        <Button variant="default" size="default" onClick={() => router.push('/admin/users/new')}>
           <UserPlus className="w-4 h-4 sm:mr-2" />
           <span className="hidden sm:inline">Add New User</span>
         </Button>
@@ -86,21 +86,21 @@ export default function UsersPage() {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {users.length === 0 ? (
           <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
+            <CardContent className="p-4 text-center text-muted-foreground">
               No users found. Create your first user to get started.
             </CardContent>
           </Card>
         ) : (
           users.map((user) => (
             <Card key={user.id}>
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold">{user.name || user.username || user.email}</h3>
+                      <h3 className="text-base font-semibold">{user.name || user.username || user.email}</h3>
                       <span className="px-2 py-1 text-xs rounded-full bg-info-visible text-info border-2 border-info-visible">
                         ADMIN
                       </span>

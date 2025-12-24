@@ -48,7 +48,7 @@ export default function AdminHeader() {
 
   return (
     <div className="bg-card border-b border-border/50 shadow-elevation-sm backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-6 flex-1 min-w-0">
             <nav className="flex gap-1 sm:gap-2 overflow-x-auto">
@@ -60,7 +60,7 @@ export default function AdminHeader() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                    className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                       isActive
                         ? 'bg-primary text-primary-foreground shadow-elevation'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'

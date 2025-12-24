@@ -190,6 +190,25 @@ export function useCommentManagement({
     }
   }, [])
 
+  // Keep selectedTimestamp in sync when the user frame-steps while commenting
+  useEffect(() => {
+    const handleVideoTimeUpdated = (e: CustomEvent) => {
+      const time = e.detail?.time
+      const videoId = e.detail?.videoId
+
+      if (typeof time !== 'number') return
+      if (!videoId || videoId !== selectedVideoId) return
+      if (!hasAutoFilledTimestamp || selectedTimestamp === null) return
+
+      setSelectedTimestamp(time)
+    }
+
+    window.addEventListener('videoTimeUpdated', handleVideoTimeUpdated as EventListener)
+    return () => {
+      window.removeEventListener('videoTimeUpdated', handleVideoTimeUpdated as EventListener)
+    }
+  }, [hasAutoFilledTimestamp, selectedTimestamp, selectedVideoId])
+
   // Auto-fill timestamp when user starts typing
   const handleCommentChange = (value: string) => {
     setNewComment(value)

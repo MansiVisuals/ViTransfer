@@ -9,7 +9,7 @@ import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import ShareLink from '@/components/ShareLink'
 import CommentSection from '@/components/CommentSection'
-import { ArrowLeft, Settings, ArrowUpDown } from 'lucide-react'
+import { ArrowLeft, Settings, ArrowUpDown, FolderKanban, Video } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
 // Force dynamic rendering (no static pre-rendering)
@@ -188,8 +188,8 @@ export default function ProjectPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
           <Link href="/admin/projects">
             <Button variant="ghost" size="default" className="justify-start px-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -198,7 +198,7 @@ export default function ProjectPage() {
             </Button>
           </Link>
           <Link href={`/admin/projects/${id}/settings`}>
-            <Button variant="outline" size="lg">
+            <Button variant="outline" size="default">
               <Settings className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Project Settings</span>
             </Button>
@@ -211,7 +211,12 @@ export default function ProjectPage() {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="break-words">{project.title}</CardTitle>
+                    <CardTitle className="flex items-center gap-2 break-words">
+                      <span className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                        <FolderKanban className="w-4 h-4 text-primary" />
+                      </span>
+                      <span className="min-w-0 break-words">{project.title}</span>
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground mt-2 break-words">{project.description}</p>
                   </div>
                   <span
@@ -255,7 +260,12 @@ export default function ProjectPage() {
 
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Videos</h2>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <span className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                    <Video className="w-4 h-4 text-primary" />
+                  </span>
+                  Videos
+                </h2>
                 {project.videos.length > 0 && (
                   <Button
                     variant="ghost"

@@ -384,9 +384,9 @@ export default function AdminSharePage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 min-h-0 flex flex-col">
+        <div className="max-w-screen-2xl mx-auto w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-6 flex-1 min-h-0 flex flex-col">
           {/* Header */}
-          <div className="mb-6 flex items-center gap-4">
+          <div className="mb-6 flex flex-wrap items-center gap-4">
             <Button
               variant="ghost"
               size="default"
@@ -417,7 +417,7 @@ export default function AdminSharePage() {
                 </CardContent>
               </Card>
             ) : (
-            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col max-w-7xl mx-auto w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
+            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
               <div className={project.hideFeedback ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
@@ -460,6 +460,7 @@ export default function AdminSharePage() {
                     adminUser={adminUser}
                     recipients={project.recipients || []}
                     shareToken={null}
+                    showShortcutsButton={true}
                   />
                 </div>
               )}

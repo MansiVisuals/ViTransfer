@@ -778,37 +778,17 @@ export default function SharePage() {
                     restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                     videos={readyVideos}
                     isAdminView={false}
-                  companyName={companyName}
-                  clientCompanyName={project.companyName}
-                  smtpConfigured={project.smtpConfigured}
-                  isPasswordProtected={isPasswordProtected || false}
-                  recipients={project.recipients || []}
-                  shareToken={shareToken}
-                />
+                    companyName={companyName}
+                    clientCompanyName={project.companyName}
+                    smtpConfigured={project.smtpConfigured}
+                    isPasswordProtected={isPasswordProtected || false}
+                    recipients={project.recipients || []}
+                    shareToken={shareToken}
+                    showShortcutsButton={true}
+                  />
               </div>
             )}
 
-              {/* Mobile Footer */}
-              <div className="lg:hidden border-t border-border py-3 px-6 mt-6 col-span-full">
-                <div className="text-center text-xs text-muted-foreground space-y-1">
-                  <div>
-                    Powered by{' '}
-                    <a
-                      href="https://github.com/MansiVisuals/ViTransfer"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      ViTransfer
-                    </a>
-                  </div>
-                  {process.env.NEXT_PUBLIC_APP_VERSION && (
-                    <div className="text-[10px] uppercase tracking-wide">
-                      Version: {process.env.NEXT_PUBLIC_APP_VERSION}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </div>

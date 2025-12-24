@@ -174,7 +174,7 @@ export default function AdminVideoManager({
             <CardHeader
               className={cn(
                 'cursor-pointer hover:bg-accent/50 transition-colors',
-                'flex flex-row items-center justify-between space-y-0 py-4'
+                'flex flex-row items-center justify-between space-y-0 py-3'
               )}
               onClick={() => toggleGroup(groupName)}
             >
@@ -236,7 +236,7 @@ export default function AdminVideoManager({
             </CardHeader>
 
             {isExpanded && (
-              <CardContent className="pt-0 space-y-6 border-t border-border">
+              <CardContent className="border-t border-border pt-0 space-y-4">
                 {/* Upload new version for this video */}
                 {projectStatus !== 'APPROVED' && (
                   <div className="mt-4">
@@ -250,7 +250,7 @@ export default function AdminVideoManager({
                 )}
 
                 {/* Version list */}
-                <div className="mt-6">
+                <div className="mt-5">
                   <h4 className="text-sm font-medium mb-3">All Versions</h4>
                   <VideoList
                     videos={groupVideos.sort((a, b) => {

@@ -39,8 +39,8 @@ export default function AdminPage() {
   if (!projects || projects.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-          <div className="flex justify-between items-center gap-4 mb-6 sm:mb-8">
+        <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+          <div className="flex justify-between items-center gap-4 mb-4 sm:mb-6">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                 <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
@@ -49,7 +49,7 @@ export default function AdminPage() {
               <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage your video projects</p>
             </div>
             <Link href="/admin/projects/new">
-              <Button variant="default" size="lg">
+              <Button variant="default" size="default">
                 <Plus className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">New Project</span>
               </Button>
@@ -63,8 +63,8 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="flex justify-between items-center gap-4 mb-6 sm:mb-8">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="flex justify-between items-center gap-4 mb-4 sm:mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
@@ -73,7 +73,7 @@ export default function AdminPage() {
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage your video projects</p>
           </div>
           <Link href="/admin/projects/new">
-            <Button variant="default" size="lg">
+            <Button variant="default" size="default">
               <Plus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">New Project</span>
             </Button>

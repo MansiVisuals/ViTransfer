@@ -228,7 +228,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   return (
     <div className="space-y-4">
       {videos.map((video) => (
-        <div key={video.id} className="border rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
+        <div key={video.id} className="border rounded-lg p-2 sm:p-3 space-y-2">
           {/* Top row: Approved badge + Version label + Action buttons */}
           <div className="flex justify-between items-center gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -251,7 +251,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
+                      className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:bg-primary-visible hover:text-primary"
                       onClick={() => handleStartEdit(video.id, video.versionLabel)}
                       title="Edit version label"
                     >

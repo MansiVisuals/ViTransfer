@@ -88,6 +88,7 @@ export default function SecurityEventsClient() {
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set())
   const [rateLimits, setRateLimits] = useState<RateLimitEntry[]>([])
   const [showRateLimits, setShowRateLimits] = useState(false)
+  const [cleanupDays, setCleanupDays] = useState<0 | 7 | 30 | 90>(90)
 
   const loadEvents = async () => {
     setLoading(true)
@@ -201,8 +202,8 @@ export default function SecurityEventsClient() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="mb-6">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="mb-4">
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <Shield className="w-8 h-8" />
             Security Events
@@ -213,50 +214,55 @@ export default function SecurityEventsClient() {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pagination.total.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Event Types</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Blocked Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {events.filter(e => e.wasBlocked).length}
+        <Card className="mb-4">
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardTitle className="text-sm font-medium">Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                  <Shield className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Events</p>
+                  <p className="text-base font-semibold tabular-nums truncate">{pagination.total.toLocaleString()}</p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                  <Tag className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Types</p>
+                  <p className="text-base font-semibold tabular-nums truncate">{stats.length}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 min-w-0 col-span-2 sm:col-span-1">
+                <div className="bg-primary-visible rounded-md p-1.5 flex-shrink-0">
+                  <XCircle className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Blocked</p>
+                  <p className="text-base font-semibold tabular-nums truncate">{events.filter(e => e.wasBlocked).length}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filters and Actions */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Filters & Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium mb-2 block">Event Type</label>
+        <Card className="mb-4">
+          <CardContent className="p-3 sm:p-4 space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="flex-1 min-w-[180px]">
+                  <label className="text-xs font-medium text-muted-foreground block">Type</label>
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-md"
+                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
                 >
                   <option value="">All Types</option>
                   {stats.map(stat => (
@@ -267,12 +273,12 @@ export default function SecurityEventsClient() {
                 </select>
               </div>
 
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-sm font-medium mb-2 block">Severity</label>
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-xs font-medium text-muted-foreground block">Severity</label>
                 <select
                   value={filterSeverity}
                   onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="w-full px-3 py-2 bg-background text-foreground border border-border rounded-md"
+                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
                 >
                   <option value="">All Severities</option>
                   <option value="CRITICAL">Critical</option>
@@ -281,63 +287,51 @@ export default function SecurityEventsClient() {
                 </select>
               </div>
 
-              <div className="flex flex-wrap items-stretch sm:items-end gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Button
                   onClick={loadEvents}
                   variant="outline"
+                  size="sm"
                   disabled={loading}
-                  className="w-full sm:w-auto"
                 >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline ml-2">Refresh</span>
                 </Button>
                 <Button
                   onClick={() => setShowRateLimits(!showRateLimits)}
                   variant={showRateLimits ? 'default' : 'outline'}
-                  className="w-full sm:w-auto"
+                  size="sm"
                 >
-                  <Unlock className="w-4 h-4 mr-2" />
-                  Rate Limits ({rateLimits.length})
+                  <Unlock className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Rate Limits</span>
+                  <span className="ml-2 text-xs tabular-nums">({rateLimits.length})</span>
                 </Button>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border pt-3">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-xs font-medium text-muted-foreground block">Cleanup</label>
+                <select
+                  value={cleanupDays}
+                  onChange={(e) => setCleanupDays(Number(e.target.value) as 0 | 7 | 30 | 90)}
+                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
+                >
+                  <option value={7}>Delete older than 7 days</option>
+                  <option value={30}>Delete older than 30 days</option>
+                  <option value={90}>Delete older than 90 days</option>
+                  <option value={0}>Delete all events</option>
+                </select>
+              </div>
+
               <Button
-                onClick={() => handleDeleteOld(7)}
-                variant="outline"
+                onClick={() => handleDeleteOld(cleanupDays)}
+                variant={cleanupDays === 0 ? 'destructive' : 'outline'}
                 size="sm"
                 disabled={deleting}
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete events older than 7 days
-              </Button>
-              <Button
-                onClick={() => handleDeleteOld(30)}
-                variant="outline"
-                size="sm"
-                disabled={deleting}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete events older than 30 days
-              </Button>
-              <Button
-                onClick={() => handleDeleteOld(90)}
-                variant="outline"
-                size="sm"
-                disabled={deleting}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete events older than 90 days
-              </Button>
-              <Button
-                onClick={() => handleDeleteOld(0)}
-                variant="destructive"
-                size="sm"
-                disabled={deleting}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete all events
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline ml-2">Run Cleanup</span>
               </Button>
             </div>
           </CardContent>
@@ -358,7 +352,7 @@ export default function SecurityEventsClient() {
               ) : (
                 <div className="space-y-2">
                   {rateLimits.map((entry) => (
-                    <div key={entry.key} className="border rounded-lg p-3 sm:p-4">
+                    <div key={entry.key} className="border rounded-lg p-2 sm:p-3">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex-1">
                           <div className="font-medium">Type: {entry.type}</div>
@@ -409,8 +403,8 @@ export default function SecurityEventsClient() {
             ) : (
               <div className="space-y-2">
                 {events.map((event) => (
-                  <div key={event.id} className="border rounded-lg p-3 sm:p-4">
-                    <div className="space-y-3">
+                  <div key={event.id} className="border rounded-lg p-2 sm:p-3">
+                    <div className="space-y-2">
                       {/* Header Row - Mobile Optimized */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -439,7 +433,7 @@ export default function SecurityEventsClient() {
                       </div>
 
                       {/* Description */}
-                      <div className="text-sm text-foreground bg-muted/50 rounded p-2 border-l-2 border-primary">
+                      <div className="text-sm text-foreground bg-muted/50 rounded border-l-2 border-primary p-2">
                         {getSecurityEventDescription(event.type)}
                       </div>
 

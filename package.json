@@ -1,12 +1,12 @@
 {
   "name": "vitransfer",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "postinstall": "prisma generate",
     "worker": "tsx src/worker/index.ts"
   },

@@ -31,6 +31,7 @@ interface CommentSectionProps {
   adminUser?: any
   recipients?: Array<{ id: string; name: string | null }>
   shareToken?: string | null
+  showShortcutsButton?: boolean
 }
 
 export default function CommentSection({
@@ -50,6 +51,7 @@ export default function CommentSection({
   adminUser = null,
   recipients = [],
   shareToken = null,
+  showShortcutsButton = false,
 }: CommentSectionProps) {
   const {
     comments,
@@ -270,6 +272,10 @@ export default function CommentSection({
     }
   }
 
+  const handleOpenShortcuts = () => {
+    window.dispatchEvent(new CustomEvent('openShortcutsDialog'))
+  }
+
   return (
     <Card className="bg-card border border-border flex flex-col h-auto lg:h-full max-h-[75vh] rounded-lg overflow-hidden" data-comment-section>
       <CardHeader className="border-b border-border flex-shrink-0">
@@ -394,6 +400,8 @@ export default function CommentSection({
           currentVideoRestricted={currentVideoRestricted}
           restrictionMessage={restrictionMessage}
           commentsDisabled={commentsDisabled}
+          showShortcutsButton={showShortcutsButton}
+          onShowShortcuts={handleOpenShortcuts}
         />
       </CardContent>
     </Card>

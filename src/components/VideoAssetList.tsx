@@ -286,7 +286,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
           {assets.map((asset) => (
             <div
               key={asset.id}
-              className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 transition-colors"
+              className="flex items-center gap-3 rounded-md border bg-card p-2 transition-colors hover:bg-accent/50"
             >
               {getAssetIcon(asset)}
               <div className="flex-1 min-w-0">

@@ -455,8 +455,6 @@ export default function AdminSharePage() {
                     restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                     videos={readyVideos}
                     isAdminView={true}
-                    companyName={companyName}
-                    clientCompanyName={project.companyName}
                     smtpConfigured={project.smtpConfigured}
                     isPasswordProtected={!!project.sharePassword}
                     adminUser={adminUser}

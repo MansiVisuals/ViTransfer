@@ -1,10 +1,10 @@
 'use client'
 
 import { Comment } from '@prisma/client'
-import { Clock, Trash2, CornerDownRight, ChevronDown, ChevronRight } from 'lucide-react'
-import { getUserColor } from '@/lib/utils'
+import { Clock, Trash2 } from 'lucide-react'
 import { timecodeToSeconds, formatTimecodeDisplay } from '@/lib/timecode'
 import DOMPurify from 'dompurify'
+import { InitialsAvatar } from '@/components/InitialsAvatar'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -13,21 +13,13 @@ type CommentWithReplies = Comment & {
 interface MessageBubbleProps {
   comment: CommentWithReplies
   isReply: boolean
-  isStudio: boolean
-  studioCompanyName: string
-  clientCompanyName?: string | null
-  parentComment?: Comment | null
   onReply?: () => void
   onSeekToTimestamp?: (timestamp: number, videoId: string, videoVersion: number | null) => void
   onDelete?: () => void
-  onScrollToComment?: (commentId: string) => void
   formatMessageTime: (date: Date) => string
   commentsDisabled: boolean
-  isViewerMessage: boolean // Is this the viewer's own message?
-  // Props for extended bubble with replies
+  sequenceNumber?: number
   replies?: Comment[]
-  repliesExpanded?: boolean
-  onToggleReplies?: () => void
   onDeleteReply?: (replyId: string) => void
 }
 
@@ -50,53 +42,21 @@ function sanitizeContent(content: string): string {
 export default function MessageBubble({
   comment,
   isReply,
-  isStudio,
-  studioCompanyName,
-  clientCompanyName,
-  parentComment,
   onReply,
   onSeekToTimestamp,
   onDelete,
-  onScrollToComment,
   formatMessageTime,
   commentsDisabled,
-  isViewerMessage,
+  sequenceNumber,
   replies,
-  repliesExpanded,
-  onToggleReplies,
   onDeleteReply,
 }: MessageBubbleProps) {
-  const hasReplies = replies && replies.length > 0
-  // Determine which company name to show
-  const displayCompanyName = isStudio ? studioCompanyName : clientCompanyName
-
-  // Viewer's own messages on RIGHT, others on LEFT
-  const alignment = isViewerMessage ? 'justify-end' : 'justify-start'
-  const headerAlign = isViewerMessage ? 'flex-row-reverse' : 'flex-row'
-
-  // Bubble colors:
-  // Sender (your messages): Blue bubble with vibrant border per person
-  // Received (others): Gray bubble with vibrant colored border per person
-  // Both: Text is black-ish in light mode, white in dark mode
-
   // Get effective author name for color generation
   // For internal comments without authorName, fall back to user.name or user.email
   const effectiveAuthorName = comment.authorName ||
     (comment.isInternal && (comment as any).user ?
       ((comment as any).user.name || (comment as any).user.email) :
       null)
-
-  const userColor = getUserColor(effectiveAuthorName, isViewerMessage)
-  const borderColor = userColor.border
-
-  let bubbleBg: string
-  if (isViewerMessage) {
-    // Your messages: Blue background
-    bubbleBg = 'bg-blue-500 dark:bg-blue-600'
-  } else {
-    // Received messages: Neutral gray background (more contrast in light mode)
-    bubbleBg = 'bg-gray-200 dark:bg-gray-800'
-  }
 
   // Text color adapts to light/dark mode (same for both sender and receiver)
   const textColor = 'text-gray-900 dark:text-gray-100'
@@ -110,159 +70,121 @@ export default function MessageBubble({
     }
   }
 
-  return (
-    <div className={`flex ${alignment} w-full`} id={`comment-${comment.id}`}>
-      <div className={isViewerMessage ? "max-w-[90%]" : "max-w-[90%]"}>
-        {/* Name and company header */}
-        <div className={`flex ${headerAlign} items-center gap-2 mb-1 px-1`}>
-          <span className="text-sm font-semibold text-foreground">
-            {effectiveAuthorName || 'Anonymous'}
-          </span>
-          {displayCompanyName && (
-            <>
-              <span className="text-xs text-muted-foreground">•</span>
-              <span className="text-xs text-muted-foreground">{displayCompanyName}</span>
-            </>
-          )}
-        </div>
+  const displayTimecode =
+    typeof comment.timecode === 'string' &&
+    comment.timecode.trim() !== '' &&
+    comment.timecode !== '00:00:00:00' &&
+    comment.timecode !== '00:00:00;00'
 
-        {/* Message Card with colored left border */}
-        <div className={`${bubbleBg} ${borderColor} border-l-4 rounded-lg p-3 shadow-sm`}>
-          {/* Simple reply indicator */}
-          {isReply && parentComment && (() => {
-            const parentEffectiveName = parentComment.authorName ||
-              (parentComment.isInternal && (parentComment as any).user ?
-                ((parentComment as any).user.name || (parentComment as any).user.email) :
+  const threadReplies = !isReply && replies && replies.length > 0 ? replies : []
+  const hasReplies = threadReplies.length > 0
+
+  return (
+    <div className="w-full" id={`comment-${comment.id}`}>
+      <div className="bg-card border border-border/40 rounded-2xl p-4 shadow-sm relative">
+        {hasReplies && (
+          <div className="absolute left-9 top-12 bottom-10 w-px bg-border/50" aria-hidden="true" />
+        )}
+
+        <div className="grid grid-cols-[40px_1fr] gap-x-3 gap-y-6 items-start">
+          <div className="flex justify-center">
+            <InitialsAvatar name={effectiveAuthorName} size="md" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-2 min-w-0">
+              <span className="text-base font-semibold text-foreground truncate">
+                {effectiveAuthorName || 'Anonymous'}
+              </span>
+              <span className="text-sm text-muted-foreground flex-shrink-0">
+                {formatMessageTime(comment.createdAt)}
+              </span>
+            </div>
+
+            <div className={`text-base whitespace-pre-wrap break-words leading-relaxed ${textColor}`}>
+              {!isReply && displayTimecode && (
+                <button
+                  type="button"
+                  onClick={handleTimestampClick}
+                  className="inline-flex items-center gap-1 rounded-md bg-warning-visible px-2 py-1 text-sm font-semibold text-warning mr-2 align-top hover:opacity-90 transition-opacity"
+                  title="Seek to this timecode"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="font-mono">{formatTimecodeDisplay(comment.timecode)}</span>
+                </button>
+              )}
+
+              <div
+                className={`${!isReply && displayTimecode ? 'inline' : ''} [&>p]:m-0 [&>p:first-child]:inline [&>br]:leading-[0]`}
+                dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.content) }}
+              />
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {!isReply && !commentsDisabled && onReply && (
+                  <button
+                    onClick={onReply}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+                  >
+                    Reply
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={onDelete}
+                    className="text-sm text-muted-foreground hover:text-destructive transition-colors font-medium flex items-center gap-1"
+                    title="Delete comment"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+              </div>
+              {typeof sequenceNumber === 'number' && sequenceNumber > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  #{sequenceNumber}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {threadReplies.map((reply) => {
+            const replyEffectiveName = reply.authorName ||
+              (reply.isInternal && (reply as any).user ?
+                ((reply as any).user.name || (reply as any).user.email) :
                 null)
 
             return (
-              <div
-                onClick={() => onScrollToComment?.(parentComment.id)}
-                className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground/70 cursor-pointer hover:text-muted-foreground transition-colors"
-              >
-                <CornerDownRight className="w-3 h-3" />
-                <span>Reply to {parentEffectiveName || 'Anonymous'}</span>
+              <div key={reply.id} className="contents">
+                <div className="flex justify-center">
+                  <InitialsAvatar name={replyEffectiveName} size="md" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-2 min-w-0">
+                    <span className="text-base font-semibold text-foreground truncate">
+                      {replyEffectiveName || 'Anonymous'}
+                    </span>
+                    <span className="text-sm text-muted-foreground flex-shrink-0">
+                      {formatMessageTime(reply.createdAt)}
+                    </span>
+                    {onDeleteReply && (
+                      <button
+                        onClick={() => onDeleteReply(reply.id)}
+                        className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete reply"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    className={`text-base whitespace-pre-wrap break-words leading-relaxed ${textColor} [&>p]:m-0`}
+                    dangerouslySetInnerHTML={{ __html: sanitizeContent(reply.content) }}
+                  />
+                </div>
               </div>
             )
-          })()}
-
-          {/* Timecode Badge (only for parent comments, not replies) */}
-          {!isReply && comment.timecode && (
-            <button
-              onClick={handleTimestampClick}
-              className="flex items-center gap-1 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
-              title="Seek to this timecode"
-            >
-              <Clock className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
-              <span className="text-xs underline decoration-dotted font-medium text-orange-600 dark:text-orange-400">
-                {formatTimecodeDisplay(comment.timecode)}
-              </span>
-            </button>
-          )}
-
-          {/* Message Content */}
-          <div
-            className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${textColor}`}
-            dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.content) }}
-          />
-
-          {/* Replies Section - Extends parent bubble */}
-          {hasReplies && (
-            <div className="mt-3 pt-3 border-t border-gray-300/40 dark:border-gray-600/40">
-              {/* Collapsible Header */}
-              <button
-                onClick={onToggleReplies}
-                className="flex items-center justify-between w-full mb-2 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity"
-              >
-                <span className={textColor}>
-                  {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
-                </span>
-                {repliesExpanded ? (
-                  <ChevronDown className={`w-3 h-3 ${textColor}`} />
-                ) : (
-                  <ChevronRight className={`w-3 h-3 ${textColor}`} />
-                )}
-              </button>
-
-              {/* Reply List */}
-              {repliesExpanded && (
-                <div className="space-y-3">
-                  {replies.map((reply) => {
-                    const replyIsViewerMessage = reply.isInternal === comment.isInternal
-                    const replyEffectiveName = reply.authorName ||
-                      (reply.isInternal && (reply as any).user ?
-                        ((reply as any).user.name || (reply as any).user.email) :
-                        null)
-
-                    return (
-                      <div key={reply.id} className="pl-3">
-                        {/* Reply Author */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <CornerDownRight className="w-3 h-3 opacity-50" />
-                          <span className="text-xs font-semibold opacity-80">
-                            {replyEffectiveName || 'Anonymous'}
-                          </span>
-                          <span className="text-xs opacity-50">
-                            {formatMessageTime(reply.createdAt)}
-                          </span>
-                          {onDeleteReply && (
-                            <>
-                              <span className="text-xs opacity-30">•</span>
-                              <button
-                                onClick={() => onDeleteReply(reply.id)}
-                                className="text-xs opacity-50 hover:opacity-100 hover:text-destructive transition-all flex items-center gap-1"
-                                title="Delete reply"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                        {/* Reply Content */}
-                        <div
-                          className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${textColor}`}
-                          dangerouslySetInnerHTML={{ __html: sanitizeContent(reply.content) }}
-                        />
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Message Time, Reply & Delete Buttons - Below card */}
-        <div className={`flex items-center gap-2 mt-1 px-1 ${isViewerMessage ? 'justify-end' : 'justify-start'}`}>
-          <span className="text-xs text-muted-foreground">
-            {formatMessageTime(comment.createdAt)}
-          </span>
-          {/* Reply Button - show for top-level comments only */}
-          {!isReply && !commentsDisabled && onReply && (
-            <>
-              <span className="text-xs text-muted-foreground">•</span>
-              <button
-                onClick={onReply}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
-              >
-                Reply
-              </button>
-            </>
-          )}
-          {/* Delete Button - admin only */}
-          {onDelete && (
-            <>
-              <span className="text-xs text-muted-foreground">•</span>
-              <button
-                onClick={onDelete}
-                className="text-xs text-muted-foreground hover:text-destructive transition-colors font-medium flex items-center gap-1"
-                title="Delete comment"
-              >
-                <Trash2 className="w-3 h-3" />
-                Delete
-              </button>
-            </>
-          )}
+          })}
         </div>
       </div>
     </div>

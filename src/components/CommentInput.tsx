@@ -6,6 +6,7 @@ import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
 import { Clock, Send } from 'lucide-react'
 import { secondsToTimecode, formatTimecodeDisplay, getTimecodeLabel, isDropFrame } from '@/lib/timecode'
+import { InitialsAvatar } from '@/components/InitialsAvatar'
 
 interface CommentInputProps {
   newComment: string
@@ -102,18 +103,21 @@ export default function CommentInput({
 
       {/* Replying To Indicator */}
       {replyingToComment && (
-        <div className="mb-3 p-3 bg-gray-100 dark:bg-gray-800 border-l-2 border-blue-400 rounded-lg flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold mb-1">
-              Replying to {replyingToComment.authorName || 'Anonymous'}
-            </p>
-            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-snug">
-              {replyingToComment.content}
-            </p>
+        <div className="mb-3 p-3 bg-muted/30 border border-border rounded-lg flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <InitialsAvatar name={replyingToComment.authorName || 'Anonymous'} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-foreground font-semibold mb-1 truncate">
+                Replying to {replyingToComment.authorName || 'Anonymous'}
+              </p>
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
+                {replyingToComment.content}
+              </p>
+            </div>
           </div>
           <button
             onClick={onCancelReply}
-            className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium flex-shrink-0 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground font-medium flex-shrink-0 px-2 py-1 rounded hover:bg-muted transition-colors"
           >
             Cancel
           </button>

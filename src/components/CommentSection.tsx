@@ -25,8 +25,6 @@ interface CommentSectionProps {
   restrictToLatestVersion?: boolean
   videos?: Video[]
   isAdminView?: boolean
-  companyName?: string // Studio company name
-  clientCompanyName?: string | null // Client company name
   smtpConfigured?: boolean
   isPasswordProtected?: boolean
   adminUser?: any
@@ -46,8 +44,6 @@ export default function CommentSection({
   restrictToLatestVersion = false,
   videos = [],
   isAdminView = false,
-  companyName = 'Studio',
-  clientCompanyName = null,
   smtpConfigured = false,
   isPasswordProtected = false,
   adminUser = null,
@@ -87,7 +83,6 @@ export default function CommentSection({
     restrictToLatestVersion,
     shareToken,
     useAdminAuth: isAdminView,
-    companyName,
   })
 
   // Auto-scroll to latest comment (like messaging apps)
@@ -247,16 +242,6 @@ export default function CommentSection({
 
   const replyingToComment = mergedComments.find(c => c.id === replyingToCommentId) || null
 
-  // Track which comments have expanded replies (default: all expanded)
-  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
-
-  const toggleReplies = (commentId: string) => {
-    setExpandedReplies(prev => ({
-      ...prev,
-      [commentId]: !prev[commentId]
-    }))
-  }
-
   // Format message time
   const formatMessageTime = (date: Date) => {
     const now = new Date()
@@ -289,19 +274,6 @@ export default function CommentSection({
       // Navigate to admin share page with video, version, and timestamp parameters
       const adminShareUrl = `/admin/projects/${projectId}/share?video=${encodeURIComponent(video.name)}&version=${videoVersion || video.version}&t=${Math.floor(timestamp)}`
       window.location.href = adminShareUrl
-    }
-  }
-
-  const handleScrollToComment = (commentId: string) => {
-    const element = document.getElementById(`comment-${commentId}`)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      // Brief highlight effect
-      element.style.transition = 'background-color 0.3s'
-      element.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'
-      setTimeout(() => {
-        element.style.backgroundColor = 'transparent'
-      }, 1000)
     }
   }
 
@@ -348,7 +320,7 @@ export default function CommentSection({
         )}
 
         {/* Messages Area - Threaded Conversations */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-gray-50 dark:bg-gray-900/30">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0 bg-muted/20">
           {sortedComments.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
@@ -356,53 +328,24 @@ export default function CommentSection({
             </div>
           ) : (
             <>
-              {sortedComments.map((comment) => {
-                const isViewerMessage = isAdminView ? comment.isInternal : !comment.isInternal
-                const hasReplies = comment.replies && comment.replies.length > 0
-                const repliesExpanded = expandedReplies[comment.id] ?? true // Default to expanded
+              {sortedComments.map((comment, index) => {
+                const sequenceNumber = index + 1
+                const replies = comment.replies || []
 
                 return (
                   <div key={comment.id}>
-                    {/* Parent Bubble that extends with replies */}
-                    {!hasReplies ? (
-                      // No replies - use normal MessageBubble
-                      <MessageBubble
-                        comment={comment}
-                        isReply={false}
-                        isStudio={comment.isInternal}
-                        studioCompanyName={companyName}
-                        clientCompanyName={clientCompanyName}
-                        parentComment={null}
-                        onReply={() => handleReply(comment.id, comment.videoId)}
-                        onSeekToTimestamp={handleSeekToTimestamp}
-                        onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
-                        onScrollToComment={handleScrollToComment}
-                        formatMessageTime={formatMessageTime}
-                        commentsDisabled={commentsDisabled}
-                        isViewerMessage={isViewerMessage}
-                      />
-                    ) : (
-                      // Has replies - render extended bubble
-                      <MessageBubble
-                        comment={comment}
-                        isReply={false}
-                        isStudio={comment.isInternal}
-                        studioCompanyName={companyName}
-                        clientCompanyName={clientCompanyName}
-                        parentComment={null}
-                        onReply={() => handleReply(comment.id, comment.videoId)}
-                        onSeekToTimestamp={handleSeekToTimestamp}
-                        onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
-                        onScrollToComment={handleScrollToComment}
-                        formatMessageTime={formatMessageTime}
-                        commentsDisabled={commentsDisabled}
-                        isViewerMessage={isViewerMessage}
-                        replies={comment.replies}
-                        repliesExpanded={repliesExpanded}
-                        onToggleReplies={() => toggleReplies(comment.id)}
-                        onDeleteReply={isAdminView ? handleDeleteComment : undefined}
-                      />
-                    )}
+                    <MessageBubble
+                      comment={comment}
+                      isReply={false}
+                      onReply={() => handleReply(comment.id, comment.videoId)}
+                      onSeekToTimestamp={handleSeekToTimestamp}
+                      onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
+                      formatMessageTime={formatMessageTime}
+                      commentsDisabled={commentsDisabled}
+                      sequenceNumber={sequenceNumber}
+                      replies={replies}
+                      onDeleteReply={isAdminView ? handleDeleteComment : undefined}
+                    />
                   </div>
                 )
               })}

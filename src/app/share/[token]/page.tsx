@@ -770,18 +770,16 @@ export default function SharePage() {
               {/* Comments Section - hidden for guests */}
               {!project.hideFeedback && !isGuest && (
                 <div className="lg:sticky lg:top-6 lg:self-start">
-	                  <CommentSection
-	                    projectId={project.id}
-	                    comments={filteredComments}
-	                    focusCommentId={focusCommentId}
-	                    clientName={project.clientName}
-	                    clientEmail={project.clientEmail}
-	                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
-	                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-	                    videos={readyVideos}
+                  <CommentSection
+                    projectId={project.id}
+                    comments={filteredComments}
+                    focusCommentId={focusCommentId}
+                    clientName={project.clientName}
+                    clientEmail={project.clientEmail}
+                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
+                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+                    videos={readyVideos}
                     isAdminView={false}
-                    companyName={companyName}
-                    clientCompanyName={project.companyName}
                     smtpConfigured={project.smtpConfigured}
                     isPasswordProtected={isPasswordProtected || false}
                     recipients={project.recipients || []}

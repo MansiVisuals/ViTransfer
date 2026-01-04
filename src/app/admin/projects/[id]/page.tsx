@@ -315,8 +315,6 @@ export default function ProjectPage() {
                   restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                   videos={activeVideos}
                   isAdminView={true}
-                  companyName={companyName}
-                  clientCompanyName={project.companyName}
                   smtpConfigured={true}
                   isPasswordProtected={!!project.sharePassword}
                   adminUser={adminUser}

@@ -22,7 +22,6 @@ interface UseCommentManagementProps {
   restrictToLatestVersion: boolean
   shareToken?: string | null
   useAdminAuth?: boolean
-  companyName?: string
 }
 
 export function useCommentManagement({
@@ -37,7 +36,6 @@ export function useCommentManagement({
   restrictToLatestVersion,
   shareToken = null,
   useAdminAuth = false,
-  companyName = 'Studio',
 }: UseCommentManagementProps) {
   const router = useRouter()
 
@@ -51,7 +49,6 @@ export function useCommentManagement({
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null)
 
   // Author name management
-  const displayClientName = isPasswordProtected ? clientName : 'Client'
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
 
   // Load persisted name selection from sessionStorage (survives commenting but not page refresh)

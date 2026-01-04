@@ -42,6 +42,8 @@ interface SecuritySettings {
   passwordAttempts: number
   sessionTimeoutValue: number
   sessionTimeoutUnit: string
+  adminSessionTimeoutValue: number
+  adminSessionTimeoutUnit: string
   trackAnalytics: boolean
   trackSecurityLogs: boolean
   viewSecurityEvents: boolean
@@ -104,6 +106,8 @@ export default function GlobalSettingsPage() {
   const [passwordAttempts, setPasswordAttempts] = useState('5')
   const [sessionTimeoutValue, setSessionTimeoutValue] = useState('15')
   const [sessionTimeoutUnit, setSessionTimeoutUnit] = useState('MINUTES')
+  const [adminSessionTimeoutValue, setAdminSessionTimeoutValue] = useState('15')
+  const [adminSessionTimeoutUnit, setAdminSessionTimeoutUnit] = useState('MINUTES')
   const [trackAnalytics, setTrackAnalytics] = useState(true)
   const [trackSecurityLogs, setTrackSecurityLogs] = useState(true)
   const [viewSecurityEvents, setViewSecurityEvents] = useState(false)
@@ -168,6 +172,8 @@ export default function GlobalSettingsPage() {
           setPasswordAttempts(securityData.passwordAttempts?.toString() || '5')
           setSessionTimeoutValue(securityData.sessionTimeoutValue?.toString() || '15')
           setSessionTimeoutUnit(securityData.sessionTimeoutUnit || 'MINUTES')
+          setAdminSessionTimeoutValue(securityData.adminSessionTimeoutValue?.toString() || '15')
+          setAdminSessionTimeoutUnit(securityData.adminSessionTimeoutUnit || 'MINUTES')
           setTrackAnalytics(securityData.trackAnalytics ?? true)
           setTrackSecurityLogs(securityData.trackSecurityLogs ?? true)
           setViewSecurityEvents(securityData.viewSecurityEvents ?? false)
@@ -332,6 +338,8 @@ export default function GlobalSettingsPage() {
         passwordAttempts: parseInt(passwordAttempts, 10) || 5,
         sessionTimeoutValue: parseInt(sessionTimeoutValue, 10) || 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
+        adminSessionTimeoutValue: parseInt(adminSessionTimeoutValue, 10) || 15,
+        adminSessionTimeoutUnit: adminSessionTimeoutUnit || 'MINUTES',
         trackAnalytics,
         trackSecurityLogs,
         viewSecurityEvents,
@@ -562,6 +570,10 @@ export default function GlobalSettingsPage() {
             setSessionTimeoutValue={setSessionTimeoutValue}
             sessionTimeoutUnit={sessionTimeoutUnit}
             setSessionTimeoutUnit={setSessionTimeoutUnit}
+            adminSessionTimeoutValue={adminSessionTimeoutValue}
+            setAdminSessionTimeoutValue={setAdminSessionTimeoutValue}
+            adminSessionTimeoutUnit={adminSessionTimeoutUnit}
+            setAdminSessionTimeoutUnit={setAdminSessionTimeoutUnit}
             trackAnalytics={trackAnalytics}
             setTrackAnalytics={setTrackAnalytics}
             trackSecurityLogs={trackSecurityLogs}

@@ -112,7 +112,7 @@ export async function getAutoApproveProject(): Promise<boolean> {
  * - Video access token TTL
  * - Redis session mappings for content streaming
  *
- * NOT used for admin JWT sessions (those stay fixed at 15 min with auto-refresh)
+ * Note: Admin dashboard inactivity logout is configured separately via admin session timeout settings.
  */
 export async function getClientSessionTimeoutSeconds(): Promise<number> {
   const now = Date.now()

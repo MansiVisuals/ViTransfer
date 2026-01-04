@@ -346,6 +346,10 @@ model SecuritySettings {
   sessionTimeoutValue Int    @default(15) // Numeric value (15, 30, 1, 2, etc.)
   sessionTimeoutUnit  String @default("MINUTES") // MINUTES, HOURS, DAYS, WEEKS
 
+  // Admin Session Timeout (admin UI inactivity logout)
+  adminSessionTimeoutValue Int    @default(15) // Numeric value (e.g., 15, 30, 1, 2, etc.)
+  adminSessionTimeoutUnit  String @default("MINUTES") // MINUTES, HOURS (max 24 hours)
+
   // HTTPS Enforcement (HTTPS_ENABLED env var always takes precedence if set)
   httpsEnabled Boolean @default(true) // Enable HSTS (default: true for production security)
 

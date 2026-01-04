@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAccessToken, getRefreshToken, clearTokens } from '@/lib/token-store'
+import { getAccessToken, getRefreshToken, clearTokens, subscribe } from '@/lib/token-store'
 
-const INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes
+const DEFAULT_INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
 const CHECK_INTERVAL = 30 * 1000 // 30 seconds
 
 export default function SessionMonitor() {
@@ -12,6 +12,52 @@ export default function SessionMonitor() {
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
   const lastActivityRef = useRef<number>(Date.now())
+  const inactivityTimeoutRef = useRef<number>(DEFAULT_INACTIVITY_TIMEOUT_MS)
+
+  useEffect(() => {
+    let cancelled = false
+    let loaded = false
+
+    async function loadAdminTimeout(accessToken?: string | null) {
+      const token = accessToken || getAccessToken()
+      if (!token) return
+
+      try {
+        const response = await fetch('/api/settings/security', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (!response.ok) return
+
+        const data = await response.json()
+        const value = Number.parseInt(String(data?.adminSessionTimeoutValue ?? '15'), 10)
+        const unit = String(data?.adminSessionTimeoutUnit ?? 'MINUTES')
+        if (!Number.isFinite(value) || value <= 0) return
+
+        const seconds = unit === 'HOURS' ? value * 60 * 60 : unit === 'MINUTES' ? value * 60 : null
+        if (!seconds || seconds <= 0) return
+
+        if (cancelled) return
+        inactivityTimeoutRef.current = Math.min(seconds, 24 * 60 * 60) * 1000
+        loaded = true
+      } catch {
+        // ignore and keep defaults
+      }
+    }
+
+    loadAdminTimeout()
+    const unsubscribe = subscribe(({ accessToken }) => {
+      if (!loaded && accessToken) {
+        loadAdminTimeout(accessToken)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
     const onActivity = () => {
@@ -26,7 +72,7 @@ export default function SessionMonitor() {
 
     const inactivityTimer = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityRef.current
-      const timeUntilLogout = INACTIVITY_TIMEOUT - timeSinceActivity
+      const timeUntilLogout = inactivityTimeoutRef.current - timeSinceActivity
 
       if (timeUntilLogout <= 0) {
         handleLogout()

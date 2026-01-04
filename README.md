@@ -450,7 +450,7 @@ Tested with Cloudflare Tunnels.
 - **Hotlink Protection** - Prevent unauthorized embedding
 - **Encrypted Passwords** - AES-256 encryption at rest
 - **HTTPS Support** - SSL/TLS for secure connections
-- **Session Monitoring** - 15-minute inactivity timeout with warnings
+- **Session Monitoring** - Configurable admin inactivity timeout (up to 24 hours) with warnings
 
 ### Security Notice
 

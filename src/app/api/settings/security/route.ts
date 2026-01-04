@@ -5,6 +5,13 @@ import { invalidateAllSessions, clearAllRateLimits } from '@/lib/session-invalid
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
+function adminTimeoutSeconds(value: number, unit: string): number | null {
+  if (!Number.isFinite(value) || value <= 0) return null
+  if (unit === 'MINUTES') return value * 60
+  if (unit === 'HOURS') return value * 60 * 60
+  return null
+}
+
 
 
 
@@ -98,6 +105,8 @@ export async function PATCH(request: NextRequest) {
       passwordAttempts,
       sessionTimeoutValue,
       sessionTimeoutUnit,
+      adminSessionTimeoutValue,
+      adminSessionTimeoutUnit,
       trackAnalytics,
       trackSecurityLogs,
       viewSecurityEvents,
@@ -109,6 +118,25 @@ export async function PATCH(request: NextRequest) {
       if (isNaN(timeoutVal) || timeoutVal <= 0) {
         return NextResponse.json(
           { error: 'Session timeout value must be a positive number' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (adminSessionTimeoutValue !== undefined && adminSessionTimeoutValue !== null) {
+      const timeoutVal = parseInt(adminSessionTimeoutValue, 10)
+      if (isNaN(timeoutVal) || timeoutVal <= 0) {
+        return NextResponse.json(
+          { error: 'Admin session timeout value must be a positive number' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (adminSessionTimeoutUnit !== undefined && adminSessionTimeoutUnit !== null) {
+      if (adminSessionTimeoutUnit !== 'MINUTES' && adminSessionTimeoutUnit !== 'HOURS') {
+        return NextResponse.json(
+          { error: 'Admin session timeout unit must be MINUTES or HOURS' },
           { status: 400 }
         )
       }
@@ -144,10 +172,35 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Get current settings to detect changes
+    // Get current settings to detect changes and validate merged values
     const currentSettings = await prisma.securitySettings.findUnique({
       where: { id: 'default' },
     })
+
+    if (adminSessionTimeoutValue !== undefined || adminSessionTimeoutUnit !== undefined) {
+      const mergedValue =
+        adminSessionTimeoutValue !== undefined && adminSessionTimeoutValue !== null
+          ? parseInt(adminSessionTimeoutValue, 10)
+          : (currentSettings?.adminSessionTimeoutValue ?? 15)
+      const mergedUnit =
+        adminSessionTimeoutUnit !== undefined && adminSessionTimeoutUnit !== null
+          ? String(adminSessionTimeoutUnit)
+          : (currentSettings?.adminSessionTimeoutUnit ?? 'MINUTES')
+
+      const seconds = adminTimeoutSeconds(mergedValue, mergedUnit)
+      if (!seconds) {
+        return NextResponse.json(
+          { error: 'Admin session timeout must be a positive number in minutes or hours' },
+          { status: 400 }
+        )
+      }
+      if (seconds > 24 * 60 * 60) {
+        return NextResponse.json(
+          { error: 'Admin session timeout must be 24 hours or less' },
+          { status: 400 }
+        )
+      }
+    }
 
     // Detect security-sensitive changes
     const sessionTimeoutChanged = hasSessionTimeoutChanged(currentSettings, sessionTimeoutValue, sessionTimeoutUnit)
@@ -166,6 +219,8 @@ export async function PATCH(request: NextRequest) {
         passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
         sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
+        adminSessionTimeoutValue: adminSessionTimeoutValue ? parseInt(adminSessionTimeoutValue, 10) : 15,
+        adminSessionTimeoutUnit: adminSessionTimeoutUnit || 'MINUTES',
         trackAnalytics: trackAnalytics ?? true,
         trackSecurityLogs: trackSecurityLogs ?? true,
         viewSecurityEvents: viewSecurityEvents ?? false,
@@ -181,6 +236,8 @@ export async function PATCH(request: NextRequest) {
         passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
         sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
+        adminSessionTimeoutValue: adminSessionTimeoutValue ? parseInt(adminSessionTimeoutValue, 10) : 15,
+        adminSessionTimeoutUnit: adminSessionTimeoutUnit || 'MINUTES',
         trackAnalytics: trackAnalytics ?? true,
         trackSecurityLogs: trackSecurityLogs ?? true,
         viewSecurityEvents: viewSecurityEvents ?? false,

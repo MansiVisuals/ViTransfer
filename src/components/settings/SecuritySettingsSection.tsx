@@ -26,6 +26,10 @@ interface SecuritySettingsSectionProps {
   setSessionTimeoutValue: (value: string) => void
   sessionTimeoutUnit: string
   setSessionTimeoutUnit: (value: string) => void
+  adminSessionTimeoutValue: string
+  setAdminSessionTimeoutValue: (value: string) => void
+  adminSessionTimeoutUnit: string
+  setAdminSessionTimeoutUnit: (value: string) => void
   trackAnalytics: boolean
   setTrackAnalytics: (value: boolean) => void
   trackSecurityLogs: boolean
@@ -70,6 +74,10 @@ export function SecuritySettingsSection({
   setSessionTimeoutValue,
   sessionTimeoutUnit,
   setSessionTimeoutUnit,
+  adminSessionTimeoutValue,
+  setAdminSessionTimeoutValue,
+  adminSessionTimeoutUnit,
+  setAdminSessionTimeoutUnit,
   trackAnalytics,
   setTrackAnalytics,
   trackSecurityLogs,
@@ -357,6 +365,70 @@ export function SecuritySettingsSection({
             </div>
           </div>
 
+          {/* Admin Session Timeout */}
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+            <div>
+              <Label className="text-base flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Admin Session Timeout
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Controls inactivity logout in the admin dashboard. Maximum is 24 hours.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="adminSessionTimeoutValue">Timeout Value</Label>
+                <Input
+                  id="adminSessionTimeoutValue"
+                  type="number"
+                  min="1"
+                  max={adminSessionTimeoutUnit === 'HOURS' ? '24' : '1440'}
+                  value={adminSessionTimeoutValue}
+                  onChange={(e) => setAdminSessionTimeoutValue(e.target.value)}
+                  placeholder="15"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="adminSessionTimeoutUnit">Timeout Unit</Label>
+                <select
+                  id="adminSessionTimeoutUnit"
+                  value={adminSessionTimeoutUnit}
+                  onChange={(e) => setAdminSessionTimeoutUnit(e.target.value)}
+                  className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
+                >
+                  <option value="MINUTES">Minutes</option>
+                  <option value="HOURS">Hours</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-3 bg-muted rounded-md">
+              <p className="text-sm font-medium">
+                Current Setting: {adminSessionTimeoutValue} {adminSessionTimeoutUnit.toLowerCase()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
+                {(() => {
+                  const val = parseInt(adminSessionTimeoutValue, 10) || 15
+                  const unit = adminSessionTimeoutUnit
+                  const seconds = unit === 'HOURS' ? val * 60 * 60 : val * 60
+                  if (seconds <= 15 * 60) {
+                    return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Strong security - short admin sessions</>
+                  }
+                  if (seconds <= 2 * 60 * 60) {
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Balanced - good for typical admin workflows</>
+                  }
+                  if (seconds <= 8 * 60 * 60) {
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for all-day work</>
+                  }
+                  return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very long - consider the security trade-off</>
+                })()}
+              </p>
+            </div>
+          </div>
+
           {/* Client Session Timeout */}
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
             <div>
@@ -365,7 +437,7 @@ export function SecuritySettingsSection({
                 Client Session Timeout
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Configure how long client share sessions stay active. Admin sessions always use 15 minutes with auto-refresh.
+                Configure how long client share sessions stay active.
               </p>
             </div>
 

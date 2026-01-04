@@ -22,6 +22,7 @@ export default function SharePage() {
   const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
   const urlVideoName = searchParams?.get('video') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
+  const focusCommentId = searchParams?.get('comment') || null
 
   const [isPasswordProtected, setIsPasswordProtected] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -769,14 +770,15 @@ export default function SharePage() {
               {/* Comments Section - hidden for guests */}
               {!project.hideFeedback && !isGuest && (
                 <div className="lg:sticky lg:top-6 lg:self-start">
-                  <CommentSection
-                    projectId={project.id}
-                    comments={filteredComments}
-                    clientName={project.clientName}
-                    clientEmail={project.clientEmail}
-                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
-                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                    videos={readyVideos}
+	                  <CommentSection
+	                    projectId={project.id}
+	                    comments={filteredComments}
+	                    focusCommentId={focusCommentId}
+	                    clientName={project.clientName}
+	                    clientEmail={project.clientEmail}
+	                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
+	                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+	                    videos={readyVideos}
                     isAdminView={false}
                     companyName={companyName}
                     clientCompanyName={project.companyName}

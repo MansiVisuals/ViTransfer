@@ -4,6 +4,9 @@ import { isSmtpConfigured } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
 import { validateCommentLength, containsSuspiciousPatterns, sanitizeCommentHtml } from '@/lib/security/html-sanitization'
 import { sendImmediateNotification, queueNotification } from '@/lib/notifications'
+import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { getAppDomain } from '@/lib/url'
+import { formatTimecodeDisplay, timecodeToSeconds } from '@/lib/timecode'
 
 /**
  * Validate comment permissions
@@ -170,25 +173,9 @@ export async function handleCommentNotifications(params: {
   const { comment, projectId, videoId, parentId } = params
 
   try {
-    // Check if SMTP is configured
-    const smtpConfigured = await isSmtpConfigured()
-    console.log('[COMMENT-NOTIFICATION] SMTP configured:', smtpConfigured)
+    const isAdminComment = comment.isInternal
 
-    if (!smtpConfigured) {
-      console.log('[COMMENT-NOTIFICATION] Skipping - SMTP not configured')
-      return
-    }
-
-    // Track this comment's notification in Redis (for deletion cancellation)
-    const redis = getRedis()
-    await redis.set(
-      `comment_notification:${comment.id}`,
-      JSON.stringify({ commentId: comment.id, projectId, videoId, queued: true }),
-      'EX',
-      3600 // Expire after 1 hour (covers all notification schedules)
-    )
-
-    // Get project with notification schedule
+    // Get project info (used by both email and external notifications)
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: {
@@ -205,12 +192,93 @@ export async function handleCommentNotifications(params: {
     }
 
     // Get video info
-    const video = videoId ? await prisma.video.findUnique({
-      where: { id: videoId },
-      select: { name: true, versionLabel: true }
-    }) : null
+    const video = videoId
+      ? await prisma.video.findUnique({
+          where: { id: videoId },
+          select: { name: true, versionLabel: true, version: true, fps: true },
+        })
+      : null
 
     console.log('[COMMENT-NOTIFICATION] Video:', video?.name || 'None')
+
+    // External notifications (Apprise) - client comments only
+    if (!isAdminComment) {
+      const appDomain = await getAppDomain()
+      const adminShareUrl = (() => {
+        if (!appDomain) return ''
+        let baseUrl = appDomain
+        try {
+          baseUrl = new URL(appDomain).origin
+        } catch {
+          // use configured value as-is
+        }
+
+        const params = new URLSearchParams()
+        if (video?.name) params.set('video', video.name)
+        const version = comment?.videoVersion ?? video?.version
+        if (typeof version === 'number') params.set('version', String(version))
+
+        try {
+          const fps = typeof video?.fps === 'number' && isFinite(video.fps) && video.fps > 0 ? video.fps : 24
+          const seconds = Math.floor(timecodeToSeconds(String(comment?.timecode || ''), fps))
+          if (isFinite(seconds) && seconds >= 0) params.set('t', String(seconds))
+        } catch {
+          // Ignore invalid timecode
+        }
+
+        if (comment?.id) params.set('comment', String(comment.id))
+
+        const qs = params.toString()
+        const returnUrl = `/admin/projects/${project.id}/share${qs ? `?${qs}` : ''}`
+        return `${baseUrl}/login?returnUrl=${encodeURIComponent(returnUrl)}`
+      })()
+      const authorName = (comment?.authorName || comment?.name || '').toString().trim() || 'Client'
+      const authorEmail = (comment?.authorEmail || comment?.email || '').toString().trim()
+      const clientDisplay = authorEmail ? `${authorName} (${authorEmail})` : authorName
+      const rawContentHtml = (comment?.content || '').toString()
+      const rawContent = rawContentHtml
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<\/p>\s*<p>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .trim()
+      const commentPreview = rawContent.length > 400 ? `${rawContent.slice(0, 400)}...` : rawContent
+      const timecode = comment?.timecode ? formatTimecodeDisplay(String(comment.timecode)) : ''
+      const videoLabel = video?.versionLabel ? ` ${video.versionLabel}` : ''
+
+      await enqueueExternalNotification({
+        eventType: 'CLIENT_COMMENT',
+        title: 'Client Comments',
+        body: [
+          `Project: ${project.title}`,
+          video?.name ? `Video: ${video.name}${videoLabel}` : null,
+          timecode ? `Timecode: ${timecode}` : null,
+          `Client: ${clientDisplay}`,
+          commentPreview ? `Comment: ${commentPreview}` : null,
+          adminShareUrl ? `Go to comment: ${adminShareUrl}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        notifyType: 'info',
+      }).catch(() => {})
+    }
+
+    // Check if SMTP is configured (email notifications)
+    const smtpConfigured = await isSmtpConfigured()
+    console.log('[COMMENT-NOTIFICATION] SMTP configured:', smtpConfigured)
+
+    if (!smtpConfigured) {
+      console.log('[COMMENT-NOTIFICATION] Email notifications skipped - SMTP not configured')
+      return
+    }
+
+    // Track this comment's notification in Redis (for deletion cancellation)
+    const redis = getRedis()
+    await redis.set(
+      `comment_notification:${comment.id}`,
+      JSON.stringify({ commentId: comment.id, projectId, videoId, queued: true }),
+      'EX',
+      3600 // Expire after 1 hour (covers all notification schedules)
+    )
 
     // Get settings for admin schedule
     const settings = await prisma.settings.findUnique({
@@ -219,7 +287,6 @@ export async function handleCommentNotifications(params: {
     })
 
     // Determine which schedule to use
-    const isAdminComment = comment.isInternal
     const schedule = isAdminComment
       ? project.clientNotificationSchedule // Admin replies use client schedule
       : (settings?.adminNotificationSchedule || 'IMMEDIATE') // Client comments use admin schedule

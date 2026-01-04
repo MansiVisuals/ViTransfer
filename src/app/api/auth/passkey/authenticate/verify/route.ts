@@ -4,6 +4,8 @@ import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-l
 import { getClientIpAddress } from '@/lib/utils'
 import type { AuthenticationResponseJSON } from '@simplewebauthn/browser'
 import { issueAdminTokens } from '@/lib/auth'
+import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { getAppUrl } from '@/lib/url'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -73,6 +75,32 @@ export async function POST(request: NextRequest) {
     if (!result.success || !result.user) {
       // FAILED LOGIN: Increment rate limit counter
       await incrementRateLimit(request, 'login', rateLimitKey)
+
+      void enqueueExternalNotification({
+        eventType: 'FAILED_LOGIN',
+        title: 'Failed Admin Login Attempts',
+        body: await (async () => {
+          const baseUrl = await getAppUrl(request).catch(() => '')
+          const fallbackLink = baseUrl ? `${baseUrl}/login` : null
+          const referer = request.headers.get('referer') || ''
+          const link = (() => {
+            if (!baseUrl || !referer) return fallbackLink
+            try {
+              const ref = new URL(referer)
+              if (ref.origin !== baseUrl) return fallbackLink
+              if (ref.pathname !== '/login') return fallbackLink
+              const returnUrl = ref.searchParams.get('returnUrl')
+              if (!returnUrl) return fallbackLink
+              return `${baseUrl}/login?returnUrl=${encodeURIComponent(returnUrl)}`
+            } catch {
+              return fallbackLink
+            }
+          })()
+
+          return ['Method: Passkey', link ? `Link: ${link}` : null].filter(Boolean).join('\n')
+        })(),
+        notifyType: 'warning',
+      }).catch(() => {})
 
       return NextResponse.json(
         { success: false, error: result.error || 'Authentication failed' },

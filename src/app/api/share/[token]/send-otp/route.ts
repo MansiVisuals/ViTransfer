@@ -12,6 +12,8 @@ import {
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { isSmtpConfigured } from '@/lib/email'
+import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { getAppUrl } from '@/lib/url'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -138,6 +140,25 @@ export async function POST(
         },
         wasBlocked: false,
       })
+
+      void enqueueExternalNotification({
+        eventType: 'UNAUTHORIZED_OTP',
+        title: 'Unauthorized OTP Requests',
+        body: await (async () => {
+          const baseUrl = await getAppUrl(request).catch(() => '')
+          const link = baseUrl ? `${baseUrl}/share/${token}` : null
+
+          return [
+            `Project: ${project.title}`,
+            `Email: ${email}`,
+            'Method: OTP',
+            link ? `Link: ${link}` : null,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        })(),
+        notifyType: 'warning',
+      }).catch(() => {})
 
       // SECURITY: Add random delay to match timing of valid email path
       // Valid emails take 100-500ms for SMTP, add equivalent delay here

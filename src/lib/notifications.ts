@@ -4,6 +4,7 @@ import { sendCommentNotificationEmail, sendAdminCommentNotificationEmail, sendPr
 import { getProjectRecipients } from './recipients'
 import { generateShareUrl } from './url'
 import { getRedis } from './redis'
+import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 
 interface NotificationContext {
   comment: Comment
@@ -196,6 +197,14 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
   const { project, video, approvedVideos, approved, authorName, authorEmail, isComplete = false } = context
 
   const shareUrl = await generateShareUrl(project.slug)
+  let adminShareUrl = ''
+  try {
+    const origin = new URL(shareUrl).origin
+    const returnUrl = `/admin/projects/${project.id}/share`
+    adminShareUrl = `${origin}/login?returnUrl=${encodeURIComponent(returnUrl)}`
+  } catch {
+    adminShareUrl = ''
+  }
   const allRecipients = await getProjectRecipients(project.id)
   const recipients = allRecipients.filter(r => r.receiveNotifications && r.email)
 
@@ -253,4 +262,25 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
       console.error(`[IMMEDIATE→ADMIN]   Failed: ${result.message}`)
     }
   }
+
+  const videoNames =
+    approvedVideos?.map(v => v.name).join(', ') ||
+    video?.name ||
+    'Unknown'
+
+  void enqueueExternalNotification({
+    eventType: 'VIDEO_APPROVAL',
+    title: 'Video Approvals',
+    body: [
+      `Project: ${project.title}`,
+      `Action: ${approved ? 'approved' : 'unapproved'}`,
+      authorName ? `Client: ${authorName}${authorEmail ? ` <${authorEmail}>` : ''}` : null,
+      `Video(s): ${videoNames}`,
+      isComplete ? 'Project: Complete approval' : null,
+      adminShareUrl ? `Link: ${adminShareUrl}` : shareUrl ? `Link: ${shareUrl}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    notifyType: approved ? 'success' : 'warning',
+  }).catch(() => {})
 }

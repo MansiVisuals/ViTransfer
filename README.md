@@ -24,6 +24,7 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 - **Approval Workflow** - Per video approval system with automatic project approval when all videos are approved
 - **Flexible Authentication** - Share links support password protection, email OTP codes, both methods, or no authentication with optional guest mode
 - **Smart Notifications** - Email notifications with scheduling options: immediate, hourly, daily, or weekly digests
+- **Push Notifications** - Optional push notifications to Gotify, ntfy, Pushover, and Telegram (configured in Admin Settings)
 - **Dark Mode** - Native light and dark themes for consistent experience across devices
 - **Responsive Design** - Optimized for desktop, tablet, and mobile devices
 
@@ -40,7 +41,7 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 ### Technical Features
 - **Docker First** - Easy deployment with Docker Compose, Unraid, TrueNAS, and Podman/Quadlet support
 - **High Performance** - Built with Next.js 16 and React 19 with CPU aware FFmpeg presets
-- **Background Processing** - Redis queue with BullMQ for video transcoding and notifications
+- **Background Processing** - Redis queue with BullMQ for video transcoding and notifications (email + push)
 - **Professional Video** - FFmpeg powered transcoding supporting MP4, MOV, AVI, MKV, MXF, and ProRes formats
 - **Reliable Database** - PostgreSQL with Prisma 6 ORM for type safe data access
 - **Secure Authentication** - JWT tokens with refresh rotation, WebAuthn passkeys, and bearer only auth (v0.6.0+)
@@ -313,7 +314,7 @@ Configure these in the admin panel under Settings:
 - Company Name - Displayed in emails and comments (default: "Studio")
 - App Domain - Required for PassKey authentication (e.g., `https://yourdomain.com`)
 
-**Email Notifications (SMTP):**
+**Notifications (Email + Push Notifications):**
 - SMTP Server - Mail server hostname
 - SMTP Port - Mail server port (default: 587)
 - SMTP Username - Authentication username
@@ -321,6 +322,31 @@ Configure these in the admin panel under Settings:
 - From Address - Sender email address
 - Security Mode - STARTTLS (default), TLS, or NONE
 - Admin Notification Schedule - IMMEDIATE, HOURLY, DAILY, WEEKLY
+
+**Push Notifications:**
+- Configure one or more destinations and choose which events to receive
+- Supported providers: Gotify, ntfy, Pushover, Telegram
+- Implemented via Apprise (embedded in the app/worker image)
+- Delivered by the worker via BullMQ (`external-notifications`)
+- Links and deep-links use the configured **App Domain** (Settings → Company Branding)
+
+**Push Notification Events:**
+- Failed Admin Login Attempts
+  - Includes: `Email`, `Method` (Password/Passkey), `Link` (login page)
+- Unauthorized OTP Requests
+  - Includes: `Project`, `Email`, `Method: OTP`, `Link` (public share page)
+- Successful Share Page Access
+  - Includes: `Project`, `Method` (PASSWORD/OTP/GUEST), optional `Client` email, `Link` (public share page)
+- Client Comments
+  - Includes: `Project`, `Video`, `Timecode`, `Client`, `Comment` preview
+  - Includes: `Go to comment` deep-link (opens login, then redirects to the admin share view and highlights the comment)
+- Video Approvals
+  - Includes: `Project`, `Action` (approved/unapproved), optional `Client`, `Video(s)`, `Link` (login page)
+
+**Notes:**
+- IP address and user-agent details are recorded in the Security Events dashboard/logs (push notifications keep payloads short).
+- Worker logs: `docker compose logs -f worker | rg EXTERNAL-NOTIFICATIONS`
+- Verbose worker logs: set `DEBUG_EXTERNAL_NOTIFICATIONS=true` (or `DEBUG_WORKER=true`) on the worker container.
 
 **Video Processing Defaults:**
 - Preview Resolution - 720p (default) or 1080p

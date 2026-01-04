@@ -4,6 +4,8 @@ import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-l
 import { validateRequest, loginSchema } from '@/lib/validation'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
+import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { getAppUrl } from '@/lib/url'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -97,6 +99,39 @@ export async function POST(request: NextRequest) {
         },
         wasBlocked: false,
       })
+
+      void enqueueExternalNotification({
+        eventType: 'FAILED_LOGIN',
+        title: 'Failed Admin Login Attempts',
+        body: await (async () => {
+          const baseUrl = await getAppUrl(request).catch(() => '')
+          const fallbackLink = baseUrl ? `${baseUrl}/login` : null
+          const referer = request.headers.get('referer') || ''
+          const link = (() => {
+            if (!baseUrl || !referer) return fallbackLink
+            try {
+              const ref = new URL(referer)
+              if (ref.origin !== baseUrl) return fallbackLink
+              if (ref.pathname !== '/login') return fallbackLink
+              // Preserve actual returnUrl from the real login page, if present.
+              const returnUrl = ref.searchParams.get('returnUrl')
+              if (!returnUrl) return fallbackLink
+              return `${baseUrl}/login?returnUrl=${encodeURIComponent(returnUrl)}`
+            } catch {
+              return fallbackLink
+            }
+          })()
+
+          return [
+            `Email: ${email}`,
+            'Method: Password',
+            link ? `Link: ${link}` : null,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        })(),
+        notifyType: 'warning',
+      }).catch(() => {})
 
       return NextResponse.json(
         { error: 'Invalid username/email or password' },

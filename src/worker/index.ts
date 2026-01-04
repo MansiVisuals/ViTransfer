@@ -1,5 +1,5 @@
 import { Worker, Queue } from 'bullmq'
-import { VideoProcessingJob, AssetProcessingJob } from '../lib/queue'
+import { VideoProcessingJob, AssetProcessingJob, ExternalNotificationJob } from '../lib/queue'
 import { initStorage } from '../lib/storage'
 import { runCleanup } from '../lib/upload-cleanup'
 import { getRedisForQueue, closeRedisConnection } from '../lib/redis'
@@ -8,6 +8,7 @@ import { processVideo } from './video-processor'
 import { processAsset } from './asset-processor'
 import { processAdminNotifications } from './admin-notifications'
 import { processClientNotifications } from './client-notifications'
+import { processExternalNotificationJob } from './external-notifications/processExternalNotificationJob'
 import { cleanupOldTempFiles, ensureTempDir } from './cleanup'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
@@ -172,6 +173,30 @@ async function main() {
   console.log('  → Checks every 1 minute for scheduled summaries')
   console.log('  → IMMEDIATE notifications sent instantly (not in batches)')
 
+  // Create worker to process external notification jobs (Apprise)
+  const externalNotificationWorker = new Worker<ExternalNotificationJob>(
+    'external-notifications',
+    async (job) => {
+      await processExternalNotificationJob(job.data, String(job.id ?? 'unknown'))
+    },
+    {
+      connection: getRedisForQueue(),
+      concurrency: 5,
+    }
+  )
+
+  externalNotificationWorker.on('completed', (job) => {
+    if (DEBUG) {
+      console.log(`[WORKER] External notification job ${job.id} completed`)
+    }
+  })
+
+  externalNotificationWorker.on('failed', (job, err) => {
+    console.error(`[WORKER ERROR] External notification job ${job?.id} failed:`, err)
+  })
+
+  console.log('External notification worker started')
+
   // Run cleanup on startup
   console.log('Running initial TUS upload cleanup...')
   await runCleanup().catch((err) => {
@@ -205,6 +230,7 @@ async function main() {
       worker.close(),
       assetWorker.close(),
       notificationWorker.close(),
+      externalNotificationWorker.close(),
       notificationQueue.close(),
     ])
     await closeRedisConnection()
@@ -220,6 +246,7 @@ async function main() {
       worker.close(),
       assetWorker.close(),
       notificationWorker.close(),
+      externalNotificationWorker.close(),
       notificationQueue.close(),
     ])
     await closeRedisConnection()

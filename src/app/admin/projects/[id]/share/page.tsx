@@ -21,6 +21,7 @@ export default function AdminSharePage() {
   const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
   const urlVideoName = searchParams?.get('video') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
+  const focusCommentId = searchParams?.get('comment') || null
 
   const [project, setProject] = useState<any>(null)
   const [comments, setComments] = useState<any[]>([])
@@ -447,6 +448,7 @@ export default function AdminSharePage() {
                     projectId={project.id}
                     projectSlug={project.slug}
                     comments={filteredComments}
+                    focusCommentId={focusCommentId}
                     clientName={clientDisplayName}
                     clientEmail={project.recipients?.[0]?.email}
                     isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}

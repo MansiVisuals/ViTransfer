@@ -78,6 +78,103 @@ export const urlSchema = z
   .max(2048, 'URL too long')
 
 // ============================================================================
+// NOTIFICATION SCHEMAS (External providers via worker)
+// ============================================================================
+
+export const notificationProviderSchema = z.enum(['GOTIFY', 'NTFY', 'PUSHOVER', 'TELEGRAM'])
+
+export const notificationEventTypeSchema = z.enum([
+  'FAILED_LOGIN',
+  'UNAUTHORIZED_OTP',
+  'SHARE_ACCESS',
+  'CLIENT_COMMENT',
+  'VIDEO_APPROVAL',
+  'TEST',
+])
+
+const notificationSecretSchema = z.string().min(1).max(512).trim()
+
+const gotifyDestinationSchema = z.object({
+  provider: z.literal('GOTIFY'),
+  name: safeStringSchema(1, 100),
+  enabled: z.boolean().optional(),
+  config: z.object({
+    baseUrl: urlSchema,
+  }),
+  secrets: z.object({
+    appToken: notificationSecretSchema,
+  }),
+  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+})
+
+const ntfyDestinationSchema = z.object({
+  provider: z.literal('NTFY'),
+  name: safeStringSchema(1, 100),
+  enabled: z.boolean().optional(),
+  config: z.object({
+    serverUrl: urlSchema.optional().or(z.literal('')),
+    topic: z.string().min(1).max(128).trim(),
+  }),
+  secrets: z.object({
+    accessToken: notificationSecretSchema.optional(),
+  }),
+  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+})
+
+const pushoverDestinationSchema = z.object({
+  provider: z.literal('PUSHOVER'),
+  name: safeStringSchema(1, 100),
+  enabled: z.boolean().optional(),
+  config: z.object({}),
+  secrets: z.object({
+    userKey: notificationSecretSchema,
+    apiToken: notificationSecretSchema,
+  }),
+  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+})
+
+const telegramDestinationSchema = z.object({
+  provider: z.literal('TELEGRAM'),
+  name: safeStringSchema(1, 100),
+  enabled: z.boolean().optional(),
+  config: z.object({
+    chatId: z.string().min(1).max(128).trim(),
+  }),
+  secrets: z.object({
+    botToken: notificationSecretSchema,
+  }),
+  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+})
+
+export const createNotificationDestinationSchema = z.discriminatedUnion('provider', [
+  gotifyDestinationSchema,
+  ntfyDestinationSchema,
+  pushoverDestinationSchema,
+  telegramDestinationSchema,
+])
+
+export const updateNotificationDestinationSchema = z.discriminatedUnion('provider', [
+  gotifyDestinationSchema.extend({
+    enabled: z.boolean().optional(),
+    secrets: z.object({ appToken: notificationSecretSchema.optional() }).optional(),
+  }),
+  ntfyDestinationSchema.extend({
+    enabled: z.boolean().optional(),
+    secrets: z.object({ accessToken: notificationSecretSchema.optional() }).optional(),
+  }),
+  pushoverDestinationSchema.extend({
+    enabled: z.boolean().optional(),
+    secrets: z
+      .object({ userKey: notificationSecretSchema.optional(), apiToken: notificationSecretSchema.optional() })
+      .optional(),
+  }),
+  telegramDestinationSchema.extend({
+    enabled: z.boolean().optional(),
+    secrets: z.object({ botToken: notificationSecretSchema.optional() }).optional(),
+  }),
+])
+
+// ============================================================================
 // USER SCHEMAS
 // ============================================================================
 

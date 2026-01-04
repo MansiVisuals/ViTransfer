@@ -271,6 +271,64 @@ model Settings {
   updatedAt DateTime @updatedAt
 }
 
+model NotificationDestination {
+  id String @id @default(cuid())
+
+  name     String
+  enabled  Boolean @default(false)
+  provider String // GOTIFY, NTFY, PUSHOVER, TELEGRAM
+
+  // Non-secret provider configuration (e.g. baseUrl, topic, etc.)
+  config Json
+
+  // Encrypted JSON string containing secrets (e.g. tokens/keys). Use src/lib/encryption.ts.
+  secretsEncrypted String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions NotificationSubscription[]
+  deliveries    NotificationDeliveryLog[]
+
+  @@index([provider])
+  @@index([enabled])
+  @@index([createdAt])
+}
+
+model NotificationSubscription {
+  id String @id @default(cuid())
+
+  destinationId String
+  destination   NotificationDestination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  eventType String // FAILED_LOGIN, UNAUTHORIZED_OTP, SHARE_ACCESS, CLIENT_COMMENT, VIDEO_APPROVAL
+  enabled   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([destinationId, eventType])
+  @@index([eventType, enabled])
+}
+
+model NotificationDeliveryLog {
+  id String @id @default(cuid())
+
+  destinationId String
+  destination   NotificationDestination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  eventType  String
+  success    Boolean @default(false)
+  statusCode Int?
+  error      String?
+
+  sentAt DateTime @default(now())
+
+  @@index([destinationId, sentAt])
+  @@index([eventType, sentAt])
+  @@index([success, sentAt])
+}
+
 model SecuritySettings {
   id String @id @default("default")
 

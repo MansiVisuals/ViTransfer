@@ -18,6 +18,7 @@ interface CommentSectionProps {
   projectId: string
   projectSlug?: string
   comments: CommentWithReplies[]
+  focusCommentId?: string | null
   clientName: string
   clientEmail?: string
   isApproved: boolean
@@ -38,6 +39,7 @@ export default function CommentSection({
   projectId,
   projectSlug,
   comments: initialComments,
+  focusCommentId = null,
   clientName,
   clientEmail,
   isApproved,
@@ -119,6 +121,37 @@ export default function CommentSection({
   useEffect(() => {
     setLocalComments(initialComments)
   }, [initialComments])
+
+  const lastFocusedCommentRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!focusCommentId) return
+    if (lastFocusedCommentRef.current === focusCommentId) return
+
+    lastFocusedCommentRef.current = focusCommentId
+
+    let attempts = 0
+    const maxAttempts = 6
+
+    const tryScroll = () => {
+      attempts += 1
+      const element = document.getElementById(`comment-${focusCommentId}`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        element.style.transition = 'background-color 0.3s'
+        element.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'
+        setTimeout(() => {
+          element.style.backgroundColor = 'transparent'
+        }, 1000)
+        return
+      }
+
+      if (attempts < maxAttempts) {
+        setTimeout(tryScroll, 200)
+      }
+    }
+
+    setTimeout(tryScroll, 100)
+  }, [focusCommentId, localComments.length])
 
   // Listen for immediate comment updates (delete, approve, post, etc.)
   useEffect(() => {

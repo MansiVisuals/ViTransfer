@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Settings as SettingsIcon, Save } from 'lucide-react'
 import { CompanyBrandingSection } from '@/components/settings/CompanyBrandingSection'
 import { DomainConfigurationSection } from '@/components/settings/DomainConfigurationSection'
-import { EmailSettingsSection } from '@/components/settings/EmailSettingsSection'
+import { NotificationsSection } from '@/components/settings/NotificationsSection'
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
 import { ProjectBehaviorSection } from '@/components/settings/ProjectBehaviorSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
@@ -118,7 +118,7 @@ export default function GlobalSettingsPage() {
   // Collapsible section state (all collapsed by default)
   const [showCompanyBranding, setShowCompanyBranding] = useState(false)
   const [showDomainConfiguration, setShowDomainConfiguration] = useState(false)
-  const [showEmailSettings, setShowEmailSettings] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
   const [showProjectBehavior, setShowProjectBehavior] = useState(false)
 
@@ -495,7 +495,7 @@ export default function GlobalSettingsPage() {
             setShow={setShowDomainConfiguration}
           />
 
-          <EmailSettingsSection
+          <NotificationsSection
             smtpServer={smtpServer}
             setSmtpServer={setSmtpServer}
             smtpPort={smtpPort}
@@ -519,8 +519,8 @@ export default function GlobalSettingsPage() {
             setAdminNotificationTime={setAdminNotificationTime}
             adminNotificationDay={adminNotificationDay}
             setAdminNotificationDay={setAdminNotificationDay}
-            show={showEmailSettings}
-            setShow={setShowEmailSettings}
+            show={showNotifications}
+            setShow={setShowNotifications}
           />
 
           <VideoProcessingSettingsSection

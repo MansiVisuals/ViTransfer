@@ -106,6 +106,18 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Install Python runtime for Apprise-based external notifications (used by the worker).
+# This keeps notifications provider logic out of the Node.js codebase while remaining in a single image.
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    py3-virtualenv \
+  && python3 -m venv /opt/apprise-venv \
+  && /opt/apprise-venv/bin/pip install --no-cache-dir --disable-pip-version-check apprise==1.9.6
+
+# Prefer the venv Python when invoking Apprise from the worker.
+ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3
+
 # Build arguments for runtime info
 ARG TARGETPLATFORM
 ARG TARGETARCH

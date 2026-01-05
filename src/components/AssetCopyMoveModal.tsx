@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { X, Copy, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
@@ -50,13 +50,7 @@ export function AssetCopyMoveModal({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchData()
-    }
-  }, [isOpen, currentVideoId])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -84,7 +78,13 @@ export function AssetCopyMoveModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentVideoId, projectId])
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchData()
+    }
+  }, [fetchData, isOpen])
 
   const toggleAsset = (assetId: string) => {
     const newSelected = new Set(selectedAssets)
@@ -247,32 +247,26 @@ export function AssetCopyMoveModal({
                   {error}
                 </div>
               )}
+
+              <Button
+                onClick={handleCopyAssets}
+                disabled={copying || selectedAssets.size === 0 || !targetVideoId || videos.length === 0}
+                className="w-full"
+              >
+                {copying ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Copying assets...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-5 w-5 mr-2" />
+                    Copy {selectedAssets.size} asset(s) to selected version
+                  </>
+                )}
+              </Button>
             </>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-border space-y-3">
-          <Button
-            onClick={handleCopyAssets}
-            disabled={copying || selectedAssets.size === 0 || !targetVideoId || videos.length === 0}
-            className="w-full"
-          >
-            {copying ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                Copying assets...
-              </>
-            ) : (
-              <>
-                <Copy className="h-5 w-5 mr-2" />
-                Copy {selectedAssets.size} asset(s) to selected version
-              </>
-            )}
-          </Button>
-          <Button variant="outline" onClick={onClose} className="w-full">
-            Close
-          </Button>
         </div>
       </div>
     </div>

@@ -49,7 +49,7 @@ export function renderUnsubscribeSection(unsubscribeUrl: string): string {
     <div style="margin: 28px 0 0; padding-top: 18px; border-top: 1px solid ${EMAIL_BRAND.border}; text-align: center;">
       ${renderEmailButton({ href: unsubscribeUrl, label: 'Unsubscribe', variant: 'secondary' })}
       <p style="margin: 10px 0 0; font-size: 12px; color: ${EMAIL_BRAND.muted}; line-height: 1.5;">
-        Stops email updates only. Your access link still works.
+        Stops email notifications only. Your share link still works.
       </p>
     </div>
   `.trim()

@@ -507,7 +507,7 @@ export function SecuritySettingsSection({
                   if (unit === 'MINUTES') {
                     if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very short - sessions may expire while users are active</>
                     if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Short - strong security; sessions expire quickly</>
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for longer sessions; less secure</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for longer sessions</>
                   }
                   if (unit === 'HOURS') {
                     if (val <= 2) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Balanced - good for typical sessions</>

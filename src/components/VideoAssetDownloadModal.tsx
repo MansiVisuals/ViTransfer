@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { X, Download, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
@@ -40,13 +40,7 @@ export function VideoAssetDownloadModal({
   const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchAssets()
-    }
-  }, [isOpen, videoId])
-
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -66,7 +60,13 @@ export function VideoAssetDownloadModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [videoId, shareToken, isAdmin])
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchAssets()
+    }
+  }, [fetchAssets, isOpen])
 
   const toggleAsset = (assetId: string) => {
     const newSelected = new Set(selectedAssets)
@@ -319,17 +319,6 @@ export function VideoAssetDownloadModal({
               {error}
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full"
-          >
-            Close
-          </Button>
         </div>
       </div>
     </div>

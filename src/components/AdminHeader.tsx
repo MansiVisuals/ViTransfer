@@ -2,12 +2,13 @@
 
 import { useAuth } from '@/components/AuthProvider'
 import { Button } from '@/components/ui/button'
-import { LogOut, User, Settings, Users, FolderKanban, BarChart3, Shield, Workflow } from 'lucide-react'
+import { BarChart3, CircleHelp, FolderKanban, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api-client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 export default function AdminHeader() {
   const { user, logout } = useAuth()
@@ -18,7 +19,7 @@ export default function AdminHeader() {
   useEffect(() => {
     async function fetchSecuritySettings() {
       try {
-      const response = await apiFetch('/api/settings')
+        const response = await apiFetch('/api/settings')
         if (response.ok) {
           const data = await response.json()
           setShowSecurityDashboard(data.security?.viewSecurityEvents ?? false)
@@ -32,6 +33,10 @@ export default function AdminHeader() {
   }, [])
 
   if (!user) return null
+
+  const repoUrl = 'https://github.com/MansiVisuals/ViTransfer'
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
+  const instanceUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   const navLinks = [
     { href: '/admin/projects', label: 'Projects', icon: FolderKanban },
@@ -80,6 +85,58 @@ export default function AdminHeader() {
               <span className="max-w-[150px] lg:max-w-none truncate">{user.email}</span>
             </div>
             <ThemeToggle />
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
+                  aria-label="About ViTransfer"
+                  title="About"
+                >
+                  <CircleHelp className="h-5 w-5 text-foreground" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>About ViTransfer</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-background p-3">
+                    <div className="text-sm font-semibold">ViTransfer</div>
+                    <div className="text-xs text-muted-foreground">
+                      {appVersion ? `Version ${appVersion}` : 'Self-hosted build'}
+                      {instanceUrl ? ` • ${instanceUrl}` : ''}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    <a
+                      href={repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
+                    >
+                      GitHub Repository
+                    </a>
+                    <a
+                      href={`${repoUrl}/issues`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
+                    >
+                      Report an Issue
+                    </a>
+                    <a
+                      href="https://hub.docker.com/r/crypt010/vitransfer"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
+                    >
+                      Docker Hub
+                    </a>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button
               variant="outline"
               size="default"

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 
@@ -65,7 +65,7 @@ export function UnsubscribeClient({ token }: { token: string }) {
         if (!open) router.push('/')
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" hideClose>
         <DialogHeader>
           <DialogTitle>Email Preferences</DialogTitle>
           <DialogDescription>Unsubscribe from project update emails.</DialogDescription>
@@ -95,26 +95,17 @@ export function UnsubscribeClient({ token }: { token: string }) {
             </div>
           )}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              className="flex-1"
-              onClick={handleUnsubscribe}
-              disabled={!hasToken || status === 'loading' || status === 'success'}
-            >
-              {status === 'loading' ? 'Unsubscribing…' : 'Unsubscribe'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/')}
-            >
-              Close
-            </Button>
-          </DialogFooter>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={handleUnsubscribe}
+            disabled={!hasToken || status === 'loading' || status === 'success'}
+          >
+            {status === 'loading' ? 'Unsubscribing…' : 'Unsubscribe'}
+          </Button>
 
           <p className="text-xs text-muted-foreground">
-            Stops email updates only. Your access link still works.
+            Stops email notifications only. Your share link still works.
           </p>
         </div>
       </DialogContent>

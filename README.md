@@ -24,6 +24,7 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 - **Approval Workflow** - Per video approval system with automatic project approval when all videos are approved
 - **Flexible Authentication** - Share links support password protection, email OTP codes, both methods, or no authentication with optional guest mode
 - **Smart Notifications** - Email notifications with scheduling options: immediate, hourly, daily, or weekly digests
+- **Per-Recipient Unsubscribe** - Client emails include an unsubscribe link to stop project email notifications (share link access is unaffected)
 - **Push Notifications** - Optional push notifications to Gotify, ntfy, Pushover, and Telegram (configured in Admin Settings)
 - **Dark Mode** - Native light and dark themes for consistent experience across devices
 - **Responsive Design** - Optimized for desktop, tablet, and mobile devices

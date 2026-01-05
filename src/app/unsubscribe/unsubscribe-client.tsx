@@ -65,7 +65,7 @@ export function UnsubscribeClient({ token }: { token: string }) {
               <Video className="w-8 h-8 text-primary-foreground" />
             </div>
             <h1 className="text-3xl font-bold text-foreground">ViTransfer</h1>
-            <p className="text-sm text-muted-foreground mt-2">Professional Video Review & Share Platform</p>
+            <p className="text-sm text-muted-foreground mt-2">Video Review & Share Platform</p>
           </div>
 
           <Card className="border-border">

@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api-client'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 export default function AdminHeader() {
   const { user, logout } = useAuth()
@@ -106,7 +106,6 @@ export default function AdminHeader() {
                     <CircleHelp className="h-5 w-5" />
                     About ViTransfer
                   </DialogTitle>
-                  <DialogDescription>Build info and links for this instance.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="rounded-lg border border-border bg-muted/30 p-3">

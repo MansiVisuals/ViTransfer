@@ -128,8 +128,9 @@ export function VideoProcessingSettingsSection({
                 <Label htmlFor="autoApproveProject">Auto-approve project when all videos are approved</Label>
                 <p className="text-xs text-muted-foreground">
                   When enabled, the project is marked as APPROVED when all unique videos have at least one approved version.
-                  <br />
-                  <span className="text-warning">Disable this if you upload videos one-by-one and don&apos;t want the project to auto-approve until you&apos;re ready.</span>
+                </p>
+                <p className="text-xs text-warning mt-2">
+                  Disable this if you upload videos one-by-one and don&apos;t want the project to auto-approve until you&apos;re ready.
                 </p>
               </div>
               <Switch

@@ -1,14 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useRouter } from 'next/navigation'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
 export function UnsubscribeClient({ token }: { token: string }) {
+  const router = useRouter()
   const [effectiveToken, setEffectiveToken] = useState(token)
   const hasToken = useMemo(() => effectiveToken.trim().length > 0, [effectiveToken])
   const [status, setStatus] = useState<Status>('idle')
@@ -58,15 +59,21 @@ export function UnsubscribeClient({ token }: { token: string }) {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Email Preferences</CardTitle>
-          <CardDescription>Unsubscribe from project update emails.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) router.push('/')
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Email Preferences</DialogTitle>
+          <DialogDescription>Unsubscribe from project update emails.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
           {!hasToken && (
-            <div className="flex items-start gap-3 rounded-md border border-border bg-muted p-3 text-sm">
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
               <div>
                 This unsubscribe link is missing or invalid. Please use the link from your email.
@@ -75,20 +82,20 @@ export function UnsubscribeClient({ token }: { token: string }) {
           )}
 
           {status === 'success' && (
-            <div className="flex items-start gap-3 rounded-md border border-border bg-muted p-3 text-sm">
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
               <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
               <div>You’re unsubscribed from project update emails.</div>
             </div>
           )}
 
           {status === 'error' && (
-            <div className="flex items-start gap-3 rounded-md border border-border bg-muted p-3 text-sm">
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
               <div>Something went wrong. Please try again.</div>
             </div>
           )}
 
-          <div className="flex gap-2">
+          <DialogFooter>
             <Button
               type="button"
               className="flex-1"
@@ -97,16 +104,20 @@ export function UnsubscribeClient({ token }: { token: string }) {
             >
               {status === 'loading' ? 'Unsubscribing…' : 'Unsubscribe'}
             </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href="/">Close</Link>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push('/')}
+            >
+              Close
             </Button>
-          </div>
+          </DialogFooter>
 
           <p className="text-xs text-muted-foreground">
             Stops email updates only. Your access link still works.
           </p>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

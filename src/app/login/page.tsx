@@ -140,7 +140,7 @@ function LoginForm() {
             ViTransfer
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Video Review & Share Platform
+            Video Review, Feedback & Deliverables
           </p>
         </div>
 

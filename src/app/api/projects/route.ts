@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
         defaultPreviewResolution: true,
         defaultWatermarkEnabled: true,
         defaultWatermarkText: true,
+        defaultTimestampDisplay: true,
       },
     })
 
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest) {
           previewResolution: settings?.defaultPreviewResolution || '720p',
           watermarkEnabled: settings?.defaultWatermarkEnabled ?? true,
           watermarkText: settings?.defaultWatermarkText || null,
+          timestampDisplay: settings?.defaultTimestampDisplay || 'TIMECODE',
           createdById: admin.id,
         },
       })

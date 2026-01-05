@@ -319,6 +319,7 @@ export default function ProjectPage() {
                   isPasswordProtected={!!project.sharePassword}
                   adminUser={adminUser}
                   recipients={project.recipients || []}
+                  timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                 />
               </div>
             )}

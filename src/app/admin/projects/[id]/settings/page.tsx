@@ -80,6 +80,7 @@ interface Project {
   maxRevisions: number
   restrictCommentsToLatestVersion: boolean
   hideFeedback: boolean
+  timestampDisplay: string
   sharePassword: string | null
   sharePasswordDecrypted: string | null
   authMode: string
@@ -114,6 +115,7 @@ export default function ProjectSettingsPage() {
   const [maxRevisions, setMaxRevisions] = useState<number | ''>('')
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
   const [hideFeedback, setHideFeedback] = useState(false)
+  const [timestampDisplay, setTimestampDisplay] = useState<'AUTO' | 'TIMECODE'>('TIMECODE')
   const [sharePassword, setSharePassword] = useState('')
   const [authMode, setAuthMode] = useState('PASSWORD')
   const [guestMode, setGuestMode] = useState(false)
@@ -196,6 +198,7 @@ export default function ProjectSettingsPage() {
         setMaxRevisions(data.maxRevisions)
         setRestrictCommentsToLatestVersion(data.restrictCommentsToLatestVersion)
         setHideFeedback(data.hideFeedback || false)
+        setTimestampDisplay(data.timestampDisplay || 'TIMECODE')
         setPreviewResolution(data.previewResolution)
         setWatermarkEnabled(data.watermarkEnabled ?? true)
         setWatermarkText(data.watermarkText || '')
@@ -294,6 +297,7 @@ export default function ProjectSettingsPage() {
         maxRevisions: enableRevisions ? finalMaxRevisions : 0,
         restrictCommentsToLatestVersion,
         hideFeedback,
+        timestampDisplay,
         previewResolution,
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
@@ -872,6 +876,22 @@ export default function ProjectSettingsPage() {
                     checked={restrictCommentsToLatestVersion}
                     onCheckedChange={setRestrictCommentsToLatestVersion}
                   />
+                </div>
+
+                <div className="space-y-2 pt-2 mt-2 border-t border-border">
+                  <Label htmlFor="timestampDisplay">Comment Timestamp Display</Label>
+                  <select
+                    id="timestampDisplay"
+                    value={timestampDisplay}
+                    onChange={(e) => setTimestampDisplay(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
+                  >
+                    <option value="TIMECODE">Timecode (HH:MM:SS:FF)</option>
+                    <option value="AUTO">Simple Time (MM:SS / HH:MM:SS)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Controls how timestamps appear in comment badges on the share page.
+                  </p>
                 </div>
               </div>
             </CardContent>

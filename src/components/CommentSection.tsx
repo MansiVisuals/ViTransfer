@@ -9,6 +9,7 @@ import CommentInput from './CommentInput'
 import { useCommentManagement } from '@/hooks/useCommentManagement'
 import { formatDate } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
+import { formatCommentTimestamp, timecodeToSeconds } from '@/lib/timecode'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -31,6 +32,7 @@ interface CommentSectionProps {
   recipients?: Array<{ id: string; name: string | null }>
   shareToken?: string | null
   showShortcutsButton?: boolean
+  timestampDisplayMode?: 'TIMECODE' | 'AUTO'
 }
 
 export default function CommentSection({
@@ -50,6 +52,7 @@ export default function CommentSection({
   recipients = [],
   shareToken = null,
   showShortcutsButton = false,
+  timestampDisplayMode = 'TIMECODE',
 }: CommentSectionProps) {
   const {
     comments,
@@ -181,6 +184,7 @@ export default function CommentSection({
 
   // Check if currently selected video is approved
   const currentVideo = videos.find(v => v.id === selectedVideoId)
+  const currentVideoDuration = currentVideo?.duration ?? null
   const isCurrentVideoApproved = currentVideo ? (currentVideo as any).approved === true : false
   // Check if ANY video in the group is approved (for admin view with multiple versions)
   const hasAnyApprovedVideo = videos.some(v => (v as any).approved === true)
@@ -277,6 +281,12 @@ export default function CommentSection({
     }
   }
 
+  const handleSeekToTimecode = (timecode: string, videoId: string, videoVersion: number | null) => {
+    const fps = videos.find(v => v.id === videoId)?.fps || 24
+    const seconds = timecodeToSeconds(timecode, fps)
+    handleSeekToTimestamp(seconds, videoId, videoVersion)
+  }
+
   const handleOpenShortcuts = () => {
     window.dispatchEvent(new CustomEvent('openShortcutsDialog'))
   }
@@ -331,6 +341,22 @@ export default function CommentSection({
               {sortedComments.map((comment, index) => {
                 const sequenceNumber = index + 1
                 const replies = comment.replies || []
+                const video = videos.find(v => v.id === comment.videoId)
+                const fps = video?.fps || 24
+                const duration = video?.duration
+                const showTimestamp =
+                  typeof comment.timecode === 'string' &&
+                  comment.timecode.trim() !== '' &&
+                  comment.timecode !== '00:00:00:00' &&
+                  comment.timecode !== '00:00:00;00'
+                const timestampLabel = showTimestamp
+                  ? formatCommentTimestamp({
+                      timecode: comment.timecode,
+                      fps,
+                      videoDurationSeconds: duration,
+                      mode: timestampDisplayMode,
+                    })
+                  : null
 
                 return (
                   <div key={comment.id}>
@@ -338,13 +364,14 @@ export default function CommentSection({
                       comment={comment}
                       isReply={false}
                       onReply={() => handleReply(comment.id, comment.videoId)}
-                      onSeekToTimestamp={handleSeekToTimestamp}
+                      onSeekToTimecode={handleSeekToTimecode}
                       onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
                       formatMessageTime={formatMessageTime}
                       commentsDisabled={commentsDisabled}
                       sequenceNumber={sequenceNumber}
                       replies={replies}
                       onDeleteReply={isAdminView ? handleDeleteComment : undefined}
+                      timestampLabel={timestampLabel}
                     />
                   </div>
                 )
@@ -364,6 +391,8 @@ export default function CommentSection({
           selectedTimestamp={selectedTimestamp}
           onClearTimestamp={handleClearTimestamp}
           selectedVideoFps={selectedVideoFps}
+          selectedVideoDurationSeconds={currentVideoDuration}
+          timestampDisplayMode={timestampDisplayMode}
           replyingToComment={replyingToComment}
           onCancelReply={handleCancelReply}
           showAuthorInput={!isAdminView && isPasswordProtected}

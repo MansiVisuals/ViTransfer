@@ -2,7 +2,6 @@
 
 import { Comment } from '@prisma/client'
 import { Clock, Trash2 } from 'lucide-react'
-import { timecodeToSeconds, formatTimecodeDisplay } from '@/lib/timecode'
 import DOMPurify from 'dompurify'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 
@@ -14,13 +13,14 @@ interface MessageBubbleProps {
   comment: CommentWithReplies
   isReply: boolean
   onReply?: () => void
-  onSeekToTimestamp?: (timestamp: number, videoId: string, videoVersion: number | null) => void
+  onSeekToTimecode?: (timecode: string, videoId: string, videoVersion: number | null) => void
   onDelete?: () => void
   formatMessageTime: (date: Date) => string
   commentsDisabled: boolean
   sequenceNumber?: number
   replies?: Comment[]
   onDeleteReply?: (replyId: string) => void
+  timestampLabel?: string | null
 }
 
 /**
@@ -43,13 +43,14 @@ export default function MessageBubble({
   comment,
   isReply,
   onReply,
-  onSeekToTimestamp,
+  onSeekToTimecode,
   onDelete,
   formatMessageTime,
   commentsDisabled,
   sequenceNumber,
   replies,
   onDeleteReply,
+  timestampLabel,
 }: MessageBubbleProps) {
   // Get effective author name for color generation
   // For internal comments without authorName, fall back to user.name or user.email
@@ -62,19 +63,10 @@ export default function MessageBubble({
   const textColor = 'text-gray-900 dark:text-gray-100'
 
   const handleTimestampClick = () => {
-    if (comment.timecode && onSeekToTimestamp) {
-      // Convert timecode to seconds for video player seeking
-      // Use 24fps as default (video player will handle the actual seek)
-      const seconds = timecodeToSeconds(comment.timecode, 24)
-      onSeekToTimestamp(seconds, comment.videoId, comment.videoVersion)
+    if (comment.timecode && onSeekToTimecode) {
+      onSeekToTimecode(comment.timecode, comment.videoId, comment.videoVersion)
     }
   }
-
-  const displayTimecode =
-    typeof comment.timecode === 'string' &&
-    comment.timecode.trim() !== '' &&
-    comment.timecode !== '00:00:00:00' &&
-    comment.timecode !== '00:00:00;00'
 
   const threadReplies = !isReply && replies && replies.length > 0 ? replies : []
   const hasReplies = threadReplies.length > 0
@@ -101,7 +93,7 @@ export default function MessageBubble({
             </div>
 
             <div className={`text-base whitespace-pre-wrap break-words leading-relaxed ${textColor}`}>
-              {!isReply && displayTimecode && (
+              {!isReply && timestampLabel && (
                 <button
                   type="button"
                   onClick={handleTimestampClick}
@@ -109,12 +101,12 @@ export default function MessageBubble({
                   title="Seek to this timecode"
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  <span className="font-mono">{formatTimecodeDisplay(comment.timecode)}</span>
+                  <span className="font-mono">{timestampLabel}</span>
                 </button>
               )}
 
               <div
-                className={`${!isReply && displayTimecode ? 'inline' : ''} [&>p]:m-0 [&>p:first-child]:inline [&>br]:leading-[0]`}
+                className={`${!isReply && timestampLabel ? 'inline' : ''} [&>p]:m-0 [&>p:first-child]:inline [&>br]:leading-[0]`}
                 dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.content) }}
               />
             </div>

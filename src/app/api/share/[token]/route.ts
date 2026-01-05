@@ -245,12 +245,15 @@ export async function GET(
       guestMode: project.guestMode || false,
       isGuest: isGuest,
 
-      ...(!isGuest ? {
+      ...(isGuest ? {} : {
         clientName: project.companyName || primaryRecipient?.name || 'Client',
         clientEmail: primaryRecipient?.email || null,
         companyName: project.companyName || null,
         recipients: allRecipients,
-      } : {}),
+      }),
+
+      // Not sensitive; used by share UI to format comment timestamp badges
+      timestampDisplay: project.timestampDisplay,
 
       ...(isGuest ? {} : {
         enableRevisions: project.enableRevisions,

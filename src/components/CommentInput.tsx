@@ -4,8 +4,8 @@ import { Comment } from '@prisma/client'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
-import { Clock, Send } from 'lucide-react'
-import { secondsToTimecode, formatTimecodeDisplay, getTimecodeLabel, isDropFrame } from '@/lib/timecode'
+import { Clock, Send, X } from 'lucide-react'
+import { formatCommentTimestamp, secondsToTimecode } from '@/lib/timecode'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 
 interface CommentInputProps {
@@ -18,6 +18,8 @@ interface CommentInputProps {
   selectedTimestamp: number | null
   onClearTimestamp: () => void
   selectedVideoFps: number // FPS of the currently selected video
+  selectedVideoDurationSeconds?: number | null
+  timestampDisplayMode?: 'TIMECODE' | 'AUTO'
 
   // Reply state
   replyingToComment: Comment | null
@@ -50,6 +52,8 @@ export default function CommentInput({
   selectedTimestamp,
   onClearTimestamp,
   selectedVideoFps,
+  selectedVideoDurationSeconds = null,
+  timestampDisplayMode = 'TIMECODE',
   replyingToComment,
   onCancelReply,
   showAuthorInput,
@@ -70,6 +74,15 @@ export default function CommentInput({
   // Check if name selection is required but not provided
   const isNameRequired = showAuthorInput && namedRecipients.length > 0 && nameSource === 'none'
   const canSubmit = !loading && newComment.trim() && !isNameRequired
+  const timestampLabel =
+    selectedTimestamp !== null && selectedTimestamp !== undefined
+      ? formatCommentTimestamp({
+          timecode: secondsToTimecode(selectedTimestamp, selectedVideoFps),
+          fps: selectedVideoFps,
+          videoDurationSeconds: selectedVideoDurationSeconds,
+          mode: timestampDisplayMode,
+        })
+      : null
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Allow Ctrl+Space and other Ctrl shortcuts to pass through to VideoPlayer
@@ -172,33 +185,23 @@ export default function CommentInput({
         </div>
       )}
 
-      {/* Timecode indicator */}
-      {selectedTimestamp !== null && selectedTimestamp !== undefined && !currentVideoRestricted && (
-        <div className="mb-2">
-          {/* Format hint - aligned to match timecode position */}
-          <div className="flex items-center gap-3 mb-0.5 ml-7">
-            <span className="text-sm text-muted-foreground/60 font-mono">
-              {isDropFrame(selectedVideoFps) ? 'HH:MM:SS;FF' : 'HH:MM:SS:FF'}
-            </span>
-            <span className="text-sm text-muted-foreground/50">
-              (Hours:Minutes:Seconds{isDropFrame(selectedVideoFps) ? ';' : ':'}Frames)
-            </span>
+      {/* Timestamp indicator */}
+      {timestampLabel && !currentVideoRestricted && (
+        <div className="mb-3 flex items-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-md bg-warning-visible px-2 py-1 text-sm font-semibold text-warning">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="font-mono">{timestampLabel}</span>
           </div>
-          {/* Timecode value with clock and clear button */}
-          <div className="flex items-center gap-3">
-            <Clock className="w-4 h-4 text-warning flex-shrink-0" />
-            <span className="text-warning font-mono text-sm">
-              {formatTimecodeDisplay(secondsToTimecode(selectedTimestamp, selectedVideoFps))}
-            </span>
-            <Button
-              onClick={onClearTimestamp}
-              variant="ghost"
-              size="xs"
-              className="text-muted-foreground"
-            >
-              Clear
-            </Button>
-          </div>
+          <Button
+            type="button"
+            onClick={onClearTimestamp}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            title="Clear timestamp"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </div>
       )}
 

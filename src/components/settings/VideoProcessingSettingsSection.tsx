@@ -11,6 +11,10 @@ interface VideoProcessingSettingsSectionProps {
   setDefaultWatermarkEnabled: (value: boolean) => void
   defaultWatermarkText: string
   setDefaultWatermarkText: (value: string) => void
+  defaultTimestampDisplay: string
+  setDefaultTimestampDisplay: (value: string) => void
+  autoApproveProject: boolean
+  setAutoApproveProject: (value: boolean) => void
   show: boolean
   setShow: (value: boolean) => void
 }
@@ -22,6 +26,10 @@ export function VideoProcessingSettingsSection({
   setDefaultWatermarkEnabled,
   defaultWatermarkText,
   setDefaultWatermarkText,
+  defaultTimestampDisplay,
+  setDefaultTimestampDisplay,
+  autoApproveProject,
+  setAutoApproveProject,
   show,
   setShow,
 }: VideoProcessingSettingsSectionProps) {
@@ -33,9 +41,9 @@ export function VideoProcessingSettingsSection({
       >
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Default Video Processing Settings</CardTitle>
+            <CardTitle>Default Project Settings</CardTitle>
             <CardDescription>
-              Set default settings for new projects
+              Defaults applied when creating new projects
             </CardDescription>
           </div>
           {show ? (
@@ -61,6 +69,22 @@ export function VideoProcessingSettingsSection({
             </select>
             <p className="text-xs text-muted-foreground">
               New projects will use this resolution by default. Can be overridden per project.
+            </p>
+          </div>
+
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+            <Label htmlFor="defaultTimestampDisplay">Default Comment Timestamp Display</Label>
+            <select
+              id="defaultTimestampDisplay"
+              value={defaultTimestampDisplay}
+              onChange={(e) => setDefaultTimestampDisplay(e.target.value)}
+              className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
+            >
+              <option value="TIMECODE">Timecode (HH:MM:SS:FF)</option>
+              <option value="AUTO">Simple Time (MM:SS / HH:MM:SS)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Used for new projects by default. You can change this per project in Project Settings.
             </p>
           </div>
 
@@ -96,6 +120,24 @@ export function VideoProcessingSettingsSection({
                 </p>
               </div>
             )}
+          </div>
+
+          <div className="space-y-4 border p-4 rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="autoApproveProject">Auto-approve project when all videos are approved</Label>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, the project is marked as APPROVED when all unique videos have at least one approved version.
+                  <br />
+                  <span className="text-warning">Disable this if you upload videos one-by-one and don&apos;t want the project to auto-approve until you&apos;re ready.</span>
+                </p>
+              </div>
+              <Switch
+                id="autoApproveProject"
+                checked={autoApproveProject}
+                onCheckedChange={setAutoApproveProject}
+              />
+            </div>
           </div>
         </CardContent>
       )}

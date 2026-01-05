@@ -785,6 +785,7 @@ export default function SharePage() {
                     recipients={project.recipients || []}
                     shareToken={shareToken}
                     showShortcutsButton={true}
+                    timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                   />
               </div>
             )}

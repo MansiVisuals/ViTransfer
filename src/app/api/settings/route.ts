@@ -100,6 +100,7 @@ export async function PATCH(request: NextRequest) {
       defaultPreviewResolution,
       defaultWatermarkEnabled,
       defaultWatermarkText,
+      defaultTimestampDisplay,
       autoApproveProject,
       adminNotificationSchedule,
       adminNotificationTime,
@@ -165,6 +166,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (defaultTimestampDisplay !== undefined) {
+      const valid = ['TIMECODE', 'AUTO']
+      if (!valid.includes(defaultTimestampDisplay)) {
+        return NextResponse.json(
+          { error: 'Invalid timestamp display. Must be TIMECODE or AUTO.' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Handle SMTP password update - only update if actually changed
     let passwordUpdate: string | null | undefined
     if (smtpPassword !== undefined) {
@@ -210,6 +221,7 @@ export async function PATCH(request: NextRequest) {
       defaultPreviewResolution,
       defaultWatermarkEnabled,
       defaultWatermarkText,
+      defaultTimestampDisplay,
       autoApproveProject,
       adminNotificationSchedule,
       adminNotificationTime,
@@ -237,6 +249,7 @@ export async function PATCH(request: NextRequest) {
         appDomain,
         defaultPreviewResolution,
         defaultWatermarkText,
+        defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject,
         adminNotificationSchedule: adminNotificationSchedule || 'IMMEDIATE',
         adminNotificationTime,

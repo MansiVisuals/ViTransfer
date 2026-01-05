@@ -8,7 +8,6 @@ import { CompanyBrandingSection } from '@/components/settings/CompanyBrandingSec
 import { DomainConfigurationSection } from '@/components/settings/DomainConfigurationSection'
 import { NotificationsSection } from '@/components/settings/NotificationsSection'
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
-import { ProjectBehaviorSection } from '@/components/settings/ProjectBehaviorSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
 import { apiPatch, apiPost, apiFetch } from '@/lib/api-client'
 
@@ -25,6 +24,7 @@ interface Settings {
   defaultPreviewResolution: string | null
   defaultWatermarkEnabled: boolean | null
   defaultWatermarkText: string | null
+  defaultTimestampDisplay: string | null
   autoApproveProject: boolean | null
   adminNotificationSchedule: string | null
   adminNotificationTime: string | null
@@ -88,6 +88,7 @@ export default function GlobalSettingsPage() {
   const [defaultPreviewResolution, setDefaultPreviewResolution] = useState('720p')
   const [defaultWatermarkEnabled, setDefaultWatermarkEnabled] = useState(true)
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
+  const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
 
   // Form state for admin notification settings
@@ -124,7 +125,6 @@ export default function GlobalSettingsPage() {
   const [showDomainConfiguration, setShowDomainConfiguration] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
-  const [showProjectBehavior, setShowProjectBehavior] = useState(false)
 
   useEffect(() => {
     async function loadSettings() {
@@ -148,6 +148,7 @@ export default function GlobalSettingsPage() {
         setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
         setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
         setDefaultWatermarkText(data.defaultWatermarkText || '')
+        setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
         setAutoApproveProject(data.autoApproveProject ?? true)
         setTestEmailAddress(data.smtpFromAddress || '')
 
@@ -318,6 +319,7 @@ export default function GlobalSettingsPage() {
         defaultPreviewResolution: defaultPreviewResolution || '720p',
         defaultWatermarkEnabled: defaultWatermarkEnabled,
         defaultWatermarkText: defaultWatermarkText || null,
+        defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject: autoApproveProject,
         adminNotificationSchedule: adminNotificationSchedule,
         adminNotificationTime: (adminNotificationSchedule === 'DAILY' || adminNotificationSchedule === 'WEEKLY') ? adminNotificationTime : null,
@@ -538,15 +540,12 @@ export default function GlobalSettingsPage() {
             setDefaultWatermarkEnabled={setDefaultWatermarkEnabled}
             defaultWatermarkText={defaultWatermarkText}
             setDefaultWatermarkText={setDefaultWatermarkText}
-            show={showVideoProcessing}
-            setShow={setShowVideoProcessing}
-          />
-
-          <ProjectBehaviorSection
+            defaultTimestampDisplay={defaultTimestampDisplay}
+            setDefaultTimestampDisplay={setDefaultTimestampDisplay}
             autoApproveProject={autoApproveProject}
             setAutoApproveProject={setAutoApproveProject}
-            show={showProjectBehavior}
-            setShow={setShowProjectBehavior}
+            show={showVideoProcessing}
+            setShow={setShowVideoProcessing}
           />
 
           <SecuritySettingsSection

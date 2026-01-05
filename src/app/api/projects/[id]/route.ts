@@ -23,6 +23,7 @@ const updateProjectSchema = z.object({
   maxRevisions: z.number().int().min(0).max(50).optional(),
   restrictCommentsToLatestVersion: z.boolean().optional(),
   hideFeedback: z.boolean().optional(),
+  timestampDisplay: z.enum(['AUTO', 'TIMECODE']).optional(),
   previewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
   watermarkEnabled: z.boolean().optional(),
   watermarkText: z.string().max(100).nullable().optional(),
@@ -238,6 +239,9 @@ export async function PATCH(
     }
     if (validatedBody.hideFeedback !== undefined) {
       updateData.hideFeedback = validatedBody.hideFeedback
+    }
+    if (validatedBody.timestampDisplay !== undefined) {
+      updateData.timestampDisplay = validatedBody.timestampDisplay
     }
 
     // Handle video processing settings

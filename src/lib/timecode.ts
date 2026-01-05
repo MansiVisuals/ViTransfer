@@ -221,3 +221,36 @@ export function formatTimecodeDisplay(timecode: string): string {
   // Use semicolon before frames for DF, colon for NDF
   return `${hours}:${minutes}:${seconds}${separator}${frames}`
 }
+
+function formatClockTime(secondsTotal: number, includeHours: boolean): string {
+  const safeSeconds = Number.isFinite(secondsTotal) && secondsTotal > 0 ? Math.floor(secondsTotal) : 0
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const seconds = safeSeconds % 60
+
+  if (includeHours) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+export function formatCommentTimestamp(params: {
+  timecode: string
+  fps?: number | null
+  videoDurationSeconds?: number | null
+  mode: 'TIMECODE' | 'AUTO'
+}): string {
+  const { timecode, fps, videoDurationSeconds, mode } = params
+
+  if (mode === 'TIMECODE') {
+    return formatTimecodeDisplay(timecode)
+  }
+
+  try {
+    const seconds = timecodeToSeconds(timecode, typeof fps === 'number' && Number.isFinite(fps) ? fps : 24)
+    const duration = typeof videoDurationSeconds === 'number' && Number.isFinite(videoDurationSeconds) ? videoDurationSeconds : seconds
+    return formatClockTime(seconds, duration >= 3600)
+  } catch {
+    return '00:00'
+  }
+}

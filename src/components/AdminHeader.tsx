@@ -35,6 +35,7 @@ export default function AdminHeader() {
   if (!user) return null
 
   const repoUrl = 'https://github.com/MansiVisuals/ViTransfer'
+  const websiteUrl = 'https://www.vitransfer.com'
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
   const instanceUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
@@ -109,6 +110,14 @@ export default function AdminHeader() {
                   </div>
 
                   <div className="space-y-2 text-sm">
+                    <a
+                      href={websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
+                    >
+                      Website
+                    </a>
                     <a
                       href={repoUrl}
                       target="_blank"

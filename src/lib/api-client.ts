@@ -12,11 +12,11 @@ export async function apiFetch(
   try {
     const response = await fetch(input, requestInit)
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       const refreshed = await attemptRefresh()
       if (refreshed) {
         const retryResponse = await fetch(input, withAuthHeader(init))
-        if (retryResponse.status !== 401 && retryResponse.status !== 403) {
+        if (retryResponse.status !== 401) {
           return retryResponse
         }
       }

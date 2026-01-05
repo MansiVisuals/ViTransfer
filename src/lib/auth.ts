@@ -48,7 +48,7 @@ interface SharePayload extends jwt.JwtPayload {
 
 const ADMIN_ACCESS_SECRET = process.env.JWT_SECRET
 const ADMIN_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET
-const SHARE_TOKEN_SECRET = process.env.SHARE_TOKEN_SECRET || ADMIN_ACCESS_SECRET
+const SHARE_TOKEN_SECRET = process.env.SHARE_TOKEN_SECRET
 
 const ACCESS_TOKEN_DURATION = Number(process.env.ADMIN_ACCESS_TTL_SECONDS || 15 * 60) // 15 minutes
 const REFRESH_TOKEN_DURATION = Number(process.env.ADMIN_REFRESH_TTL_SECONDS || 7 * 24 * 60 * 60) // 7 days

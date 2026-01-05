@@ -1,7 +1,6 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { EmailSettingsContent, type EmailSettingsContentProps } from '@/components/settings/EmailSettingsSection'
 import { ExternalNotificationsContent } from '@/components/settings/ExternalNotificationsSection'
 import { useState } from 'react'
@@ -15,23 +14,14 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
   const [activeTab, setActiveTab] = useState<'email' | 'external'>('email')
 
   return (
-    <Card className="border-border">
-      <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setShow(!show)}>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Email & Push Notifications</CardTitle>
-            <CardDescription>Configure email and push notification destinations</CardDescription>
-          </div>
-          {show ? (
-            <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          )}
-        </div>
-      </CardHeader>
-
-      {show && (
-        <CardContent className="space-y-6 border-t pt-6">
+    <CollapsibleSection
+      className="border-border"
+      title="Email & Push Notifications"
+      description="Configure email and push notification destinations"
+      open={show}
+      onOpenChange={setShow}
+      contentClassName="space-y-6 border-t pt-6"
+    >
           <div
             role="tablist"
             aria-label="Notification settings"
@@ -84,8 +74,6 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
               <ExternalNotificationsContent active={show && activeTab === 'external'} showIntro={false} />
             </div>
           )}
-        </CardContent>
-      )}
-    </Card>
+    </CollapsibleSection>
   )
 }

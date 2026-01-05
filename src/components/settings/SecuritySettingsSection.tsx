@@ -1,10 +1,10 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Clock, AlertTriangle, CheckCircle, Lock, ChevronDown, ChevronUp } from 'lucide-react'
+import { CollapsibleSection } from '@/components/ui/collapsible-section'
+import { Clock, AlertTriangle, CheckCircle, Lock } from 'lucide-react'
 
 function formatDurationSetting(value: string, unit: string, fallbackValue = 15): string {
   const parsedValue = Number.parseInt(value, 10)
@@ -111,28 +111,14 @@ export function SecuritySettingsSection({
   blocklistsLoading,
 }: SecuritySettingsSectionProps) {
   return (
-    <Card className="border-border">
-      <CardHeader
-        className="cursor-pointer hover:bg-accent/50 transition-colors"
-        onClick={() => setShowSecuritySettings(!showSecuritySettings)}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Advanced Security Settings</CardTitle>
-            <CardDescription>
-              Configure advanced security options
-            </CardDescription>
-          </div>
-          {showSecuritySettings ? (
-            <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          )}
-        </div>
-      </CardHeader>
-
-      {showSecuritySettings && (
-        <CardContent className="space-y-4 border-t pt-4">
+    <CollapsibleSection
+      className="border-border"
+      title="Advanced Security Settings"
+      description="Configure advanced security options"
+      open={showSecuritySettings}
+      onOpenChange={setShowSecuritySettings}
+      contentClassName="space-y-4 border-t pt-4"
+    >
           <div className="p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
             <p className="text-sm font-semibold text-warning">
               Warning: Advanced Configuration
@@ -572,8 +558,6 @@ export function SecuritySettingsSection({
               />
             </div>
           </div>
-        </CardContent>
-      )}
-    </Card>
+    </CollapsibleSection>
   )
 }

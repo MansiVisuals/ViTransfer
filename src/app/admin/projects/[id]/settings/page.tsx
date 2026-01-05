@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { ReprocessModal } from '@/components/ReprocessModal'
 import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
@@ -18,7 +18,7 @@ import { apiFetch } from '@/lib/api-client'
 import { sanitizeSlug } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
 
 // Client-safe password generation using Web Crypto API
 function generateSecurePassword(): string {
@@ -456,34 +456,20 @@ export default function ProjectSettingsPage() {
           </div>
         )}
 
-        <div className="space-y-4 sm:space-y-6">
-          {/* Project Details */}
-          <Card className="border-border">
-            <CardHeader
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => setShowProjectDetails(!showProjectDetails)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Project Details</CardTitle>
-                  <CardDescription>
-                    Basic project information and client details
-                  </CardDescription>
-                </div>
-                {showProjectDetails ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            </CardHeader>
-
-            {showProjectDetails && (
-              <CardContent className="space-y-4 border-t pt-4">
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Project Title</Label>
-                  <Input
+	        <div className="space-y-4 sm:space-y-6">
+	          {/* Project Details */}
+	          <CollapsibleSection
+	            className="border-border"
+	            title="Project Details"
+	            description="Basic project information and client details"
+	            open={showProjectDetails}
+	            onOpenChange={setShowProjectDetails}
+	            contentClassName="space-y-4 border-t pt-4"
+	          >
+	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+	                <div className="space-y-2">
+	                  <Label htmlFor="title">Project Title</Label>
+	                  <Input
                     id="title"
                     type="text"
                     value={title}
@@ -580,43 +566,27 @@ export default function ProjectSettingsPage() {
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {useCustomSlug
-                      ? 'Custom share link. Only lowercase letters, numbers, and hyphens allowed.'
-                      : 'Auto-generated from project title. Enable "Custom Link" to set your own.'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-            )}
-          </Card>
+	                    {useCustomSlug
+	                      ? 'Custom share link. Only lowercase letters, numbers, and hyphens allowed.'
+	                      : 'Auto-generated from project title. Enable "Custom Link" to set your own.'}
+	                  </p>
+	                </div>
+	              </div>
+	          </CollapsibleSection>
 
-          {/* Client Information & Notifications */}
-          <Card className="border-border">
-            <CardHeader
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => setShowClientInfo(!showClientInfo)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Client Information & Notifications</CardTitle>
-                  <CardDescription>
-                    Manage client recipients and notification settings
-                  </CardDescription>
-                </div>
-                {showClientInfo ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            </CardHeader>
-
-            {showClientInfo && (
-              <CardContent className="space-y-6 border-t pt-4">
-              <RecipientManager
-                projectId={projectId}
-                onError={setError}
-                onRecipientsChange={setRecipients}
+	          {/* Client Information & Notifications */}
+	          <CollapsibleSection
+	            className="border-border"
+	            title="Client Information & Notifications"
+	            description="Manage client recipients and notification settings"
+	            open={showClientInfo}
+	            onOpenChange={setShowClientInfo}
+	            contentClassName="space-y-6 border-t pt-4"
+	          >
+	              <RecipientManager
+	                projectId={projectId}
+	                onError={setError}
+	                onRecipientsChange={setRecipients}
               />
 
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
@@ -628,40 +598,24 @@ export default function ProjectSettingsPage() {
                   onTimeChange={setClientNotificationTime}
                   onDayChange={setClientNotificationDay}
                   label="Client Notification Schedule"
-                  description="Configure when clients receive summaries of your replies for this project. Note: Approval emails are always sent immediately."
-                />
-              </div>
-            </CardContent>
-            )}
-          </Card>
+	                  description="Configure when clients receive summaries of your replies for this project. Note: Approval emails are always sent immediately."
+	                />
+	              </div>
+	          </CollapsibleSection>
 
-          {/* Video Processing Settings */}
-          <Card className="border-border">
-            <CardHeader
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => setShowVideoProcessing(!showVideoProcessing)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Video Processing</CardTitle>
-                  <CardDescription>
-                    Configure how videos are processed and displayed
-                  </CardDescription>
-                </div>
-                {showVideoProcessing ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            </CardHeader>
-
-            {showVideoProcessing && (
-              <CardContent className="space-y-6 border-t pt-4">
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-                <div className="space-y-2">
-                  <Label>Preview Resolution</Label>
-                  <Select value={previewResolution} onValueChange={setPreviewResolution}>
+	          {/* Video Processing Settings */}
+	          <CollapsibleSection
+	            className="border-border"
+	            title="Video Processing"
+	            description="Configure how videos are processed and displayed"
+	            open={showVideoProcessing}
+	            onOpenChange={setShowVideoProcessing}
+	            contentClassName="space-y-6 border-t pt-4"
+	          >
+	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+	                <div className="space-y-2">
+	                  <Label>Preview Resolution</Label>
+	                  <Select value={previewResolution} onValueChange={setPreviewResolution}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -740,40 +694,24 @@ export default function ProjectSettingsPage() {
                     id="allowAssetDownload"
                     checked={allowAssetDownload}
                     onCheckedChange={setAllowAssetDownload}
-                  />
-                </div>
-              </div>
-            </CardContent>
-            )}
-          </Card>
+	                  />
+	                </div>
+	              </div>
+	          </CollapsibleSection>
 
-          {/* Revision Settings */}
-          <Card className="border-border">
-            <CardHeader
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => setShowRevisionTracking(!showRevisionTracking)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Revision Tracking</CardTitle>
-                  <CardDescription>
-                    Manage how video revisions are tracked and limited
-                  </CardDescription>
-                </div>
-                {showRevisionTracking ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            </CardHeader>
-
-            {showRevisionTracking && (
-              <CardContent className="space-y-6 border-t pt-4">
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="enableRevisions">Enable Revision Tracking</Label>
+	          {/* Revision Settings */}
+	          <CollapsibleSection
+	            className="border-border"
+	            title="Revision Tracking"
+	            description="Manage how video revisions are tracked and limited"
+	            open={showRevisionTracking}
+	            onOpenChange={setShowRevisionTracking}
+	            contentClassName="space-y-6 border-t pt-4"
+	          >
+	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+	                <div className="flex items-center justify-between gap-4">
+	                  <div className="space-y-0.5 flex-1">
+	                    <Label htmlFor="enableRevisions">Enable Revision Tracking</Label>
                     <p className="text-xs text-muted-foreground">
                       Track and limit the number of video revisions
                     </p>
@@ -818,42 +756,26 @@ export default function ProjectSettingsPage() {
                       />
                       <p className="text-xs text-muted-foreground">
                         Must be at least 1. Applies to each video group independently.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            )}
-          </Card>
+	                      </p>
+	                    </div>
+	                  </div>
+	                )}
+	              </div>
+	          </CollapsibleSection>
 
-          {/* Comment Settings */}
-          <Card className="border-border">
-            <CardHeader
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => setShowFeedback(!showFeedback)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Feedback & Comments</CardTitle>
-                  <CardDescription>
-                    Control how clients can leave feedback
-                  </CardDescription>
-                </div>
-                {showFeedback ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            </CardHeader>
-
-            {showFeedback && (
-              <CardContent className="space-y-6 border-t pt-4">
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="hideFeedback">Hide Feedback Section</Label>
+	          {/* Comment Settings */}
+	          <CollapsibleSection
+	            className="border-border"
+	            title="Feedback & Comments"
+	            description="Control how clients can leave feedback"
+	            open={showFeedback}
+	            onOpenChange={setShowFeedback}
+	            contentClassName="space-y-6 border-t pt-4"
+	          >
+	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+	                <div className="flex items-center justify-between gap-4">
+	                  <div className="space-y-0.5 flex-1">
+	                    <Label htmlFor="hideFeedback">Hide Feedback Section</Label>
                     <p className="text-xs text-muted-foreground">
                       Completely hide the Feedback & Discussion window from clients
                     </p>
@@ -892,40 +814,24 @@ export default function ProjectSettingsPage() {
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     Controls how timestamps appear in comment badges on the share page.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-            )}
-          </Card>
+	                  </p>
+	                </div>
+	              </div>
+	          </CollapsibleSection>
 
-          {/* Security Settings */}
-          <Card className="border-border">
-            <CardHeader
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => setShowSecurity(!showSecurity)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Security</CardTitle>
-                  <CardDescription>
-                    Password protection for the share page
-                  </CardDescription>
-                </div>
-                {showSecurity ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                )}
-              </div>
-            </CardHeader>
-
-            {showSecurity && (
-              <CardContent className="space-y-4 border-t pt-4">
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-                <div className="space-y-2">
-                  <Label>Authentication Method</Label>
-                  <Select value={authMode} onValueChange={setAuthMode}>
+	          {/* Security Settings */}
+	          <CollapsibleSection
+	            className="border-border"
+	            title="Security"
+	            description="Password protection for the share page"
+	            open={showSecurity}
+	            onOpenChange={setShowSecurity}
+	            contentClassName="space-y-4 border-t pt-4"
+	          >
+	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+	                <div className="space-y-2">
+	                  <Label>Authentication Method</Label>
+	                  <Select value={authMode} onValueChange={setAuthMode}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1061,16 +967,14 @@ export default function ProjectSettingsPage() {
                     <SharePasswordRequirements password={sharePassword} />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Clients will need this password to access the share page
-                  </p>
-                </div>
-              </div>
-              )}
-            </CardContent>
-            )}
-          </Card>
+	                    Clients will need this password to access the share page
+	                  </p>
+	                </div>
+	              </div>
+	              )}
+	          </CollapsibleSection>
 
-        </div>
+	        </div>
 
         {/* Error notification at bottom */}
         {error && (

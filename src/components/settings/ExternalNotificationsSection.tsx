@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PasswordInput } from '@/components/ui/password-input'
+import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { ChevronDown, ChevronUp, Plus, Send, Trash2, Save } from 'lucide-react'
 import { apiDelete, apiFetch, apiPatch, apiPost } from '@/lib/api-client'
 import { NOTIFICATION_EVENT_TYPES, type NotificationEventType } from '@/lib/external-notifications/constants'
@@ -459,27 +459,16 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
 
 export function ExternalNotificationsSection({ show, setShow }: ExternalNotificationsSectionProps) {
   return (
-    <Card className="border-border">
-      <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setShow(!show)}>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Push Notifications</CardTitle>
-            <CardDescription>Configure push notifications to Gotify, ntfy, Pushover, and more</CardDescription>
-          </div>
-          {show ? (
-            <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          )}
-        </div>
-      </CardHeader>
-
-      {show && (
-        <CardContent className="space-y-6 border-t pt-4">
-          <ExternalNotificationsContent active={show} />
-        </CardContent>
-      )}
-    </Card>
+    <CollapsibleSection
+      className="border-border"
+      title="Push Notifications"
+      description="Configure push notifications to Gotify, ntfy, Pushover, and more"
+      open={show}
+      onOpenChange={setShow}
+      contentClassName="space-y-6 border-t pt-4"
+    >
+      <ExternalNotificationsContent active={show} />
+    </CollapsibleSection>
   )
 }
 

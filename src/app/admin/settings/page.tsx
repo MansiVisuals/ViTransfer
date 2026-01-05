@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Settings as SettingsIcon, Save } from 'lucide-react'
@@ -126,6 +126,43 @@ export default function GlobalSettingsPage() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
 
+  const applySettingsToForm = useCallback((data: Settings) => {
+    setCompanyName(data.companyName || '')
+    setSmtpServer(data.smtpServer || '')
+    setSmtpPort(data.smtpPort?.toString() || '587')
+    setSmtpUsername(data.smtpUsername || '')
+    setSmtpPassword(data.smtpPassword || '')
+    setSmtpFromAddress(data.smtpFromAddress || '')
+    setSmtpSecure(data.smtpSecure || 'STARTTLS')
+    setAppDomain(data.appDomain || '')
+    setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
+    setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
+    setDefaultWatermarkText(data.defaultWatermarkText || '')
+    setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
+    setAutoApproveProject(data.autoApproveProject ?? true)
+    setTestEmailAddress(data.smtpFromAddress || '')
+    setAdminNotificationSchedule(data.adminNotificationSchedule || 'HOURLY')
+    setAdminNotificationTime(data.adminNotificationTime || '09:00')
+    setAdminNotificationDay(data.adminNotificationDay ?? 1)
+  }, [])
+
+  const applySecuritySettingsToForm = useCallback((data: SecuritySettings) => {
+    setHttpsEnabled(data.httpsEnabled ?? false)
+    setHotlinkProtection(data.hotlinkProtection || 'LOG_ONLY')
+    setIpRateLimit(data.ipRateLimit?.toString() || '1000')
+    setSessionRateLimit(data.sessionRateLimit?.toString() || '600')
+    setShareSessionRateLimit(data.shareSessionRateLimit?.toString() || '300')
+    setShareTokenTtlSeconds(data.shareTokenTtlSeconds ? data.shareTokenTtlSeconds.toString() : '')
+    setPasswordAttempts(data.passwordAttempts?.toString() || '5')
+    setSessionTimeoutValue(data.sessionTimeoutValue?.toString() || '15')
+    setSessionTimeoutUnit(data.sessionTimeoutUnit || 'MINUTES')
+    setAdminSessionTimeoutValue(data.adminSessionTimeoutValue?.toString() || '15')
+    setAdminSessionTimeoutUnit(data.adminSessionTimeoutUnit || 'MINUTES')
+    setTrackAnalytics(data.trackAnalytics ?? true)
+    setTrackSecurityLogs(data.trackSecurityLogs ?? true)
+    setViewSecurityEvents(data.viewSecurityEvents ?? false)
+  }, [])
+
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -136,48 +173,14 @@ export default function GlobalSettingsPage() {
         const data = await response.json()
         setSettings(data)
 
-        // Set form values
-        setCompanyName(data.companyName || '')
-        setSmtpServer(data.smtpServer || '')
-        setSmtpPort(data.smtpPort?.toString() || '587')
-        setSmtpUsername(data.smtpUsername || '')
-        setSmtpPassword(data.smtpPassword || '')
-        setSmtpFromAddress(data.smtpFromAddress || '')
-        setSmtpSecure(data.smtpSecure || 'STARTTLS')
-        setAppDomain(data.appDomain || '')
-        setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
-        setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
-        setDefaultWatermarkText(data.defaultWatermarkText || '')
-        setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
-        setAutoApproveProject(data.autoApproveProject ?? true)
-        setTestEmailAddress(data.smtpFromAddress || '')
-
-        // Set notification settings
-        setAdminNotificationSchedule(data.adminNotificationSchedule || 'HOURLY')
-        setAdminNotificationTime(data.adminNotificationTime || '09:00')
-        setAdminNotificationDay(data.adminNotificationDay ?? 1)
+        applySettingsToForm(data)
 
         // Load security settings
         const securityResponse = await apiFetch('/api/settings/security')
         if (securityResponse.ok) {
           const securityData = await securityResponse.json()
           setSecuritySettings(securityData)
-
-          // Set security form values
-          setHttpsEnabled(securityData.httpsEnabled ?? false)
-          setHotlinkProtection(securityData.hotlinkProtection || 'LOG_ONLY')
-          setIpRateLimit(securityData.ipRateLimit?.toString() || '1000')
-          setSessionRateLimit(securityData.sessionRateLimit?.toString() || '600')
-          setShareSessionRateLimit(securityData.shareSessionRateLimit?.toString() || '300')
-          setShareTokenTtlSeconds(securityData.shareTokenTtlSeconds ? securityData.shareTokenTtlSeconds.toString() : '')
-          setPasswordAttempts(securityData.passwordAttempts?.toString() || '5')
-          setSessionTimeoutValue(securityData.sessionTimeoutValue?.toString() || '15')
-          setSessionTimeoutUnit(securityData.sessionTimeoutUnit || 'MINUTES')
-          setAdminSessionTimeoutValue(securityData.adminSessionTimeoutValue?.toString() || '15')
-          setAdminSessionTimeoutUnit(securityData.adminSessionTimeoutUnit || 'MINUTES')
-          setTrackAnalytics(securityData.trackAnalytics ?? true)
-          setTrackSecurityLogs(securityData.trackSecurityLogs ?? true)
-          setViewSecurityEvents(securityData.viewSecurityEvents ?? false)
+          applySecuritySettingsToForm(securityData)
         }
       } catch (err) {
         setError('Failed to load settings')
@@ -187,7 +190,7 @@ export default function GlobalSettingsPage() {
     }
 
     loadSettings()
-  }, [])
+  }, [applySecuritySettingsToForm, applySettingsToForm])
 
   const loadBlocklists = async () => {
     setBlocklistsLoading(true)
@@ -357,21 +360,7 @@ export default function GlobalSettingsPage() {
       if (refreshResponse.ok) {
         const refreshedData = await refreshResponse.json()
         setSettings(refreshedData)
-        // Update form state with refreshed data
-        setCompanyName(refreshedData.companyName || '')
-        setSmtpServer(refreshedData.smtpServer || '')
-        setSmtpPort(refreshedData.smtpPort?.toString() || '587')
-        setSmtpUsername(refreshedData.smtpUsername || '')
-        setSmtpPassword(refreshedData.smtpPassword || '')
-        setSmtpFromAddress(refreshedData.smtpFromAddress || '')
-        setSmtpSecure(refreshedData.smtpSecure || 'STARTTLS')
-        setAppDomain(refreshedData.appDomain || '')
-        setDefaultPreviewResolution(refreshedData.defaultPreviewResolution || '720p')
-        setDefaultWatermarkText(refreshedData.defaultWatermarkText || '')
-        setAutoApproveProject(refreshedData.autoApproveProject ?? true)
-        setAdminNotificationSchedule(refreshedData.adminNotificationSchedule || 'HOURLY')
-        setAdminNotificationTime(refreshedData.adminNotificationTime || '09:00')
-        setAdminNotificationDay(refreshedData.adminNotificationDay ?? 1)
+        applySettingsToForm(refreshedData)
       }
 
       // Reload security settings data
@@ -379,17 +368,7 @@ export default function GlobalSettingsPage() {
       if (securityRefreshResponse.ok) {
         const refreshedSecurityData = await securityRefreshResponse.json()
         setSecuritySettings(refreshedSecurityData)
-        // Update form state with refreshed data
-        setHttpsEnabled(refreshedSecurityData.httpsEnabled)
-        setHotlinkProtection(refreshedSecurityData.hotlinkProtection)
-        setIpRateLimit(refreshedSecurityData.ipRateLimit?.toString() || '1000')
-        setSessionRateLimit(refreshedSecurityData.sessionRateLimit?.toString() || '600')
-        setPasswordAttempts(refreshedSecurityData.passwordAttempts?.toString() || '5')
-        setSessionTimeoutValue(refreshedSecurityData.sessionTimeoutValue?.toString() || '15')
-        setSessionTimeoutUnit(refreshedSecurityData.sessionTimeoutUnit || 'MINUTES')
-        setTrackAnalytics(refreshedSecurityData.trackAnalytics)
-        setTrackSecurityLogs(refreshedSecurityData.trackSecurityLogs)
-        setViewSecurityEvents(refreshedSecurityData.viewSecurityEvents)
+        applySecuritySettingsToForm(refreshedSecurityData)
       }
 
       // Refresh the page to update server components (like AdminHeader menu)

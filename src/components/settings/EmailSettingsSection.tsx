@@ -1,10 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { PasswordInput } from '@/components/ui/password-input'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
-import { Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { CollapsibleSection } from '@/components/ui/collapsible-section'
+import { Send, Loader2 } from 'lucide-react'
 
 export interface EmailSettingsContentProps {
   // SMTP Settings
@@ -262,26 +262,15 @@ export function EmailSettingsContent({
 
 export function EmailSettingsSection({ show, setShow, ...contentProps }: EmailSettingsSectionProps) {
   return (
-    <Card className="border-border">
-      <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setShow(!show)}>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Email / SMTP</CardTitle>
-            <CardDescription>Configure SMTP settings and notification schedules</CardDescription>
-          </div>
-          {show ? (
-            <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          )}
-        </div>
-      </CardHeader>
-
-      {show && (
-        <CardContent className="space-y-4 border-t pt-4">
-          <EmailSettingsContent {...contentProps} />
-        </CardContent>
-      )}
-    </Card>
+    <CollapsibleSection
+      className="border-border"
+      title="Email / SMTP"
+      description="Configure SMTP settings and notification schedules"
+      open={show}
+      onOpenChange={setShow}
+      contentClassName="space-y-4 border-t pt-4"
+    >
+      <EmailSettingsContent {...contentProps} />
+    </CollapsibleSection>
   )
 }

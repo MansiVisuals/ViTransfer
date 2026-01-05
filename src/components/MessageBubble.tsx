@@ -73,7 +73,7 @@ export default function MessageBubble({
 
   return (
     <div className="w-full" id={`comment-${comment.id}`}>
-      <div className="bg-card border border-border/40 rounded-2xl p-4 shadow-sm relative">
+      <div className="bg-card border border-border/50 rounded-lg p-4 shadow-elevation-sm relative">
         {hasReplies && (
           <div className="absolute left-9 top-12 bottom-10 w-px bg-border/50" aria-hidden="true" />
         )}

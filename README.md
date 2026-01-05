@@ -311,7 +311,7 @@ Rootless Podman Quadlets are available in the folder quadlet.
 Configure these in the admin panel under Settings:
 
 **Company Branding:**
-- Company Name - Displayed in emails and comments (default: "Studio")
+- Company Name - Displayed in emails and comments (default: "ViTransfer")
 - App Domain - Required for PassKey authentication (e.g., `https://yourdomain.com`)
 
 **Notifications (Email + Push Notifications):**
@@ -322,6 +322,7 @@ Configure these in the admin panel under Settings:
 - From Address - Sender email address
 - Security Mode - STARTTLS (default), TLS, or NONE
 - Admin Notification Schedule - IMMEDIATE, HOURLY, DAILY, WEEKLY
+- Unsubscribe - Client-facing emails include an unsubscribe link that disables notifications per recipient (reflected in Project → Recipients)
 
 **Push Notifications:**
 - Configure one or more destinations and choose which events to receive
@@ -347,6 +348,7 @@ Configure these in the admin panel under Settings:
 - IP address and user-agent details are recorded in the Security Events dashboard/logs (push notifications keep payloads short).
 - Worker logs: `docker compose logs -f worker | rg EXTERNAL-NOTIFICATIONS`
 - Verbose worker logs: set `DEBUG_EXTERNAL_NOTIFICATIONS=true` (or `DEBUG_WORKER=true`) on the worker container.
+- Email unsubscribe links use encrypted tokens and open `/unsubscribe#token=...` (the token is kept out of server/proxy access logs).
 
 **Video Processing Defaults:**
 - Preview Resolution - 720p (default) or 1080p

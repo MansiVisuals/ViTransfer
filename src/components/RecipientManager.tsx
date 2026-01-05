@@ -232,6 +232,11 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
                           Primary
                         </span>
                       )}
+                      {recipient.email && !recipient.receiveNotifications && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+                          Unsubscribed
+                        </span>
+                      )}
                     </div>
                     {recipient.name && recipient.email && (
                       <div className="flex items-center gap-2 pl-6">

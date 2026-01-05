@@ -14,6 +14,7 @@ import { getClientIpAddress } from '@/lib/utils'
 import { isSmtpConfigured } from '@/lib/email'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { getAppUrl } from '@/lib/url'
+import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '@/lib/unsubscribe'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -183,9 +184,34 @@ export async function POST(
     // Store OTP in Redis
     await storeOTP(email, project.id, code)
 
+    const recipient = await prisma.projectRecipient.findFirst({
+      where: {
+        projectId: project.id,
+        email: { equals: email, mode: 'insensitive' },
+      },
+      select: { id: true, email: true },
+    })
+
+    let unsubscribeUrl: string | undefined
+    if (recipient?.email) {
+      try {
+        const token = generateRecipientUnsubscribeToken({
+          recipientId: recipient.id,
+          projectId: project.id,
+          recipientEmail: recipient.email,
+        })
+        const appUrl = await getAppUrl(request).catch(() => '')
+        if (appUrl) {
+          unsubscribeUrl = buildUnsubscribeUrl(appUrl, token)
+        }
+      } catch {
+        unsubscribeUrl = undefined
+      }
+    }
+
     // Send OTP email
     try {
-      await sendOTPEmail(email, project.title, code)
+      await sendOTPEmail(email, project.title, code, unsubscribeUrl)
     } catch (error) {
       console.error('Error sending OTP email:', error)
       return NextResponse.json(

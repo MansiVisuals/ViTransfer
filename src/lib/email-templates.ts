@@ -3,7 +3,7 @@
  * Clean, minimal, and easy to scan
  */
 
-import { escapeHtml, renderEmailShell } from './email'
+import { EMAIL_BRAND, escapeHtml, renderEmailButton, renderEmailShell, renderUnsubscribeSection } from './email'
 import { formatTimecodeDisplay } from './timecode'
 
 interface NotificationData {
@@ -25,15 +25,18 @@ interface NotificationData {
 }
 
 interface NotificationSummaryData {
+  companyName?: string
   projectTitle: string
   shareUrl: string
   recipientName: string
   recipientEmail: string
   period: string
   notifications: NotificationData[]
+  unsubscribeUrl?: string
 }
 
 interface AdminSummaryData {
+  companyName?: string
   adminName: string
   period: string
   projects: Array<{
@@ -52,6 +55,7 @@ function formatTimecodeForEmail(timecode?: string | null): string {
  * Client notification summary
  */
 export function generateNotificationSummaryEmail(data: NotificationSummaryData): string {
+  const companyName = data.companyName || 'ViTransfer'
   const greeting = data.recipientName !== data.recipientEmail
     ? data.recipientName
     : 'there'
@@ -71,8 +75,8 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
     if (n.type === 'PROJECT_APPROVED') {
       return `
         <div style="padding:10px 0;">
-          <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#2563eb; margin-bottom:4px;">Project approved</div>
-          <div style="font-size:14px; color:#111827;">All videos are ready for download.</div>
+          <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${EMAIL_BRAND.accent}; margin-bottom:6px; font-weight:700;">Project approved</div>
+          <div style="font-size:14px; color:${EMAIL_BRAND.text};">All videos are ready for download.</div>
         </div>
       `
     }
@@ -81,8 +85,8 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
       const approved = n.type === 'VIDEO_APPROVED'
       return `
         <div style="padding:10px 0;">
-          <div style="font-size:14px; font-weight:700; color:#111827; margin-bottom:2px;">${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}</div>
-          <div style="font-size:13px; color:${approved ? '#15803d' : '#b45309'};">${approved ? 'Approved' : 'Approval removed'}</div>
+          <div style="font-size:14px; font-weight:750; color:${EMAIL_BRAND.text}; margin-bottom:4px;">${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}</div>
+          <div style="font-size:13px; color:${approved ? EMAIL_BRAND.accent : EMAIL_BRAND.muted}; font-weight:600;">${approved ? 'Approved' : 'Approval removed'}</div>
         </div>
       `
     }
@@ -90,44 +94,43 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
     const isReply = n.isReply && n.parentComment
     return `
       <div style="padding:10px 0;">
-        <div style="font-size:13px; color:#6b7280; margin-bottom:4px;">
+        <div style="font-size:13px; color:${EMAIL_BRAND.muted}; margin-bottom:6px;">
           ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timecode ? ` • ${formatTimecodeForEmail(n.timecode)}` : ''}
         </div>
-        <div style="font-size:14px; font-weight:700; color:#111827; margin-bottom:2px;">${escapeHtml(n.authorName)}</div>
-        ${isReply ? `<div style="font-size:12px; color:#6b7280; margin-bottom:6px;">Replying to ${escapeHtml(n.parentComment!.authorName)} — "${escapeHtml(n.parentComment!.content.substring(0, 60))}${n.parentComment!.content.length > 60 ? '...' : ''}"</div>` : ''}
-        <div style="font-size:14px; color:#374151; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
+        <div style="font-size:14px; font-weight:750; color:${EMAIL_BRAND.text}; margin-bottom:4px;">${escapeHtml(n.authorName)}</div>
+        ${isReply ? `<div style="font-size:12px; color:${EMAIL_BRAND.muted}; margin-bottom:8px;">Replying to ${escapeHtml(n.parentComment!.authorName)} — "${escapeHtml(n.parentComment!.content.substring(0, 60))}${n.parentComment!.content.length > 60 ? '...' : ''}"</div>` : ''}
+        <div style="font-size:14px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
       </div>
     `
-  }).join('<div style="height:1px; background:#e5e7eb; margin:6px 0;"></div>')
+  }).join(`<div style="height:1px; background:${EMAIL_BRAND.border}; margin:6px 0;"></div>`)
 
   const itemsHtml = `
-    <div style="border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px; margin-bottom:14px;">
+    <div style="border:1px solid ${EMAIL_BRAND.border}; border-radius:12px; padding:10px 14px; margin-bottom:14px; background:${EMAIL_BRAND.surfaceAlt};">
       ${itemsHtmlContent}
     </div>
   `
 
   return renderEmailShell({
-    companyName: 'Project Updates',
-    headerGradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    companyName,
     title: 'Project Update',
     subtitle: `${summaryText} ${data.period}`,
-    footerNote: 'Project Updates',
+    preheader: `Updates on ${data.projectTitle}`,
+    footerNote: companyName,
     bodyContent: `
-      <p style="margin:0 0 20px; font-size:16px;">
+      <p style="margin:0 0 20px; font-size:16px; color:${EMAIL_BRAND.text};">
         Hi <strong>${escapeHtml(greeting)}</strong>,
       </p>
-      <p style="margin:0 0 24px; font-size:15px;">
+      <p style="margin:0 0 24px; font-size:15px; color:${EMAIL_BRAND.textSubtle};">
         Here's what happened on your project:
       </p>
       ${itemsHtml}
-      <div style="text-align:center; margin:32px 0;">
-        <a href="${escapeHtml(data.shareUrl)}" style="display:inline-block; background:#3b82f6; color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
-          View Project
-        </a>
+      <div style="margin: 28px 0; text-align: center;">
+        ${renderEmailButton({ href: data.shareUrl, label: 'View Project' })}
       </div>
-      <p style="margin:24px 0 0; font-size:13px; color:#9ca3af; text-align:center; line-height:1.5;">
-        Reply to this email to unsubscribe from project updates.
+      <p style="margin:24px 0 0; font-size:13px; color:${EMAIL_BRAND.muted}; text-align:center; line-height:1.5;">
+        You can manage email preferences anytime.
       </p>
+      ${data.unsubscribeUrl ? renderUnsubscribeSection(data.unsubscribeUrl) : ''}
     `,
   }).trim()
 }
@@ -136,32 +139,31 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
  * Admin summary - multi-project
  */
 export function generateAdminSummaryEmail(data: AdminSummaryData): string {
+  const companyName = data.companyName || 'ViTransfer'
   const greeting = data.adminName ? data.adminName : 'there'
   const totalComments = data.projects.reduce((sum, p) => sum + p.notifications.length, 0)
   const projectCount = data.projects.length
 
   const projectsHtml = data.projects.map((project) => {
     const items = project.notifications.map((n, index) => `
-      <div style="padding:10px 0;${index > 0 ? ' border-top:1px solid #e5e7eb; margin-top:8px;' : ''}">
-        <div style="font-size:13px; color:#6b7280; margin-bottom:4px;">
+      <div style="padding:10px 0;${index > 0 ? ` border-top:1px solid ${EMAIL_BRAND.border}; margin-top:8px;` : ''}">
+        <div style="font-size:13px; color:${EMAIL_BRAND.muted}; margin-bottom:6px;">
           ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timecode ? ` • ${formatTimecodeForEmail(n.timecode)}` : ''}
         </div>
         <div style="margin-bottom:4px;">
-          <span style="font-size:14px; font-weight:700; color:#111827;">${escapeHtml(n.authorName)}</span>
-          ${n.authorEmail ? `<span style="font-size:12px; color:#6b7280; margin-left:6px;">${escapeHtml(n.authorEmail)}</span>` : ''}
+          <span style="font-size:14px; font-weight:750; color:${EMAIL_BRAND.text};">${escapeHtml(n.authorName)}</span>
+          ${n.authorEmail ? `<span style="font-size:12px; color:${EMAIL_BRAND.muted}; margin-left:6px;">${escapeHtml(n.authorEmail)}</span>` : ''}
         </div>
-        <div style="font-size:14px; color:#374151; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
+        <div style="font-size:14px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
       </div>
     `).join('')
 
     return `
-      <div style="border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px; background:#f9fafb;">
-        <div style="font-size:15px; font-weight:800; color:#111827; margin-bottom:8px;">${escapeHtml(project.projectTitle)}</div>
+      <div style="border:1px solid ${EMAIL_BRAND.border}; border-radius:12px; padding:16px; margin-bottom:16px; background:${EMAIL_BRAND.surfaceAlt};">
+        <div style="font-size:15px; font-weight:850; color:${EMAIL_BRAND.text}; margin-bottom:10px;">${escapeHtml(project.projectTitle)}</div>
         ${items}
-        <div style="margin-top:12px; text-align:center;">
-          <a href="${escapeHtml(project.shareUrl)}" style="display:inline-flex; align-items:center; gap:8px; color:#111827; text-decoration:none; padding:10px 22px; border-radius:999px; border:1px solid #111827; font-weight:700; font-size:14px;">
-            View project<span style="font-size:16px;">→</span>
-          </a>
+        <div style="margin-top: 14px; text-align: center;">
+          ${renderEmailButton({ href: project.shareUrl, label: 'View Project', variant: 'secondary' })}
         </div>
       </div>
     `
@@ -170,23 +172,21 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
   const adminUrl = data.projects[0]?.shareUrl ? escapeHtml(data.projects[0].shareUrl.replace(/\/share\/[^/]+/, '/admin/projects')) : '#'
 
   return renderEmailShell({
-    companyName: 'Admin Dashboard',
-    headerGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+    companyName,
     title: 'Client Activity Summary',
     subtitle: `${totalComments} ${totalComments === 1 ? 'comment' : 'comments'} across ${projectCount} ${projectCount === 1 ? 'project' : 'projects'} ${data.period}`,
-    footerNote: 'Admin Notifications',
+    preheader: `Client activity summary: ${totalComments} updates`,
+    footerNote: companyName,
     bodyContent: `
-      <p style="margin:0 0 20px; font-size:16px;">
+      <p style="margin:0 0 20px; font-size:16px; color:${EMAIL_BRAND.text};">
         Hi <strong>${escapeHtml(greeting)}</strong>,
       </p>
-      <p style="margin:0 0 24px; font-size:15px;">
+      <p style="margin:0 0 24px; font-size:15px; color:${EMAIL_BRAND.textSubtle};">
         Here are the latest client comments:
       </p>
       ${projectsHtml}
-      <div style="text-align:center; margin:32px 0;">
-        <a href="${adminUrl}" style="display:inline-block; background:#f59e0b; color:#ffffff; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; box-shadow:0 4px 12px rgba(245,158,11,0.3);">
-          Open Admin Dashboard
-        </a>
+      <div style="margin: 28px 0; text-align: center;">
+        ${renderEmailButton({ href: adminUrl, label: 'Open Admin Dashboard' })}
       </div>
     `,
   }).trim()

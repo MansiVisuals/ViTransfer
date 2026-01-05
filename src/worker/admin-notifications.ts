@@ -1,5 +1,5 @@
 import { prisma } from '../lib/db'
-import { sendEmail } from '../lib/email'
+import { getEmailSettings, sendEmail } from '../lib/email'
 import { generateAdminSummaryEmail } from '../lib/email-templates'
 import { generateShareUrl } from '../lib/url'
 import { getRedis } from '../lib/redis'
@@ -11,6 +11,9 @@ import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNo
  */
 export async function processAdminNotifications() {
   try {
+    const emailSettings = await getEmailSettings()
+    const companyName = emailSettings.companyName || 'ViTransfer'
+
     // Get admin notification settings
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
@@ -153,6 +156,7 @@ export async function processAdminNotifications() {
 
         for (const admin of admins) {
           const html = generateAdminSummaryEmail({
+            companyName,
             adminName: admin.name || '',
             period,
             projects

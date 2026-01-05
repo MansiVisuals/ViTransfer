@@ -6,6 +6,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
 import { getProjectRecipients } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
+import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '@/lib/unsubscribe'
 export const runtime = 'nodejs'
 
 
@@ -109,6 +110,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const emailPromises = recipients
       .filter(recipient => recipient.email)
       .map(async (recipient) => {
+        let unsubscribeUrl: string | undefined
+        try {
+          const token = generateRecipientUnsubscribeToken({
+            recipientId: recipient.id!,
+            projectId,
+            recipientEmail: recipient.email!,
+          })
+          unsubscribeUrl = buildUnsubscribeUrl(new URL(shareUrl).origin, token)
+        } catch {
+          unsubscribeUrl = undefined
+        }
+
         if (notifyEntireProject) {
           return sendProjectGeneralNotificationEmail({
             clientEmail: recipient.email!,
@@ -118,6 +131,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             shareUrl,
             readyVideos: project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
             isPasswordProtected,
+            unsubscribeUrl,
           })
         } else {
           return sendNewVersionEmail({
@@ -128,6 +142,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             versionLabel: video!.versionLabel,
             shareUrl,
             isPasswordProtected,
+            unsubscribeUrl,
           })
         }
       })
@@ -152,12 +167,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const passwordPromises = recipients
           .filter(recipient => recipient.email)
           .map(recipient =>
-            sendPasswordEmail({
+            (() => {
+              let unsubscribeUrl: string | undefined
+              try {
+                const token = generateRecipientUnsubscribeToken({
+                  recipientId: recipient.id!,
+                  projectId,
+                  recipientEmail: recipient.email!,
+                })
+                unsubscribeUrl = buildUnsubscribeUrl(new URL(shareUrl).origin, token)
+              } catch {
+                unsubscribeUrl = undefined
+              }
+
+              return sendPasswordEmail({
               clientEmail: recipient.email!,
               clientName: recipient.name || 'Client',
               projectTitle: project.title,
               password: decryptedPassword,
-            })
+                unsubscribeUrl,
+              })
+            })()
           )
 
         const passwordResults = await Promise.allSettled(passwordPromises)

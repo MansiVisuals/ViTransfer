@@ -5,6 +5,7 @@ import { getProjectRecipients } from './recipients'
 import { generateShareUrl } from './url'
 import { getRedis } from './redis'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from './unsubscribe'
 
 interface NotificationContext {
   comment: Comment
@@ -63,8 +64,20 @@ export async function sendImmediateNotification(context: NotificationContext) {
     console.log(`[IMMEDIATE→CLIENT]   Video: ${videoName} (${versionLabel})`)
     console.log(`[IMMEDIATE→CLIENT]   Author: ${comment.authorName || 'Admin'}`)
 
-    const emailPromises = recipients.map(recipient =>
-      sendCommentNotificationEmail({
+    const emailPromises = recipients.map(recipient => {
+      let unsubscribeUrl: string | undefined
+      try {
+        const token = generateRecipientUnsubscribeToken({
+          recipientId: recipient.id!,
+          projectId: comment.projectId,
+          recipientEmail: recipient.email!,
+        })
+        unsubscribeUrl = buildUnsubscribeUrl(new URL(shareUrl).origin, token)
+      } catch {
+        unsubscribeUrl = undefined
+      }
+
+      return sendCommentNotificationEmail({
         clientEmail: recipient.email!,
         clientName: recipient.name || 'Client',
         projectTitle: project.title,
@@ -74,6 +87,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
         commentContent: comment.content,
         timecode: comment.timecode,
         shareUrl,
+        unsubscribeUrl,
       }).then(result => {
         if (result.success) {
           console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
@@ -82,7 +96,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
         }
         return result
       })
-    )
+    })
 
     await Promise.allSettled(emailPromises)
   } else {
@@ -219,14 +233,27 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
   if (recipients.length > 0 && isComplete && approved) {
     console.log(`[IMMEDIATE→CLIENT] Sending complete project approval to ${recipients.length} recipient(s)`)
 
-    const emailPromises = recipients.map(recipient =>
-      sendProjectApprovedEmail({
+    const emailPromises = recipients.map(recipient => {
+      let unsubscribeUrl: string | undefined
+      try {
+        const token = generateRecipientUnsubscribeToken({
+          recipientId: recipient.id!,
+          projectId: project.id,
+          recipientEmail: recipient.email!,
+        })
+        unsubscribeUrl = buildUnsubscribeUrl(new URL(shareUrl).origin, token)
+      } catch {
+        unsubscribeUrl = undefined
+      }
+
+      return sendProjectApprovedEmail({
         clientEmail: recipient.email!,
         clientName: recipient.name || 'Client',
         projectTitle: project.title,
         approvedVideos: approvedVideos || (video ? [{ id: video.id, name: video.name }] : []),
         shareUrl,
         isComplete: true, // Only send when complete
+        unsubscribeUrl,
       }).then(result => {
         if (result.success) {
           console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
@@ -235,7 +262,7 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
         }
         return result
       })
-    )
+    })
 
     await Promise.allSettled(emailPromises)
   } else if (recipients.length > 0 && !isComplete) {

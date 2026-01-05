@@ -1,9 +1,10 @@
 import { prisma } from '../lib/db'
-import { sendEmail } from '../lib/email'
+import { getEmailSettings, sendEmail } from '../lib/email'
 import { generateNotificationSummaryEmail } from '../lib/email-templates'
 import { getProjectRecipients } from '../lib/recipients'
 import { generateShareUrl } from '../lib/url'
 import { getRedis } from '../lib/redis'
+import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '../lib/unsubscribe'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
 
 /**
@@ -12,6 +13,9 @@ import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNo
  */
 export async function processClientNotifications() {
   try {
+    const emailSettings = await getEmailSettings()
+    const companyName = emailSettings.companyName || 'ViTransfer'
+
     const now = new Date()
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
     console.log(`[CLIENT] Checking for summaries to send (time: ${timeStr})`)
@@ -151,13 +155,27 @@ export async function processClientNotifications() {
           )
 
           for (const recipient of recipients) {
+            let unsubscribeUrl: string | undefined
+            try {
+              const token = generateRecipientUnsubscribeToken({
+                recipientId: recipient.id!,
+                projectId: project.id,
+                recipientEmail: recipient.email!,
+              })
+              unsubscribeUrl = buildUnsubscribeUrl(new URL(shareUrl).origin, token)
+            } catch {
+              unsubscribeUrl = undefined
+            }
+
             const html = generateNotificationSummaryEmail({
+              companyName,
               projectTitle: project.title,
               shareUrl,
               recipientName: recipient.name || recipient.email!,
               recipientEmail: recipient.email!,
               period,
-              notifications
+              notifications,
+              unsubscribeUrl,
             })
 
             const result = await sendEmail({

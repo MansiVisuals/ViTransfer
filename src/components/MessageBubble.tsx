@@ -59,9 +59,6 @@ export default function MessageBubble({
       ((comment as any).user.name || (comment as any).user.email) :
       null)
 
-  // Text color adapts to light/dark mode (same for both sender and receiver)
-  const textColor = 'text-gray-900 dark:text-gray-100'
-
   const handleTimestampClick = () => {
     if (comment.timecode && onSeekToTimecode) {
       onSeekToTimecode(comment.timecode, comment.videoId, comment.videoVersion)
@@ -92,7 +89,7 @@ export default function MessageBubble({
               </span>
             </div>
 
-            <div className={`text-base whitespace-pre-wrap break-words leading-relaxed ${textColor}`}>
+            <div className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed">
               {!isReply && timestampLabel && (
                 <button
                   type="button"
@@ -170,7 +167,7 @@ export default function MessageBubble({
                     )}
                   </div>
                   <div
-                    className={`text-base whitespace-pre-wrap break-words leading-relaxed ${textColor} [&>p]:m-0`}
+                    className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed [&>p]:m-0"
                     dangerouslySetInnerHTML={{ __html: sanitizeContent(reply.content) }}
                   />
                 </div>

@@ -136,7 +136,7 @@ export default function CommentSection({
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' })
         element.style.transition = 'background-color 0.3s'
-        element.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'
+        element.style.backgroundColor = 'hsl(var(--primary) / 0.12)'
         setTimeout(() => {
           element.style.backgroundColor = 'transparent'
         }, 1000)

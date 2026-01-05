@@ -5,6 +5,15 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Clock, AlertTriangle, CheckCircle, Lock, ChevronDown, ChevronUp } from 'lucide-react'
 
+function formatDurationSetting(value: string, unit: string, fallbackValue = 15): string {
+  const parsedValue = Number.parseInt(value, 10)
+  const normalizedValue = Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallbackValue
+  const unitPlural = unit.toLowerCase()
+  const unitSingular = unitPlural.endsWith('s') ? unitPlural.slice(0, -1) : unitPlural
+  const unitLabel = normalizedValue === 1 ? unitSingular : unitPlural
+  return `${normalizedValue} ${unitLabel}`
+}
+
 interface SecuritySettingsSectionProps {
   showSecuritySettings: boolean
   setShowSecuritySettings: (value: boolean) => void
@@ -407,7 +416,7 @@ export function SecuritySettingsSection({
 
             <div className="p-3 bg-muted rounded-md">
               <p className="text-sm font-medium">
-                Current Setting: {adminSessionTimeoutValue} {adminSessionTimeoutUnit.toLowerCase()}
+                Current Setting: {formatDurationSetting(adminSessionTimeoutValue, adminSessionTimeoutUnit)}
               </p>
               <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
                 {(() => {
@@ -415,13 +424,13 @@ export function SecuritySettingsSection({
                   const unit = adminSessionTimeoutUnit
                   const seconds = unit === 'HOURS' ? val * 60 * 60 : val * 60
                   if (seconds <= 15 * 60) {
-                    return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Strong security - short admin sessions</>
+                    return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Short - strong security; sessions expire quickly</>
                   }
                   if (seconds <= 2 * 60 * 60) {
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Balanced - good for typical admin workflows</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Balanced - good for typical sessions</>
                   }
                   if (seconds <= 8 * 60 * 60) {
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for all-day work</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for all-day sessions</>
                   }
                   return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very long - consider the security trade-off</>
                 })()}
@@ -489,27 +498,27 @@ export function SecuritySettingsSection({
 
             <div className="p-3 bg-muted rounded-md">
               <p className="text-sm font-medium">
-                Current Setting: {sessionTimeoutValue} {sessionTimeoutUnit.toLowerCase()}
+                Current Setting: {formatDurationSetting(sessionTimeoutValue, sessionTimeoutUnit)}
               </p>
               <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
                 {(() => {
                   const val = parseInt(sessionTimeoutValue, 10) || 15
                   const unit = sessionTimeoutUnit
                   if (unit === 'MINUTES') {
-                    if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very short - users may be logged out while actively viewing</>
-                    if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Good for security - sessions expire quickly</>
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Longer timeout - convenient but less secure</>
+                    if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very short - sessions may expire while users are active</>
+                    if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Short - strong security; sessions expire quickly</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for longer sessions; less secure</>
                   }
                   if (unit === 'HOURS') {
-                    if (val <= 2) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Balanced - good for longer review sessions</>
-                    if (val <= 8) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long timeout - convenient for all-day access</>
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very long - consider security implications</>
+                    if (val <= 2) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Balanced - good for typical sessions</>
+                    if (val <= 8) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for all-day sessions</>
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very long - consider the security trade-off</>
                   }
                   if (unit === 'DAYS') {
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Extended timeout - only use for trusted environments</>
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Extended - long-lived sessions; trusted environments only</>
                   }
                   if (unit === 'WEEKS') {
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Maximum timeout - use with caution</>
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Maximum - long-lived sessions; use with caution</>
                   }
                   return ''
                 })()}

@@ -8,12 +8,13 @@ import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api-client'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 export default function AdminHeader() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const [showSecurityDashboard, setShowSecurityDashboard] = useState(false)
+  const [instanceUrl, setInstanceUrl] = useState('')
 
   // Fetch security settings to check if security dashboard should be shown
   useEffect(() => {
@@ -32,12 +33,15 @@ export default function AdminHeader() {
     fetchSecuritySettings()
   }, [])
 
+  useEffect(() => {
+    setInstanceUrl(window.location.origin)
+  }, [])
+
   if (!user) return null
 
   const repoUrl = 'https://github.com/MansiVisuals/ViTransfer'
   const websiteUrl = 'https://www.vitransfer.com'
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
-  const instanceUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   const navLinks = [
     { href: '/admin/projects', label: 'Projects', icon: FolderKanban },
@@ -98,50 +102,42 @@ export default function AdminHeader() {
               </DialogTrigger>
               <DialogContent className="max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>About ViTransfer</DialogTitle>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CircleHelp className="h-5 w-5" />
+                    About ViTransfer
+                  </DialogTitle>
+                  <DialogDescription>Build info and links for this instance.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="rounded-lg border border-border bg-background p-3">
-                    <div className="text-sm font-semibold">ViTransfer</div>
-                    <div className="text-xs text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="text-sm font-medium">Build</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
                       {appVersion ? `Version ${appVersion}` : 'Self-hosted build'}
                       {instanceUrl ? ` • ${instanceUrl}` : ''}
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm">
-                    <a
-                      href={websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
-                    >
-                      Website
-                    </a>
-                    <a
-                      href={repoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
-                    >
-                      GitHub Repository
-                    </a>
-                    <a
-                      href={`${repoUrl}/issues`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
-                    >
-                      Report an Issue
-                    </a>
-                    <a
-                      href="https://hub.docker.com/r/crypt010/vitransfer"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-lg border border-border bg-background px-3 py-2 hover:bg-accent transition-colors"
-                    >
-                      Docker Hub
-                    </a>
+                  <div className="grid gap-2">
+                    <Button asChild variant="outline" className="w-full justify-start">
+                      <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
+                        Website
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full justify-start">
+                      <a href={repoUrl} target="_blank" rel="noopener noreferrer">
+                        GitHub Repository
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full justify-start">
+                      <a href={`${repoUrl}/issues`} target="_blank" rel="noopener noreferrer">
+                        Report an Issue
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full justify-start">
+                      <a href="https://hub.docker.com/r/crypt010/vitransfer" target="_blank" rel="noopener noreferrer">
+                        Docker Hub
+                      </a>
+                    </Button>
                   </div>
                 </div>
               </DialogContent>

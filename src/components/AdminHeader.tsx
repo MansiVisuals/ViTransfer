@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/components/AuthProvider'
 import { Button } from '@/components/ui/button'
-import { BarChart3, CircleHelp, FolderKanban, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
+import { BarChart3, Bug, CircleHelp, Container, ExternalLink, FolderKanban, Github, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -14,7 +14,6 @@ export default function AdminHeader() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const [showSecurityDashboard, setShowSecurityDashboard] = useState(false)
-  const [instanceUrl, setInstanceUrl] = useState('')
 
   // Fetch security settings to check if security dashboard should be shown
   useEffect(() => {
@@ -31,10 +30,6 @@ export default function AdminHeader() {
     }
 
     fetchSecuritySettings()
-  }, [])
-
-  useEffect(() => {
-    setInstanceUrl(window.location.origin)
   }, [])
 
   if (!user) return null
@@ -103,37 +98,44 @@ export default function AdminHeader() {
               <DialogContent className="max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <CircleHelp className="h-5 w-5" />
+                    <CircleHelp className="w-5 h-5" />
                     About ViTransfer
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-border bg-muted/30 p-3">
-                    <div className="text-sm font-medium">Build</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {appVersion ? `Version ${appVersion}` : 'Self-hosted build'}
-                      {instanceUrl ? ` • ${instanceUrl}` : ''}
-                    </div>
-                  </div>
 
-                  <div className="grid gap-2">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Open-source video review and approval platform for creative professionals.
+                  </p>
+
+                  {appVersion && (
+                    <div className="p-3 bg-muted rounded-md">
+                      <p className="text-sm font-medium">Version {appVersion}</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
-                        Website
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        vitransfer.com
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href={repoUrl} target="_blank" rel="noopener noreferrer">
+                        <Github className="w-4 h-4 mr-2" />
                         GitHub Repository
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href={`${repoUrl}/issues`} target="_blank" rel="noopener noreferrer">
+                        <Bug className="w-4 h-4 mr-2" />
                         Report an Issue
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href="https://hub.docker.com/r/crypt010/vitransfer" target="_blank" rel="noopener noreferrer">
+                        <Container className="w-4 h-4 mr-2" />
                         Docker Hub
                       </a>
                     </Button>

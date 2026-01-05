@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { Button } from './ui/button'
 import { Label } from './ui/label'
 import { Input } from './ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Upload, Pause, Play, X } from 'lucide-react'
 import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
@@ -263,20 +264,19 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
 
       {/* Category Selection */}
       <div className="space-y-2">
-        <Label htmlFor={`category-${videoId}`}>Category (Optional)</Label>
-        <select
-          id={`category-${videoId}`}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          disabled={uploading}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {CATEGORY_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <Label>Category (Optional)</Label>
+        <Select value={category} onValueChange={setCategory} disabled={uploading}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORY_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* File Selection */}

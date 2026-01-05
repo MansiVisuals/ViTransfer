@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
 import { apiPost, apiFetch } from '@/lib/api-client'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
@@ -214,21 +215,21 @@ export default function NewProjectPage() {
                   <div className="space-y-4 pt-2 border-t">
                     {/* Authentication Method Selection */}
                     <div className="space-y-2">
-                      <Label htmlFor="authMode">Authentication Method</Label>
-                      <select
-                        id="authMode"
-                        value={authMode}
-                        onChange={(e) => setAuthMode(e.target.value as any)}
-                        className="w-full px-3 py-2 bg-card border border-border rounded-md"
-                      >
-                        <option value="PASSWORD">Password Only</option>
-                        <option value="OTP" disabled={!canUseOTP}>
-                          Email OTP Only {!canUseOTP ? '(requires SMTP & client email)' : ''}
-                        </option>
-                        <option value="BOTH" disabled={!canUseOTP}>
-                          Both Password and OTP {!canUseOTP ? '(requires SMTP & client email)' : ''}
-                        </option>
-                      </select>
+                      <Label>Authentication Method</Label>
+                      <Select value={authMode} onValueChange={(v) => setAuthMode(v as 'PASSWORD' | 'OTP' | 'BOTH')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PASSWORD">Password Only</SelectItem>
+                          <SelectItem value="OTP" disabled={!canUseOTP}>
+                            Email OTP Only {!canUseOTP ? '(requires SMTP & client email)' : ''}
+                          </SelectItem>
+                          <SelectItem value="BOTH" disabled={!canUseOTP}>
+                            Both Password and OTP {!canUseOTP ? '(requires SMTP & client email)' : ''}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <p className="text-xs text-muted-foreground">
                         {authMode === 'PASSWORD' && 'Clients must enter a password to access the project'}
                         {authMode === 'OTP' && 'Clients receive a one-time code via email (must be a registered recipient)'}

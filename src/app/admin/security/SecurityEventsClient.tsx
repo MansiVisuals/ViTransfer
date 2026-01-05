@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, Unlock, Tag } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { apiDelete, apiFetch } from '@/lib/api-client'
@@ -83,8 +84,8 @@ export default function SecurityEventsClient() {
   const [stats, setStats] = useState<Array<{ type: string; count: number }>>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
-  const [filterType, setFilterType] = useState<string>('')
-  const [filterSeverity, setFilterSeverity] = useState<string>('')
+  const [filterType, setFilterType] = useState<string>('all')
+  const [filterSeverity, setFilterSeverity] = useState<string>('all')
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set())
   const [rateLimits, setRateLimits] = useState<RateLimitEntry[]>([])
   const [showRateLimits, setShowRateLimits] = useState(false)
@@ -98,8 +99,8 @@ export default function SecurityEventsClient() {
         limit: pagination.limit.toString(),
       })
 
-      if (filterType) params.append('type', filterType)
-      if (filterSeverity) params.append('severity', filterSeverity)
+      if (filterType && filterType !== 'all') params.append('type', filterType)
+      if (filterSeverity && filterSeverity !== 'all') params.append('severity', filterSeverity)
 
       const response = await apiFetch(`/api/security/events?${params}`)
       if (!response.ok) throw new Error('Failed to load security events')
@@ -258,33 +259,35 @@ export default function SecurityEventsClient() {
           <CardContent className="p-3 sm:p-4 space-y-3">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div className="flex-1 min-w-[180px]">
-                  <label className="text-xs font-medium text-muted-foreground block">Type</label>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
-                >
-                  <option value="">All Types</option>
-                  {stats.map(stat => (
-                    <option key={stat.type} value={stat.type}>
-                      {formatSecurityEventType(stat.type)} ({stat.count})
-                    </option>
-                  ))}
-                </select>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Type</label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {stats.map(stat => (
+                      <SelectItem key={stat.type} value={stat.type}>
+                        {formatSecurityEventType(stat.type)} ({stat.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex-1 min-w-[180px]">
-                <label className="text-xs font-medium text-muted-foreground block">Severity</label>
-                <select
-                  value={filterSeverity}
-                  onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
-                >
-                  <option value="">All Severities</option>
-                  <option value="CRITICAL">Critical</option>
-                  <option value="WARNING">Warning</option>
-                  <option value="INFO">Info</option>
-                </select>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Severity</label>
+                <Select value={filterSeverity} onValueChange={setFilterSeverity}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All Severities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Severities</SelectItem>
+                    <SelectItem value="CRITICAL">Critical</SelectItem>
+                    <SelectItem value="WARNING">Warning</SelectItem>
+                    <SelectItem value="INFO">Info</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -311,17 +314,18 @@ export default function SecurityEventsClient() {
 
             <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border pt-3">
               <div className="flex-1 min-w-[180px]">
-                <label className="text-xs font-medium text-muted-foreground block">Cleanup</label>
-                <select
-                  value={cleanupDays}
-                  onChange={(e) => setCleanupDays(Number(e.target.value) as 0 | 7 | 30 | 90)}
-                  className="w-full mt-1 h-9 px-3 bg-background text-foreground border border-border rounded-md"
-                >
-                  <option value={7}>Delete older than 7 days</option>
-                  <option value={30}>Delete older than 30 days</option>
-                  <option value={90}>Delete older than 90 days</option>
-                  <option value={0}>Delete all events</option>
-                </select>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Cleanup</label>
+                <Select value={String(cleanupDays)} onValueChange={(v) => setCleanupDays(Number(v) as 0 | 7 | 30 | 90)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Delete older than 7 days</SelectItem>
+                    <SelectItem value="30">Delete older than 30 days</SelectItem>
+                    <SelectItem value="90">Delete older than 90 days</SelectItem>
+                    <SelectItem value="0">Delete all events</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button

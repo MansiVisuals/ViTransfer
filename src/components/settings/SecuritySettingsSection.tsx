@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Clock, AlertTriangle, CheckCircle, Lock, ChevronDown, ChevronUp } from 'lucide-react'
 
 function formatDurationSetting(value: string, unit: string, fallbackValue = 15): string {
@@ -184,17 +185,17 @@ export function SecuritySettingsSection({
           </div>
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-            <Label htmlFor="hotlinkProtection">Hotlink Protection</Label>
-            <select
-              id="hotlinkProtection"
-              value={hotlinkProtection}
-              onChange={(e) => setHotlinkProtection(e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
-            >
-              <option value="DISABLED">Disabled - No hotlink protection</option>
-              <option value="LOG_ONLY">Log Only - Detect but allow</option>
-              <option value="BLOCK_STRICT">Block Strict - Block suspected hotlinks</option>
-            </select>
+            <Label>Hotlink Protection</Label>
+            <Select value={hotlinkProtection} onValueChange={setHotlinkProtection}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="DISABLED">Disabled - No hotlink protection</SelectItem>
+                <SelectItem value="LOG_ONLY">Log Only - Detect but allow</SelectItem>
+                <SelectItem value="BLOCK_STRICT">Block Strict - Block suspected hotlinks</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
               Controls how the system handles hotlinking attempts. Log Only is recommended for monitoring.
             </p>
@@ -401,16 +402,16 @@ export function SecuritySettingsSection({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="adminSessionTimeoutUnit">Timeout Unit</Label>
-                <select
-                  id="adminSessionTimeoutUnit"
-                  value={adminSessionTimeoutUnit}
-                  onChange={(e) => setAdminSessionTimeoutUnit(e.target.value)}
-                  className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
-                >
-                  <option value="MINUTES">Minutes</option>
-                  <option value="HOURS">Hours</option>
-                </select>
+                <Label>Timeout Unit</Label>
+                <Select value={adminSessionTimeoutUnit} onValueChange={setAdminSessionTimeoutUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MINUTES">Minutes</SelectItem>
+                    <SelectItem value="HOURS">Hours</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -465,18 +466,18 @@ export function SecuritySettingsSection({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sessionTimeoutUnit">Timeout Unit</Label>
-                <select
-                  id="sessionTimeoutUnit"
-                  value={sessionTimeoutUnit}
-                  onChange={(e) => setSessionTimeoutUnit(e.target.value)}
-                  className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
-                >
-                  <option value="MINUTES">Minutes</option>
-                  <option value="HOURS">Hours</option>
-                  <option value="DAYS">Days</option>
-                  <option value="WEEKS">Weeks</option>
-                </select>
+                <Label>Timeout Unit</Label>
+                <Select value={sessionTimeoutUnit} onValueChange={setSessionTimeoutUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MINUTES">Minutes</SelectItem>
+                    <SelectItem value="HOURS">Hours</SelectItem>
+                    <SelectItem value="DAYS">Days</SelectItem>
+                    <SelectItem value="WEEKS">Weeks</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

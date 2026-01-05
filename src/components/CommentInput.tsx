@@ -4,6 +4,7 @@ import { Comment } from '@prisma/client'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Clock, Send, X } from 'lucide-react'
 import { formatCommentTimestamp, secondsToTimecode } from '@/lib/timecode'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
@@ -142,27 +143,31 @@ export default function CommentInput({
         <div className="mb-3 space-y-2">
           {namedRecipients.length > 0 ? (
             <>
-              <select
+              <Select
                 value={nameSource === 'recipient' && selectedRecipientId ? selectedRecipientId : nameSource === 'custom' ? 'custom' : 'none'}
-                onChange={(e) => {
-                  if (e.target.value === 'custom') {
+                onValueChange={(value) => {
+                  if (value === 'custom') {
                     onNameSourceChange('custom')
-                  } else if (e.target.value === 'none') {
+                  } else if (value === 'none') {
                     onNameSourceChange('none')
                   } else {
-                    onNameSourceChange('recipient', e.target.value)
+                    onNameSourceChange('recipient', value)
                   }
                 }}
-                className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md"
               >
-                <option value="none">Select a name...</option>
-                {namedRecipients.map((recipient) => (
-                  <option key={recipient.id} value={recipient.id}>
-                    {recipient.name}
-                  </option>
-                ))}
-                <option value="custom">Custom Name</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a name..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select a name...</SelectItem>
+                  {namedRecipients.map((recipient) => (
+                    <SelectItem key={recipient.id} value={recipient.id}>
+                      {recipient.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom Name</SelectItem>
+                </SelectContent>
+              </Select>
 
               {nameSource === 'custom' && (
                 <Input

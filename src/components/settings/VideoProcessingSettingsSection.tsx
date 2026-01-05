@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface VideoProcessingSettingsSectionProps {
@@ -57,32 +58,32 @@ export function VideoProcessingSettingsSection({
       {show && (
         <CardContent className="space-y-4 border-t pt-4">
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-            <Label htmlFor="resolution">Default Preview Resolution</Label>
-            <select
-              id="resolution"
-              value={defaultPreviewResolution}
-              onChange={(e) => setDefaultPreviewResolution(e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
-            >
-              <option value="720p">720p (1280x720 or 720x1280 for vertical)</option>
-              <option value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</option>
-            </select>
+            <Label>Default Preview Resolution</Label>
+            <Select value={defaultPreviewResolution} onValueChange={setDefaultPreviewResolution}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="720p">720p (1280x720 or 720x1280 for vertical)</SelectItem>
+                <SelectItem value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
               New projects will use this resolution by default. Can be overridden per project.
             </p>
           </div>
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-            <Label htmlFor="defaultTimestampDisplay">Default Comment Timestamp Display</Label>
-            <select
-              id="defaultTimestampDisplay"
-              value={defaultTimestampDisplay}
-              onChange={(e) => setDefaultTimestampDisplay(e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
-            >
-              <option value="TIMECODE">Timecode (HH:MM:SS:FF)</option>
-              <option value="AUTO">Simple Time (MM:SS / HH:MM:SS)</option>
-            </select>
+            <Label>Default Comment Timestamp Display</Label>
+            <Select value={defaultTimestampDisplay} onValueChange={setDefaultTimestampDisplay}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TIMECODE">Timecode (HH:MM:SS:FF)</SelectItem>
+                <SelectItem value="AUTO">Simple Time (MM:SS / HH:MM:SS)</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
               Used for new projects by default. You can change this per project in Project Settings.
             </p>

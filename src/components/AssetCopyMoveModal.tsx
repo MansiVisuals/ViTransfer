@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X, Copy, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { formatFileSize } from '@/lib/utils'
 import { apiFetch, apiPost } from '@/lib/api-client'
 
@@ -177,19 +178,18 @@ export function AssetCopyMoveModal({
                     No other versions available. Create a new version first.
                   </div>
                 ) : (
-                  <select
-                    id="target-version"
-                    value={targetVideoId}
-                    onChange={(e) => setTargetVideoId(e.target.value)}
-                    className="w-full p-3 border border-border rounded-lg bg-background"
-                  >
-                    <option value="">-- Select a version --</option>
-                    {videos.map((video) => (
-                      <option key={video.id} value={video.id}>
-                        {video.name} - {video.versionLabel}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={targetVideoId} onValueChange={setTargetVideoId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="-- Select a version --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {videos.map((video) => (
+                        <SelectItem key={video.id} value={video.id}>
+                          {video.name} - {video.versionLabel}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 

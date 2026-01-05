@@ -19,7 +19,7 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
       <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setShow(!show)}>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Email + Push Notifications</CardTitle>
+            <CardTitle>Email & Push Notifications</CardTitle>
             <CardDescription>Configure email and push notification destinations</CardDescription>
           </div>
           {show ? (
@@ -35,7 +35,7 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
           <div
             role="tablist"
             aria-label="Notification settings"
-            className="inline-flex w-full overflow-hidden rounded-lg border border-border bg-muted/30"
+            className="inline-flex w-full gap-2"
           >
             <button
               type="button"
@@ -43,10 +43,10 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
               aria-selected={activeTab === 'email'}
               aria-controls="notifications-tabpanel-email"
               className={[
-                'flex-1 px-3 py-2 text-sm font-medium transition-colors',
+                'flex-1 px-3 py-2 text-sm font-medium rounded-md border transition-colors',
                 activeTab === 'email'
-                  ? 'bg-card text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-muted-foreground border-border hover:bg-accent hover:text-foreground',
               ].join(' ')}
               onClick={() => setActiveTab('email')}
             >
@@ -58,10 +58,10 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
               aria-selected={activeTab === 'external'}
               aria-controls="notifications-tabpanel-external"
               className={[
-                'flex-1 px-3 py-2 text-sm font-medium transition-colors',
+                'flex-1 px-3 py-2 text-sm font-medium rounded-md border transition-colors',
                 activeTab === 'external'
-                  ? 'bg-card text-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-muted-foreground border-border hover:bg-accent hover:text-foreground',
               ].join(' ')}
               onClick={() => setActiveTab('external')}
             >

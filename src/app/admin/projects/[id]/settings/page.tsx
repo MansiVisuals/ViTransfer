@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { PasswordInput } from '@/components/ui/password-input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ReprocessModal } from '@/components/ReprocessModal'
 import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
@@ -659,16 +660,16 @@ export default function ProjectSettingsPage() {
               <CardContent className="space-y-6 border-t pt-4">
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="space-y-2">
-                  <Label htmlFor="resolution">Preview Resolution</Label>
-                  <select
-                    id="resolution"
-                    value={previewResolution}
-                    onChange={(e) => setPreviewResolution(e.target.value)}
-                    className="w-full px-3 py-2 bg-card border border-border rounded-md"
-                  >
-                    <option value="720p">720p (1280x720 or 720x1280 for vertical)</option>
-                    <option value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</option>
-                  </select>
+                  <Label>Preview Resolution</Label>
+                  <Select value={previewResolution} onValueChange={setPreviewResolution}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="720p">720p (1280x720 or 720x1280 for vertical)</SelectItem>
+                      <SelectItem value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
                     Higher resolutions take longer to process and use more storage.
                     Vertical videos automatically adjust dimensions while maintaining aspect ratio.
@@ -879,16 +880,16 @@ export default function ProjectSettingsPage() {
                 </div>
 
                 <div className="space-y-2 pt-2 mt-2 border-t border-border">
-                  <Label htmlFor="timestampDisplay">Comment Timestamp Display</Label>
-                  <select
-                    id="timestampDisplay"
-                    value={timestampDisplay}
-                    onChange={(e) => setTimestampDisplay(e.target.value as any)}
-                    className="w-full px-3 py-2 text-sm sm:text-base bg-background text-foreground border border-border rounded-md"
-                  >
-                    <option value="TIMECODE">Timecode (HH:MM:SS:FF)</option>
-                    <option value="AUTO">Simple Time (MM:SS / HH:MM:SS)</option>
-                  </select>
+                  <Label>Comment Timestamp Display</Label>
+                  <Select value={timestampDisplay} onValueChange={(v) => setTimestampDisplay(v as 'AUTO' | 'TIMECODE')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TIMECODE">Timecode (HH:MM:SS:FF)</SelectItem>
+                      <SelectItem value="AUTO">Simple Time (MM:SS / HH:MM:SS)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
                     Controls how timestamps appear in comment badges on the share page.
                   </p>
@@ -923,22 +924,22 @@ export default function ProjectSettingsPage() {
               <CardContent className="space-y-4 border-t pt-4">
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="space-y-2">
-                  <Label htmlFor="authMode">Authentication Method</Label>
-                  <select
-                    id="authMode"
-                    value={authMode}
-                    onChange={(e) => setAuthMode(e.target.value)}
-                    className="w-full px-3 py-2 bg-card border border-border rounded-md"
-                  >
-                    <option value="PASSWORD">Password Only</option>
-                    <option value="OTP" disabled={!smtpConfigured || !hasRecipientWithEmail}>
-                      Email OTP Only {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
-                    </option>
-                    <option value="BOTH" disabled={!smtpConfigured || !hasRecipientWithEmail}>
-                      Both Password and OTP {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
-                    </option>
-                    <option value="NONE">No Authentication</option>
-                  </select>
+                  <Label>Authentication Method</Label>
+                  <Select value={authMode} onValueChange={setAuthMode}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PASSWORD">Password Only</SelectItem>
+                      <SelectItem value="OTP" disabled={!smtpConfigured || !hasRecipientWithEmail}>
+                        Email OTP Only {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
+                      </SelectItem>
+                      <SelectItem value="BOTH" disabled={!smtpConfigured || !hasRecipientWithEmail}>
+                        Both Password and OTP {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
+                      </SelectItem>
+                      <SelectItem value="NONE">No Authentication</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
                     {authMode === 'PASSWORD' && 'Clients must enter a password to access the project'}
                     {authMode === 'OTP' && 'Clients receive a one-time code via email (must be a registered recipient)'}

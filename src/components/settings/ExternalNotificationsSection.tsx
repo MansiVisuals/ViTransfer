@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PasswordInput } from '@/components/ui/password-input'
 import { ChevronDown, ChevronUp, Plus, Send, Trash2, Save } from 'lucide-react'
 import { apiDelete, apiFetch, apiPatch, apiPost } from '@/lib/api-client'
@@ -360,18 +361,18 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
                 <Input id="newName" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Admin Phone" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="newProvider">Provider</Label>
-                <select
-                  id="newProvider"
-                  value={newProvider}
-                  onChange={(e) => setNewProvider(e.target.value as Provider)}
-                  className="w-full px-3 py-2 bg-card border border-border rounded-md"
-                >
-                  <option value="GOTIFY">Gotify</option>
-                  <option value="NTFY">ntfy</option>
-                  <option value="PUSHOVER">Pushover</option>
-                  <option value="TELEGRAM">Telegram</option>
-                </select>
+                <Label>Provider</Label>
+                <Select value={newProvider} onValueChange={(v) => setNewProvider(v as Provider)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GOTIFY">Gotify</SelectItem>
+                    <SelectItem value="NTFY">ntfy</SelectItem>
+                    <SelectItem value="PUSHOVER">Pushover</SelectItem>
+                    <SelectItem value="TELEGRAM">Telegram</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

@@ -110,47 +110,46 @@ export default function AnalyticsDashboard() {
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <div className="flex justify-between items-center gap-4 mb-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-              <BarChart3 className="w-7 h-7 sm:w-8 sm:h-8" />
-              Analytics
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Track visits, downloads, and engagement
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <ViewModeToggle value={viewMode} onChange={setViewMode} />
-            <FilterDropdown
-              groups={[{
-                key: 'status',
-                label: 'Status',
-                options: STATUS_OPTIONS,
-                selected: statusFilter,
-                onChange: setStatusFilter,
-              }]}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
-              title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
-            >
-              <ArrowUpDown className="w-4 h-4" />
-              <span className="hidden sm:inline ml-2">Sort</span>
-            </Button>
-            <Button
-              onClick={loadAnalytics}
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              title="Refresh"
-            >
-              <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-              <span className="hidden sm:inline ml-2">Refresh</span>
-            </Button>
-          </div>
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <BarChart3 className="w-7 h-7 sm:w-8 sm:h-8" />
+            Analytics
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+            Track visits, downloads, and engagement
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <FilterDropdown
+            groups={[{
+              key: 'status',
+              label: 'Status',
+              options: STATUS_OPTIONS,
+              selected: statusFilter,
+              onChange: setStatusFilter,
+            }]}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
+            title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
+          >
+            <ArrowUpDown className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Sort</span>
+          </Button>
+          <Button
+            onClick={loadAnalytics}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            title="Refresh"
+          >
+            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+            <span className="hidden sm:inline ml-2">Refresh</span>
+          </Button>
         </div>
 
         {/* Stats Overview */}

@@ -236,67 +236,66 @@ export default function SecurityEventsClient() {
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <div className="flex justify-between items-center gap-4 mb-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-              <Shield className="w-7 h-7 sm:w-8 sm:h-8" />
-              Security Events
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Monitor events, rate limits, and suspicious activity
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <FilterDropdown
-              groups={[
-                {
-                  key: 'type',
-                  label: 'Event Type',
-                  options: stats.map(s => ({ value: s.type, label: formatSecurityEventType(s.type) })),
-                  selected: typeFilter ?? new Set(),
-                  onChange: setTypeFilter,
-                },
-                {
-                  key: 'severity',
-                  label: 'Severity',
-                  options: SEVERITY_OPTIONS,
-                  selected: severityFilter,
-                  onChange: setSeverityFilter,
-                },
-              ]}
-            />
-            <Button
-              onClick={loadEvents}
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              title="Refresh"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline ml-2">Refresh</span>
-            </Button>
-            <Button
-              onClick={() => setShowRateLimitsModal(true)}
-              variant="outline"
-              size="sm"
-              title="Rate Limits"
-            >
-              <Unlock className="w-4 h-4" />
-              <span className="hidden sm:inline ml-2">Rate Limits</span>
-              {rateLimits.length > 0 && (
-                <span className="ml-1 text-xs tabular-nums">({rateLimits.length})</span>
-              )}
-            </Button>
-            <Button
-              onClick={() => setShowCleanupModal(true)}
-              variant="destructive"
-              size="sm"
-              title="Delete Events"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline ml-2">Delete</span>
-            </Button>
-          </div>
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <Shield className="w-7 h-7 sm:w-8 sm:h-8" />
+            Security Events
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+            Monitor events, rate limits, and suspicious activity
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
+          <FilterDropdown
+            groups={[
+              {
+                key: 'type',
+                label: 'Event Type',
+                options: stats.map(s => ({ value: s.type, label: formatSecurityEventType(s.type) })),
+                selected: typeFilter ?? new Set(),
+                onChange: setTypeFilter,
+              },
+              {
+                key: 'severity',
+                label: 'Severity',
+                options: SEVERITY_OPTIONS,
+                selected: severityFilter,
+                onChange: setSeverityFilter,
+              },
+            ]}
+          />
+          <Button
+            onClick={loadEvents}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            title="Refresh"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline ml-2">Refresh</span>
+          </Button>
+          <Button
+            onClick={() => setShowRateLimitsModal(true)}
+            variant="outline"
+            size="sm"
+            title="Rate Limits"
+          >
+            <Unlock className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Rate Limits</span>
+            {rateLimits.length > 0 && (
+              <span className="ml-1 text-xs tabular-nums">({rateLimits.length})</span>
+            )}
+          </Button>
+          <Button
+            onClick={() => setShowCleanupModal(true)}
+            variant="destructive"
+            size="sm"
+            title="Delete Events"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Delete</span>
+          </Button>
         </div>
 
         {/* Stats Overview */}

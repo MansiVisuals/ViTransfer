@@ -594,7 +594,7 @@ export default function GlobalSettingsPage() {
         <div className="mt-6 sm:mt-8 pb-20 lg:pb-24 flex justify-end">
           <Button onClick={handleSave} variant="default" disabled={saving} size="lg" className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Saving...' : 'Save All Changes'}
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
         </div>

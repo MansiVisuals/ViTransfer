@@ -116,7 +116,7 @@ export default function AnalyticsDashboard() {
             Analytics
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Track visits, downloads, and engagement
+            Monitor project visits and downloads
           </p>
         </div>
 

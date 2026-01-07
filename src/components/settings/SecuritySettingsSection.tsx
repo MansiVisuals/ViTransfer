@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
-import { Clock, AlertTriangle, CheckCircle, Lock } from 'lucide-react'
+import { Clock, AlertTriangle, CheckCircle } from 'lucide-react'
 
 function formatDurationSetting(value: string, unit: string, fallbackValue = 15): string {
   const parsedValue = Number.parseInt(value, 10)
@@ -131,43 +131,26 @@ export function SecuritySettingsSection({
           {/* HTTPS Enforcement */}
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <Lock className="w-5 h-5 text-primary flex-shrink-0" />
-                <Label htmlFor="httpsEnabled" className="text-base font-semibold">
-                  HTTPS Enforcement
-                </Label>
+              <div className="space-y-0.5 flex-1">
+                <Label htmlFor="httpsEnabled">HTTPS Enforcement</Label>
+                <p className="text-xs text-muted-foreground">
+                  Enable for production deployments. Disable for local development with HTTP.
+                </p>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Switch
-                  id="httpsEnabled"
-                  checked={httpsEnabled}
-                  onCheckedChange={setHttpsEnabled}
-                />
-                <span className="text-sm font-medium whitespace-nowrap">{httpsEnabled ? 'ON' : 'OFF'}</span>
-              </div>
+              <Switch
+                id="httpsEnabled"
+                checked={httpsEnabled}
+                onCheckedChange={setHttpsEnabled}
+              />
             </div>
 
-            <div className="space-y-2 text-sm">
-              <p className="text-muted-foreground">
-                <strong>OFF:</strong> Use for local deployments with HTTP
-              </p>
-              <p className="text-muted-foreground">
-                <strong>ON:</strong> Use for production deployments with HTTPS
-              </p>
-
-              {httpsEnabled && (
-                <div className="mt-3 p-3 bg-primary-visible border-2 border-primary-visible rounded-md">
-                  <p className="text-sm font-semibold text-primary mb-2">
-                    When HTTPS is enabled, the following are enforced:
-                  </p>
-                  <ul className="text-xs text-primary space-y-1 list-disc list-inside">
-                    <li>Cookies use <code className="bg-background px-1 py-0.5 rounded">secure: true</code> (only sent over HTTPS)</li>
-                    <li>HSTS header enabled (forces browser to use HTTPS)</li>
-                    <li>Enhanced security for all sessions and authentication</li>
-                  </ul>
-                </div>
-              )}
-            </div>
+            {httpsEnabled && (
+              <div className="p-3 bg-primary-visible border-2 border-primary-visible rounded-md">
+                <p className="text-xs text-primary">
+                  HSTS header is enabled, forcing browsers to use HTTPS connections.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">

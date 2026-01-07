@@ -38,18 +38,20 @@ export default function AdminHeader() {
   const websiteUrl = 'https://www.vitransfer.com'
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
 
-  const navLinks = [
+  const navLinks: Array<{ href: string; label: string; icon: typeof FolderKanban; title?: string }> = [
     { href: '/admin/projects', label: 'Projects', icon: FolderKanban },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
     { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/integrations', label: 'Integrations', icon: Workflow },
   ]
 
   // Add Security link if enabled
   if (showSecurityDashboard) {
     navLinks.push({ href: '/admin/security', label: 'Security', icon: Shield })
   }
+
+  // Integrations is always last and icon-only
+  navLinks.push({ href: '/admin/integrations', label: '', icon: Workflow, title: 'Integrations' })
 
   return (
     <div className="bg-card border-b border-border/50 shadow-elevation-sm backdrop-blur-sm">
@@ -65,6 +67,7 @@ export default function AdminHeader() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    title={link.title || link.label || undefined}
                     className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                       isActive
                         ? 'bg-primary text-primary-foreground shadow-elevation'
@@ -72,7 +75,7 @@ export default function AdminHeader() {
                     }`}
                   >
                     {Icon && <Icon className="w-4 h-4" />}
-                    <span className="hidden sm:inline">{link.label}</span>
+                    {link.label && <span className="hidden sm:inline">{link.label}</span>}
                   </Link>
                 )
               })}

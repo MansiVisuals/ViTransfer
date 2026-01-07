@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Project } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Trash2, ExternalLink, Archive, RotateCcw, Send, Loader2 } from 'lucide-react'
+import { Trash2, ExternalLink, Archive, ArchiveRestore, RotateCcw, Send, Loader2, CheckCircle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,7 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingApproval, setIsTogglingApproval] = useState(false)
+  const [isArchiving, setIsArchiving] = useState(false)
 
   // Unapprove modal state
   const [showUnapproveModal, setShowUnapproveModal] = useState(false)
@@ -250,6 +251,33 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
       })
   }
 
+  const handleToggleArchive = async () => {
+    if (isArchiving) return
+
+    const isCurrentlyArchived = project.status === 'ARCHIVED'
+    const action = isCurrentlyArchived ? 'unarchive' : 'archive'
+    const newStatus = isCurrentlyArchived ? 'IN_REVIEW' : 'ARCHIVED'
+
+    if (!confirm(`Are you sure you want to ${action} this project?${!isCurrentlyArchived ? ' The share link will become inaccessible to clients.' : ''}`)) {
+      return
+    }
+
+    setIsArchiving(true)
+
+    apiPatch(`/api/projects/${project.id}`, { status: newStatus })
+      .then(() => {
+        alert(`Project ${action}d successfully`)
+        onRefresh?.()
+        router.refresh()
+      })
+      .catch(() => {
+        alert(`Failed to ${action} project`)
+      })
+      .finally(() => {
+        setIsArchiving(false)
+      })
+  }
+
   return (
     <>
       <Card>
@@ -300,38 +328,60 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
             View Share Page
           </Button>
 
-          {/* Approve/Unapprove Toggle Button */}
-          <div>
-            <Button
-              variant="outline"
-              size="default"
-              className="w-full"
-              onClick={handleToggleApproval}
-              disabled={isTogglingApproval || (project.status !== 'APPROVED' && !canApproveProject)}
-              title={
-                project.status !== 'APPROVED' && !canApproveProject
-                  ? 'Approve one version of each video first'
-                  : ''
-              }
-            >
-              {project.status === 'APPROVED' ? (
-                <>
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  {isTogglingApproval ? 'Unapproving...' : 'Unapprove Project'}
-                </>
-              ) : (
-                <>
-                  <Archive className="w-4 h-4 mr-2" />
-                  {isTogglingApproval ? 'Approving...' : 'Approve Project'}
-                </>
+          {/* Approve/Unapprove Toggle Button - hidden when archived */}
+          {project.status !== 'ARCHIVED' && (
+            <div>
+              <Button
+                variant="outline"
+                size="default"
+                className="w-full"
+                onClick={handleToggleApproval}
+                disabled={isTogglingApproval || (project.status !== 'APPROVED' && !canApproveProject)}
+                title={
+                  project.status !== 'APPROVED' && !canApproveProject
+                    ? 'Approve one version of each video first'
+                    : ''
+                }
+              >
+                {project.status === 'APPROVED' ? (
+                  <>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    {isTogglingApproval ? 'Unapproving...' : 'Unapprove Project'}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {isTogglingApproval ? 'Approving...' : 'Approve Project'}
+                  </>
+                )}
+              </Button>
+              {project.status !== 'APPROVED' && !canApproveProject && (
+                <p className="text-xs text-muted-foreground mt-1 px-1">
+                  Approve one version of each video to enable project approval
+                </p>
               )}
-            </Button>
-            {project.status !== 'APPROVED' && !canApproveProject && (
-              <p className="text-xs text-muted-foreground mt-1 px-1">
-                Approve one version of each video to enable project approval
-              </p>
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            size="default"
+            className="w-full"
+            onClick={handleToggleArchive}
+            disabled={isArchiving}
+          >
+            {project.status === 'ARCHIVED' ? (
+              <>
+                <ArchiveRestore className="w-4 h-4 mr-2" />
+                {isArchiving ? 'Unarchiving...' : 'Unarchive Project'}
+              </>
+            ) : (
+              <>
+                <Archive className="w-4 h-4 mr-2" />
+                {isArchiving ? 'Archiving...' : 'Archive Project'}
+              </>
             )}
-          </div>
+          </Button>
 
           <Button
             variant="destructive"

@@ -7,7 +7,15 @@ import Link from 'next/link'
 import { BarChart3, FolderKanban, Video, Eye, Download, RefreshCw, ArrowUpDown } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
+import FilterDropdown from '@/components/FilterDropdown'
 import { cn } from '@/lib/utils'
+
+const STATUS_OPTIONS = [
+  { value: 'IN_REVIEW', label: 'In Review' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'SHARE_ONLY', label: 'Share Only' },
+  { value: 'ARCHIVED', label: 'Archived' },
+]
 
 interface ProjectAnalytics {
   id: string
@@ -33,6 +41,7 @@ export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(STATUS_OPTIONS.map(o => o.value)))
   const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
 
@@ -76,14 +85,16 @@ export default function AnalyticsDashboard() {
   const totalDownloads = projects.reduce((sum, p) => sum + p.totalDownloads, 0)
   const totalVideos = projects.reduce((sum, p) => sum + p.videoCount, 0)
 
-  // Filter projects
-  const sortedProjects = [...projects].sort((a, b) => {
+  // Filter and sort projects
+  const filteredProjects = projects.filter(p => statusFilter.has(p.status))
+
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
     if (sortMode === 'alphabetical') {
       return a.title.localeCompare(b.title)
     }
 
-    const statusPriority = { IN_REVIEW: 1, SHARE_ONLY: 2, APPROVED: 3 } as const
-    const priorityDiff = (statusPriority[a.status as keyof typeof statusPriority] ?? 99) - (statusPriority[b.status as keyof typeof statusPriority] ?? 99)
+    const statusPriority: Record<string, number> = { IN_REVIEW: 1, SHARE_ONLY: 2, APPROVED: 3, ARCHIVED: 4 }
+    const priorityDiff = (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99)
     if (priorityDiff !== 0) return priorityDiff
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   })
@@ -99,64 +110,89 @@ export default function AnalyticsDashboard() {
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <div className="mb-4">
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-            <BarChart3 className="w-8 h-8" />
-            Analytics Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Track share page accesses, downloads, and engagement metrics
-          </p>
+        <div className="flex justify-between items-center gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+              <BarChart3 className="w-7 h-7 sm:w-8 sm:h-8" />
+              Analytics
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+              Track visits, downloads, and engagement
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            <FilterDropdown
+              groups={[{
+                key: 'status',
+                label: 'Status',
+                options: STATUS_OPTIONS,
+                selected: statusFilter,
+                onChange: setStatusFilter,
+              }]}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
+              title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
+            >
+              <ArrowUpDown className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Sort</span>
+            </Button>
+            <Button
+              onClick={loadAnalytics}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+              title="Refresh"
+            >
+              <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+              <span className="hidden sm:inline ml-2">Refresh</span>
+            </Button>
+          </div>
         </div>
 
         {/* Stats Overview */}
-        <Card className="mb-4">
-          <CardHeader className="p-3 sm:p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <FolderKanban className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Projects</p>
-                  <p className="text-base font-semibold tabular-nums truncate">{totalProjects.toLocaleString()}</p>
-                </div>
+        <Card className="p-3 mb-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className={metricIconWrapperClassName}>
+                <FolderKanban className={metricIconClassName} />
               </div>
-
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <Video className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Videos</p>
-                  <p className="text-base font-semibold tabular-nums truncate">{totalVideos.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <Eye className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Visits</p>
-                  <p className="text-base font-semibold tabular-nums truncate">{totalVisits.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <Download className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Downloads</p>
-                  <p className="text-base font-semibold tabular-nums truncate">{totalDownloads.toLocaleString()}</p>
-                </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Projects</p>
+                <p className="text-base font-semibold tabular-nums">{totalProjects.toLocaleString()}</p>
               </div>
             </div>
-          </CardContent>
+            <div className="flex items-center gap-2">
+              <div className={metricIconWrapperClassName}>
+                <Video className={metricIconClassName} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Videos</p>
+                <p className="text-base font-semibold tabular-nums">{totalVideos.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={metricIconWrapperClassName}>
+                <Eye className={metricIconClassName} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Visits</p>
+                <p className="text-base font-semibold tabular-nums">{totalVisits.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={metricIconWrapperClassName}>
+                <Download className={metricIconClassName} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Downloads</p>
+                <p className="text-base font-semibold tabular-nums">{totalDownloads.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
         </Card>
 
         {/* Projects List */}
@@ -174,28 +210,6 @@ export default function AnalyticsDashboard() {
           </Card>
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
-              <ViewModeToggle value={viewMode} onChange={setViewMode} />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
-                className="text-muted-foreground hover:text-foreground"
-                title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
-              >
-                <ArrowUpDown className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={loadAnalytics}
-                variant="ghost"
-                size="sm"
-                disabled={loading}
-                className="text-muted-foreground hover:text-foreground"
-                title="Refresh"
-              >
-                <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-              </Button>
-            </div>
 
             <div
               className={

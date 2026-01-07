@@ -3,8 +3,16 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, Unlock, Tag } from 'lucide-react'
+import FilterDropdown from '@/components/FilterDropdown'
 import { formatDateTime } from '@/lib/utils'
 import { apiDelete, apiFetch } from '@/lib/api-client'
 import {
@@ -79,28 +87,47 @@ interface RateLimitEntry {
 }
 
 export default function SecurityEventsClient() {
+  const SEVERITY_OPTIONS = [
+    { value: 'CRITICAL', label: 'Critical' },
+    { value: 'WARNING', label: 'Warning' },
+    { value: 'INFO', label: 'Info' },
+  ]
+
   const [events, setEvents] = useState<SecurityEvent[]>([])
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, pages: 0 })
   const [stats, setStats] = useState<Array<{ type: string; count: number }>>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
-  const [filterType, setFilterType] = useState<string>('all')
-  const [filterSeverity, setFilterSeverity] = useState<string>('all')
+  const [typeFilter, setTypeFilter] = useState<Set<string> | null>(null) // null = not initialized yet
+  const [severityFilter, setSeverityFilter] = useState<Set<string>>(new Set(SEVERITY_OPTIONS.map(o => o.value)))
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set())
   const [rateLimits, setRateLimits] = useState<RateLimitEntry[]>([])
-  const [showRateLimits, setShowRateLimits] = useState(false)
-  const [cleanupDays, setCleanupDays] = useState<0 | 7 | 30 | 90>(90)
+  const [showRateLimitsModal, setShowRateLimitsModal] = useState(false)
+  const [showCleanupModal, setShowCleanupModal] = useState(false)
 
   const loadEvents = async () => {
     setLoading(true)
     try {
+      // If filters are initialized but empty, show no results
+      if ((typeFilter !== null && typeFilter.size === 0) || severityFilter.size === 0) {
+        setEvents([])
+        setPagination(p => ({ ...p, total: 0, pages: 0 }))
+        setLoading(false)
+        return
+      }
+
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
       })
 
-      if (filterType && filterType !== 'all') params.append('type', filterType)
-      if (filterSeverity && filterSeverity !== 'all') params.append('severity', filterSeverity)
+      // Send comma-separated values if filtering (not showing all)
+      if (typeFilter !== null && typeFilter.size > 0 && typeFilter.size < stats.length) {
+        params.append('type', Array.from(typeFilter).join(','))
+      }
+      if (severityFilter.size > 0 && severityFilter.size < SEVERITY_OPTIONS.length) {
+        params.append('severity', Array.from(severityFilter).join(','))
+      }
 
       const response = await apiFetch(`/api/security/events?${params}`)
       if (!response.ok) throw new Error('Failed to load security events')
@@ -109,6 +136,11 @@ export default function SecurityEventsClient() {
       setEvents(data.events)
       setPagination(data.pagination)
       setStats(data.stats)
+
+      // Initialize type filter with all types on first load only
+      if (typeFilter === null && data.stats.length > 0) {
+        setTypeFilter(new Set(data.stats.map(s => s.type)))
+      }
     } catch (error) {
       console.error('Error loading security events:', error)
     } finally {
@@ -148,13 +180,13 @@ export default function SecurityEventsClient() {
 
   useEffect(() => {
     loadEvents()
-  }, [pagination.page, filterType, filterSeverity])
+  }, [pagination.page, typeFilter, severityFilter])
 
   useEffect(() => {
-    if (showRateLimits) {
+    if (showRateLimitsModal) {
       loadRateLimits()
     }
-  }, [showRateLimits])
+  }, [showRateLimitsModal])
 
   // Prime rate limit data so counts show immediately
   useEffect(() => {
@@ -204,192 +236,101 @@ export default function SecurityEventsClient() {
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <div className="mb-4">
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-            <Shield className="w-8 h-8" />
-            Security Events
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Monitor security events, hotlink attempts, rate limits, and suspicious activity
-          </p>
+        <div className="flex justify-between items-center gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+              <Shield className="w-7 h-7 sm:w-8 sm:h-8" />
+              Security Events
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+              Monitor events, rate limits, and suspicious activity
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <FilterDropdown
+              groups={[
+                {
+                  key: 'type',
+                  label: 'Event Type',
+                  options: stats.map(s => ({ value: s.type, label: formatSecurityEventType(s.type) })),
+                  selected: typeFilter ?? new Set(),
+                  onChange: setTypeFilter,
+                },
+                {
+                  key: 'severity',
+                  label: 'Severity',
+                  options: SEVERITY_OPTIONS,
+                  selected: severityFilter,
+                  onChange: setSeverityFilter,
+                },
+              ]}
+            />
+            <Button
+              onClick={loadEvents}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline ml-2">Refresh</span>
+            </Button>
+            <Button
+              onClick={() => setShowRateLimitsModal(true)}
+              variant="outline"
+              size="sm"
+              title="Rate Limits"
+            >
+              <Unlock className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Rate Limits</span>
+              {rateLimits.length > 0 && (
+                <span className="ml-1 text-xs tabular-nums">({rateLimits.length})</span>
+              )}
+            </Button>
+            <Button
+              onClick={() => setShowCleanupModal(true)}
+              variant="destructive"
+              size="sm"
+              title="Delete Events"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Delete</span>
+            </Button>
+          </div>
         </div>
 
         {/* Stats Overview */}
-        <Card className="mb-4">
-          <CardHeader className="p-3 sm:p-4 pb-2">
-            <CardTitle className="text-sm font-medium">Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
-                  <Shield className="w-4 h-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Events</p>
-                  <p className="text-base font-semibold tabular-nums truncate">{pagination.total.toLocaleString()}</p>
-                </div>
+        <Card className="p-3 mb-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                <Shield className="w-4 h-4 text-primary" />
               </div>
-
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
-                  <Tag className="w-4 h-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Types</p>
-                  <p className="text-base font-semibold tabular-nums truncate">{stats.length}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 min-w-0 col-span-2 sm:col-span-1">
-                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
-                  <XCircle className="w-4 h-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Blocked</p>
-                  <p className="text-base font-semibold tabular-nums truncate">{events.filter(e => e.wasBlocked).length}</p>
-                </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Events</p>
+                <p className="text-base font-semibold tabular-nums">{pagination.total.toLocaleString()}</p>
               </div>
             </div>
-          </CardContent>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                <Tag className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Types</p>
+                <p className="text-base font-semibold tabular-nums">{stats.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                <XCircle className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Blocked</p>
+                <p className="text-base font-semibold tabular-nums">{events.filter(e => e.wasBlocked).length}</p>
+              </div>
+            </div>
+          </div>
         </Card>
-
-        {/* Filters and Actions */}
-        <Card className="mb-4">
-          <CardContent className="p-3 sm:p-4 space-y-3">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="flex-1 min-w-[180px]">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Type</label>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {stats.map(stat => (
-                      <SelectItem key={stat.type} value={stat.type}>
-                        {formatSecurityEventType(stat.type)} ({stat.count})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex-1 min-w-[180px]">
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Severity</label>
-                <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="All Severities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Severities</SelectItem>
-                    <SelectItem value="CRITICAL">Critical</SelectItem>
-                    <SelectItem value="WARNING">Warning</SelectItem>
-                    <SelectItem value="INFO">Info</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button
-                  onClick={loadEvents}
-                  variant="outline"
-                  size="sm"
-                  disabled={loading}
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline ml-2">Refresh</span>
-                </Button>
-                <Button
-                  onClick={() => setShowRateLimits(!showRateLimits)}
-                  variant={showRateLimits ? 'default' : 'outline'}
-                  size="sm"
-                >
-                  <Unlock className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-2">Rate Limits</span>
-                  <span className="ml-2 text-xs tabular-nums">({rateLimits.length})</span>
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border pt-3">
-              <div className="flex-1 min-w-[180px]">
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Cleanup</label>
-                <Select value={String(cleanupDays)} onValueChange={(v) => setCleanupDays(Number(v) as 0 | 7 | 30 | 90)}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="7">Delete older than 7 days</SelectItem>
-                    <SelectItem value="30">Delete older than 30 days</SelectItem>
-                    <SelectItem value="90">Delete older than 90 days</SelectItem>
-                    <SelectItem value="0">Delete all events</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                onClick={() => handleDeleteOld(cleanupDays)}
-                variant={cleanupDays === 0 ? 'destructive' : 'outline'}
-                size="sm"
-                disabled={deleting}
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className="hidden sm:inline ml-2">Run Cleanup</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Rate Limits Panel */}
-        {showRateLimits && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Active Rate Limits</CardTitle>
-              <CardDescription>
-                Currently locked out IPs and accounts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {rateLimits.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No active rate limits</div>
-              ) : (
-                <div className="space-y-2">
-                  {rateLimits.map((entry) => (
-                    <div key={entry.key} className="border rounded-lg p-2 sm:p-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="font-medium">Type: {entry.type}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Failed attempts: {entry.count}
-                          </div>
-                          <div className="text-sm text-muted-foreground break-words">
-                            Locked until: {new Date(entry.lockoutUntil).toLocaleString()}
-                          </div>
-                        </div>
-                        {entry.lockoutUntil > Date.now() ? (
-                          <Button
-                            onClick={() => handleUnblockRateLimit(entry.key)}
-                            variant="outline"
-                            size="sm"
-                            className="w-full sm:w-auto"
-                          >
-                            <Unlock className="w-4 h-4 mr-2" />
-                            Unblock
-                          </Button>
-                        ) : (
-                          <div className="text-xs text-muted-foreground text-right">
-                            Lock expired
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Events List */}
         <Card>
@@ -521,6 +462,114 @@ export default function SecurityEventsClient() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cleanup Modal */}
+      <Dialog open={showCleanupModal} onOpenChange={setShowCleanupModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              Delete Security Events
+            </DialogTitle>
+            <DialogDescription>
+              Remove old security events from the database. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-4">
+            <Button
+              onClick={() => { handleDeleteOld(7); setShowCleanupModal(false) }}
+              variant="outline"
+              className="justify-start"
+              disabled={deleting}
+            >
+              Delete events older than 7 days
+            </Button>
+            <Button
+              onClick={() => { handleDeleteOld(30); setShowCleanupModal(false) }}
+              variant="outline"
+              className="justify-start"
+              disabled={deleting}
+            >
+              Delete events older than 30 days
+            </Button>
+            <Button
+              onClick={() => { handleDeleteOld(90); setShowCleanupModal(false) }}
+              variant="outline"
+              className="justify-start"
+              disabled={deleting}
+            >
+              Delete events older than 90 days
+            </Button>
+            <Button
+              onClick={() => { handleDeleteOld(0); setShowCleanupModal(false) }}
+              variant="destructive"
+              className="justify-start"
+              disabled={deleting}
+            >
+              Delete all events
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rate Limits Modal */}
+      <Dialog open={showRateLimitsModal} onOpenChange={setShowRateLimitsModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Unlock className="w-5 h-5" />
+              Active Rate Limits
+            </DialogTitle>
+            <DialogDescription>
+              Currently locked out IPs and accounts due to excessive failed attempts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {rateLimits.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No active rate limits
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {rateLimits.map((entry) => (
+                  <div key={entry.key} className="border rounded-lg p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm">Type: {entry.type}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Failed attempts: {entry.count}
+                        </div>
+                        <div className="text-xs text-muted-foreground break-words">
+                          Locked until: {new Date(entry.lockoutUntil).toLocaleString()}
+                        </div>
+                      </div>
+                      {entry.lockoutUntil > Date.now() ? (
+                        <Button
+                          onClick={() => handleUnblockRateLimit(entry.key)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Unlock className="w-4 h-4 mr-2" />
+                          Unblock
+                        </Button>
+                      ) : (
+                        <div className="text-xs text-muted-foreground">
+                          Lock expired
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRateLimitsModal(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

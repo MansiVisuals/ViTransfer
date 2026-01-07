@@ -6,7 +6,15 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus, ArrowUpDown, Video, MessageSquare } from 'lucide-react'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
+import FilterDropdown from '@/components/FilterDropdown'
 import { cn } from '@/lib/utils'
+
+const STATUS_OPTIONS = [
+  { value: 'IN_REVIEW', label: 'In Review' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'SHARE_ONLY', label: 'Share Only' },
+  { value: 'ARCHIVED', label: 'Archived' },
+]
 
 interface Project {
   id: string
@@ -28,6 +36,7 @@ interface ProjectsListProps {
 export default function ProjectsList({ projects }: ProjectsListProps) {
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(STATUS_OPTIONS.map(o => o.value)))
   const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
 
@@ -47,13 +56,16 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
     localStorage.setItem('admin_projects_view', viewMode)
   }, [viewMode])
 
-  const sortedProjects = [...projects].sort((a, b) => {
+  // Filter projects by status
+  const filteredProjects = projects.filter(p => statusFilter.has(p.status))
+
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
     if (sortMode === 'alphabetical') {
       return a.title.localeCompare(b.title)
     } else {
       // Status sorting
-      const statusPriority = { IN_REVIEW: 1, SHARE_ONLY: 2, APPROVED: 3 }
-      const priorityDiff = statusPriority[a.status as keyof typeof statusPriority] - statusPriority[b.status as keyof typeof statusPriority]
+      const statusPriority: Record<string, number> = { IN_REVIEW: 1, SHARE_ONLY: 2, APPROVED: 3, ARCHIVED: 4 }
+      const priorityDiff = (statusPriority[a.status] || 99) - (statusPriority[b.status] || 99)
       if (priorityDiff !== 0) return priorityDiff
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     }
@@ -64,14 +76,23 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
       {projects.length > 0 && (
         <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <FilterDropdown
+            groups={[{
+              key: 'status',
+              label: 'Status',
+              options: STATUS_OPTIONS,
+              selected: statusFilter,
+              onChange: setStatusFilter,
+            }]}
+          />
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
-            className="text-muted-foreground hover:text-foreground"
             title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
           >
             <ArrowUpDown className="w-4 h-4" />
+            <span className="hidden sm:inline ml-2">Sort</span>
           </Button>
         </div>
       )}
@@ -134,8 +155,10 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
                               ? 'bg-success-visible text-success border-2 border-success-visible'
                             : project.status === 'SHARE_ONLY'
                               ? 'bg-info-visible text-info border-2 border-info-visible'
-                              : project.status === 'IN_REVIEW'
+                            : project.status === 'IN_REVIEW'
                               ? 'bg-primary-visible text-primary border-2 border-primary-visible'
+                            : project.status === 'ARCHIVED'
+                              ? 'bg-muted text-muted-foreground border-2 border-muted'
                               : 'bg-muted text-muted-foreground border border-border'
                           }`}
                         >

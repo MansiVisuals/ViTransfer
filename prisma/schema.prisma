@@ -89,6 +89,7 @@ enum ProjectStatus {
   IN_REVIEW
   APPROVED
   SHARE_ONLY
+  ARCHIVED
 }
 
 model ProjectRecipient {

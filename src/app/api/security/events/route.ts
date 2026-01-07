@@ -53,10 +53,16 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    // Build where clause
+    // Build where clause (supports comma-separated values for multi-select)
     const where: any = {}
-    if (type) where.type = type
-    if (severity) where.severity = severity
+    if (type) {
+      const types = type.split(',').filter(Boolean)
+      where.type = types.length === 1 ? types[0] : { in: types }
+    }
+    if (severity) {
+      const severities = severity.split(',').filter(Boolean)
+      where.severity = severities.length === 1 ? severities[0] : { in: severities }
+    }
     if (projectId) where.projectId = projectId
 
     // Fetch events with pagination

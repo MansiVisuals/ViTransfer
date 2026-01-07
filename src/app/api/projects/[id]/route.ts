@@ -18,7 +18,7 @@ const updateProjectSchema = z.object({
   slug: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   companyName: z.string().max(200).nullable().optional(),
-  status: z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY']).optional(),
+  status: z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED']).optional(),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(0).max(50).optional(),
   restrictCommentsToLatestVersion: z.boolean().optional(),

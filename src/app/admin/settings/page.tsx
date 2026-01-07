@@ -450,9 +450,9 @@ export default function GlobalSettingsPage() {
               </p>
             </div>
 
-            <Button onClick={handleSave} variant="default" disabled={saving} size="lg" className="w-full sm:w-auto">
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Changes'}
+            <Button onClick={handleSave} variant="default" disabled={saving} size="default">
+              <Save className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
             </Button>
           </div>
         </div>
@@ -592,9 +592,9 @@ export default function GlobalSettingsPage() {
 
         {/* Save button at bottom */}
         <div className="mt-6 sm:mt-8 pb-20 lg:pb-24 flex justify-end">
-          <Button onClick={handleSave} variant="default" disabled={saving} size="lg" className="w-full sm:w-auto">
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Saving...' : 'Save Changes'}
+          <Button onClick={handleSave} variant="default" disabled={saving} size="default">
+            <Save className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
           </Button>
         </div>
         </div>

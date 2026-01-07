@@ -58,27 +58,31 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading users...</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-            <Users className="w-7 h-7 sm:w-8 sm:h-8" />
-            User Management
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage admin users and their permissions</p>
+    <div className="flex-1 min-h-0 bg-background">
+      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+        <div className="max-w-4xl mx-auto">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+                <Users className="w-7 h-7 sm:w-8 sm:h-8" />
+                User Management
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage admin users and their permissions</p>
+            </div>
+            <Button variant="default" size="default" onClick={() => router.push('/admin/users/new')}>
+              <UserPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add New User</span>
+            </Button>
+          </div>
         </div>
-        <Button variant="default" size="default" onClick={() => router.push('/admin/users/new')}>
-          <UserPlus className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">Add New User</span>
-        </Button>
-      </div>
 
       {error && (
         <div className="bg-destructive-visible border-2 border-destructive-visible text-destructive font-medium px-4 py-3 rounded mb-4">
@@ -137,6 +141,8 @@ export default function UsersPage() {
             </Card>
           ))
         )}
+        </div>
+        </div>
       </div>
     </div>
   )

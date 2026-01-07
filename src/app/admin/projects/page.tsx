@@ -46,7 +46,7 @@ export default function AdminPage() {
                 <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
                 Projects Dashboard
               </h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage your video projects</p>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage video projects and deliverables</p>
             </div>
             <Link href="/admin/projects/new">
               <Button variant="default" size="default">
@@ -70,7 +70,7 @@ export default function AdminPage() {
               <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
               Projects Dashboard
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage your video projects</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage video projects and deliverables</p>
           </div>
           <Link href="/admin/projects/new">
             <Button variant="default" size="default">

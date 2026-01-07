@@ -75,7 +75,7 @@ export default function UsersPage() {
                 <Users className="w-7 h-7 sm:w-8 sm:h-8" />
                 User Management
               </h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage admin users and their permissions</p>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage administrator accounts</p>
             </div>
             <Button variant="default" size="default" onClick={() => router.push('/admin/users/new')}>
               <UserPlus className="w-4 h-4 sm:mr-2" />

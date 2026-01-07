@@ -119,10 +119,17 @@ export default function NewUserPage() {
 
   return (
     <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">Add New Admin User</h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Create a new administrator account</p>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+                <UserPlus className="w-7 h-7 sm:w-8 sm:h-8" />
+                Add User
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">Create a new administrator account</p>
+            </div>
+          </div>
         </div>
 
         <Card>
@@ -178,11 +185,9 @@ export default function NewUserPage() {
                   variant="outline"
                   size="sm"
                   onClick={generateRandomPassword}
-                  title="Generate secure password"
-                  className="flex items-center gap-2"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  <span className="hidden sm:inline">Generate Password</span>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Generate
                 </Button>
               </div>
               <div className="relative">
@@ -273,14 +278,14 @@ export default function NewUserPage() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" variant="default" size="lg" disabled={loading}>
+              <Button type="submit" variant="default" size="default" disabled={loading}>
                 <UserPlus className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">{loading ? 'Creating...' : 'Create User'}</span>
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                size="lg"
+                size="default"
                 onClick={() => router.push('/admin/users')}
                 disabled={loading}
               >

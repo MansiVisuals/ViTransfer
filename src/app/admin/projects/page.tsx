@@ -2,23 +2,50 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import Link from 'next/link'
-import { FolderKanban, Plus } from 'lucide-react'
+import { FolderKanban, Plus, Video, Eye, Download } from 'lucide-react'
 import ProjectsList from '@/components/ProjectsList'
 import { apiFetch } from '@/lib/api-client'
-import type { Project } from '@prisma/client'
+
+interface AnalyticsOverview {
+  totalProjects: number
+  totalVideos: number
+  totalVisits: number
+  totalDownloads: number
+}
 
 export default function AdminPage() {
   const [projects, setProjects] = useState<any[] | null>(null)
+  const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await apiFetch('/api/projects')
-        if (!res.ok) throw new Error('Failed to load projects')
-        const data = await res.json()
-        setProjects(data.projects || data || [])
+        // Fetch projects and analytics in parallel
+        const [projectsRes, analyticsRes] = await Promise.all([
+          apiFetch('/api/projects'),
+          apiFetch('/api/analytics')
+        ])
+
+        if (projectsRes.ok) {
+          const data = await projectsRes.json()
+          setProjects(data.projects || data || [])
+        } else {
+          setProjects([])
+        }
+
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json()
+          const projectsList = analyticsData.projects || []
+          setAnalytics({
+            totalProjects: projectsList.length,
+            totalVideos: projectsList.reduce((sum: number, p: any) => sum + (p.videoCount || 0), 0),
+            totalVisits: projectsList.reduce((sum: number, p: any) => sum + (p.totalVisits || 0), 0),
+            totalDownloads: projectsList.reduce((sum: number, p: any) => sum + (p.totalDownloads || 0), 0),
+          })
+        }
       } catch (error) {
         setProjects([])
       } finally {
@@ -27,6 +54,9 @@ export default function AdminPage() {
     }
     load()
   }, [])
+
+  const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
+  const metricIconClassName = 'w-4 h-4 text-primary'
 
   if (loading) {
     return (
@@ -79,6 +109,50 @@ export default function AdminPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Analytics Overview */}
+        {analytics && (
+          <Card className="p-3 mb-4">
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className={metricIconWrapperClassName}>
+                  <FolderKanban className={metricIconClassName} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Projects</p>
+                  <p className="text-base font-semibold tabular-nums">{analytics.totalProjects.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={metricIconWrapperClassName}>
+                  <Video className={metricIconClassName} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Videos</p>
+                  <p className="text-base font-semibold tabular-nums">{analytics.totalVideos.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={metricIconWrapperClassName}>
+                  <Eye className={metricIconClassName} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Visits</p>
+                  <p className="text-base font-semibold tabular-nums">{analytics.totalVisits.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={metricIconWrapperClassName}>
+                  <Download className={metricIconClassName} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Downloads</p>
+                  <p className="text-base font-semibold tabular-nums">{analytics.totalDownloads.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <ProjectsList projects={projects} />
       </div>

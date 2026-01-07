@@ -65,7 +65,6 @@ interface AnalyticsData {
 }
 
 function getAccessMethodColor(method: string): string {
-  // All auth/visit events use primary (blue) color for easy visual distinction from downloads
   return 'bg-primary-visible text-primary border-2 border-primary-visible'
 }
 
@@ -121,8 +120,8 @@ export default function AnalyticsClient({ id }: { id: string }) {
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Project not found</p>
-          <Link href="/admin/analytics">
-            <Button>Back to Analytics</Button>
+          <Link href="/admin/projects">
+            <Button>Back to Projects</Button>
           </Link>
         </div>
       </div>
@@ -136,14 +135,17 @@ export default function AnalyticsClient({ id }: { id: string }) {
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <Link href="/admin/analytics">
+            <Link href={`/admin/projects/${id}`}>
               <Button variant="ghost" size="default" className="justify-start px-3 mb-2">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Back to Analytics</span>
+                <span className="hidden sm:inline">Back to Project</span>
                 <span className="sm:hidden">Back</span>
               </Button>
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold">{project.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+              <BarChart3 className="w-7 h-7 sm:w-8 sm:h-8" />
+              {project.title}
+            </h1>
             {project.recipientName && (
               <p className="text-muted-foreground mt-1">Client: {project.recipientName}</p>
             )}
@@ -263,7 +265,6 @@ export default function AnalyticsClient({ id }: { id: string }) {
                         onClick={() => toggleExpand(event.id)}
                       >
                         <div className="flex items-center gap-3 p-3">
-                          {/* Badge - left aligned */}
                           <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${event.type === 'AUTH' ? getAccessMethodColor(event.accessMethod) : 'bg-success-visible text-success border-2 border-success-visible'}`}>
                             {event.type === 'AUTH' ? (
                               event.accessMethod === 'OTP' ? 'Email OTP' :
@@ -278,7 +279,6 @@ export default function AnalyticsClient({ id }: { id: string }) {
                             )}
                           </span>
 
-                          {/* Text - centered, grows to fill space */}
                           <div className="flex-1 min-w-0 flex items-center justify-center">
                             <span className="text-muted-foreground text-sm truncate">
                               {event.type === 'AUTH' ? (
@@ -293,12 +293,10 @@ export default function AnalyticsClient({ id }: { id: string }) {
                             </span>
                           </div>
 
-                          {/* Date/Time - before chevron */}
                           <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                             {formatDateTime(event.createdAt)}
                           </div>
 
-                          {/* Chevron - right aligned */}
                           {isExpanded ? (
                             <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           ) : (

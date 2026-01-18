@@ -67,6 +67,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }, { status: 401 })
     }
 
+    // SECURITY: Check if client is allowed to approve videos
+    // If clientCanApprove is false, only admins can approve
+    if (!accessCheck.isAdmin && project.clientCanApprove === false) {
+      return NextResponse.json({
+        error: 'Only administrators can approve videos for this project'
+      }, { status: 403 })
+    }
+
     if (project.status === 'APPROVED') {
       return NextResponse.json({ error: 'Project already approved' }, { status: 400 })
     }

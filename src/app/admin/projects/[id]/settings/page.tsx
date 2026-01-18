@@ -91,6 +91,7 @@ interface Project {
   watermarkEnabled: boolean
   watermarkText: string | null
   allowAssetDownload: boolean
+  clientCanApprove: boolean
   clientNotificationSchedule: string
   clientNotificationTime: string | null
   clientNotificationDay: number | null
@@ -128,6 +129,7 @@ export default function ProjectSettingsPage() {
   const [watermarkText, setWatermarkText] = useState('')
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
   const [allowAssetDownload, setAllowAssetDownload] = useState(true)
+  const [clientCanApprove, setClientCanApprove] = useState(true)
 
   // Notification settings state
   const [clientNotificationSchedule, setClientNotificationSchedule] = useState('HOURLY')
@@ -205,6 +207,7 @@ export default function ProjectSettingsPage() {
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
         setAllowAssetDownload(data.allowAssetDownload ?? true)
+        setClientCanApprove(data.clientCanApprove ?? true)
         setAuthMode(data.authMode || 'PASSWORD')
         setGuestMode(data.guestMode || false)
         setGuestLatestOnly(data.guestLatestOnly ?? true)
@@ -303,6 +306,7 @@ export default function ProjectSettingsPage() {
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
         allowAssetDownload,
+        clientCanApprove,
         sharePassword: sharePassword || null,
         authMode,
         guestMode,
@@ -681,22 +685,6 @@ export default function ProjectSettingsPage() {
                   </>
                 )}
               </div>
-
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="allowAssetDownload">Allow Asset Downloads</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Allow clients to download additional project assets (images, audio, project files) when the video is approved
-                    </p>
-                  </div>
-                  <Switch
-                    id="allowAssetDownload"
-                    checked={allowAssetDownload}
-                    onCheckedChange={setAllowAssetDownload}
-	                  />
-	                </div>
-	              </div>
 	          </CollapsibleSection>
 
 	          {/* Revision Settings */}
@@ -763,15 +751,45 @@ export default function ProjectSettingsPage() {
 	              </div>
 	          </CollapsibleSection>
 
-	          {/* Comment Settings */}
+	          {/* Client Share Page Options */}
 	          <CollapsibleSection
 	            className="border-border"
-	            title="Feedback & Comments"
-	            description="Control how clients can leave feedback"
+	            title="Client Share Page"
+	            description="Control client access, downloads, and approval permissions"
 	            open={showFeedback}
 	            onOpenChange={setShowFeedback}
 	            contentClassName="space-y-6 border-t pt-4"
 	          >
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="clientCanApprove">Allow Client Approval</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow clients to approve videos. When disabled, only admins can approve videos.
+                    </p>
+                  </div>
+                  <Switch
+                    id="clientCanApprove"
+                    checked={clientCanApprove}
+                    onCheckedChange={setClientCanApprove}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="allowAssetDownload">Allow Asset Downloads</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow clients to download project assets when the video is approved
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowAssetDownload"
+                    checked={allowAssetDownload}
+                    onCheckedChange={setAllowAssetDownload}
+                  />
+                </div>
+              </div>
+
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="flex items-center justify-between gap-4">
 	                  <div className="space-y-0.5 flex-1">

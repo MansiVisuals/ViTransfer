@@ -63,8 +63,9 @@ model Project {
   watermarkEnabled  Boolean @default(true) // Enable/disable watermarks for this project
   watermarkText     String? // Custom watermark text (null = use default format)
 
-  // Asset download settings
+  // Client share page settings
   allowAssetDownload Boolean @default(true) // Allow clients to download video assets when project is approved
+  clientCanApprove   Boolean @default(true) // Allow clients to approve videos (false = admin only)
 
   // Client notification settings (per-project)
   // Note: Approval emails are always IMMEDIATE regardless of this setting

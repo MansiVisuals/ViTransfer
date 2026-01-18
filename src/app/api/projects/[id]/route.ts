@@ -28,6 +28,7 @@ const updateProjectSchema = z.object({
   watermarkEnabled: z.boolean().optional(),
   watermarkText: z.string().max(100).nullable().optional(),
   allowAssetDownload: z.boolean().optional(),
+  clientCanApprove: z.boolean().optional(),
   sharePassword: z.string().max(200).nullable().optional(),
   authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
   guestMode: z.boolean().optional(),
@@ -286,6 +287,10 @@ export async function PATCH(
 
     if (validatedBody.allowAssetDownload !== undefined) {
       updateData.allowAssetDownload = validatedBody.allowAssetDownload
+    }
+
+    if (validatedBody.clientCanApprove !== undefined) {
+      updateData.clientCanApprove = validatedBody.clientCanApprove
     }
 
     // Handle password, authMode, and guest settings updates

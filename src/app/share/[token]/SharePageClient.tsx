@@ -766,6 +766,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   isAdmin={false}
                   isGuest={isGuest}
                   allowAssetDownload={project.allowAssetDownload}
+                  clientCanApprove={project.clientCanApprove}
                   shareToken={shareToken}
                 />
               </div>

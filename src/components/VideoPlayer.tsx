@@ -33,6 +33,7 @@ interface VideoPlayerProps {
   initialSeekTime?: number | null // Initial timestamp to seek to (from URL params)
   initialVideoIndex?: number // Initial video index to select (from URL params)
   allowAssetDownload?: boolean // Allow clients to download assets
+  clientCanApprove?: boolean // Allow clients to approve videos (false = admin only)
   shareToken?: string | null
   hideDownloadButton?: boolean // Hide download button completely (for admin share view)
 }
@@ -54,6 +55,7 @@ export default function VideoPlayer({
   initialSeekTime = null,
   initialVideoIndex = 0,
   allowAssetDownload = true,
+  clientCanApprove = true, // Default to true (clients can approve)
   shareToken = null,
   hideDownloadButton = false, // Default to false (show download button)
 }: VideoPlayerProps) {
@@ -710,7 +712,8 @@ export default function VideoPlayer({
         </div>
 
         {/* Note & Approval Section (only if video not approved and approval is allowed) */}
-        {!isVideoApproved && onApprove && (
+        {/* Show approve button if: video not approved, callback exists, and (user is admin OR clients can approve) */}
+        {!isVideoApproved && onApprove && (isAdmin || clientCanApprove) && (
           <>
             <div className="text-xs text-muted-foreground pt-3 mt-3 border-t border-border">
               <span className="font-medium text-foreground">Note:</span> This is a downscaled preview{watermarkEnabled && ' with watermark'}. Original quality will be available for download once approved.

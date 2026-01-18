@@ -144,9 +144,8 @@ export default function ProjectSettingsPage() {
   // Collapsible section state (all collapsed by default)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
   const [showClientInfo, setShowClientInfo] = useState(false)
+  const [showClientSharePage, setShowClientSharePage] = useState(false)
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
-  const [showRevisionTracking, setShowRevisionTracking] = useState(false)
-  const [showFeedback, setShowFeedback] = useState(false)
   const [showSecurity, setShowSecurity] = useState(false)
 
   // Track original processing settings for change detection
@@ -576,6 +575,57 @@ export default function ProjectSettingsPage() {
 	                  </p>
 	                </div>
 	              </div>
+
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="enableRevisions">Enable Revision Tracking</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Track and limit the number of video revisions
+                    </p>
+                  </div>
+                  <Switch
+                    id="enableRevisions"
+                    checked={enableRevisions}
+                    onCheckedChange={setEnableRevisions}
+                  />
+                </div>
+
+                {enableRevisions && (
+                  <div className="space-y-2">
+                    <Label htmlFor="maxRevisions">Maximum Revisions</Label>
+                    <Input
+                      id="maxRevisions"
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={maxRevisions}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === '') {
+                          setMaxRevisions('')
+                        } else {
+                          const num = parseInt(val, 10)
+                          if (!isNaN(num)) setMaxRevisions(num)
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const val = e.target.value
+                        if (val === '') {
+                          setMaxRevisions(1)
+                        } else {
+                          const num = parseInt(val, 10)
+                          if (isNaN(num) || num < 1) setMaxRevisions(1)
+                          else if (num > 20) setMaxRevisions(20)
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 1. Applies to each video group independently.
+                    </p>
+                  </div>
+                )}
+              </div>
 	          </CollapsibleSection>
 
 	          {/* Client Information & Notifications */}
@@ -604,6 +654,92 @@ export default function ProjectSettingsPage() {
                   label="Client Notification Schedule"
 	                  description="Configure when clients receive summaries of your replies for this project. Note: Approval emails are always sent immediately."
 	                />
+	              </div>
+	          </CollapsibleSection>
+
+	          {/* Client Share Page */}
+	          <CollapsibleSection
+	            className="border-border"
+	            title="Client Share Page"
+	            description="Control client access, downloads, and approval permissions"
+	            open={showClientSharePage}
+	            onOpenChange={setShowClientSharePage}
+	            contentClassName="space-y-6 border-t pt-4"
+	          >
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="clientCanApprove">Allow Client Approval</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow clients to approve videos. When disabled, only admins can approve videos.
+                    </p>
+                  </div>
+                  <Switch
+                    id="clientCanApprove"
+                    checked={clientCanApprove}
+                    onCheckedChange={setClientCanApprove}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="allowAssetDownload">Allow Asset Downloads</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow clients to download project assets when the video is approved
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowAssetDownload"
+                    checked={allowAssetDownload}
+                    onCheckedChange={setAllowAssetDownload}
+                  />
+                </div>
+              </div>
+
+	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+	                <div className="flex items-center justify-between gap-4">
+	                  <div className="space-y-0.5 flex-1">
+	                    <Label htmlFor="hideFeedback">Hide Feedback Section</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Completely hide the Feedback & Discussion window from clients
+                    </p>
+                  </div>
+                  <Switch
+                    id="hideFeedback"
+                    checked={hideFeedback}
+                    onCheckedChange={setHideFeedback}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="restrictComments">Restrict Comments to Latest Version</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Only allow feedback on the most recent video version
+                    </p>
+                  </div>
+                  <Switch
+                    id="restrictComments"
+                    checked={restrictCommentsToLatestVersion}
+                    onCheckedChange={setRestrictCommentsToLatestVersion}
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2 mt-2 border-t border-border">
+                  <Label>Comment Timestamp Display</Label>
+                  <Select value={timestampDisplay} onValueChange={(v) => setTimestampDisplay(v as 'AUTO' | 'TIMECODE')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TIMECODE">Timecode (HH:MM:SS:FF)</SelectItem>
+                      <SelectItem value="AUTO">Simple Time (MM:SS / HH:MM:SS)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Controls how timestamps appear in comment badges on the share page.
+	                  </p>
+	                </div>
 	              </div>
 	          </CollapsibleSection>
 
@@ -685,156 +821,6 @@ export default function ProjectSettingsPage() {
                   </>
                 )}
               </div>
-	          </CollapsibleSection>
-
-	          {/* Revision Settings */}
-	          <CollapsibleSection
-	            className="border-border"
-	            title="Revision Tracking"
-	            description="Manage how video revisions are tracked and limited"
-	            open={showRevisionTracking}
-	            onOpenChange={setShowRevisionTracking}
-	            contentClassName="space-y-6 border-t pt-4"
-	          >
-	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-	                <div className="flex items-center justify-between gap-4">
-	                  <div className="space-y-0.5 flex-1">
-	                    <Label htmlFor="enableRevisions">Enable Revision Tracking</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Track and limit the number of video revisions
-                    </p>
-                  </div>
-                  <Switch
-                    id="enableRevisions"
-                    checked={enableRevisions}
-                    onCheckedChange={setEnableRevisions}
-                  />
-                </div>
-
-                {enableRevisions && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="maxRevisions">Maximum Revisions</Label>
-                      <Input
-                        id="maxRevisions"
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={maxRevisions}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          if (val === '') {
-                            setMaxRevisions('')
-                          } else {
-                            const num = parseInt(val, 10)
-                            if (!isNaN(num)) setMaxRevisions(num)
-                          }
-                        }}
-                        onBlur={(e) => {
-                          // Only validate on blur - ensure at least 1
-                          const val = e.target.value
-                          if (val === '') {
-                            setMaxRevisions(1)
-                          } else {
-                            const num = parseInt(val, 10)
-                            if (isNaN(num) || num < 1) setMaxRevisions(1)
-                            else if (num > 20) setMaxRevisions(20)
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Must be at least 1. Applies to each video group independently.
-	                      </p>
-	                    </div>
-	                  </div>
-	                )}
-	              </div>
-	          </CollapsibleSection>
-
-	          {/* Client Share Page Options */}
-	          <CollapsibleSection
-	            className="border-border"
-	            title="Client Share Page"
-	            description="Control client access, downloads, and approval permissions"
-	            open={showFeedback}
-	            onOpenChange={setShowFeedback}
-	            contentClassName="space-y-6 border-t pt-4"
-	          >
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="clientCanApprove">Allow Client Approval</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Allow clients to approve videos. When disabled, only admins can approve videos.
-                    </p>
-                  </div>
-                  <Switch
-                    id="clientCanApprove"
-                    checked={clientCanApprove}
-                    onCheckedChange={setClientCanApprove}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="allowAssetDownload">Allow Asset Downloads</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Allow clients to download project assets when the video is approved
-                    </p>
-                  </div>
-                  <Switch
-                    id="allowAssetDownload"
-                    checked={allowAssetDownload}
-                    onCheckedChange={setAllowAssetDownload}
-                  />
-                </div>
-              </div>
-
-	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-	                <div className="flex items-center justify-between gap-4">
-	                  <div className="space-y-0.5 flex-1">
-	                    <Label htmlFor="hideFeedback">Hide Feedback Section</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Completely hide the Feedback & Discussion window from clients
-                    </p>
-                  </div>
-                  <Switch
-                    id="hideFeedback"
-                    checked={hideFeedback}
-                    onCheckedChange={setHideFeedback}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="restrictComments">Restrict Comments to Latest Version</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Only allow feedback on the most recent video version
-                    </p>
-                  </div>
-                  <Switch
-                    id="restrictComments"
-                    checked={restrictCommentsToLatestVersion}
-                    onCheckedChange={setRestrictCommentsToLatestVersion}
-                  />
-                </div>
-
-                <div className="space-y-2 pt-2 mt-2 border-t border-border">
-                  <Label>Comment Timestamp Display</Label>
-                  <Select value={timestampDisplay} onValueChange={(v) => setTimestampDisplay(v as 'AUTO' | 'TIMECODE')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="TIMECODE">Timecode (HH:MM:SS:FF)</SelectItem>
-                      <SelectItem value="AUTO">Simple Time (MM:SS / HH:MM:SS)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Controls how timestamps appear in comment badges on the share page.
-	                  </p>
-	                </div>
-	              </div>
 	          </CollapsibleSection>
 
 	          {/* Security Settings */}

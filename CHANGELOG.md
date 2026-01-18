@@ -5,6 +5,57 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-01-18
+
+### Added
+- **Push notifications via Apprise**: Send notifications to 100+ services (Slack, Discord, Telegram, Pushover, etc.)
+  - Configure multiple notification channels in Settings > Integrations
+  - Trigger notifications on admin login, OTP requests, project approvals, and new comments
+  - Test notifications before saving configuration
+  - Notification logs with delivery status tracking
+  - Python/Apprise runs in isolated venv within the container
+- **Email unsubscribe**: Recipients can opt out of email notifications
+  - One-click unsubscribe links in all email templates
+  - Dedicated unsubscribe page with confirmation
+  - Per-recipient unsubscribe tracking in database
+  - Unified email templates with consistent branding
+- **Project archiving**: Archive projects to hide them from active views
+  - New ARCHIVED status blocks share page access
+  - Archived projects can be restored anytime
+  - Filter dropdown to show/hide archived projects
+- **Client approval control**: Per-project toggle to restrict video approval to admins only
+  - When disabled, clients can comment and download but cannot approve
+  - Backend enforces restriction (not just UI)
+- **Custom 404 pages**: Branded error pages for root, admin, and share routes
+- **Filter system**: Reusable FilterDropdown component for status filtering across pages
+- **Configurable admin session timeout**: Set inactivity timeout in Settings (default 15 minutes)
+- **Comment timestamp display setting**: Choose between timecode (HH:MM:SS:FF) or simple time (MM:SS) per project
+- **Header about dialog**: Quick access to version info and website link (replaces footer)
+
+### Changed
+- **Analytics moved into projects**: Analytics now accessible at `/projects/[id]/analytics` with overview on dashboard
+- **Project settings reorganized**:
+  - Revision tracking merged into Project Details section
+  - New section order: Project Details → Client Information → Client Share Page → Video Processing → Security
+  - Client Share Page section consolidates approval, downloads, and feedback options
+- **User management refactored**: Password and passkey management now use modal dialogs
+- **Settings UI**: All sections use CollapsibleSection component for consistency
+- **Integrations page**: Icon-only display for cleaner layout
+- **Button styling standardized**: Consistent sizes and labels across all admin pages
+- **Comment UI refined**: Theme tokens, improved bubble styling, thread layout improvements
+- **Tagline updated**: Focus on "deliverables" messaging
+
+### Fixed
+- Share authentication hardened with proper 401 handling for expired/invalid tokens
+- Dialog close button highlight removed for cleaner appearance
+- Session timeout wording aligned across UI
+
+### Security
+- **Base image updated**: node:24.13.0-alpine3.23 (latest Node.js 24 LTS)
+- **CVE documentation**: Updated SECURITY.md with current vulnerability assessment
+  - All remaining CVEs are in upstream packages (npm bundled, Alpine system) awaiting fixes
+  - No vulnerabilities in project dependencies (npm audit clean)
+
 ## [0.8.2] - 2025-12-24
 
 ### Fixed

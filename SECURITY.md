@@ -66,39 +66,40 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 
 ## Vulnerability Assessment
 
-### Docker Scout Scan Results (As of 2025-12-05 - Version 0.6.4)
+### Docker Scout Scan Results (As of 2026-01-18)
 
 **Scan Summary:**
-- **Image**: crypt010/vitransfer:0.6.4
-- **Platform**: linux/arm64
-- **Base Image**: node:24.11.1-alpine3.23
-- **Image Size**: 774 MB
-- **Total Packages**: 1308
-- **Vulnerabilities**: 0 Critical | 0 High | 0 Medium | 0 Low | 1 Unspecified
+- **Base Image**: node:24.13.0-alpine3.23
+- **Vulnerabilities**: 0 Critical | 3 High | 3 Medium | 1 Low
 
-**Known Vulnerabilities:**
+**Known Vulnerabilities (Awaiting Upstream Fixes):**
 
-| CVE ID | Severity | Package | Status | Risk Level |
-|--------|----------|---------|--------|-----------|
-| RUSTSEC-2024-0436 | Unspecified | cargo/paste@1.0.15 | No fix available | Very Low |
+| CVE ID | Severity | Package | Type | Status |
+|--------|----------|---------|------|--------|
+| CVE-2026-23745 | High | tar@7.5.1 | npm | Path Traversal - awaiting npm fix |
+| CVE-2025-64756 | High | glob@10.x/11.x | npm | OS Command Injection - awaiting npm fix |
+| CVE-2025-64118 | Medium | tar@7.5.1 | npm | Race Condition - awaiting npm fix |
+| CVE-2026-22184 | Medium | zlib@1.3.1-r2 | apk | Awaiting Alpine fix |
+| CVE-2025-60876 | Medium | busybox@1.37.0-r30 | apk | Awaiting Alpine fix |
+| GHSA-73rr-hh4g-fpgx | Low | diff | npm | ReDoS - low severity |
 
-### Details: RUSTSEC-2024-0436
+### Risk Assessment
 
-**What is it?**
-- Unspecified vulnerability in the `paste` Rust crate (version 1.0.15)
-- Transitive dependency through Alpine FFmpeg package (rav1e encoder component)
-- No CVE score assigned
+**npm packages (tar, glob, diff):**
+- These are bundled with npm itself in the Node.js base image
+- Not directly used by ViTransfer application code
+- Awaiting upstream fixes from the npm team
+- Risk is limited to npm operations during build time
 
-**Risk Assessment:**
-- **Exploitability**: Very Low - indirect dependency not accessible via API
-- **Impact**: Minimal - macro helper library used internally by FFmpeg
-- **Attack Vector**: Requires specially crafted video file + FFmpeg processing + container escape
-- **Mitigation**: Sandboxed in containerized environment with limited permissions
+**Alpine packages (zlib, busybox):**
+- Core Alpine system packages awaiting upstream fixes
+- Standard packages present in all Alpine-based containers
+- Image uses `apk upgrade` to pull latest available patches
 
 ## Security Hardening
 
 ### Container Security
-- Base image: node:24.11.1-alpine3.23 with latest security patches
+- Base image: node:24.13.0-alpine3.23 with latest security patches
 - Non-root user execution (PUID/PGID support)
 - no-new-privileges security option enabled
 - Regular image rebuilds with security updates

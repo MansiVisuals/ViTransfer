@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Comment } from '@prisma/client'
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward } from 'lucide-react'
 import { getUserColor } from '@/lib/utils'
-import { timecodeToSeconds } from '@/lib/timecode'
+import { timecodeToSeconds, secondsToTimecode, formatCommentTimestamp } from '@/lib/timecode'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -28,6 +28,8 @@ interface CustomVideoControlsProps {
   videoFps?: number
   videoId?: string
   isAdmin?: boolean
+  timestampDisplayMode?: 'TIMECODE' | 'AUTO'
+  onMarkerClick?: (commentId: string) => void // Callback when a timeline marker is clicked
 }
 
 // Color map for marker backgrounds - IDENTICAL to InitialsAvatar component
@@ -263,6 +265,23 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+function formatTimeWithMode(
+  seconds: number,
+  fps: number,
+  videoDurationSeconds: number,
+  mode: 'TIMECODE' | 'AUTO'
+): string {
+  if (!seconds || isNaN(seconds) || !isFinite(seconds)) return mode === 'TIMECODE' ? '00:00:00:00' : '0:00'
+  
+  const timecode = secondsToTimecode(seconds, fps)
+  return formatCommentTimestamp({
+    timecode,
+    fps,
+    videoDurationSeconds,
+    mode,
+  })
+}
+
 interface MarkerData {
   id: string
   timestamp: number
@@ -291,6 +310,8 @@ export default function CustomVideoControls({
   videoFps = 24,
   videoId = '',
   isAdmin = false,
+  timestampDisplayMode = 'TIMECODE',
+  onMarkerClick,
 }: CustomVideoControlsProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
@@ -432,13 +453,21 @@ export default function CustomVideoControls({
     e.stopPropagation()
     e.preventDefault()
     onSeek(marker.timestamp)
-  }, [onSeek])
+    // Notify parent to scroll to comment
+    if (onMarkerClick) {
+      onMarkerClick(marker.id)
+    }
+  }, [onSeek, onMarkerClick])
 
   const handleMarkerTouchEnd = useCallback((marker: MarkerData, e: React.TouchEvent) => {
     e.stopPropagation()
     e.preventDefault()
     onSeek(marker.timestamp)
-  }, [onSeek])
+    // Notify parent to scroll to comment
+    if (onMarkerClick) {
+      onMarkerClick(marker.id)
+    }
+  }, [onSeek, onMarkerClick])
 
   const handleMarkerMouseEnter = useCallback((markerId: string) => {
     setHoveredMarkerId(markerId)
@@ -666,7 +695,7 @@ export default function CustomVideoControls({
 
           {/* Time Display */}
           <div className="text-white text-xs sm:text-sm font-mono ml-1 sm:ml-2 whitespace-nowrap">
-            {formatTime(currentTime)} / {formatTime(videoDuration)}
+            {formatTimeWithMode(currentTime, videoFps, videoDuration, timestampDisplayMode)} / {formatTimeWithMode(videoDuration, videoFps, videoDuration, timestampDisplayMode)}
           </div>
         </div>
 

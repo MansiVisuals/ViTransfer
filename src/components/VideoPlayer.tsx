@@ -42,6 +42,8 @@ interface VideoPlayerProps {
   shareToken?: string | null
   hideDownloadButton?: boolean // Hide download button completely (for admin share view)
   comments?: CommentWithReplies[] // Comments for timeline markers
+  timestampDisplayMode?: 'TIMECODE' | 'AUTO' // Timestamp display format (default: TIMECODE)
+  onCommentFocus?: (commentId: string) => void // Callback when a timeline marker is clicked
 }
 
 export default function VideoPlayer({
@@ -65,6 +67,8 @@ export default function VideoPlayer({
   shareToken = null,
   hideDownloadButton = false, // Default to false (show download button)
   comments = [], // Default to empty array
+  timestampDisplayMode = 'TIMECODE', // Default to TIMECODE format
+  onCommentFocus, // Callback when timeline marker is clicked
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
@@ -793,6 +797,8 @@ export default function VideoPlayer({
                 videoFps={selectedVideo?.fps || 24}
                 videoId={selectedVideo?.id}
                 isAdmin={isAdmin}
+                timestampDisplayMode={timestampDisplayMode}
+                onMarkerClick={onCommentFocus}
               />
             </div>
 

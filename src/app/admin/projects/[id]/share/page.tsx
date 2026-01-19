@@ -21,8 +21,9 @@ export default function AdminSharePage() {
   const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
   const urlVideoName = searchParams?.get('video') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
-  const focusCommentId = searchParams?.get('comment') || null
+  const urlFocusCommentId = searchParams?.get('comment') || null
 
+  const [focusCommentId, setFocusCommentId] = useState<string | null>(urlFocusCommentId)
   const [project, setProject] = useState<any>(null)
   const [comments, setComments] = useState<any[]>([])
   const [commentsLoading, setCommentsLoading] = useState(false)
@@ -440,6 +441,8 @@ export default function AdminSharePage() {
                   onApprove={undefined}
                   hideDownloadButton={true}
                   comments={!project.hideFeedback ? filteredComments : []}
+                  timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
+                  onCommentFocus={(commentId) => setFocusCommentId(commentId)}
                 />
               </div>
 

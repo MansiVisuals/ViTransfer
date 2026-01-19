@@ -24,8 +24,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
   const urlVideoName = searchParams?.get('video') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
-  const focusCommentId = searchParams?.get('comment') || null
+  const urlFocusCommentId = searchParams?.get('comment') || null
 
+  const [focusCommentId, setFocusCommentId] = useState<string | null>(urlFocusCommentId)
   const [isPasswordProtected, setIsPasswordProtected] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
@@ -769,6 +770,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   clientCanApprove={project.clientCanApprove}
                   shareToken={shareToken}
                   comments={!project.hideFeedback && !isGuest ? filteredComments : []}
+                  timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
+                  onCommentFocus={(commentId) => setFocusCommentId(commentId)}
                 />
               </div>
 

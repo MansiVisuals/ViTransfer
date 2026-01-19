@@ -56,8 +56,12 @@ const SHARE_TOKEN_DURATION = Number(process.env.SHARE_TOKEN_TTL_SECONDS || 45 * 
 const DUMMY_BCRYPT_HASH = '$2a$14$aoLibk0GEJrzo6fSqPoQIONMGynUKWEoQhkCrFcEapn6I.WzXXdki'
 
 if (process.env.SKIP_ENV_VALIDATION !== '1') {
-  if (!ADMIN_ACCESS_SECRET || !ADMIN_REFRESH_SECRET || !SHARE_TOKEN_SECRET) {
-    throw new Error('JWT secrets must be configured (JWT_SECRET, JWT_REFRESH_SECRET, SHARE_TOKEN_SECRET).')
+  const missing: string[] = []
+  if (!ADMIN_ACCESS_SECRET) missing.push('JWT_SECRET')
+  if (!ADMIN_REFRESH_SECRET) missing.push('JWT_REFRESH_SECRET')
+  if (!SHARE_TOKEN_SECRET) missing.push('SHARE_TOKEN_SECRET')
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}. Generate with: openssl rand -base64 32`)
   }
 }
 

@@ -22,10 +22,8 @@ interface AdminVideoManagerProps {
   projectId: string
   videos: any[]
   projectStatus: string
-  comments?: any[]
   restrictToLatestVersion?: boolean
   companyName?: string
-  onVideoSelect?: (videoName: string, videos: any[]) => void
   onRefresh?: () => void
   sortMode?: 'status' | 'alphabetical'
   maxRevisions?: number
@@ -36,10 +34,8 @@ export default function AdminVideoManager({
   projectId,
   videos,
   projectStatus,
-  comments = [],
   restrictToLatestVersion = false,
   companyName = 'Studio',
-  onVideoSelect,
   onRefresh,
   sortMode = 'alphabetical',
   maxRevisions,
@@ -80,10 +76,6 @@ export default function AdminVideoManager({
     } else {
       // Expand this video (and collapse any other)
       setExpandedGroup(name)
-      // Notify parent when expanding a video
-      if (onVideoSelect && videoGroups[name]) {
-        onVideoSelect(name, videoGroups[name])
-      }
     }
   }
 

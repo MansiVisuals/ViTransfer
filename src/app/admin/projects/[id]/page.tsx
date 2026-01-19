@@ -1,15 +1,13 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
-import ShareLink from '@/components/ShareLink'
-import CommentSection from '@/components/CommentSection'
-import { ArrowLeft, Settings, ArrowUpDown, FolderKanban, Video } from 'lucide-react'
+import { ArrowLeft, Settings, ArrowUpDown, Video } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
 // Force dynamic rendering (no static pre-rendering)
@@ -24,15 +22,7 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true)
   const [shareUrl, setShareUrl] = useState('')
   const [companyName, setCompanyName] = useState('Studio')
-  const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
-  const [adminUser, setAdminUser] = useState<any>(null)
-
-  // Derive active videos from selected video name (synchronous, no useEffect delay)
-  const activeVideos = useMemo(() => {
-    if (!project?.videos || !activeVideoName) return []
-    return project.videos.filter((v: any) => v.name === activeVideoName)
-  }, [project?.videos, activeVideoName])
 
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = async () => {
@@ -121,7 +111,7 @@ export default function ProjectPage() {
     fetchShareUrl()
   }, [project?.slug])
 
-  // Fetch company name and admin user
+  // Fetch company name
   useEffect(() => {
     async function fetchCompanyName() {
       try {
@@ -135,27 +125,8 @@ export default function ProjectPage() {
       }
     }
 
-    async function fetchAdminUser() {
-      try {
-        const response = await apiFetch('/api/auth/session')
-        if (response.ok) {
-          const data = await response.json()
-          setAdminUser(data.user)
-        }
-      } catch (error) {
-        console.error('Error fetching admin user:', error)
-      }
-    }
-
     fetchCompanyName()
-    fetchAdminUser()
   }, [])
-
-  // Handle video selection
-  const handleVideoSelect = (videoName: string, videos: any[]) => {
-    setActiveVideoName(videoName)
-    // activeVideos is now derived from activeVideoName via useMemo
-  }
 
   if (loading) {
     return (
@@ -178,13 +149,6 @@ export default function ProjectPage() {
   }
 
   // Filter comments to only show comments for active videos
-  const activeVideoIds = new Set(activeVideos.map((v: any) => v.id))
-  const filteredComments = project?.comments?.filter((comment: any) => {
-    // Show general comments (no videoId) or comments for active videos
-    return !comment.videoId || activeVideoIds.has(comment.videoId)
-  }) || []
-
-  const hideFeedback = (project as any).hideFeedback === true
   const iconBadgeClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const iconBadgeIconClassName = 'w-4 h-4 text-primary'
 
@@ -208,66 +172,28 @@ export default function ProjectPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6 min-w-0">
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-                  <div className="min-w-0 flex-1">
-	                    <CardTitle className="flex items-center gap-2 break-words">
-	                      <span className={iconBadgeClassName}>
-	                        <FolderKanban className={iconBadgeIconClassName} />
-	                      </span>
-	                      <span className="min-w-0 break-words">{project.title}</span>
-	                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-2 break-words">{project.description}</p>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${
-                      project.status === 'APPROVED'
-                        ? 'bg-success-visible text-success border-2 border-success-visible'
-                        : project.status === 'SHARE_ONLY'
-                        ? 'bg-info-visible text-info border-2 border-info-visible'
-                        : project.status === 'IN_REVIEW'
-                        ? 'bg-primary-visible text-primary border-2 border-primary-visible'
-                        : 'bg-muted text-muted-foreground border border-border'
-                    }`}
-                  >
-                    {project.status.replace('_', ' ')}
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-sm">
-                    <div className="min-w-0">
-                      <p className="text-muted-foreground">Client</p>
-                      <p className="font-medium break-words">
-                        {(() => {
-                          const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
-                          return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
-                        })()}
-                      </p>
-                      {!project.companyName && project.recipients?.[0]?.name && project.recipients?.[0]?.email && (
-                        <p className="text-xs text-muted-foreground break-all">
-                          {project.recipients[0].email}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+          {/* Actions Panel - Top on mobile, right on desktop */}
+          <div className="lg:col-start-3 lg:row-start-1 min-w-0">
+            <ProjectActions 
+              project={project} 
+              videos={project.videos} 
+              onRefresh={fetchProject}
+              shareUrl={shareUrl}
+              companyName={companyName}
+              recipients={project.recipients || []}
+            />
+          </div>
 
-                  <ShareLink shareUrl={shareUrl} />
-                </div>
-              </CardContent>
-            </Card>
-
+          {/* Videos Section - Below actions on mobile, left on desktop */}
+          <div className="lg:col-span-2 lg:row-start-1 space-y-6 min-w-0">
             <div>
-	              <div className="flex items-center justify-between mb-4">
-	                <h2 className="text-xl font-semibold flex items-center gap-2">
-	                  <span className={iconBadgeClassName}>
-	                    <Video className={iconBadgeIconClassName} />
-	                  </span>
-	                  Videos
-	                </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <span className={iconBadgeClassName}>
+                    <Video className={iconBadgeIconClassName} />
+                  </span>
+                  Videos
+                </h2>
                 {project.videos.length > 0 && (
                   <Button
                     variant="ghost"
@@ -284,45 +210,14 @@ export default function ProjectPage() {
                 projectId={project.id}
                 videos={project.videos}
                 projectStatus={project.status}
-                comments={project.comments}
                 restrictToLatestVersion={project.restrictCommentsToLatestVersion}
                 companyName={companyName}
-                onVideoSelect={handleVideoSelect}
                 onRefresh={fetchProject}
                 sortMode={sortMode}
                 maxRevisions={project.maxRevisions}
                 enableRevisions={project.enableRevisions}
               />
             </div>
-          </div>
-
-          <div className="space-y-6 min-w-0">
-            <ProjectActions project={project} videos={project.videos} onRefresh={fetchProject} />
-
-            {!hideFeedback && activeVideos.length > 0 && (
-              <div className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
-                <CommentSection
-                  key={activeVideoName} // Force fresh component per video
-                  projectId={project.id}
-                  projectSlug={project.slug}
-                  comments={filteredComments}
-                  clientName={(() => {
-                    const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
-                    return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
-                  })()}
-                  clientEmail={project.recipients?.[0]?.email}
-                  isApproved={project.status === 'APPROVED'}
-                  restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                  videos={activeVideos}
-                  isAdminView={true}
-                  smtpConfigured={true}
-                  isPasswordProtected={!!project.sharePassword}
-                  adminUser={adminUser}
-                  recipients={project.recipients || []}
-                  timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>

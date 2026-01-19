@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Project } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Trash2, ExternalLink, Archive, ArchiveRestore, RotateCcw, Send, Loader2, CheckCircle, BarChart3 } from 'lucide-react'
+import { Trash2, ExternalLink, Archive, ArchiveRestore, RotateCcw, Send, Loader2, CheckCircle, BarChart3, FolderKanban } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -34,13 +34,17 @@ interface ProjectActionsProps {
   project: Project
   videos: Video[]
   onRefresh?: () => void
+  shareUrl?: string
+  companyName?: string
+  recipients?: any[]
 }
 
-export default function ProjectActions({ project, videos, onRefresh }: ProjectActionsProps) {
+export default function ProjectActions({ project, videos, onRefresh, shareUrl = '', companyName, recipients = [] }: ProjectActionsProps) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingApproval, setIsTogglingApproval] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   // Unapprove modal state
   const [showUnapproveModal, setShowUnapproveModal] = useState(false)
@@ -282,9 +286,82 @@ export default function ProjectActions({ project, videos, onRefresh }: ProjectAc
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Actions</CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="flex items-center gap-2 break-words mb-2">
+                <span className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                  <FolderKanban className="w-4 h-4 text-primary" />
+                </span>
+                <span className="min-w-0 break-words">{project.title}</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground break-words">{(project as any).description}</p>
+            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${
+                project.status === 'APPROVED'
+                  ? 'bg-success-visible text-success border-2 border-success-visible'
+                  : project.status === 'SHARE_ONLY'
+                  ? 'bg-info-visible text-info border-2 border-info-visible'
+                  : project.status === 'IN_REVIEW'
+                  ? 'bg-primary-visible text-primary border-2 border-primary-visible'
+                  : 'bg-muted text-muted-foreground border border-border'
+              }`}
+            >
+              {project.status.replace('_', ' ')}
+            </span>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Client Information */}
+          <div className="pb-3 border-b border-border">
+            <div className="text-sm">
+              <p className="text-muted-foreground mb-1">Client</p>
+              <p className="font-medium break-words">
+                {(() => {
+                  const primaryRecipient = recipients?.find((r: any) => r.isPrimary) || recipients?.[0]
+                  return companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
+                })()}
+              </p>
+              {!companyName && recipients?.[0]?.name && recipients?.[0]?.email && (
+                <p className="text-xs text-muted-foreground break-all">
+                  {recipients[0].email}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Share Link */}
+          {shareUrl && (
+            <div className="pb-3 border-b border-border">
+              <p className="text-sm text-muted-foreground mb-2">Share Link</p>
+              <div className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareUrl}
+                  className="flex-1 px-3 py-2 border rounded-md text-xs bg-muted truncate"
+                />
+                <Button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl)
+                    setLinkCopied(true)
+                    setTimeout(() => setLinkCopied(false), 2000)
+                  }} 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full"
+                >
+                  {linkCopied ? 'Copied!' : 'Copy Link'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Actions Section Title */}
+          <div className="pt-2">
+            <h3 className="text-sm font-semibold mb-3">Project Actions</h3>
+          </div>
+
           {/* Send Notification Button - only show if there are ready videos */}
           {readyVideos.length > 0 && (
             <div>

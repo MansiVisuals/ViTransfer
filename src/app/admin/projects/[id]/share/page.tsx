@@ -439,6 +439,7 @@ export default function AdminSharePage() {
                   shareToken={null}
                   onApprove={undefined}
                   hideDownloadButton={true}
+                  comments={!project.hideFeedback ? filteredComments : []}
                 />
               </div>
 

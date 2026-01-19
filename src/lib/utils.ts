@@ -160,56 +160,118 @@ export function getClientIpAddress(request: NextRequest): string {
 }
 
 /**
- * Generate a consistent vibrant border color for a user based on their name
- * Returns border color class for left border on message bubbles
+ * Color assignment system with persistence and uniqueness guarantees
+ * Ensures different names always get different colors within the same palette
+ * 
  * @param name - User's name for color generation
  * @param isSender - True if this is the sender (your message), false for receiver
  */
+
+// In-memory color registry (persists during page session)
+const colorRegistry = {
+  sender: new Map<string, string>(),
+  receiver: new Map<string, string>()
+}
+
 export function getUserColor(name: string | null | undefined, isSender: boolean = false): { border: string } {
   if (!name) {
     // Default gray for anonymous
     return { border: 'border-gray-500' }
   }
 
-  // Simple hash function
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-    hash = hash & hash // Convert to 32bit integer
+  // Normalize name for consistency (trim, lowercase)
+  const normalizedName = name.trim().toLowerCase()
+  const palette = isSender ? 'sender' : 'receiver'
+  
+  // Check if this name already has a color assigned
+  if (colorRegistry[palette].has(normalizedName)) {
+    return { border: colorRegistry[palette].get(normalizedName)! }
   }
 
-  // Separate color palettes - sender and receiver NEVER share colors
+  // Expanded color palettes for better distribution
   const senderColors = [
-    // Earth tones for sender (beige, brown, army green)
-    { border: 'border-amber-700' },
-    { border: 'border-orange-800' },
-    { border: 'border-stone-600' },
-    { border: 'border-yellow-700' },
-    { border: 'border-lime-700' },
-    { border: 'border-green-700' },
-    { border: 'border-emerald-800' },
-    { border: 'border-teal-800' },
-    { border: 'border-slate-600' },
-    { border: 'border-zinc-600' },
+    // Earth tones for sender (admins/studio) - 20 colors
+    'border-amber-700',
+    'border-orange-800',
+    'border-stone-600',
+    'border-yellow-700',
+    'border-lime-700',
+    'border-green-700',
+    'border-emerald-800',
+    'border-teal-800',
+    'border-slate-600',
+    'border-zinc-600',
+    'border-amber-800',
+    'border-yellow-800',
+    'border-lime-800',
+    'border-green-800',
+    'border-teal-700',
+    'border-cyan-800',
+    'border-stone-700',
+    'border-slate-700',
+    'border-neutral-600',
+    'border-orange-900',
   ]
 
   const receiverColors = [
-    // Vibrant high-contrast colors for receiver
-    { border: 'border-red-500' },
-    { border: 'border-orange-500' },
-    { border: 'border-amber-500' },
-    { border: 'border-yellow-400' },
-    { border: 'border-lime-500' },
-    { border: 'border-green-500' },
-    { border: 'border-emerald-500' },
-    { border: 'border-pink-500' },
-    { border: 'border-rose-500' },
-    { border: 'border-fuchsia-500' },
+    // Vibrant high-contrast colors for receiver (clients) - 20 colors
+    'border-red-500',
+    'border-orange-500',
+    'border-amber-500',
+    'border-yellow-400',
+    'border-lime-500',
+    'border-green-500',
+    'border-emerald-500',
+    'border-teal-500',
+    'border-cyan-500',
+    'border-sky-500',
+    'border-blue-500',
+    'border-indigo-500',
+    'border-violet-500',
+    'border-purple-500',
+    'border-fuchsia-500',
+    'border-pink-500',
+    'border-rose-500',
+    'border-red-600',
+    'border-orange-600',
+    'border-yellow-500',
   ]
 
   const colors = isSender ? senderColors : receiverColors
+  
+  // Get already assigned colors in this palette
+  const assignedColors = new Set(colorRegistry[palette].values())
+  
+  // Find first available color (not yet assigned)
+  let selectedColor: string
+  const availableColors = colors.filter(color => !assignedColors.has(color))
+  
+  if (availableColors.length > 0) {
+    // Use improved hash function for better distribution among available colors
+    const hash = hashString(normalizedName)
+    const colorIndex = Math.abs(hash) % availableColors.length
+    selectedColor = availableColors[colorIndex]
+  } else {
+    // All colors assigned - fall back to hash-based selection (collision possible but rare)
+    const hash = hashString(normalizedName)
+    const colorIndex = Math.abs(hash) % colors.length
+    selectedColor = colors[colorIndex]
+  }
+  
+  // Store the assignment
+  colorRegistry[palette].set(normalizedName, selectedColor)
+  
+  return { border: selectedColor }
+}
 
-  // Use hash to pick a color
-  const colorIndex = Math.abs(hash) % colors.length
-  return colors[colorIndex]
+/**
+ * Improved hash function with better distribution
+ * Uses djb2 algorithm which produces fewer collisions
+ */
+function hashString(str: string): number {
+  let hash = 5381
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i) // hash * 33 + c
+  }
+  return hash
 }

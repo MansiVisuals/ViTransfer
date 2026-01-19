@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Video, ProjectStatus } from '@prisma/client'
+import { Video, ProjectStatus, Comment } from '@prisma/client'
 import { Button } from './ui/button'
-import { Download, Info, CheckCircle2 } from 'lucide-react'
+import { Download, Info, CheckCircle2, Keyboard } from 'lucide-react'
 import { formatTimestamp, formatFileSize, formatDate } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import {
@@ -15,6 +15,11 @@ import {
 } from './ui/dialog'
 import { VideoAssetDownloadModal } from './VideoAssetDownloadModal'
 import { getAccessToken } from '@/lib/token-store'
+import CustomVideoControls from './CustomVideoControls'
+
+type CommentWithReplies = Comment & {
+  replies?: Comment[]
+}
 
 interface VideoPlayerProps {
   videos: Video[]
@@ -36,6 +41,7 @@ interface VideoPlayerProps {
   clientCanApprove?: boolean // Allow clients to approve videos (false = admin only)
   shareToken?: string | null
   hideDownloadButton?: boolean // Hide download button completely (for admin share view)
+  comments?: CommentWithReplies[] // Comments for timeline markers
 }
 
 export default function VideoPlayer({
@@ -58,6 +64,7 @@ export default function VideoPlayer({
   clientCanApprove = true, // Default to true (clients can approve)
   shareToken = null,
   hideDownloadButton = false, // Default to false (show download button)
+  comments = [], // Default to empty array
 }: VideoPlayerProps) {
   const router = useRouter()
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
@@ -70,8 +77,17 @@ export default function VideoPlayer({
   const [checkingAssets, setCheckingAssets] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
+  const [videoDuration, setVideoDuration] = useState(0)
+  const [currentTimeState, setCurrentTimeState] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [volume, setVolume] = useState(1)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showControls, setShowControls] = useState(true)
 
   const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
   const lastTimeUpdateRef = useRef(0) // Throttle time updates
   const previousVideoNameRef = useRef<string | null>(null)
@@ -219,6 +235,18 @@ export default function VideoPlayer({
     window.addEventListener('getSelectedVideoId' as any, handleGetSelectedVideoId as EventListener)
     return () => {
       window.removeEventListener('getSelectedVideoId' as any, handleGetSelectedVideoId as EventListener)
+    }
+  }, [])
+
+  // Listen for shortcuts dialog open request from CommentSection
+  useEffect(() => {
+    const handleOpenShortcuts = () => {
+      setShowShortcutsDialog(true)
+    }
+
+    window.addEventListener('openShortcutsDialog', handleOpenShortcuts)
+    return () => {
+      window.removeEventListener('openShortcutsDialog', handleOpenShortcuts)
     }
   }, [])
 
@@ -386,10 +414,221 @@ export default function VideoPlayer({
       // Throttle to update max every 200ms instead of 60 times per second
       if (now - lastTimeUpdateRef.current > 200) {
         currentTimeRef.current = videoRef.current.currentTime
+        setCurrentTimeState(videoRef.current.currentTime)
         lastTimeUpdateRef.current = now
       }
     }
   }
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setVideoDuration(videoRef.current.duration)
+      setVolume(videoRef.current.volume)
+      setIsMuted(videoRef.current.muted)
+    }
+  }
+
+  const handleTimelineSeek = (timestamp: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = timestamp
+      currentTimeRef.current = timestamp
+      setCurrentTimeState(timestamp)
+    }
+  }
+
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play()
+        setIsPlaying(true)
+      } else {
+        videoRef.current.pause()
+        setIsPlaying(false)
+      }
+    }
+  }
+
+  const handleVolumeChange = (newVolume: number) => {
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume
+      setVolume(newVolume)
+      if (newVolume > 0 && isMuted) {
+        videoRef.current.muted = false
+        setIsMuted(false)
+      }
+    }
+  }
+
+  const handleToggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted
+      setIsMuted(videoRef.current.muted)
+    }
+  }
+
+  const handleToggleFullscreen = () => {
+    if (!containerRef.current || !videoRef.current) return
+
+    // Mobile devices (especially iOS) need special handling
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    const video = videoRef.current as any // Type cast for webkit APIs
+    
+    if (!document.fullscreenElement) {
+      // Try native video fullscreen first (better for mobile)
+      if (isMobile && video.webkitEnterFullscreen) {
+        // iOS Safari
+        try {
+          video.webkitEnterFullscreen()
+          setIsFullscreen(true)
+        } catch (error) {
+          console.error('Failed to enter fullscreen:', error)
+        }
+      } else if (isMobile && video.requestFullscreen) {
+        // Android Chrome
+        try {
+          video.requestFullscreen()
+          setIsFullscreen(true)
+        } catch (error) {
+          console.error('Failed to enter fullscreen:', error)
+        }
+      } else if (containerRef.current.requestFullscreen) {
+        // Desktop browsers
+        try {
+          containerRef.current.requestFullscreen()
+          setIsFullscreen(true)
+        } catch (error) {
+          console.error('Failed to enter fullscreen:', error)
+        }
+      }
+    } else {
+      // Exit fullscreen
+      try {
+        document.exitFullscreen()
+        setIsFullscreen(false)
+      } catch (error) {
+        console.error('Failed to exit fullscreen:', error)
+      }
+    }
+  }
+
+  const handleFrameStep = (direction: 'forward' | 'backward') => {
+    if (!videoRef.current || !selectedVideo?.fps) return
+
+    if (!videoRef.current.paused) {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    }
+
+    const frameDuration = 1 / selectedVideo.fps
+    const newTime = direction === 'forward'
+      ? Math.min(videoDuration, videoRef.current.currentTime + frameDuration)
+      : Math.max(0, videoRef.current.currentTime - frameDuration)
+    
+    videoRef.current.currentTime = newTime
+    currentTimeRef.current = newTime
+    setCurrentTimeState(newTime)
+    
+    window.dispatchEvent(new CustomEvent('videoTimeUpdated', {
+      detail: { time: currentTimeRef.current, videoId: selectedVideoIdRef.current }
+    }))
+  }
+
+  // Auto-hide controls when not in use
+  const resetControlsTimeout = () => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    setShowControls(true)
+    if (isPlaying) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 3000)
+    }
+  }
+
+  // Track video play/pause events
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handlePlay = () => {
+      setIsPlaying(true)
+      resetControlsTimeout()
+    }
+    const handlePause = () => setIsPlaying(false)
+    const handleVolumeChangeEvent = () => {
+      setVolume(video.volume)
+      setIsMuted(video.muted)
+    }
+
+    video.addEventListener('play', handlePlay)
+    video.addEventListener('pause', handlePause)
+    video.addEventListener('volumechange', handleVolumeChangeEvent)
+
+    return () => {
+      video.removeEventListener('play', handlePlay)
+      video.removeEventListener('pause', handlePause)
+      video.removeEventListener('volumechange', handleVolumeChangeEvent)
+    }
+  }, [])
+
+  // Fullscreen change event (handles both desktop and mobile)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isCurrentlyFullscreen)
+    }
+
+    const video = videoRef.current
+    if (video) {
+      // iOS Safari fullscreen events
+      const handleWebkitBegin = () => setIsFullscreen(true)
+      const handleWebkitEnd = () => setIsFullscreen(false)
+      
+      video.addEventListener('webkitbeginfullscreen', handleWebkitBegin)
+      video.addEventListener('webkitendfullscreen', handleWebkitEnd)
+      
+      // Standard fullscreen events
+      document.addEventListener('fullscreenchange', handleFullscreenChange)
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+      
+      return () => {
+        video.removeEventListener('webkitbeginfullscreen', handleWebkitBegin)
+        video.removeEventListener('webkitendfullscreen', handleWebkitEnd)
+        document.removeEventListener('fullscreenchange', handleFullscreenChange)
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+        document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+        document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+      }
+    }
+  }, [videoRef.current])
+
+  // Show controls on mouse move
+  useEffect(() => {
+    const handleMouseMove = () => {
+      resetControlsTimeout()
+    }
+
+    if (containerRef.current) {
+      containerRef.current.addEventListener('mousemove', handleMouseMove)
+    }
+
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.removeEventListener('mousemove', handleMouseMove)
+      }
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
+    }
+  }, [isPlaying])
 
   const handleDownload = async () => {
     // Use secure token-based download URL
@@ -501,37 +740,72 @@ export default function VideoPlayer({
 
   return (
     <div className="space-y-4 flex flex-col max-h-full">
-      {/* Video Player */}
-      <div className="relative bg-background rounded-lg overflow-hidden aspect-video flex-shrink min-h-0">
+      {/* Video Player Container */}
+      <div 
+        ref={containerRef}
+        className="relative bg-background rounded-lg aspect-video flex-shrink min-h-0 overflow-hidden group"
+      >
         {videoUrl ? (
-          <video
-            key={selectedVideo?.id}
-            ref={videoRef}
-            src={videoUrl}
-            poster={(selectedVideo as any).thumbnailUrl || undefined}
-            className="w-full h-full"
-            onTimeUpdate={handleTimeUpdate}
-            onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}
-            crossOrigin="anonymous"
-            controls
-            controlsList={!isAdmin ? "nodownload" : undefined}
-            playsInline
-            preload="metadata"
-            style={{
-              objectFit: 'contain',
-              backgroundColor: '#000',
-            }}
-          />
+          <>
+            <video
+              key={selectedVideo?.id}
+              ref={videoRef}
+              src={videoUrl}
+              poster={(selectedVideo as any).thumbnailUrl || undefined}
+              className="w-full h-full rounded-lg cursor-pointer"
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}
+              onClick={handlePlayPause}
+              crossOrigin="anonymous"
+              playsInline
+              preload="metadata"
+              // @ts-ignore - webkit attributes for iOS
+              webkit-playsinline="true"
+              x-webkit-airplay="allow"
+              style={{
+                objectFit: 'contain',
+                backgroundColor: '#000',
+              }}
+            />
+
+            {/* Custom Video Controls with Integrated Timeline */}
+            <div 
+              className={`transition-opacity duration-300 ${
+                showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <CustomVideoControls
+                videoRef={videoRef as React.RefObject<HTMLVideoElement>}
+                videoDuration={videoDuration}
+                currentTime={currentTimeState}
+                isPlaying={isPlaying}
+                volume={volume}
+                isMuted={isMuted}
+                isFullscreen={isFullscreen}
+                onPlayPause={handlePlayPause}
+                onSeek={handleTimelineSeek}
+                onVolumeChange={handleVolumeChange}
+                onToggleMute={handleToggleMute}
+                onToggleFullscreen={handleToggleFullscreen}
+                onFrameStep={handleFrameStep}
+                comments={comments}
+                videoFps={selectedVideo?.fps || 24}
+                videoId={selectedVideo?.id}
+                isAdmin={isAdmin}
+              />
+            </div>
+
+            {/* Playback Speed Indicator - Show when speed is not 1.0x */}
+            {playbackSpeed !== 1.0 && (
+              <div className="absolute top-4 right-4 bg-black/80 text-white px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-20">
+                {playbackSpeed.toFixed(2)}x
+              </div>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-card-foreground">
             Loading video...
-          </div>
-        )}
-
-        {/* Playback Speed Indicator - Show when speed is not 1.0x */}
-        {playbackSpeed !== 1.0 && (
-          <div className="absolute top-4 right-4 bg-black/80 text-white px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none">
-            {playbackSpeed.toFixed(2)}x
           </div>
         )}
       </div>

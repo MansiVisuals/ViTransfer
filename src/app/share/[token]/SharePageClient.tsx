@@ -768,6 +768,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   allowAssetDownload={project.allowAssetDownload}
                   clientCanApprove={project.clientCanApprove}
                   shareToken={shareToken}
+                  comments={!project.hideFeedback && !isGuest ? filteredComments : []}
                 />
               </div>
 

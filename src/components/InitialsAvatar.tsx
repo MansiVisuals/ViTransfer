@@ -112,6 +112,110 @@ const COLOR_MAP: Record<string, { bg: string; ring: string; text: string }> = {
     ring: 'ring-zinc-500/30',
     text: 'text-zinc-900 dark:text-zinc-50',
   },
+  
+  // Additional sender colors (expanded palette)
+  'border-amber-800': {
+    bg: 'bg-amber-800/15 dark:bg-amber-800/30',
+    ring: 'ring-amber-700/30',
+    text: 'text-amber-950 dark:text-amber-50',
+  },
+  'border-yellow-800': {
+    bg: 'bg-yellow-800/15 dark:bg-yellow-800/30',
+    ring: 'ring-yellow-700/30',
+    text: 'text-yellow-950 dark:text-yellow-50',
+  },
+  'border-lime-800': {
+    bg: 'bg-lime-800/15 dark:bg-lime-800/30',
+    ring: 'ring-lime-700/30',
+    text: 'text-lime-950 dark:text-lime-50',
+  },
+  'border-green-800': {
+    bg: 'bg-green-800/15 dark:bg-green-800/30',
+    ring: 'ring-green-700/30',
+    text: 'text-green-950 dark:text-green-50',
+  },
+  'border-teal-700': {
+    bg: 'bg-teal-700/15 dark:bg-teal-700/30',
+    ring: 'ring-teal-600/30',
+    text: 'text-teal-950 dark:text-teal-50',
+  },
+  'border-cyan-800': {
+    bg: 'bg-cyan-800/15 dark:bg-cyan-800/30',
+    ring: 'ring-cyan-700/30',
+    text: 'text-cyan-950 dark:text-cyan-50',
+  },
+  'border-stone-700': {
+    bg: 'bg-stone-700/15 dark:bg-stone-700/30',
+    ring: 'ring-stone-600/30',
+    text: 'text-stone-950 dark:text-stone-50',
+  },
+  'border-slate-700': {
+    bg: 'bg-slate-700/15 dark:bg-slate-700/30',
+    ring: 'ring-slate-600/30',
+    text: 'text-slate-950 dark:text-slate-50',
+  },
+  'border-neutral-600': {
+    bg: 'bg-neutral-600/15 dark:bg-neutral-600/30',
+    ring: 'ring-neutral-500/30',
+    text: 'text-neutral-900 dark:text-neutral-50',
+  },
+  'border-orange-900': {
+    bg: 'bg-orange-900/15 dark:bg-orange-900/30',
+    ring: 'ring-orange-800/30',
+    text: 'text-orange-950 dark:text-orange-50',
+  },
+  
+  // Additional receiver colors (expanded palette)
+  'border-teal-500': {
+    bg: 'bg-teal-500/20 dark:bg-teal-500/30',
+    ring: 'ring-teal-500/30',
+    text: 'text-teal-800 dark:text-teal-100',
+  },
+  'border-cyan-500': {
+    bg: 'bg-cyan-500/20 dark:bg-cyan-500/30',
+    ring: 'ring-cyan-500/30',
+    text: 'text-cyan-800 dark:text-cyan-100',
+  },
+  'border-sky-500': {
+    bg: 'bg-sky-500/20 dark:bg-sky-500/30',
+    ring: 'ring-sky-500/30',
+    text: 'text-sky-800 dark:text-sky-100',
+  },
+  'border-blue-500': {
+    bg: 'bg-blue-500/20 dark:bg-blue-500/30',
+    ring: 'ring-blue-500/30',
+    text: 'text-blue-800 dark:text-blue-100',
+  },
+  'border-indigo-500': {
+    bg: 'bg-indigo-500/20 dark:bg-indigo-500/30',
+    ring: 'ring-indigo-500/30',
+    text: 'text-indigo-800 dark:text-indigo-100',
+  },
+  'border-violet-500': {
+    bg: 'bg-violet-500/20 dark:bg-violet-500/30',
+    ring: 'ring-violet-500/30',
+    text: 'text-violet-800 dark:text-violet-100',
+  },
+  'border-purple-500': {
+    bg: 'bg-purple-500/20 dark:bg-purple-500/30',
+    ring: 'ring-purple-500/30',
+    text: 'text-purple-800 dark:text-purple-100',
+  },
+  'border-red-600': {
+    bg: 'bg-red-600/20 dark:bg-red-600/30',
+    ring: 'ring-red-600/30',
+    text: 'text-red-900 dark:text-red-100',
+  },
+  'border-orange-600': {
+    bg: 'bg-orange-600/20 dark:bg-orange-600/30',
+    ring: 'ring-orange-600/30',
+    text: 'text-orange-900 dark:text-orange-100',
+  },
+  'border-yellow-500': {
+    bg: 'bg-yellow-500/25 dark:bg-yellow-500/30',
+    ring: 'ring-yellow-500/30',
+    text: 'text-yellow-900 dark:text-yellow-100',
+  },
 }
 
 function initialsFromName(name: string | null | undefined): string {
@@ -147,10 +251,11 @@ export function InitialsAvatar(props: {
   size?: AvatarSize
   className?: string
   title?: string
+  isInternal?: boolean // True if this is an internal/admin user (sender), false for client (receiver)
 }) {
-  const { name, size = 'md', className, title } = props
+  const { name, size = 'md', className, title, isInternal = false } = props
 
-  const color = getUserColor(name, false)
+  const color = getUserColor(name, isInternal)
   const classes = COLOR_MAP[color.border] || COLOR_MAP['border-gray-500']
 
   return (

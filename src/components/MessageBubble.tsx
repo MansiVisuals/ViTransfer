@@ -77,7 +77,7 @@ export default function MessageBubble({
 
         <div className="grid grid-cols-[40px_1fr] gap-x-3 gap-y-6 items-start">
           <div className="flex justify-center">
-            <InitialsAvatar name={effectiveAuthorName} size="md" />
+            <InitialsAvatar name={effectiveAuthorName} size="md" isInternal={comment.isInternal ?? false} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-2 min-w-0">
@@ -146,7 +146,7 @@ export default function MessageBubble({
             return (
               <div key={reply.id} className="contents">
                 <div className="flex justify-center">
-                  <InitialsAvatar name={replyEffectiveName} size="md" />
+                  <InitialsAvatar name={replyEffectiveName} size="md" isInternal={reply.isInternal ?? false} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-2 min-w-0">

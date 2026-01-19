@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Clock, Send, X } from 'lucide-react'
+import { Clock, Send, X, Keyboard } from 'lucide-react'
 import { formatCommentTimestamp, secondsToTimecode } from '@/lib/timecode'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 
@@ -245,12 +245,13 @@ export default function CommentInput({
               {showShortcutsButton && onShowShortcuts && (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="xs"
+                  variant="outline"
+                  size="sm"
                   onClick={onShowShortcuts}
                   className="self-start sm:self-auto"
                 >
-                  Shortcuts
+                  <Keyboard className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Shortcuts</span>
                 </Button>
               )}
             </div>

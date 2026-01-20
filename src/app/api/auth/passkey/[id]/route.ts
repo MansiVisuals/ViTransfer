@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { deletePasskey, updatePasskeyName } from '@/lib/passkey'
+import { invalidateAdminSessions, clearPasskeyChallenges } from '@/lib/session-invalidation'
 export const runtime = 'nodejs'
 
 
@@ -40,6 +41,12 @@ export async function DELETE(
         { status: 400 }
       )
     }
+
+    // Security: Invalidate all sessions when a passkey is deleted
+    // This ensures if a passkey was compromised and is being removed,
+    // any sessions authenticated with it are terminated
+    await invalidateAdminSessions(user.id)
+    await clearPasskeyChallenges(user.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {

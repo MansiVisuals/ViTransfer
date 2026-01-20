@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin, getCurrentUserFromRequest } from '@/lib/auth'
 import { hashPassword, validatePassword, verifyPassword } from '@/lib/encryption'
 import { revokeAllUserTokens, clearUserRevocation } from '@/lib/token-revocation'
+import { invalidateAdminSessions } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -293,6 +294,10 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    // Invalidate all sessions for this user BEFORE deletion
+    // This ensures any active tokens are revoked immediately
+    await invalidateAdminSessions(id)
 
     // Delete user
     await prisma.user.delete({

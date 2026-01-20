@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { updateRecipient, deleteRecipient } from '@/lib/recipients'
+import { invalidateSessionsByEmail } from '@/lib/session-invalidation'
+import { prisma } from '@/lib/db'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -44,7 +46,21 @@ export async function PATCH(
       )
     }
 
+    // Get current recipient to check if email is changing
+    const currentRecipient = await prisma.projectRecipient.findUnique({
+      where: { id: recipientId },
+      select: { email: true }
+    })
+
     const recipient = await updateRecipient(recipientId, validation.data)
+
+    // If email changed, invalidate sessions for the old email
+    // This forces re-authentication with the new email
+    if (validation.data.email !== undefined &&
+        currentRecipient?.email &&
+        currentRecipient.email !== validation.data.email) {
+      await invalidateSessionsByEmail(currentRecipient.email)
+    }
 
     return NextResponse.json({ recipient })
   } catch (error: any) {
@@ -76,7 +92,18 @@ export async function DELETE(
   try {
     const { rid: recipientId } = await params
 
+    // Get recipient email BEFORE deletion for session invalidation
+    const recipientToDelete = await prisma.projectRecipient.findUnique({
+      where: { id: recipientId },
+      select: { email: true }
+    })
+
     await deleteRecipient(recipientId)
+
+    // Invalidate sessions for the deleted recipient's email
+    if (recipientToDelete?.email) {
+      await invalidateSessionsByEmail(recipientToDelete.email)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

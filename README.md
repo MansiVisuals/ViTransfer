@@ -18,10 +18,11 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 ## Features
 
 ### Core Functionality
-- **Video Upload & Processing** - Automatic FFmpeg transcoding to 720p, 1080p, or 4K with resumable uploads via TUS protocol
+- **Video Upload & Processing** - Automatic FFmpeg transcoding to 720p or 1080p preview with resumable uploads via TUS protocol (originals preserved at any resolution)
 - **Smart Watermarking** - Customizable watermarks with center and corner placements, configurable per project or globally
 - **Timestamped Comments** - Timestamped feedback with threaded replies that track video versions (up to 10,000 characters)
-- **Approval Workflow** - Per video approval system with automatic project approval when all videos are approved
+- **Approval Workflow** - Per video approval system with automatic project approval when all videos are approved, optional admin-only approval mode
+- **Project Archiving** - Archive completed projects to hide from active views while preserving data
 - **Flexible Authentication** - Share links support password protection, email OTP codes, both methods, or no authentication with optional guest mode
 - **Smart Notifications** - Email notifications with scheduling options: immediate, hourly, daily, or weekly digests
 - **Per-Recipient Unsubscribe** - Client emails include an unsubscribe link to stop project email notifications (share link access is unaffected)
@@ -31,6 +32,8 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 
 ### Admin Features
 - **Multi-User Support** - Multiple admin accounts with JWT authentication and optional WebAuthn passkey support
+- **Password Reset** - Secure self-service password recovery via email with time-limited tokens
+- **Passkey Enforcement** - When passkeys are configured for an account, password login is automatically blocked
 - **Analytics Dashboard** - Track page visits and download events per project and video with engagement metrics
 - **Security Features** - Rate limiting, hotlink protection, security event logging, encrypted credentials, and token based authentication with IP binding
 - **Version Control** - Multiple video versions per project with revision tracking and optional max revision limits
@@ -40,6 +43,7 @@ NOTE: Code-assisted development with Claude AI, built with focus on security and
 - **Flexible Settings** - Per project and global configuration with override capabilities
 
 ### Technical Features
+- **Video Player** - Custom video controls with timeline markers showing comment positions, frame-accurate seeking, and keyboard shortcuts
 - **Docker First** - Easy deployment with Docker Compose, Unraid, TrueNAS, and Podman/Quadlet support
 - **High Performance** - Built with Next.js 16 and React 19 with CPU aware FFmpeg presets
 - **Background Processing** - Redis queue with BullMQ for video transcoding and notifications (email + push)
@@ -400,7 +404,7 @@ Each project can override global defaults:
 - Revision Limit - Maximum number of revision rounds
 - Allow Comments - Enable client feedback
 - Allow Downloads - Let clients download approved videos
-- Require Approval - Client must approve before download
+- Client Can Approve - Toggle whether clients can approve videos (disable for admin-only approval)
 
 **Notifications:**
 - Client Notification Schedule - Override global schedule (IMMEDIATE/HOURLY/DAILY/WEEKLY)
@@ -453,7 +457,8 @@ Tested with Cloudflare Tunnels.
 - **Hotlink Protection** - Prevent unauthorized embedding
 - **Encrypted Passwords** - AES-256 encryption at rest
 - **HTTPS Support** - SSL/TLS for secure connections
-- **Session Monitoring** - Configurable admin inactivity timeout (up to 24 hours) with warnings
+- **Session Monitoring** - Configurable admin inactivity timeout with warnings
+- **Session Invalidation** - Automatic session revocation on security-sensitive changes (password, passkey, recipient updates)
 
 ### Security Notice
 

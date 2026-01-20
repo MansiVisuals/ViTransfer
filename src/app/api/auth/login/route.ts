@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     // SECURITY ENHANCEMENT: Check if user has passkeys configured
-    // Similar to GitHub/Cloudflare, if passkeys are registered, require their use
+    // If passkeys are registered, require their use instead of password
     const passkeyCount = await prisma.passkeyCredential.count({
       where: { userId: user.id },
     })

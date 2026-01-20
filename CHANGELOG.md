@@ -58,6 +58,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Better JWT secret validation error messages
 - Centralized validation prevents schema drift
 
+### Infrastructure
+- **Redis updated to version 8-alpine**: Backward compatible upgrade for improved performance and features
+  - Applies to new installations only
+  - Existing installations continue to work without changes
+  - Fully backward compatible, seamless upgrade
+- **PostgreSQL updated to 18.1-alpine**: Latest PostgreSQL version for new installations
+  - Applies to new installations only
+  - Existing installations continue to work without changes
+  - Optional upgrade for existing users (requires manual backup and migration according to your infrastructure practices)
+  - Note: TrueNAS catalog version separately managed (currently uses PostgreSQL 17.7)
+
 ## [0.8.3] - 2026-01-18
 
 ### Added

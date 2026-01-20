@@ -229,28 +229,64 @@ export const createProjectSchema = z.object({
 })
 
 export const updateProjectSchema = z.object({
-  title: safeStringSchema(1, 255).optional(),
-  description: safeStringSchema(0, 5000).optional(),
-  companyName: safeStringSchema(0, 100)
+  // Basic project info
+  title: safeStringSchema(1, 200).optional(),
+  slug: safeStringSchema(1, 200)
+    .refine(val => !val || /^[a-z0-9-]+$/.test(val), {
+      message: 'Slug can only contain lowercase letters, numbers, and hyphens'
+    })
+    .optional(),
+  description: safeStringSchema(0, 2000).nullable().optional(),
+  companyName: safeStringSchema(0, 200)
     .refine(val => !val || !/[\r\n]/.test(val), {
       message: 'Company name cannot contain line breaks'
     })
+    .nullable()
     .optional(),
+  status: z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED']).optional(),
+
+  // Revision settings
+  enableRevisions: z.boolean().optional(),
+  maxRevisions: z.number().int().min(0).max(50).optional(),
+  restrictCommentsToLatestVersion: z.boolean().optional(),
+
+  // Display settings
+  hideFeedback: z.boolean().optional(),
+  timestampDisplay: z.enum(['AUTO', 'TIMECODE']).optional(),
+  previewResolution: z.enum(['720p', '1080p']).optional(),
+
+  // Watermark settings
+  watermarkEnabled: z.boolean().optional(),
+  watermarkText: safeStringSchema(0, 100).nullable().optional(),
+
+  // Download settings
+  allowAssetDownload: z.boolean().optional(),
+
+  // Approval settings
+  clientCanApprove: z.boolean().optional(),
+
+  // Authentication settings
   sharePassword: z.string()
     .min(8, 'Share password must be at least 8 characters')
-    .max(255, 'Share password must not exceed 255 characters')
+    .max(200, 'Share password must not exceed 200 characters')
     .regex(/[A-Za-z]/, 'Share password must contain at least one letter')
     .regex(/[0-9]/, 'Share password must contain at least one number')
+    .nullable()
     .optional()
     .or(z.literal('')),
   authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
-  enableRevisions: z.boolean().optional(),
-  maxRevisions: z.number().int().min(1).max(10).optional(),
-  restrictCommentsToLatestVersion: z.boolean().optional(),
-  hideFeedback: z.boolean().optional(),
-  status: z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY']).optional(),
-  previewResolution: z.enum(['720p', '1080p']).optional(),
-  watermarkText: safeStringSchema(0, 100).optional()
+
+  // Guest mode settings
+  guestMode: z.boolean().optional(),
+  guestLatestOnly: z.boolean().optional(),
+
+  // Client notification settings
+  clientNotificationSchedule: z.enum(['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']).optional(),
+  clientNotificationTime: z.string()
+    .regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format. Expected HH:MM')
+    .nullable()
+    .optional(),
+  clientNotificationDay: z.number().int().min(0).max(6).nullable().optional()
 })
 
 // ============================================================================

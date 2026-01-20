@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { updateRecipient, deleteRecipient } from '@/lib/recipients'
 import { invalidateSessionsByEmail } from '@/lib/session-invalidation'
+import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
 export const runtime = 'nodejs'
@@ -28,9 +29,20 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; rid: string }> }
 ) {
+  // 1. Authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // 2. Rate limiting: 30 requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 30,
+    message: 'Too many requests. Please slow down.'
+  }, 'recipient-update')
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {
@@ -84,9 +96,20 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; rid: string }> }
 ) {
+  // 1. Authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
+  }
+
+  // 2. Rate limiting: 20 requests per minute
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: 'Too many requests. Please slow down.'
+  }, 'recipient-delete')
+  if (rateLimitResult) {
+    return rateLimitResult
   }
 
   try {

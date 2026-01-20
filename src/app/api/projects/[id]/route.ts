@@ -7,36 +7,8 @@ import { isSmtpConfigured } from '@/lib/email'
 import { invalidateProjectSessions, invalidateShareTokensByProject } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeComment } from '@/lib/comment-sanitization'
-import { z } from 'zod'
+import { updateProjectSchema } from '@/lib/validation'
 export const runtime = 'nodejs'
-
-
-
-
-const updateProjectSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  slug: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).nullable().optional(),
-  companyName: z.string().max(200).nullable().optional(),
-  status: z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED']).optional(),
-  enableRevisions: z.boolean().optional(),
-  maxRevisions: z.number().int().min(0).max(50).optional(),
-  restrictCommentsToLatestVersion: z.boolean().optional(),
-  hideFeedback: z.boolean().optional(),
-  timestampDisplay: z.enum(['AUTO', 'TIMECODE']).optional(),
-  previewResolution: z.enum(['720p', '1080p']).optional(),
-  watermarkEnabled: z.boolean().optional(),
-  watermarkText: z.string().max(100).nullable().optional(),
-  allowAssetDownload: z.boolean().optional(),
-  clientCanApprove: z.boolean().optional(),
-  sharePassword: z.string().max(200).nullable().optional(),
-  authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
-  guestMode: z.boolean().optional(),
-  guestLatestOnly: z.boolean().optional(),
-  clientNotificationSchedule: z.enum(['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']).optional(),
-  clientNotificationTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/).nullable().optional(),
-  clientNotificationDay: z.number().int().min(0).max(6).nullable().optional(),
-})
 
 export async function GET(
   request: NextRequest,

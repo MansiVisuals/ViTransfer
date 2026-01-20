@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Comment, Video } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { CheckCircle2, MessageSquare } from 'lucide-react'
+import { CheckCircle2, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import MessageBubble from './MessageBubble'
 import CommentInput from './CommentInput'
 import { useCommentManagement } from '@/hooks/useCommentManagement'
@@ -33,6 +34,8 @@ interface CommentSectionProps {
   shareToken?: string | null
   showShortcutsButton?: boolean
   timestampDisplayMode?: 'TIMECODE' | 'AUTO'
+  mobileCollapsible?: boolean
+  initialMobileCollapsed?: boolean
 }
 
 export default function CommentSection({
@@ -53,7 +56,10 @@ export default function CommentSection({
   shareToken = null,
   showShortcutsButton = false,
   timestampDisplayMode = 'TIMECODE',
+  mobileCollapsible = false,
+  initialMobileCollapsed = true,
 }: CommentSectionProps) {
+  const [isMobileCollapsed, setIsMobileCollapsed] = useState(initialMobileCollapsed)
   const {
     comments,
     newComment,
@@ -329,8 +335,65 @@ export default function CommentSection({
           </div>
         )}
 
+        {/* Comment Input - MOVED TO TOP on mobile when collapsible */}
+        {mobileCollapsible && (
+          <div className="order-1 lg:hidden">
+            <CommentInput
+              newComment={newComment}
+              onCommentChange={handleCommentChange}
+              onSubmit={handleSubmitComment}
+              loading={loading}
+              selectedTimestamp={selectedTimestamp}
+              onClearTimestamp={handleClearTimestamp}
+              selectedVideoFps={selectedVideoFps}
+              selectedVideoDurationSeconds={currentVideoDuration}
+              timestampDisplayMode={timestampDisplayMode}
+              replyingToComment={replyingToComment}
+              onCancelReply={handleCancelReply}
+              showAuthorInput={!isAdminView && isPasswordProtected}
+              authorName={authorName}
+              onAuthorNameChange={setAuthorName}
+              namedRecipients={namedRecipients}
+              nameSource={nameSource}
+              selectedRecipientId={selectedRecipientId}
+              onNameSourceChange={handleNameSourceChange}
+              currentVideoRestricted={currentVideoRestricted}
+              restrictionMessage={restrictionMessage}
+              commentsDisabled={commentsDisabled}
+              showShortcutsButton={showShortcutsButton}
+              onShowShortcuts={handleOpenShortcuts}
+            />
+          </div>
+        )}
+
+        {/* Collapsible header for messages (mobile only) */}
+        {mobileCollapsible && (
+          <button
+            onClick={() => setIsMobileCollapsed(!isMobileCollapsed)}
+            className="order-2 lg:hidden w-full p-3 flex items-center justify-between border-t border-border bg-muted/30"
+          >
+            <span className="text-sm font-medium flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              {sortedComments.length} {sortedComments.length === 1 ? 'message' : 'messages'}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {sortedComments.length > 0 ? formatMessageTime(sortedComments[sortedComments.length - 1].createdAt) : ''}
+              </span>
+              {isMobileCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </div>
+          </button>
+        )}
+
         {/* Messages Area - Threaded Conversations */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0 bg-muted/20">
+        <div
+          ref={messagesContainerRef}
+          className={cn(
+            "flex-1 overflow-y-auto p-4 space-y-6 min-h-0 bg-muted/20",
+            mobileCollapsible && "order-3 lg:order-1",
+            mobileCollapsible && isMobileCollapsed && "hidden lg:block"
+          )}
+        >
           {sortedComments.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
@@ -382,8 +445,9 @@ export default function CommentSection({
           )}
         </div>
 
-        {/* Input Area */}
-        <CommentInput
+        {/* Input Area - Desktop and non-collapsible mobile */}
+        <div className={cn(mobileCollapsible && "hidden lg:block lg:order-2")}>
+          <CommentInput
           newComment={newComment}
           onCommentChange={handleCommentChange}
           onSubmit={handleSubmitComment}
@@ -408,6 +472,7 @@ export default function CommentSection({
           showShortcutsButton={showShortcutsButton}
           onShowShortcuts={handleOpenShortcuts}
         />
+        </div>
       </CardContent>
     </Card>
   )

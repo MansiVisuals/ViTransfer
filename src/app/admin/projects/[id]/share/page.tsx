@@ -6,6 +6,7 @@ import Link from 'next/link'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
 import VideoSidebar from '@/components/VideoSidebar'
+import ProjectInfo from '@/components/ProjectInfo'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
@@ -37,6 +38,12 @@ export default function AdminSharePage() {
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [adminUser, setAdminUser] = useState<any>(null)
+  const [videoState, setVideoState] = useState<{
+    selectedVideo: any
+    isVideoApproved: boolean
+    displayVideos: any[]
+    displayLabel: string
+  } | null>(null)
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
   const sessionIdRef = useRef<string>(`admin:${Date.now()}`)
 
@@ -419,8 +426,9 @@ export default function AdminSharePage() {
                 </CardContent>
               </Card>
             ) : (
-            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
-              <div className={project.hideFeedback ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
+            <div className={`flex-1 min-h-0 ${project.hideFeedback ? 'flex flex-col w-full' : 'flex flex-col lg:grid gap-4 sm:gap-6 lg:grid-cols-3'}`}>
+              {/* Video Player - order-1 on both mobile and desktop */}
+              <div className={project.hideFeedback ? 'flex-1 min-h-0 flex flex-col' : 'order-1 lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}
@@ -443,11 +451,13 @@ export default function AdminSharePage() {
                   comments={!project.hideFeedback ? filteredComments : []}
                   timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                   onCommentFocus={(commentId) => setFocusCommentId(commentId)}
+                  onVideoStateChange={setVideoState}
                 />
               </div>
 
+              {/* Comments Section (input + collapsible messages) - order-2 */}
               {!project.hideFeedback && (
-                <div className="lg:sticky lg:top-6 lg:self-start">
+                <div className="order-2 lg:sticky lg:top-6 lg:self-start">
                   <CommentSection
                     projectId={project.id}
                     projectSlug={project.slug}
@@ -466,6 +476,27 @@ export default function AdminSharePage() {
                     shareToken={null}
                     showShortcutsButton={true}
                     timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
+                    mobileCollapsible={true}
+                    initialMobileCollapsed={true}
+                  />
+                </div>
+              )}
+
+              {/* Project Info - order-3 on mobile only, hidden on desktop */}
+              {videoState && (
+                <div className="order-3 lg:hidden">
+                  <ProjectInfo
+                    selectedVideo={videoState.selectedVideo}
+                    displayLabel={videoState.displayLabel}
+                    isVideoApproved={videoState.isVideoApproved}
+                    projectTitle={project.title}
+                    projectDescription={project.description}
+                    clientName={project.clientName}
+                    isPasswordProtected={!!project.sharePassword}
+                    watermarkEnabled={project.watermarkEnabled}
+                    defaultQuality={defaultQuality}
+                    isAdmin={true}
+                    hideDownloadButton={true}
                   />
                 </div>
               )}

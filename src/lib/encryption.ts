@@ -11,7 +11,7 @@ function getCrypto(): typeof import('crypto') {
   }
 
   // Safe to require because all callers run on the server (Node.js)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   cryptoModule = require('crypto') as typeof import('crypto')
   return cryptoModule
 }

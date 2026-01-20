@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
 import VideoSidebar from '@/components/VideoSidebar'
+import ProjectInfo from '@/components/ProjectInfo'
 import { OTPInput } from '@/components/OTPInput'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -51,6 +52,12 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
+  const [videoState, setVideoState] = useState<{
+    selectedVideo: any
+    isVideoApproved: boolean
+    displayVideos: any[]
+    displayLabel: string
+  } | null>(null)
   const storageKey = token || ''
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
 
@@ -747,9 +754,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               </CardContent>
             </Card>
           ) : (
-            <div className={`flex-1 min-h-0 ${(project.hideFeedback || isGuest) ? 'flex flex-col max-w-7xl mx-auto w-full' : 'grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3'}`}>
-              {/* Video Player - centered */}
-              <div className={(project.hideFeedback || isGuest) ? 'flex-1 min-h-0 flex flex-col' : 'lg:col-span-2'}>
+            <div className={`flex-1 min-h-0 ${(project.hideFeedback || isGuest) ? 'flex flex-col max-w-7xl mx-auto w-full' : 'flex flex-col lg:grid gap-4 sm:gap-6 lg:grid-cols-3'}`}>
+              {/* Video Player - order-1 on both mobile and desktop */}
+              <div className={(project.hideFeedback || isGuest) ? 'flex-1 min-h-0 flex flex-col' : 'order-1 lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}
@@ -772,12 +779,13 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   comments={!project.hideFeedback && !isGuest ? filteredComments : []}
                   timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                   onCommentFocus={(commentId) => setFocusCommentId(commentId)}
+                  onVideoStateChange={setVideoState}
                 />
               </div>
 
-              {/* Comments Section - hidden for guests */}
+              {/* Comments Section (input + collapsible messages) - order-2 */}
               {!project.hideFeedback && !isGuest && (
-                <div className="lg:sticky lg:top-6 lg:self-start">
+                <div className="order-2 lg:sticky lg:top-6 lg:self-start">
                   <CommentSection
                     projectId={project.id}
                     comments={filteredComments}
@@ -794,10 +802,36 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     shareToken={shareToken}
                     showShortcutsButton={true}
                     timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
+                    mobileCollapsible={true}
+                    initialMobileCollapsed={true}
                   />
-              </div>
-            )}
+                </div>
+              )}
 
+              {/* Project Info - order-3 on mobile only, hidden on desktop */}
+              {videoState && !isGuest && (
+                <div className="order-3 lg:hidden">
+                  <ProjectInfo
+                    selectedVideo={videoState.selectedVideo}
+                    displayLabel={videoState.displayLabel}
+                    isVideoApproved={videoState.isVideoApproved}
+                    projectTitle={project.title}
+                    projectDescription={project.description}
+                    clientName={project.clientName}
+                    isPasswordProtected={isPasswordProtected || false}
+                    watermarkEnabled={project.watermarkEnabled}
+                    defaultQuality={defaultQuality}
+                    onApprove={fetchProjectData}
+                    isAdmin={false}
+                    clientCanApprove={project.clientCanApprove}
+                    isGuest={false}
+                    hideDownloadButton={false}
+                    allowAssetDownload={project.allowAssetDownload}
+                    shareToken={shareToken}
+                    activeVideoName={activeVideoName}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

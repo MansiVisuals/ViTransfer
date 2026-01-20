@@ -248,10 +248,10 @@ export default function CommentInput({
                   variant="outline"
                   size="sm"
                   onClick={onShowShortcuts}
-                  className="self-start sm:self-auto"
+                  className="self-start sm:self-auto hidden lg:inline-flex"
                 >
-                  <Keyboard className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Shortcuts</span>
+                  <Keyboard className="w-4 h-4 lg:mr-2" />
+                  <span className="hidden lg:inline">Shortcuts</span>
                 </Button>
               )}
             </div>

@@ -53,6 +53,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [initialSeekTime, setInitialSeekTime] = useState<number | null>(null)
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
+  const [hideComments, setHideComments] = useState(false)
   const [videoState, setVideoState] = useState<{
     selectedVideo: any
     isVideoApproved: boolean
@@ -769,9 +770,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               </CardContent>
             </Card>
           ) : (
-            <div className={`flex-1 min-h-0 ${(project.hideFeedback || isGuest) ? 'flex flex-col max-w-7xl mx-auto w-full' : 'flex flex-col lg:grid gap-4 sm:gap-6 lg:grid-cols-3'}`}>
+            <div className={`flex-1 min-h-0 ${(project.hideFeedback || isGuest || hideComments) ? 'flex flex-col max-w-7xl mx-auto w-full' : 'flex flex-col lg:grid gap-4 sm:gap-6 lg:grid-cols-3'}`}>
               {/* Video Player - order-1 on both mobile and desktop */}
-              <div className={(project.hideFeedback || isGuest) ? 'flex-1 min-h-0 flex flex-col' : 'order-1 lg:col-span-2'}>
+              <div className={(project.hideFeedback || isGuest || hideComments) ? 'flex-1 min-h-0 flex flex-col' : 'order-1 lg:col-span-2'}>
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}
@@ -799,7 +800,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               </div>
 
               {/* Comments Section (input + collapsible messages) - order-2 */}
-              {!project.hideFeedback && !isGuest && (
+              {!project.hideFeedback && !isGuest && !hideComments && (
                 <div className="order-2 lg:sticky lg:top-6 lg:self-start">
                   <CommentSection
                     projectId={project.id}
@@ -820,6 +821,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     mobileCollapsible={true}
                     initialMobileCollapsed={true}
                     authenticatedEmail={authenticatedEmail}
+                    onToggleVisibility={() => setHideComments(!hideComments)}
+                    showToggleButton={true}
                   />
                 </div>
               )}

@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Comment, Video } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { CheckCircle2, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react'
+import { Button } from './ui/button'
+import { CheckCircle2, MessageSquare, ChevronDown, ChevronUp, PanelRightClose } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import MessageBubble from './MessageBubble'
 import CommentInput from './CommentInput'
@@ -37,6 +38,8 @@ interface CommentSectionProps {
   mobileCollapsible?: boolean
   initialMobileCollapsed?: boolean
   authenticatedEmail?: string | null
+  onToggleVisibility?: () => void
+  showToggleButton?: boolean
 }
 
 export default function CommentSection({
@@ -60,6 +63,8 @@ export default function CommentSection({
   mobileCollapsible = false,
   initialMobileCollapsed = true,
   authenticatedEmail = null,
+  onToggleVisibility,
+  showToggleButton = false,
 }: CommentSectionProps) {
   const [isMobileCollapsed, setIsMobileCollapsed] = useState(initialMobileCollapsed)
   const {
@@ -305,10 +310,23 @@ export default function CommentSection({
     <Card className="bg-card border border-border flex flex-col h-auto lg:h-full max-h-[75vh] rounded-lg overflow-hidden" data-comment-section>
       {/* Desktop: Show header at top, Mobile: Hide header (will show below input) */}
       <CardHeader className={cn("border-b border-border flex-shrink-0", mobileCollapsible && "hidden lg:block")}>
-        <CardTitle className="text-foreground flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          Feedback & Discussion
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Feedback & Discussion
+          </CardTitle>
+          {showToggleButton && onToggleVisibility && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleVisibility}
+              className="hidden lg:flex h-8 px-2"
+              title="Hide feedback section"
+            >
+              <PanelRightClose className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
         {selectedVideoId && currentVideo && !isAdminView && (
           <p className="text-xs text-muted-foreground mt-1">
             {commentsDisabled

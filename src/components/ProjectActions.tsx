@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Project } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Trash2, ExternalLink, Archive, ArchiveRestore, RotateCcw, Send, Loader2, CheckCircle, BarChart3, FolderKanban } from 'lucide-react'
+import { Trash2, ExternalLink, Archive, ArchiveRestore, RotateCcw, Send, Loader2, CheckCircle, BarChart3, FolderKanban, Copy } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -341,18 +341,39 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                   value={shareUrl}
                   className="flex-1 px-3 py-2 border rounded-md text-xs bg-muted truncate"
                 />
-                <Button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl)
-                    setLinkCopied(true)
-                    setTimeout(() => setLinkCopied(false), 2000)
-                  }} 
-                  variant="outline" 
-                  size="sm"
-                  className="w-full"
-                >
-                  {linkCopied ? 'Copied!' : 'Copy Link'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareUrl)
+                      setLinkCopied(true)
+                      setTimeout(() => setLinkCopied(false), 2000)
+                    }} 
+                    variant="outline" 
+                    size="sm"
+                    className="flex-1"
+                  >
+                    {linkCopied ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Copy
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => window.open(shareUrl, '_blank', 'noopener,noreferrer')}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open
+                  </Button>
+                </div>
               </div>
             </div>
           )}

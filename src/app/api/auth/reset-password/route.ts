@@ -5,6 +5,8 @@ import { verifyPasswordResetToken } from '@/lib/password-reset'
 import { hashPassword, validatePassword } from '@/lib/encryption'
 import { invalidateAdminSessions } from '@/lib/session-invalidation'
 import { logSecurityEvent } from '@/lib/video-access'
+import { getRedis } from '@/lib/redis'
+import crypto from 'crypto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,6 +19,7 @@ export const dynamic = 'force-dynamic'
  * SECURITY:
  * - Rate limited
  * - Token verification (encrypted, time-limited)
+ * - Single-use tokens (Redis tracking)
  * - Password validation
  * - Invalidates all existing sessions
  * - Logs security event
@@ -88,6 +91,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if token has already been used (single-use enforcement)
+    const redis = getRedis()
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+    const tokenKey = `password_reset_used:${tokenHash}`
+    
+    const tokenUsed = await redis.get(tokenKey)
+    if (tokenUsed) {
+      // Log attempt to reuse token
+      await logSecurityEvent({
+        type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
+        severity: 'WARNING',
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        details: {
+          reason: 'Token already used',
+          userId: payload.userId,
+        },
+      })
+      return NextResponse.json(
+        { error: 'This reset link has already been used. Please request a new one.' },
+        { status: 400 }
+      )
+    }
+
     // Find user
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
@@ -131,6 +157,10 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: { password: hashedPassword },
     })
+
+    // Mark token as used (30 minutes TTL to match token expiration)
+    // This prevents the same token from being used multiple times
+    await redis.set(tokenKey, '1', 'EX', 30 * 60)
 
     // Invalidate all sessions for this user (security: force re-login everywhere)
     await invalidateAdminSessions(user.id)

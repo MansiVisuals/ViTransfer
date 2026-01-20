@@ -39,7 +39,10 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
     }
   }, [isOpen])
 
-  const isFiltering = groups.some(g => g.options.length > 0 && g.selected.size > 0 && g.selected.size < g.options.length)
+  const isFiltering = groups.some(g => {
+    // Check if filtering is active (not all options selected)
+    return g.options.length > 0 && g.selected.size > 0 && g.selected.size < g.options.length
+  })
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -54,6 +57,11 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
       >
         <Funnel className={cn('w-4 h-4', isFiltering && 'fill-primary')} />
         <span className="hidden sm:inline ml-2">Filter</span>
+        {isFiltering && (
+          <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full font-medium">
+            {groups.reduce((sum, g) => sum + g.selected.size, 0)}
+          </span>
+        )}
       </Button>
 
       {isOpen && (
@@ -85,8 +93,11 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
               <div key={group.key}>
                 {index > 0 && <div className="border-t border-border my-2" />}
 
-                <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
-                  {group.label}
+                <div className="px-2 py-1 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                  <span>{group.label}</span>
+                  <span className="text-muted-foreground/70">
+                    {group.selected.size}/{group.options.length}
+                  </span>
                 </div>
 
                 <label className="flex items-center gap-2 px-2 py-1 hover:bg-muted rounded cursor-pointer">

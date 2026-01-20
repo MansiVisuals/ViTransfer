@@ -19,16 +19,17 @@ const nextConfig = {
         key: 'Content-Security-Policy',
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: https://storage.ko-fi.com",
           "style-src 'self' 'unsafe-inline' https:",
-          "img-src * data: blob:",
+          "img-src * data: blob: https://storage.ko-fi.com",
           "font-src * data:",
-          `connect-src 'self' blob: ${tusEndpoint || ''} https:`,
+          `connect-src 'self' blob: ${tusEndpoint || ''} https: https://ko-fi.com https://storage.ko-fi.com`,
           "media-src * blob:",
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'self'",
           "frame-ancestors 'none'",
+          "frame-src 'self' https://ko-fi.com",
         ]
       },
       {

@@ -51,12 +51,12 @@ export function useCommentManagement({
   // Author name management
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
 
-  // Load persisted name selection from sessionStorage (survives commenting but not page refresh)
+  // Load persisted name selection from localStorage (persists across sessions)
   const storageKey = `comment-name-${projectId}`
   const loadPersistedName = () => {
     if (typeof window === 'undefined') return null
     try {
-      const stored = sessionStorage.getItem(storageKey)
+      const stored = localStorage.getItem(storageKey)
       return stored ? JSON.parse(stored) : null
     } catch {
       return null
@@ -426,9 +426,9 @@ export function useCommentManagement({
     setAuthorName(newAuthorName)
     setSelectedRecipientId(newRecipientId)
 
-    // Persist to sessionStorage
+    // Persist to localStorage (persists across sessions)
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify({
+      localStorage.setItem(storageKey, JSON.stringify({
         nameSource: source,
         authorName: newAuthorName,
         selectedRecipientId: newRecipientId,
@@ -473,14 +473,14 @@ export function useCommentManagement({
     }
   }
 
-  // Wrapper for setAuthorName that also persists to sessionStorage
+  // Wrapper for setAuthorName that also persists to localStorage
   const handleAuthorNameChange = (name: string) => {
     setAuthorName(name)
 
-    // Persist to sessionStorage when custom name is being typed
+    // Persist to localStorage when custom name is being typed
     if (nameSource === 'custom') {
       try {
-        sessionStorage.setItem(storageKey, JSON.stringify({
+        localStorage.setItem(storageKey, JSON.stringify({
           nameSource,
           authorName: name,
           selectedRecipientId,

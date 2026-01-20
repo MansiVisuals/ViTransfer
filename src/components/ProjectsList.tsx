@@ -31,12 +31,30 @@ interface Project {
 
 interface ProjectsListProps {
   projects: Project[]
+  statusFilter?: Set<string>
+  onStatusFilterChange?: (filter: Set<string>) => void
 }
 
-export default function ProjectsList({ projects }: ProjectsListProps) {
-  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
+export default function ProjectsList({ projects, statusFilter: externalStatusFilter, onStatusFilterChange }: ProjectsListProps) {
+  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>(() => {
+    // Load sort mode from localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('admin_projects_sort_mode')
+      if (stored === 'status' || stored === 'alphabetical') {
+        return stored
+      }
+    }
+    return 'alphabetical'
+  })
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(STATUS_OPTIONS.map(o => o.value)))
+  // Use external filter if provided, otherwise use internal filter (default: all except ARCHIVED)
+  const [internalStatusFilter, setInternalStatusFilter] = useState<Set<string>>(
+    new Set(STATUS_OPTIONS.filter(o => o.value !== 'ARCHIVED').map(o => o.value))
+  )
+  
+  // Use external filter if provided, otherwise use internal
+  const statusFilter = externalStatusFilter || internalStatusFilter
+  const setStatusFilter = onStatusFilterChange || setInternalStatusFilter
   const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
 
@@ -55,6 +73,11 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
   useEffect(() => {
     localStorage.setItem('admin_projects_view', viewMode)
   }, [viewMode])
+
+  // Save sort mode to localStorage
+  useEffect(() => {
+    localStorage.setItem('admin_projects_sort_mode', sortMode)
+  }, [sortMode])
 
   // Filter projects by status
   const filteredProjects = projects.filter(p => statusFilter.has(p.status))

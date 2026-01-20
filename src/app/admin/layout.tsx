@@ -3,6 +3,7 @@
 import { AuthProvider } from '@/components/AuthProvider'
 import AdminHeader from '@/components/AdminHeader'
 import SessionMonitor from '@/components/SessionMonitor'
+import KofiWidget from '@/components/KofiWidget'
 import { useEffect, useRef } from 'react'
 
 export default function AdminLayout({
@@ -64,6 +65,7 @@ export default function AdminLayout({
           {children}
         </div>
         <SessionMonitor />
+        <KofiWidget />
       </div>
     </AuthProvider>
   )

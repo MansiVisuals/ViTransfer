@@ -17,8 +17,28 @@ interface AnalyticsOverview {
 
 export default function AdminPage() {
   const [projects, setProjects] = useState<any[] | null>(null)
-  const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null)
+  const [analyticsData, setAnalyticsData] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(() => {
+    // Load filter from localStorage or use default (all except ARCHIVED)
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('admin_projects_status_filter')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          return new Set(parsed)
+        } catch {
+          // If parsing fails, use default
+        }
+      }
+    }
+    return new Set(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY'])
+  })
+
+  // Save filter to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('admin_projects_status_filter', JSON.stringify(Array.from(statusFilter)))
+  }, [statusFilter])
 
   useEffect(() => {
     const load = async () => {
@@ -39,12 +59,7 @@ export default function AdminPage() {
         if (analyticsRes.ok) {
           const analyticsData = await analyticsRes.json()
           const projectsList = analyticsData.projects || []
-          setAnalytics({
-            totalProjects: projectsList.length,
-            totalVideos: projectsList.reduce((sum: number, p: any) => sum + (p.videoCount || 0), 0),
-            totalVisits: projectsList.reduce((sum: number, p: any) => sum + (p.totalVisits || 0), 0),
-            totalDownloads: projectsList.reduce((sum: number, p: any) => sum + (p.totalDownloads || 0), 0),
-          })
+          setAnalyticsData(projectsList)
         }
       } catch (error) {
         setProjects([])
@@ -54,6 +69,19 @@ export default function AdminPage() {
     }
     load()
   }, [])
+
+  // Calculate analytics based on current filter
+  const analytics: AnalyticsOverview | null = analyticsData
+    ? (() => {
+        const filteredAnalytics = analyticsData.filter((p: any) => statusFilter.has(p.status))
+        return {
+          totalProjects: filteredAnalytics.length,
+          totalVideos: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.videoCount || 0), 0),
+          totalVisits: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalVisits || 0), 0),
+          totalDownloads: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalDownloads || 0), 0),
+        }
+      })()
+    : null
 
   const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
@@ -154,7 +182,11 @@ export default function AdminPage() {
           </Card>
         )}
 
-        <ProjectsList projects={projects} />
+        <ProjectsList 
+          projects={projects} 
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+        />
       </div>
     </div>
   )

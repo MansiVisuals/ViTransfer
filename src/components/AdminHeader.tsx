@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/components/AuthProvider'
 import { Button } from '@/components/ui/button'
-import { Bug, CircleHelp, Container, ExternalLink, FolderKanban, Github, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
+import { Bug, CircleHelp, Container, ExternalLink, FolderKanban, Github, Heart, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -35,7 +35,7 @@ export default function AdminHeader() {
   if (!user) return null
 
   const repoUrl = 'https://github.com/MansiVisuals/ViTransfer'
-  const websiteUrl = 'https://www.vitransfer.com'
+  const websiteUrl = 'https://vitransfer.com'
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
 
   const navLinks: Array<{ href: string; label: string; icon: typeof FolderKanban; title?: string }> = [
@@ -140,6 +140,18 @@ export default function AdminHeader() {
                         <Container className="w-4 h-4 mr-2" />
                         Docker Hub
                       </a>
+                    </Button>
+                    <Button 
+                      className="w-full justify-start bg-[#FF5E5B] hover:bg-[#FF5E5B]/90 text-white border-0"
+                      onClick={() => {
+                        // Open Ko-fi widget dialog
+                        if (typeof window !== 'undefined' && window.openKofiWidget) {
+                          window.openKofiWidget()
+                        }
+                      }}
+                    >
+                      <Heart className="w-4 h-4 mr-2 fill-current" />
+                      Support on Ko-fi
                     </Button>
                   </div>
                 </div>

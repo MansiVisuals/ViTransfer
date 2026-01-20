@@ -666,7 +666,13 @@ export default function VideoPlayer({
         ref={containerRef}
         className="relative bg-background rounded-lg flex-shrink min-h-0 overflow-hidden group lg:order-1"
         style={{
-          aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`
+          aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
+          // Constrain vertical videos (9:16, portrait) to prevent massive size
+          ...(selectedVideo && selectedVideo.height > selectedVideo.width ? {
+            maxWidth: '600px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          } : {})
         }}
       >
         {videoUrl ? (

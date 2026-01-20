@@ -11,8 +11,7 @@ const DEBUG = process.env.DEBUG_WORKER === 'true'
 // Constants (no more magic numbers!)
 export const RESOLUTION_PRESETS = {
   '720p': { horizontal: { width: 1280, height: 720 }, verticalWidth: 720 },
-  '1080p': { horizontal: { width: 1920, height: 1080 }, verticalWidth: 1080 },
-  '2160p': { horizontal: { width: 3840, height: 2160 }, verticalWidth: 2160 }
+  '1080p': { horizontal: { width: 1920, height: 1080 }, verticalWidth: 1080 }
 } as const
 
 export const THUMBNAIL_CONFIG = {
@@ -376,8 +375,6 @@ export async function finalizeVideo(
     updateData.preview720Path = previewPath
   } else if (resolution === '1080p') {
     updateData.preview1080Path = previewPath
-  } else if (resolution === '2160p') {
-    updateData.preview2160Path = previewPath
   }
 
   debugLog('Updating database with final video data...')

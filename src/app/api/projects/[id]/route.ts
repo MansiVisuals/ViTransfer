@@ -24,7 +24,7 @@ const updateProjectSchema = z.object({
   restrictCommentsToLatestVersion: z.boolean().optional(),
   hideFeedback: z.boolean().optional(),
   timestampDisplay: z.enum(['AUTO', 'TIMECODE']).optional(),
-  previewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
+  previewResolution: z.enum(['720p', '1080p']).optional(),
   watermarkEnabled: z.boolean().optional(),
   watermarkText: z.string().max(100).nullable().optional(),
   allowAssetDownload: z.boolean().optional(),

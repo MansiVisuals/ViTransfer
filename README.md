@@ -386,7 +386,7 @@ Configure these in the admin panel under Settings > Security:
 Each project can override global defaults:
 
 **Video Processing:**
-- Preview Resolution - Override global setting (720p/1080p/2160p)
+- Preview Resolution - Override global setting (720p/1080p). Originals can be any resolution including 2160p+.
 - Watermark Text - Custom watermark for this project
 - Watermark Enabled - Enable/disable watermark for this project
 

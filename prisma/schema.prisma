@@ -59,7 +59,7 @@ model Project {
   timestampDisplay String @default("TIMECODE")
 
   // Video processing settings
-  previewResolution String  @default("720p") // "720p", "1080p", "2160p"
+  previewResolution String  @default("720p") // "720p" or "1080p" (originals can be any resolution including 2160p)
   watermarkEnabled  Boolean @default(true) // Enable/disable watermarks for this project
   watermarkText     String? // Custom watermark text (null = use default format)
 

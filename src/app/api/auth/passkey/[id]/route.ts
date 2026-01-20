@@ -10,11 +10,12 @@ export const runtime = 'nodejs'
 /**
  * Delete PassKey
  *
- * DELETE /api/auth/passkey/[id]
+ * DELETE /api/auth/passkey/[id]?userId=<optional>
  *
  * SECURITY:
  * - Requires admin authentication (JWT)
- * - Users can only delete their own passkeys
+ * - If userId is provided, admin can delete that user's passkey (for support)
+ * - If userId is not provided, deletes current user's passkey
  * - Ownership verified in deletePasskey function
  */
 export async function DELETE(
@@ -32,8 +33,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Credential ID required' }, { status: 400 })
     }
 
-    // Delete passkey (ownership verified inside)
-    const result = await deletePasskey(user.id, credentialId)
+    // Get userId from query params (optional - defaults to current user)
+    const { searchParams } = new URL(request.url)
+    const targetUserId = searchParams.get('userId') || user.id
+
+    // Delete passkey (ownership verified inside, but admin can override)
+    const result = await deletePasskey(targetUserId, credentialId, true) // true = adminOverride
 
     if (!result.success) {
       return NextResponse.json(
@@ -45,8 +50,8 @@ export async function DELETE(
     // Security: Invalidate all sessions when a passkey is deleted
     // This ensures if a passkey was compromised and is being removed,
     // any sessions authenticated with it are terminated
-    await invalidateAdminSessions(user.id)
-    await clearPasskeyChallenges(user.id)
+    await invalidateAdminSessions(targetUserId)
+    await clearPasskeyChallenges(targetUserId)
 
     return NextResponse.json({ success: true })
   } catch (error) {

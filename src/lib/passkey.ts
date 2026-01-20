@@ -511,15 +511,17 @@ export async function getUserPasskeys(userId: string) {
 /**
  * Delete a passkey
  *
- * SECURITY: Users can only delete their own passkeys
+ * SECURITY: Users can only delete their own passkeys unless adminOverride is true
  *
- * @param userId - User ID
+ * @param userId - User ID (for ownership check or target user if adminOverride)
  * @param credentialId - Credential ID to delete
+ * @param adminOverride - If true, allows deletion without ownership check (for admin support)
  * @returns Success status
  */
 export async function deletePasskey(
   userId: string,
-  credentialId: string
+  credentialId: string,
+  adminOverride = false
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Verify ownership
@@ -536,7 +538,8 @@ export async function deletePasskey(
       return { success: false, error: 'PassKey not found' }
     }
 
-    if (credential.userId !== userId) {
+    // Check ownership unless admin override is enabled
+    if (!adminOverride && credential.userId !== userId) {
       // Log unauthorized deletion attempt
       await logSecurityEvent({
         type: 'PASSKEY_DELETE_UNAUTHORIZED',
@@ -559,10 +562,12 @@ export async function deletePasskey(
       type: 'PASSKEY_DELETED',
       severity: 'INFO',
       details: {
-        userId,
+        userId: credential.userId, // Log the actual owner's userId
+        deletedBy: adminOverride ? userId : credential.userId,
         credentialId,
         deviceType: credential.deviceType,
         credentialName: credential.credentialName,
+        adminOverride,
       },
     })
 

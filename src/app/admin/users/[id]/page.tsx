@@ -21,6 +21,7 @@ export default function EditUserPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [loggedInUser, setLoggedInUser] = useState<any>(null)
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -50,9 +51,22 @@ export default function EditUserPage() {
 
   useEffect(() => {
     fetchUser()
+    fetchLoggedInUser()
     fetchPasskeyStatus()
     fetchPasskeys()
   }, [userId])
+
+  const fetchLoggedInUser = async () => {
+    try {
+      const res = await apiFetch('/api/auth/session')
+      if (res.ok) {
+        const data = await res.json()
+        setLoggedInUser(data.user)
+      }
+    } catch (err) {
+      // Silently fail
+    }
+  }
 
   const fetchPasskeyStatus = async () => {
     try {
@@ -68,8 +82,10 @@ export default function EditUserPage() {
   }
 
   const fetchPasskeys = async () => {
+    if (!userId) return
+    
     try {
-      const res = await apiFetch('/api/auth/passkey/list')
+      const res = await apiFetch(`/api/auth/passkey/list?userId=${userId}`)
       if (res.ok) {
         const data = await res.json()
         setPasskeys(data.passkeys || [])
@@ -115,7 +131,7 @@ export default function EditUserPage() {
 
     setPasskeyError('')
     try {
-      await apiDelete(`/api/auth/passkey/${id}`)
+      await apiDelete(`/api/auth/passkey/${id}?userId=${userId}`)
       await fetchPasskeys()
     } catch (err: any) {
       setPasskeyError(err.message)
@@ -486,6 +502,11 @@ export default function EditUserPage() {
               <Fingerprint className="w-5 h-5" />
               Manage Passkeys
             </DialogTitle>
+            {currentUser && (
+              <p className="text-sm text-muted-foreground pt-1">
+                {currentUser.name || currentUser.email}
+              </p>
+            )}
           </DialogHeader>
 
           <div className="space-y-4">
@@ -505,16 +526,18 @@ export default function EditUserPage() {
                   {passkeys.length === 0 ? 'No passkeys registered' : `${passkeys.length} passkey(s)`}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleRegisterPasskey}
-                disabled={passkeyLoading}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add
-              </Button>
+              {loggedInUser && currentUser && loggedInUser.id === currentUser.id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegisterPasskey}
+                  disabled={passkeyLoading}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add
+                </Button>
+              )}
             </div>
 
             {passkeys.length > 0 && (

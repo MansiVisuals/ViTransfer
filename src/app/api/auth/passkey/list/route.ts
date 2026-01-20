@@ -10,11 +10,12 @@ export const runtime = 'nodejs'
 /**
  * List User's PassKeys
  *
- * GET /api/auth/passkey/list
+ * GET /api/auth/passkey/list?userId=<optional>
  *
  * SECURITY:
  * - Requires admin authentication (JWT)
- * - Returns only current user's passkeys
+ * - If userId is provided, returns that user's passkeys (admin can manage others' passkeys)
+ * - If userId is not provided, returns current user's passkeys
  *
  * Returns:
  * - Array of passkeys with metadata (no sensitive crypto material)
@@ -36,8 +37,12 @@ export async function GET(request: NextRequest) {
       return rateLimitResult
     }
 
+    // Get userId from query params (optional - defaults to current user)
+    const { searchParams } = new URL(request.url)
+    const targetUserId = searchParams.get('userId') || user.id
+
     // Get user's passkeys
-    const passkeys = await getUserPasskeys(user.id)
+    const passkeys = await getUserPasskeys(targetUserId)
 
     return NextResponse.json({ passkeys })
   } catch (error) {

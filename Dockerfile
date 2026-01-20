@@ -166,7 +166,8 @@ RUN chown -R app:app /app
 RUN chmod -R a+rX /app/src \
                   /app/.next \
                   /app/node_modules \
-                  /app/public
+                  /app/public \
+                  /app/prisma
 
 # Environment variables for PUID/PGID (can be overridden at runtime)
 ENV PUID=1000 \

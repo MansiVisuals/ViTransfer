@@ -1,6 +1,7 @@
 'use client'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Coffee } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 // Declare global window interface for Ko-fi dialog control
@@ -30,7 +31,8 @@ export default function KofiWidget() {
       <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
-            ☕ Support ViTransfer
+            <Coffee className="w-5 h-5" />
+            Support ViTransfer
           </DialogTitle>
         </DialogHeader>
         <div className="px-6 pb-6">
@@ -44,7 +46,7 @@ export default function KofiWidget() {
               borderRadius: '8px'
             }}
             height='712' 
-            title='Support mansivisuals on Ko-fi'
+            title='Support ViTransfer on Ko-fi'
             loading="lazy"
           />
         </div>

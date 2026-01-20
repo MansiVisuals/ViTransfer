@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/components/AuthProvider'
 import { Button } from '@/components/ui/button'
-import { Bug, CircleHelp, Container, ExternalLink, FolderKanban, Github, Heart, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
+import { Bug, CircleHelp, Coffee, Container, ExternalLink, FolderKanban, Github, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -150,8 +150,8 @@ export default function AdminHeader() {
                         }
                       }}
                     >
-                      <Heart className="w-4 h-4 mr-2 fill-current" />
-                      Support on Ko-fi
+                      <Coffee className="w-4 h-4 mr-2" />
+                      Support ViTransfer
                     </Button>
                   </div>
                 </div>

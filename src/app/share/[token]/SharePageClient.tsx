@@ -71,6 +71,19 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [storageKey])
 
+  // Restore authenticatedEmail from server-provided authenticatedRecipientId (for OTP users)
+  // Server extracts recipientId from token - client never decodes token
+  useEffect(() => {
+    if (!project?.authenticatedRecipientId || !project?.recipients?.length) return
+    if (authenticatedEmail) return // Already set, skip
+
+    // Match server-provided recipientId with recipients to get email
+    const recipient = project.recipients.find((r: any) => r.id === project.authenticatedRecipientId)
+    if (recipient?.email) {
+      setAuthenticatedEmail(recipient.email)
+    }
+  }, [project?.authenticatedRecipientId, project?.recipients, authenticatedEmail])
+
 
   // Fetch comments separately for security
   const fetchComments = async () => {

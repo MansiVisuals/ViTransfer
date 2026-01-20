@@ -187,7 +187,7 @@ export async function GET(
       getPrimaryRecipient(project.id)
     ])
 
-    let allRecipients: Array<{id: string, name: string | null}> = []
+    let allRecipients: Array<{id: string, name: string | null, email: string | null}> = []
     // Include recipients for all authenticated users (guest mode is the only restriction)
     if (!isGuest) {
       const recipients = await getProjectRecipients(project.id)
@@ -195,7 +195,8 @@ export async function GET(
         .filter(r => r.id)
         .map(r => ({
           id: r.id!,
-          name: r.name
+          name: r.name,
+          email: r.email
         }))
     }
 
@@ -234,6 +235,9 @@ export async function GET(
       return acc
     }, {}) : sortedVideosByName
 
+    // Extract authenticated recipient ID from share token (for OTP-authenticated users)
+    const authenticatedRecipientId = shareContext?.recipientId || null
+
     const projectData = {
       ...(isGuest ? {} : { id: project.id }),
 
@@ -250,6 +254,7 @@ export async function GET(
         clientEmail: primaryRecipient?.email || null,
         companyName: project.companyName || null,
         recipients: allRecipients,
+        authenticatedRecipientId,
       }),
 
       // Not sensitive; used by share UI to format comment timestamp badges

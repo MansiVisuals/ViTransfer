@@ -213,12 +213,22 @@ export async function POST(
     // SUCCESS - Clear rate limit on successful verification
     await redisClient.del(rateLimitKey)
 
+    // Get recipient ID for token (secure: only UUID, no PII in token)
+    const recipient = await prisma.projectRecipient.findFirst({
+      where: {
+        projectId: project.id,
+        email: { equals: email.toLowerCase().trim(), mode: 'insensitive' }
+      },
+      select: { id: true }
+    })
+
     const shareTokenTtl = await getShareTokenTtlSeconds()
     const shareToken = signShareToken({
       shareId: token,
       projectId: project.id,
       permissions: ['view', 'comment', 'download'],
       guest: false,
+      recipientId: recipient?.id,
       ttlSeconds: shareTokenTtl,
     })
 

@@ -9,7 +9,7 @@ import VideoSidebar from '@/components/VideoSidebar'
 import ProjectInfo from '@/components/ProjectInfo'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, MessageSquare } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
 export default function AdminSharePage() {
@@ -429,7 +429,20 @@ export default function AdminSharePage() {
             ) : (
             <div className={`flex-1 min-h-0 ${project.hideFeedback || hideComments ? 'flex flex-col w-full' : 'flex flex-col lg:grid gap-4 sm:gap-6 lg:grid-cols-3'}`}>
               {/* Video Player - order-1 on both mobile and desktop */}
-              <div className={project.hideFeedback || hideComments ? 'flex-1 min-h-0 flex flex-col' : 'order-1 lg:col-span-2'}>
+              <div className={`${project.hideFeedback || hideComments ? 'flex-1 min-h-0 flex flex-col relative' : 'order-1 lg:col-span-2'}`}>
+                {/* Show Comments Toggle Button - visible when comments are hidden */}
+                {!project.hideFeedback && hideComments && (
+                  <Button
+                    onClick={() => setHideComments(false)}
+                    variant="outline"
+                    size="sm"
+                    className="absolute top-4 right-4 z-10 hidden lg:flex items-center gap-2 bg-background/95 backdrop-blur-sm shadow-lg hover:bg-background"
+                    title="Show feedback & discussion"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Show Feedback
+                  </Button>
+                )}
                 <VideoPlayer
                   videos={readyVideos}
                   projectId={project.id}

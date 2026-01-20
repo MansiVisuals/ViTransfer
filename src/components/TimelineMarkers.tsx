@@ -100,8 +100,8 @@ export default function TimelineMarkers({
         if (comment.parentId) return false
         // Only show comments for this video
         if (comment.videoId !== videoId) return false
-        // Only show comments with valid timecodes
-        if (!comment.timecode || comment.timecode === '00:00:00:00' || comment.timecode === '00:00:00;00') {
+        // Allow 00:00:00:00 timecode - it's a valid timestamp at the start
+        if (!comment.timecode) {
           return false
         }
         return true
@@ -130,7 +130,11 @@ export default function TimelineMarkers({
     if (markers.length === 0) return []
 
     const groups: MarkerData[][] = []
-    const threshold = 4 // percentage threshold for grouping
+    // Dynamic threshold based on video duration
+    // For short videos (<60s): 5% threshold
+    // For medium videos (60s-600s): 3% threshold  
+    // For long videos (>600s): 2% threshold
+    const threshold = videoDuration < 60 ? 5 : videoDuration < 600 ? 3 : 2
 
     markers.forEach((marker) => {
       const lastGroup = groups[groups.length - 1]
@@ -142,7 +146,7 @@ export default function TimelineMarkers({
     })
 
     return groups
-  }, [markers])
+  }, [markers, videoDuration])
 
   const handleMarkerClick = useCallback((marker: MarkerData, e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation() // Prevent video click-through

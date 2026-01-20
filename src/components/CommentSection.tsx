@@ -433,9 +433,7 @@ export default function CommentSection({
                 const duration = video?.duration
                 const showTimestamp =
                   typeof comment.timecode === 'string' &&
-                  comment.timecode.trim() !== '' &&
-                  comment.timecode !== '00:00:00:00' &&
-                  comment.timecode !== '00:00:00;00'
+                  comment.timecode.trim() !== ''
                 const timestampLabel = showTimestamp
                   ? formatCommentTimestamp({
                       timecode: comment.timecode,

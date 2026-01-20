@@ -329,7 +329,8 @@ export default function CustomVideoControls({
       .filter((comment) => {
         if (comment.parentId) return false
         if (videoId && comment.videoId !== videoId) return false
-        if (!comment.timecode || comment.timecode === '00:00:00:00' || comment.timecode === '00:00:00;00') {
+        // Allow 00:00:00:00 timecode - it's a valid timestamp at the start
+        if (!comment.timecode) {
           return false
         }
         return true
@@ -360,7 +361,11 @@ export default function CustomVideoControls({
     if (markers.length === 0) return []
 
     const groups: MarkerData[][] = []
-    const threshold = 2.5 // percentage threshold for grouping (tighter for integrated view)
+    // Dynamic threshold based on video duration
+    // For short videos (<60s): 3% threshold
+    // For medium videos (60s-600s): 2% threshold  
+    // For long videos (>600s): 1.5% threshold
+    const threshold = videoDuration < 60 ? 3 : videoDuration < 600 ? 2 : 1.5
 
     markers.forEach((marker) => {
       const lastGroup = groups[groups.length - 1]
@@ -372,7 +377,7 @@ export default function CustomVideoControls({
     })
 
     return groups
-  }, [markers])
+  }, [markers, videoDuration])
 
   const handleTimelineClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!timelineRef.current || !videoDuration) return

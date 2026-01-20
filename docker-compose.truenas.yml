@@ -26,7 +26,7 @@ services:
       - no-new-privileges:true
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: vitransfer-redis
     restart: unless-stopped
     user: "568:568"

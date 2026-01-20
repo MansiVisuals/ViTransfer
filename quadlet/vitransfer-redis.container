@@ -4,7 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=docker.io/library/redis:7-alpine
+Image=docker.io/library/redis:8-alpine
 ContainerName=vitransfer-redis
 AutoUpdate=registry
 

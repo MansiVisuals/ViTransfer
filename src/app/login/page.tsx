@@ -106,6 +106,14 @@ function LoginForm() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Check if passkey is required - immediately trigger passkey login without revealing account details
+        if (response.status === 403 && data.passkeyRequired) {
+          setLoading(false)
+          // Immediately trigger passkey login
+          handlePasskeyLogin()
+          return
+        }
+        
         setError(data.error || 'Login failed')
         setLoading(false)
         return

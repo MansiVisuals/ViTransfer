@@ -9,6 +9,7 @@ export type SecurityEventType =
   // Admin Login Events
   | 'ADMIN_PASSWORD_LOGIN_SUCCESS'
   | 'ADMIN_PASSWORD_LOGIN_FAILED'
+  | 'ADMIN_PASSWORD_LOGIN_BLOCKED_PASSKEY_REQUIRED'
   | 'ADMIN_LOGIN_RATE_LIMIT_HIT'
 
   // Admin Password Reset Events
@@ -74,6 +75,12 @@ export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMet
   ADMIN_PASSWORD_LOGIN_FAILED: {
     label: 'Admin Basic Auth Login Failed',
     description: 'Failed administrator login attempt - incorrect username/email or password.',
+    category: 'Admin Auth',
+    severity: 'WARNING',
+  },
+  ADMIN_PASSWORD_LOGIN_BLOCKED_PASSKEY_REQUIRED: {
+    label: 'Admin Password Login Blocked - Passkey Required',
+    description: 'Password login attempt blocked because passkey authentication is configured for this account.',
     category: 'Admin Auth',
     severity: 'WARNING',
   },

@@ -664,7 +664,10 @@ export default function VideoPlayer({
       {/* Video Player Container */}
       <div 
         ref={containerRef}
-        className="relative bg-background rounded-lg aspect-video flex-shrink min-h-0 overflow-hidden group lg:order-1"
+        className="relative bg-background rounded-lg flex-shrink min-h-0 overflow-hidden group lg:order-1"
+        style={{
+          aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`
+        }}
       >
         {videoUrl ? (
           <>

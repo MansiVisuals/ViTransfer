@@ -5,6 +5,59 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-01-20
+
+### Added
+- **Password reset flow**: Secure self-service password recovery for admin users
+  - Forgot password page with email/username lookup
+  - Encrypted, time-limited reset tokens (30 minutes)
+  - Single-use token enforcement via Redis
+  - Rate limiting (3 requests/15min for request, 5/15min for reset)
+  - Email enumeration prevention (always returns success)
+  - Automatic session invalidation after password change
+  - Comprehensive security event logging
+- **Passkey enforcement**: When passkeys are configured, password login is blocked
+  - Security event logged for blocked attempts
+- **Video player rewrite**: New custom video controls with enhanced functionality
+  - Timeline markers showing comment positions on the scrubber
+  - Improved playback controls with better mobile support
+  - Frame-accurate seeking with timecode display
+  - Comments toggle button to show/hide markers
+- **Project info panel**: Dedicated component for project metadata display
+  - Video technical details (resolution, codec, FPS, duration)
+  - Quick actions for common operations
+  - Keyboard shortcuts dialog
+- **Ko-fi support widget**: Optional donation widget for community support
+- **Recipient session management**: Session invalidation on recipient changes
+  - Sessions invalidated when recipient email changes
+  - Sessions invalidated when recipient is deleted
+
+### Changed
+- **Admin passkey management**: Admins can now manage other users' passkeys
+  - List passkeys for any user (for support purposes)
+  - Delete passkeys with proper audit logging
+  - Session invalidation when passkeys are deleted
+- **Share token includes recipient ID**: OTP-authenticated users tracked by recipient
+- **Validation schema centralized**: Single source of truth in `@/lib/validation.ts`
+  - All project update fields use `safeStringSchema` for XSS prevention
+  - Slug validation enforces lowercase alphanumeric with hyphens
+- **Comment section improvements**: Better thread display and interaction
+- **InitialsAvatar enhancements**: Improved color generation and display
+- **FilterDropdown refinements**: Better UX for status filtering
+
+### Fixed
+- **Database migration**: Aims to resolve migration issue reported in 0.8.3
+- Copy confirmation icon and text in ProjectActions component
+- Marker spacing now dynamic based on video length
+- Timecode validation logic improvements
+
+### Security
+- Rate limiting added to recipient PATCH/DELETE endpoints
+- Shell script permissions fixed (docker-entrypoint.sh, quadlet/*.sh)
+- Session invalidation on passkey deletion
+- Better JWT secret validation error messages
+- Centralized validation prevents schema drift
+
 ## [0.8.3] - 2026-01-18
 
 ### Added

@@ -4,7 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=docker.io/library/postgres:16-alpine
+Image=docker.io/library/postgres:18.1-alpine
 ContainerName=vitransfer-postgres
 AutoUpdate=registry
 

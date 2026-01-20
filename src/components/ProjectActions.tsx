@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Project } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Trash2, ExternalLink, Archive, ArchiveRestore, RotateCcw, Send, Loader2, CheckCircle, BarChart3, FolderKanban, Copy } from 'lucide-react'
+import { Trash2, ExternalLink, Archive, ArchiveRestore, RotateCcw, Send, Loader2, CheckCircle, BarChart3, FolderKanban, Copy, Check } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -354,8 +354,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                   >
                     {linkCopied ? (
                       <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Copy
+                        <Check className="w-4 h-4 mr-2 text-success" />
+                        Copied!
                       </>
                     ) : (
                       <>

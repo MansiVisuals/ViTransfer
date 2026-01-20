@@ -823,6 +823,62 @@ export async function sendPasswordEmail({
 }
 
 /**
+ * Email template: Admin password reset
+ */
+export async function sendPasswordResetEmail({
+  adminEmail,
+  adminName,
+  resetUrl,
+}: {
+  adminEmail: string
+  adminName: string
+  resetUrl: string
+}) {
+  const settings = await getEmailSettings()
+  const companyName = settings.companyName || 'ViTransfer'
+
+  const subject = `Reset Your Password - ${companyName}`
+
+  const html = renderEmailShell({
+    companyName,
+    title: 'Password Reset',
+    subtitle: 'Reset your admin account password',
+    preheader: 'Reset your password for ViTransfer',
+    bodyContent: `
+      <p style="margin:0 0 16px; font-size:15px; color:${EMAIL_BRAND.text}; line-height:1.6;">
+        Hi <strong>${escapeHtml(adminName)}</strong>,
+      </p>
+      <p style="margin:0 0 20px; font-size:15px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6;">
+        We received a request to reset your password. Click the button below to create a new password.
+      </p>
+      <div style="margin:24px 0;">
+        ${renderEmailButton({ href: resetUrl, label: 'Reset Password' })}
+      </div>
+      <div style="background:${EMAIL_BRAND.surfaceAlt}; border:1px solid ${EMAIL_BRAND.border}; padding:14px 16px; margin:20px 0; border-radius:10px;">
+        <p style="margin:0 0 8px; font-size:13px; color:${EMAIL_BRAND.textSubtle}; line-height:1.5;">
+          <strong style="color:${EMAIL_BRAND.text};">Security Notice:</strong>
+        </p>
+        <ul style="margin:0; padding-left:20px; font-size:13px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6;">
+          <li>This link expires in <strong>30 minutes</strong></li>
+          <li>Can only be used once</li>
+          <li>All sessions will be logged out after reset</li>
+        </ul>
+      </div>
+      <p style="margin:20px 0 0; font-size:13px; color:${EMAIL_BRAND.muted}; line-height:1.6; text-align:center;">
+        If you didn't request this, you can safely ignore this email. Your password will not be changed.
+      </p>
+    `,
+    footerNote: `This is an automated security message from ${companyName}`,
+  })
+
+  return sendEmail({
+    to: adminEmail,
+    subject,
+    html,
+  })
+}
+
+/**
  * Test SMTP connection and send a test email
  */
 export async function testEmailConnection(testEmail: string, customConfig?: any) {

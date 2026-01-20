@@ -11,6 +11,16 @@ export type SecurityEventType =
   | 'ADMIN_PASSWORD_LOGIN_FAILED'
   | 'ADMIN_LOGIN_RATE_LIMIT_HIT'
 
+  // Admin Password Reset Events
+  | 'ADMIN_PASSWORD_RESET_REQUESTED'
+  | 'ADMIN_PASSWORD_RESET_EMAIL_SENT'
+  | 'ADMIN_PASSWORD_RESET_EMAIL_FAILED'
+  | 'ADMIN_PASSWORD_RESET_UNKNOWN_EMAIL'
+  | 'ADMIN_PASSWORD_RESET_TOKEN_INVALID'
+  | 'ADMIN_PASSWORD_RESET_TOKEN_EXPIRED'
+  | 'ADMIN_PASSWORD_RESET_COMPLETED'
+  | 'ADMIN_PASSWORD_RESET_RATE_LIMIT_HIT'
+
   // Passkey Events
   | 'PASSKEY_REGISTERED'
   | 'PASSKEY_REGISTRATION_FAILED'
@@ -70,6 +80,56 @@ export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMet
   ADMIN_LOGIN_RATE_LIMIT_HIT: {
     label: 'Admin Login Rate Limited',
     description: 'Too many failed admin login attempts - account temporarily locked for security.',
+    category: 'Admin Auth',
+    severity: 'WARNING',
+  },
+
+  // Admin Password Reset Events
+  ADMIN_PASSWORD_RESET_REQUESTED: {
+    label: 'Admin Password Reset Requested',
+    description: 'Administrator requested a password reset link via email.',
+    category: 'Admin Auth',
+    severity: 'INFO',
+  },
+  ADMIN_PASSWORD_RESET_EMAIL_SENT: {
+    label: 'Admin Password Reset Email Sent',
+    description: 'Password reset email successfully sent to administrator.',
+    category: 'Admin Auth',
+    severity: 'INFO',
+  },
+  ADMIN_PASSWORD_RESET_EMAIL_FAILED: {
+    label: 'Admin Password Reset Email Failed',
+    description: 'Failed to send password reset email - SMTP not configured or email delivery error.',
+    category: 'Admin Auth',
+    severity: 'WARNING',
+  },
+  ADMIN_PASSWORD_RESET_UNKNOWN_EMAIL: {
+    label: 'Admin Password Reset Unknown Email',
+    description: 'Password reset requested for unknown email address (no account found).',
+    category: 'Admin Auth',
+    severity: 'INFO',
+  },
+  ADMIN_PASSWORD_RESET_TOKEN_INVALID: {
+    label: 'Admin Password Reset Invalid Token',
+    description: 'Attempted to use invalid or malformed password reset token.',
+    category: 'Admin Auth',
+    severity: 'WARNING',
+  },
+  ADMIN_PASSWORD_RESET_TOKEN_EXPIRED: {
+    label: 'Admin Password Reset Token Expired',
+    description: 'Attempted to use expired password reset token (tokens expire after 30 minutes).',
+    category: 'Admin Auth',
+    severity: 'INFO',
+  },
+  ADMIN_PASSWORD_RESET_COMPLETED: {
+    label: 'Admin Password Reset Completed',
+    description: 'Administrator successfully completed password reset and all sessions were invalidated.',
+    category: 'Admin Auth',
+    severity: 'INFO',
+  },
+  ADMIN_PASSWORD_RESET_RATE_LIMIT_HIT: {
+    label: 'Admin Password Reset Rate Limited',
+    description: 'Too many password reset attempts - temporarily blocked for security.',
     category: 'Admin Auth',
     severity: 'WARNING',
   },

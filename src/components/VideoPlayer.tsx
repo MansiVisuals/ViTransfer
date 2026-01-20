@@ -639,10 +639,32 @@ export default function VideoPlayer({
 
   return (
     <div className="space-y-4 flex flex-col max-h-full">
+      {/* Version Selector - Show ABOVE video on mobile, BELOW on desktop */}
+      {displayVideos.length > 1 && (
+        <div className="flex gap-3 overflow-x-auto py-2 flex-shrink-0 lg:order-2">
+          {displayVideos.map((video, index) => {
+            const videoApproved = (video as any).approved === true
+            return (
+              <Button
+                key={video.id}
+                onClick={() => setSelectedVideoIndex(index)}
+                variant={selectedVideoIndex === index ? 'default' : 'outline'}
+                className="whitespace-nowrap relative"
+              >
+                {videoApproved && (
+                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
+                )}
+                {videoApproved ? 'Approved Version' : video.versionLabel}
+              </Button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Video Player Container */}
       <div 
         ref={containerRef}
-        className="relative bg-background rounded-lg aspect-video flex-shrink min-h-0 overflow-hidden group"
+        className="relative bg-background rounded-lg aspect-video flex-shrink min-h-0 overflow-hidden group lg:order-1"
       >
         {videoUrl ? (
           <>
@@ -711,28 +733,6 @@ export default function VideoPlayer({
         )}
       </div>
 
-      {/* Version Selector - Only show if there are multiple versions to choose from */}
-      {displayVideos.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto py-2 flex-shrink-0">
-          {displayVideos.map((video, index) => {
-            const videoApproved = (video as any).approved === true
-            return (
-              <Button
-                key={video.id}
-                onClick={() => setSelectedVideoIndex(index)}
-                variant={selectedVideoIndex === index ? 'default' : 'outline'}
-                className="whitespace-nowrap relative"
-              >
-                {videoApproved && (
-                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
-                )}
-                {videoApproved ? 'Approved Version' : video.versionLabel}
-              </Button>
-            )
-          })}
-        </div>
-      )}
-
       {/* Video & Project Information - visible on desktop, hidden on mobile (shown separately below comments) */}
       <ProjectInfo
         selectedVideo={selectedVideo}
@@ -752,7 +752,7 @@ export default function VideoPlayer({
         allowAssetDownload={allowAssetDownload}
         shareToken={shareToken}
         activeVideoName={activeVideoName}
-        className="hidden lg:block"
+        className="hidden lg:block lg:order-3"
       />
     </div>
   )

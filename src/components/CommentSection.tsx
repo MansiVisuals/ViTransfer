@@ -299,7 +299,8 @@ export default function CommentSection({
 
   return (
     <Card className="bg-card border border-border flex flex-col h-auto lg:h-full max-h-[75vh] rounded-lg overflow-hidden" data-comment-section>
-      <CardHeader className="border-b border-border flex-shrink-0">
+      {/* Desktop: Show header at top, Mobile: Hide header (will show below input) */}
+      <CardHeader className={cn("border-b border-border flex-shrink-0", mobileCollapsible && "hidden lg:block")}>
         <CardTitle className="text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
           Feedback & Discussion
@@ -366,7 +367,7 @@ export default function CommentSection({
           </div>
         )}
 
-        {/* Collapsible header for messages (mobile only) */}
+        {/* Collapsible header for messages (mobile only) - NOW includes "Feedback & Discussion" title */}
         {mobileCollapsible && (
           <button
             onClick={() => setIsMobileCollapsed(!isMobileCollapsed)}
@@ -374,7 +375,7 @@ export default function CommentSection({
           >
             <span className="text-sm font-medium flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              {sortedComments.length} {sortedComments.length === 1 ? 'message' : 'messages'}
+              Feedback & Discussion ({sortedComments.length})
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">

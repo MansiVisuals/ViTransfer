@@ -30,12 +30,13 @@ interface CommentSectionProps {
   smtpConfigured?: boolean
   isPasswordProtected?: boolean
   adminUser?: any
-  recipients?: Array<{ id: string; name: string | null }>
+  recipients?: Array<{ id: string; name: string | null; email: string | null }>
   shareToken?: string | null
   showShortcutsButton?: boolean
   timestampDisplayMode?: 'TIMECODE' | 'AUTO'
   mobileCollapsible?: boolean
   initialMobileCollapsed?: boolean
+  authenticatedEmail?: string | null
 }
 
 export default function CommentSection({
@@ -58,6 +59,7 @@ export default function CommentSection({
   timestampDisplayMode = 'TIMECODE',
   mobileCollapsible = false,
   initialMobileCollapsed = true,
+  authenticatedEmail = null,
 }: CommentSectionProps) {
   const [isMobileCollapsed, setIsMobileCollapsed] = useState(initialMobileCollapsed)
   const {
@@ -72,6 +74,7 @@ export default function CommentSection({
     nameSource,
     selectedRecipientId,
     namedRecipients,
+    isOtpAuthenticated,
     handleCommentChange,
     handleSubmitComment,
     handleReply,
@@ -92,6 +95,7 @@ export default function CommentSection({
     restrictToLatestVersion,
     shareToken,
     useAdminAuth: isAdminView,
+    authenticatedEmail,
   })
 
   // Auto-scroll to latest comment (like messaging apps)
@@ -358,6 +362,7 @@ export default function CommentSection({
               nameSource={nameSource}
               selectedRecipientId={selectedRecipientId}
               onNameSourceChange={handleNameSourceChange}
+              isOtpAuthenticated={isOtpAuthenticated}
               currentVideoRestricted={currentVideoRestricted}
               restrictionMessage={restrictionMessage}
               commentsDisabled={commentsDisabled}
@@ -467,6 +472,7 @@ export default function CommentSection({
           nameSource={nameSource}
           selectedRecipientId={selectedRecipientId}
           onNameSourceChange={handleNameSourceChange}
+          isOtpAuthenticated={isOtpAuthenticated}
           currentVideoRestricted={currentVideoRestricted}
           restrictionMessage={restrictionMessage}
           commentsDisabled={commentsDisabled}

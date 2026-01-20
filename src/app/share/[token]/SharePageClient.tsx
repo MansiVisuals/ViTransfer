@@ -35,6 +35,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [guestMode, setGuestMode] = useState(false)
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
+  const [authenticatedEmail, setAuthenticatedEmail] = useState<string | null>(null) // Track OTP-authenticated email
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -444,6 +445,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         }
         setIsAuthenticated(true)
         setIsGuest(false)
+        setAuthenticatedEmail(email) // Save the authenticated email
 
         await fetchProjectData(data.shareToken)
       } else {
@@ -804,6 +806,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                     mobileCollapsible={true}
                     initialMobileCollapsed={true}
+                    authenticatedEmail={authenticatedEmail}
                   />
                 </div>
               )}

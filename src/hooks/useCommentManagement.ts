@@ -17,11 +17,12 @@ interface UseCommentManagementProps {
   clientEmail?: string
   isPasswordProtected: boolean
   adminUser?: any
-  recipients: Array<{ id: string; name: string | null }>
+  recipients: Array<{ id: string; name: string | null; email: string | null }>
   clientName: string
   restrictToLatestVersion: boolean
   shareToken?: string | null
   useAdminAuth?: boolean
+  authenticatedEmail?: string | null
 }
 
 export function useCommentManagement({
@@ -36,6 +37,7 @@ export function useCommentManagement({
   restrictToLatestVersion,
   shareToken = null,
   useAdminAuth = false,
+  authenticatedEmail = null,
 }: UseCommentManagementProps) {
   const router = useRouter()
 
@@ -50,6 +52,34 @@ export function useCommentManagement({
 
   // Author name management
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
+
+  // Auto-select recipient if authenticatedEmail is provided
+  useEffect(() => {
+    if (authenticatedEmail && recipients.length > 0) {
+      const matchingRecipient = recipients.find(r => 
+        r.email?.toLowerCase() === authenticatedEmail.toLowerCase()
+      )
+      
+      if (matchingRecipient && matchingRecipient.name) {
+        // Auto-select this recipient
+        setNameSource('recipient')
+        setSelectedRecipientId(matchingRecipient.id)
+        setAuthorName(matchingRecipient.name)
+        
+        // Save to localStorage 
+        const storageKey = `comment-name-${projectId}`
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({
+            nameSource: 'recipient',
+            selectedRecipientId: matchingRecipient.id,
+            authorName: matchingRecipient.name
+          }))
+        } catch (error) {
+          console.error('Failed to save authenticated name:', error)
+        }
+      }
+    }
+  }, [authenticatedEmail, recipients, projectId])
 
   // Load persisted name selection from localStorage (persists across sessions)
   const storageKey = `comment-name-${projectId}`
@@ -507,6 +537,7 @@ export function useCommentManagement({
     nameSource,
     selectedRecipientId,
     namedRecipients,
+    isOtpAuthenticated: !!authenticatedEmail,
     handleCommentChange,
     handleSubmitComment,
     handleReply,

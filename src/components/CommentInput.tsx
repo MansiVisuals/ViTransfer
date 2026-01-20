@@ -34,6 +34,7 @@ interface CommentInputProps {
   nameSource: 'recipient' | 'custom' | 'none'
   selectedRecipientId: string
   onNameSourceChange: (source: 'recipient' | 'custom' | 'none', recipientId?: string) => void
+  isOtpAuthenticated?: boolean
 
   // Restrictions
   currentVideoRestricted: boolean
@@ -64,6 +65,7 @@ export default function CommentInput({
   nameSource,
   selectedRecipientId,
   onNameSourceChange,
+  isOtpAuthenticated = false,
   currentVideoRestricted,
   restrictionMessage,
   commentsDisabled,
@@ -139,7 +141,7 @@ export default function CommentInput({
       )}
 
       {/* Author Info - Only show for password-protected shares (not for admin users) */}
-      {!currentVideoRestricted && showAuthorInput && (
+      {!currentVideoRestricted && showAuthorInput && !isOtpAuthenticated && (
         <div className="mb-3 space-y-2">
           {namedRecipients.length > 0 ? (
             <>
@@ -187,6 +189,18 @@ export default function CommentInput({
               className="text-sm"
             />
           )}
+        </div>
+      )}
+
+      {/* Show read-only name indicator when OTP authenticated */}
+      {!currentVideoRestricted && showAuthorInput && isOtpAuthenticated && authorName && (
+        <div className="mb-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border border-border rounded-md">
+            <InitialsAvatar name={authorName} size="sm" />
+            <span className="text-sm text-foreground font-medium">
+              Commenting as <span className="font-semibold">{authorName}</span>
+            </span>
+          </div>
         </div>
       )}
 

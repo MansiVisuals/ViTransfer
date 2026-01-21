@@ -114,13 +114,13 @@ jobs:
           sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$FROM_VERSION/g" docker-compose.yml
           
           # Start old version
-          docker-compose up -d
+          docker compose up -d
           
           echo "[WAIT] Waiting for old version to be ready..."
           sleep 40
           
           # Verify old version is running
-          docker-compose ps
+          docker compose ps
 
       - name: Verify old version started
         run: |
@@ -177,8 +177,8 @@ jobs:
       - name: Stop old version
         run: |
           echo "[STOP] Stopping old version..."
-          docker-compose stop app worker
-          docker-compose rm -f app worker
+          docker compose stop app worker
+          docker compose rm -f app worker
 
       - name: Upgrade to new version
         run: |
@@ -194,10 +194,10 @@ jobs:
           fi
           
           # Pull new version
-          docker-compose pull app worker
+          docker compose pull app worker
           
           # Start new version (database and redis are still running)
-          docker-compose up -d app worker
+          docker compose up -d app worker
           
           echo "[WAIT] Waiting for new version to be ready..."
           sleep 40
@@ -334,7 +334,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker-compose down -v
+          docker compose down -v
           rm -f .env cookies.txt
           rm -f /tmp/before_projects.txt /tmp/before_users.txt
           rm -f /tmp/backup_before_upgrade.sql /tmp/schema_after_upgrade.sql

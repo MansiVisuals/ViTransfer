@@ -66,7 +66,7 @@ jobs:
 
       - name: Start services with docker-compose
         run: |
-          docker-compose up -d
+          docker compose up -d
           echo "Waiting for services to be healthy..."
           sleep 30
 
@@ -100,7 +100,7 @@ jobs:
       - name: Check container health
         run: |
           echo "Checking container statuses..."
-          docker-compose ps
+          docker compose ps
           
           # Check if all containers are healthy
           APP_HEALTH=$(docker inspect vitransfer-app --format='{{.State.Health.Status}}')
@@ -118,7 +118,7 @@ jobs:
              [[ "$REDIS_HEALTH" != "healthy" ]] || \
              [[ "$WORKER_HEALTH" != "healthy" ]]; then
             echo "[ERROR] One or more containers are not healthy"
-            docker-compose logs
+            docker compose logs
             exit 1
           fi
           echo "[OK] All containers are healthy"
@@ -201,5 +201,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker-compose down -v
+          docker compose down -v
           rm .env

@@ -2,6 +2,27 @@
 
 This directory contains GitHub Actions workflows for automated testing of ViTransfer.
 
+## Overview
+
+**Total Workflows: 4**
+- `test-clean-install.yml` (main branch) - **19 tests** - Fresh installation
+- `test-upgrade.yml` (main branch) - **22 tests** - Version upgrades with data preservation
+- `test-dev-clean-install.yml` (dev branch) - **19 tests** - Dev build fresh installation
+- `test-dev-upgrade.yml` (dev branch) - **22 tests** - Production → Dev upgrade
+
+**Test Categories:**
+- Infrastructure (PostgreSQL, Redis, health checks)
+- Authentication (login, session management)
+- API Endpoints (projects, users, settings, analytics)
+- Write Operations (create, update, recipient management)
+- Database Schema (table existence verification)
+- Worker Services (BullMQ initialization)
+- Data Integrity (upgrade preservation verification)
+
+**Key Differences:**
+- **Clean Install Tests (19):** Test fresh deployments without existing data
+- **Upgrade Tests (22):** Test version migrations with data preservation verification, includes 3 additional tests (data integrity check, database comparison, and summary generation)
+
 ## Workflows
 
 ### Production Testing (main branch)
@@ -10,17 +31,42 @@ This directory contains GitHub Actions workflows for automated testing of ViTran
 
 Tests a fresh installation of ViTransfer with the latest production compose configuration.
 
+**Total Tests: 19**
+
 **What it tests:**
-- [x] PostgreSQL deployment (version from docker-compose.yml)
-- [x] Redis deployment (version from docker-compose.yml)
-- [x] Container health checks
-- [x] Database migrations
-- [x] Database connectivity
-- [x] Redis connectivity
-- [x] API health endpoint
-- [x] Admin user creation
-- [x] Admin login functionality
-- [x] Worker initialization
+
+**Infrastructure Tests (3):**
+- [x] PostgreSQL deployment and connectivity (version from docker-compose.yml)
+- [x] Redis deployment and connectivity (version from docker-compose.yml)
+- [x] API health endpoint (`GET /api/health`)
+
+**Authentication Tests (1):**
+- [x] Admin user creation and login (`POST /api/auth/login`)
+
+**API Read Endpoints (4):**
+- [x] Session endpoint (`GET /api/auth/session`)
+- [x] Projects list endpoint (`GET /api/projects`)
+- [x] Users list endpoint (`GET /api/users`)
+- [x] Settings endpoint (`GET /api/settings`)
+
+**Analytics Endpoints (2):**
+- [x] General analytics (`GET /api/analytics`)
+- [x] Project-specific analytics (`GET /api/analytics/[projectId]`)
+
+**Write/Create Operations (5):**
+- [x] Project creation (`POST /api/projects` + database verification)
+- [x] Recipient management (`POST /api/projects/[id]/recipients` + `GET` verification)
+- [x] User creation (`POST /api/users` + database verification)
+- [x] Project update (`PATCH /api/projects/[id]` + persistence verification)
+- [x] Settings update (`PATCH /api/settings` + persistence verification)
+
+**Database Schema Tests (1):**
+- [x] NotificationQueue table exists
+
+**Worker Tests (3):**
+- [x] Worker container startup
+- [x] Worker logs (BullMQ initialization)
+- [x] No worker errors
 
 **Triggers:**
 - Push to `main` or `dev` branches
@@ -35,16 +81,82 @@ Tests a fresh installation of ViTransfer with the latest production compose conf
 
 Tests upgrading from a previous version to the current version, ensuring data integrity and migration success.
 
-**What it tests:**
+**Total Tests: 22**
+
+**Pre-Upgrade Phase:**
 - [x] Deploy old version (auto-detected from VERSION file, or manually specified)
-- [x] Seed test data
-- [x] Create database backup
+- [x] Seed test data (create project with admin user)
+- [x] Capture baseline counts (Projects, Users)
+- [x] Create database backup (`pg_dump`)
+
+**Upgrade Phase:**
+- [x] Stop old version containers
 - [x] Upgrade to new version
 - [x] Verify migrations ran successfully
-- [x] Verify data integrity (no data loss)
-- [x] Test functionality after upgrade
-- [x] Verify admin login still works
-- [x] Verify worker still functions
+
+**Data Integrity Verification (1):**
+- [x] Verify data integrity (compare before/after counts - no data loss)
+  - Projects count must match
+  - Users count must match
+  - Stores verified counts for summary report
+
+**Post-Upgrade Functionality Tests (21):**
+
+**Infrastructure (2):**
+- [x] API health endpoint after upgrade
+- [x] Redis connection after upgrade
+
+**Authentication (2):**
+- [x] Admin login after upgrade
+- [x] Session endpoint after upgrade
+
+**API Read Endpoints (4):**
+- [x] Projects API (`GET /api/projects`)
+- [x] Seeded project preserved (verify seed data still exists)
+- [x] Users API (`GET /api/users`)
+- [x] Settings API (`GET /api/settings`)
+
+**Analytics Endpoints (2):**
+- [x] General analytics (`GET /api/analytics`)
+- [x] Project-specific analytics (`GET /api/analytics/[projectId]`)
+
+**Write/Create Operations (5):**
+- [x] Create new project after upgrade (`POST /api/projects`)
+- [x] Recipient management (`POST` & `GET` recipients)
+- [x] User creation (`POST /api/users`)
+- [x] Project update (`PATCH /api/projects/[id]`)
+- [x] Settings update (`PATCH /api/settings`)
+
+**Database Schema Tests (1):**
+- [x] NotificationQueue table exists
+
+**Worker Tests (3):**
+- [x] Worker container running after upgrade
+- [x] Worker logs (BullMQ initialization)
+- [x] No worker errors
+
+**Database Comparison (1):**
+- [x] Compare database schemas (pg_dump before/after, show tables)
+
+**Summary Generation (Always runs):**
+- Data preservation table (Before Upgrade vs After Upgrade counts)
+- Post-upgrade functionality metrics (Final counts with new test data)
+- All 22 test results with status
+
+**Example Output:**
+```
+Data Preservation (Existing Data Survived Upgrade)
+| Resource | Before Upgrade | After Upgrade | Status |
+|----------|----------------|---------------|--------|
+| Projects | 1              | 1             | [OK]   |
+| Users    | 1              | 1             | [OK]   |
+
+Post-Upgrade Functionality
+| Check               | Result                                      |
+|---------------------|---------------------------------------------|
+| Final Project Count | 2 (started with 1, created +1 in tests)    |
+| New Data Creation   | [OK] Successfully created new project      |
+```
 
 **Triggers:**
 - Push to `main` or `dev` branches
@@ -88,16 +200,21 @@ Combined workflow that runs both clean install and upgrade tests.
 
 Tests a fresh installation of development builds using `dev-VERSION` Docker tags.
 
+**Total Tests: 19** (same as production clean install)
+
 **What it tests:**
-- [x] Dev build deployment (e.g., `dev-0.8.5`)
-- [x] PostgreSQL and Redis deployment
-- [x] Container health checks
-- [x] Database migrations
-- [x] API health endpoint
-- [x] Admin login functionality
-- [x] Worker initialization
+- [x] Dev build deployment (e.g., `dev-0.8.5` from Docker Hub)
+- All 19 tests identical to production clean install test
+- Infrastructure, Authentication, API endpoints, Analytics, Write operations, Database schema, Worker tests
 
 **Triggers:**
+- Push to `dev` branch
+- Pull requests to `dev`
+- Manual dispatch (with version override)
+
+**Duration:** ~2-3 minutes
+
+**Example:** Tests `crypt010/vitransfer:dev-0.8.5` from Docker Hub
 - Push to `dev` branch
 - Pull requests to `dev`
 - Manual dispatch (with version override)
@@ -112,14 +229,15 @@ Tests a fresh installation of development builds using `dev-VERSION` Docker tags
 
 Tests upgrading from latest production to development builds.
 
+**Total Tests: 22** (same as production upgrade test)
+
 **What it tests:**
 - [x] Deploy latest production version
 - [x] Seed test data
 - [x] Create database backup
 - [x] Upgrade to dev version (e.g., `dev-0.8.5`)
-- [x] Verify migrations ran successfully
-- [x] Verify data integrity (no data loss)
-- [x] Test functionality after upgrade
+- All 22 tests identical to production upgrade test
+- Data integrity verification, Post-upgrade functionality, Database comparison, Summary generation
 
 **Triggers:**
 - Push to `dev` branch

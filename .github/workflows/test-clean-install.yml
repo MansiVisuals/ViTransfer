@@ -281,11 +281,15 @@ jobs:
       - name: Check worker logs
         run: |
           echo "Checking worker initialization..."
-          docker logs vitransfer-worker --tail 50
+          echo "Waiting for worker to fully initialize..."
+          sleep 10
+          
+          docker logs vitransfer-worker --tail 100
           
           WORKER_LOGS=$(docker logs vitransfer-worker 2>&1)
-          if [[ "$WORKER_LOGS" != *"Video processing worker started"* ]]; then
+          if [[ "$WORKER_LOGS" != *"[WORKER] Video processing worker started"* ]]; then
             echo "[ERROR] Worker did not start properly"
+            echo "Expected to find: '[WORKER] Video processing worker started'"
             exit 1
           fi
           echo "[OK] Worker started successfully"

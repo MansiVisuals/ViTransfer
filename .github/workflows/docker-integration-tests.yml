@@ -1,0 +1,57 @@
+name: Docker Integration Tests
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'docker-compose*.yml'
+      - 'Dockerfile'
+      - 'prisma/**'
+      - '.github/workflows/docker-*.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'docker-compose*.yml'
+      - 'Dockerfile'
+      - 'prisma/**'
+  workflow_dispatch:
+
+jobs:
+  # Run clean install test first
+  clean-install:
+    name: Clean Install Test
+    uses: ./.github/workflows/test-clean-install.yml
+
+  # Run upgrade test after clean install passes
+  upgrade-test:
+    name: Upgrade Test
+    needs: clean-install
+    uses: ./.github/workflows/test-upgrade.yml
+
+  # Summary job
+  summary:
+    name: Test Summary
+    needs: [clean-install, upgrade-test]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Check test results
+        run: |
+          echo "=== Test Results Summary ==="
+          echo ""
+          
+          CLEAN_RESULT="${{ needs.clean-install.result }}"
+          UPGRADE_RESULT="${{ needs.upgrade-test.result }}"
+          
+          echo "Clean Install Test: $CLEAN_RESULT"
+          echo "Upgrade Test: $UPGRADE_RESULT"
+          echo ""
+          
+          if [[ "$CLEAN_RESULT" == "success" ]] && [[ "$UPGRADE_RESULT" == "success" ]]; then
+            echo "[OK] All tests passed!"
+            exit 0
+          else
+            echo "[ERROR] Some tests failed"
+            exit 1
+          fi

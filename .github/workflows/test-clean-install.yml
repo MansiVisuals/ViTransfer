@@ -1,0 +1,205 @@
+name: Test Clean Installation
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+jobs:
+  test-clean-install:
+    name: Clean Install Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect expected database versions
+        id: versions
+        run: |
+          # Extract PostgreSQL version from docker-compose.yml
+          PG_IMAGE=$(grep -A 1 "postgres:" docker-compose.yml | grep "image:" | sed 's/.*postgres:\([^-]*\).*/\1/')
+          echo "Expected PostgreSQL version: $PG_IMAGE"
+          echo "postgres_version=$PG_IMAGE" >> $GITHUB_OUTPUT
+          
+          # Extract Redis version from docker-compose.yml
+          REDIS_IMAGE=$(grep -A 1 "redis:" docker-compose.yml | grep "image:" | sed 's/.*redis:\([^-]*\).*/\1/')
+          echo "Expected Redis version: $REDIS_IMAGE"
+          echo "redis_version=$REDIS_IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Create test .env file
+        run: |
+          cat > .env << EOF
+          # Database Configuration
+          POSTGRES_USER=vitransfer
+          POSTGRES_PASSWORD=test_postgres_password
+          POSTGRES_DB=vitransfer
+          
+          # Redis Configuration
+          REDIS_PASSWORD=test_redis_password
+          
+          # Application Configuration
+          APP_PORT=4321
+          TZ=UTC
+          PUID=1000
+          PGID=1000
+          
+          # Admin Account
+          ADMIN_EMAIL=admin@test.local
+          ADMIN_PASSWORD=TestPassword123!
+          ADMIN_NAME=Test Admin
+          
+          # Application URL
+          NEXT_PUBLIC_APP_URL=http://localhost:4321
+          
+          # Security Keys (Generated for testing)
+          ENCRYPTION_KEY=$(openssl rand -base64 32)
+          JWT_SECRET=$(openssl rand -base64 64)
+          JWT_REFRESH_SECRET=$(openssl rand -base64 64)
+          SHARE_TOKEN_SECRET=$(openssl rand -base64 64)
+          
+          # HTTPS
+          HTTPS_ENABLED=false
+          EOF
+
+      - name: Start services with docker-compose
+        run: |
+          docker-compose up -d
+          echo "Waiting for services to be healthy..."
+          sleep 30
+
+      - name: Verify PostgreSQL version
+        run: |
+          EXPECTED_VERSION="${{ steps.versions.outputs.postgres_version }}"
+          PG_VERSION=$(docker exec vitransfer-postgres psql --version | grep -oP '\d+\.\d+')
+          echo "PostgreSQL version: $PG_VERSION (expected: $EXPECTED_VERSION)"
+          
+          if [[ "$PG_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "[ERROR] Expected PostgreSQL $EXPECTED_VERSION, got $PG_VERSION"
+            exit 1
+          fi
+          echo "[OK] PostgreSQL $EXPECTED_VERSION verified"
+
+      - name: Verify Redis version
+        run: |
+          EXPECTED_VERSION="${{ steps.versions.outputs.redis_version }}"
+          REDIS_VERSION=$(docker exec vitransfer-redis redis-server --version | grep -oP 'v=\K[0-9]+\.[0-9]+')
+          echo "Redis version: $REDIS_VERSION (expected: $EXPECTED_VERSION)"
+          
+          REDIS_MAJOR=$(echo $REDIS_VERSION | cut -d. -f1)
+          EXPECTED_MAJOR=$(echo $EXPECTED_VERSION | cut -d. -f1)
+          
+          if [[ "$REDIS_MAJOR" != "$EXPECTED_MAJOR" ]]; then
+            echo "[ERROR] Expected Redis $EXPECTED_MAJOR.x, got $REDIS_VERSION"
+            exit 1
+          fi
+          echo "[OK] Redis $REDIS_MAJOR.x verified"
+
+      - name: Check container health
+        run: |
+          echo "Checking container statuses..."
+          docker-compose ps
+          
+          # Check if all containers are healthy
+          APP_HEALTH=$(docker inspect vitransfer-app --format='{{.State.Health.Status}}')
+          POSTGRES_HEALTH=$(docker inspect vitransfer-postgres --format='{{.State.Health.Status}}')
+          REDIS_HEALTH=$(docker inspect vitransfer-redis --format='{{.State.Health.Status}}')
+          WORKER_HEALTH=$(docker inspect vitransfer-worker --format='{{.State.Health.Status}}')
+          
+          echo "App health: $APP_HEALTH"
+          echo "PostgreSQL health: $POSTGRES_HEALTH"
+          echo "Redis health: $REDIS_HEALTH"
+          echo "Worker health: $WORKER_HEALTH"
+          
+          if [[ "$APP_HEALTH" != "healthy" ]] || \
+             [[ "$POSTGRES_HEALTH" != "healthy" ]] || \
+             [[ "$REDIS_HEALTH" != "healthy" ]] || \
+             [[ "$WORKER_HEALTH" != "healthy" ]]; then
+            echo "[ERROR] One or more containers are not healthy"
+            docker-compose logs
+            exit 1
+          fi
+          echo "[OK] All containers are healthy"
+
+      - name: Test database connection
+        run: |
+          echo "Testing PostgreSQL connection..."
+          docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -c "SELECT version();"
+          echo "[OK] Database connection successful"
+
+      - name: Test Redis connection
+        run: |
+          echo "Testing Redis connection..."
+          docker exec vitransfer-redis redis-cli -a test_redis_password --no-auth-warning ping
+          echo "[OK] Redis connection successful"
+
+      - name: Verify migrations ran
+        run: |
+          echo "Checking database migrations..."
+          TABLES=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';")
+          echo "Number of tables: $TABLES"
+          if [[ $TABLES -lt 5 ]]; then
+            echo "[ERROR] Expected at least 5 tables, found $TABLES"
+            exit 1
+          fi
+          echo "[OK] Migrations completed successfully"
+
+      - name: Test API health endpoint
+        run: |
+          echo "Testing health endpoint..."
+          RESPONSE=$(curl -s http://localhost:4321/api/health)
+          echo "Response: $RESPONSE"
+          if [[ "$RESPONSE" != *"ok"* ]]; then
+            echo "[ERROR] Health check failed"
+            exit 1
+          fi
+          echo "[OK] API health check passed"
+
+      - name: Test admin login
+        run: |
+          echo "Testing admin login..."
+          LOGIN_RESPONSE=$(curl -s -X POST http://localhost:4321/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@test.local","password":"TestPassword123!"}')
+          echo "Login response: $LOGIN_RESPONSE"
+          if [[ "$LOGIN_RESPONSE" == *"error"* ]]; then
+            echo "[ERROR] Admin login failed"
+            echo "$LOGIN_RESPONSE"
+            exit 1
+          fi
+          echo "[OK] Admin login successful"
+
+      - name: Check worker logs
+        run: |
+          echo "Checking worker initialization..."
+          docker logs vitransfer-worker --tail 50
+          
+          WORKER_LOGS=$(docker logs vitransfer-worker 2>&1)
+          if [[ "$WORKER_LOGS" != *"Video processing worker started"* ]]; then
+            echo "[ERROR] Worker did not start properly"
+            exit 1
+          fi
+          echo "[OK] Worker started successfully"
+
+      - name: Show application logs on failure
+        if: failure()
+        run: |
+          echo "=== Application Logs ==="
+          docker logs vitransfer-app --tail 100
+          echo ""
+          echo "=== PostgreSQL Logs ==="
+          docker logs vitransfer-postgres --tail 50
+          echo ""
+          echo "=== Redis Logs ==="
+          docker logs vitransfer-redis --tail 50
+          echo ""
+          echo "=== Worker Logs ==="
+          docker logs vitransfer-worker --tail 50
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose down -v
+          rm .env

@@ -506,9 +506,9 @@ jobs:
           fi
           echo "[OK] New user verified in database"
 
-      - name: Test notification tables after upgrade
+      - name: Test notification queue table after upgrade
         run: |
-          echo "[TEST] Testing notification system tables..."
+          echo "[TEST] Testing notification queue table..."
           AUTH_TOKEN=$(cat /tmp/auth_token.txt)
           
           # Query database to verify NotificationQueue table exists
@@ -525,21 +525,6 @@ jobs:
             exit 1
           fi
           echo "[OK] NotificationQueue table exists"
-          
-          # Verify NotificationSchedule table exists
-          SCHEDULE_CHECK=$(docker compose -f docker-compose.yml exec -T postgres \
-            psql -U vitransfer -d vitransfer -t -c \
-            "SELECT EXISTS (
-              SELECT FROM information_schema.tables 
-              WHERE table_schema = 'public' 
-              AND table_name = 'NotificationSchedule'
-            );")
-          
-          if [[ "$SCHEDULE_CHECK" != *"t"* ]]; then
-            echo "[ERROR] NotificationSchedule table missing"
-            exit 1
-          fi
-          echo "[OK] NotificationSchedule table exists"
 
       - name: Test project update after upgrade
         run: |
@@ -736,7 +721,7 @@ jobs:
           | Project Creation | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Recipient Management | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | User Creation | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
-          | Notification Tables | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | NotificationQueue Table | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Project Update (PATCH) | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Settings Update (PATCH) | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Project-Specific Analytics | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |

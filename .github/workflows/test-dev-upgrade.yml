@@ -457,6 +457,19 @@ jobs:
             DATA_INTEGRITY="[WARN] Data count mismatch detected"
           fi
           
+          # Pre-calculate status for table rows
+          if [[ "$PROJECTS_BEFORE" == "$PROJECTS_AFTER" ]]; then
+            PROJECTS_STATUS="[OK]"
+          else
+            PROJECTS_STATUS="[ERROR]"
+          fi
+          
+          if [[ "$USERS_BEFORE" == "$USERS_AFTER" ]]; then
+            USERS_STATUS="[OK]"
+          else
+            USERS_STATUS="[ERROR]"
+          fi
+          
           cat >> $GITHUB_STEP_SUMMARY << EOF
           # Dev Build Upgrade Test Results
           
@@ -470,8 +483,8 @@ jobs:
           
           | Resource | Before Upgrade | After Upgrade | Status |
           |----------|----------------|---------------|--------|
-          | Projects | ${PROJECTS_BEFORE} | ${PROJECTS_AFTER} | ${PROJECTS_BEFORE} == ${PROJECTS_AFTER} && echo "[OK]" || echo "[ERROR]" |
-          | Users | ${USERS_BEFORE} | ${USERS_AFTER} | ${USERS_BEFORE} == ${USERS_AFTER} && echo "[OK]" || echo "[ERROR]" |
+          | Projects | ${PROJECTS_BEFORE} | ${PROJECTS_AFTER} | ${PROJECTS_STATUS} |
+          | Users | ${USERS_BEFORE} | ${USERS_AFTER} | ${USERS_STATUS} |
           
           **Overall Data Integrity**: ${DATA_INTEGRITY}
           

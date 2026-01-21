@@ -31,7 +31,14 @@ jobs:
 
       - name: Create test .env file
         run: |
-          cat > .env << EOF
+          # Generate secrets first
+          ENCRYPTION_KEY=$(openssl rand -base64 32)
+          JWT_SECRET=$(openssl rand -base64 64)
+          JWT_REFRESH_SECRET=$(openssl rand -base64 64)
+          SHARE_TOKEN_SECRET=$(openssl rand -base64 64)
+          
+          # Create .env file with proper escaping
+          cat > .env << 'EOF'
           # Database Configuration
           POSTGRES_USER=vitransfer
           POSTGRES_PASSWORD=test_postgres_password
@@ -54,15 +61,15 @@ jobs:
           # Application URL
           NEXT_PUBLIC_APP_URL=http://localhost:4321
           
-          # Security Keys (Generated for testing)
-          ENCRYPTION_KEY=$(openssl rand -base64 32)
-          JWT_SECRET=$(openssl rand -base64 64)
-          JWT_REFRESH_SECRET=$(openssl rand -base64 64)
-          SHARE_TOKEN_SECRET=$(openssl rand -base64 64)
-          
           # HTTPS
           HTTPS_ENABLED=false
           EOF
+          
+          # Append secrets separately to avoid bash interpretation issues
+          echo "ENCRYPTION_KEY=$ENCRYPTION_KEY" >> .env
+          echo "JWT_SECRET=$JWT_SECRET" >> .env
+          echo "JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET" >> .env
+          echo "SHARE_TOKEN_SECRET=$SHARE_TOKEN_SECRET" >> .env
 
       - name: Start services with docker-compose
         run: |

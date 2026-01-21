@@ -80,14 +80,15 @@ jobs:
       - name: Verify PostgreSQL version
         run: |
           EXPECTED_VERSION="${{ steps.versions.outputs.postgres_version }}"
-          PG_VERSION=$(docker exec vitransfer-postgres psql --version | grep -oP '\d+\.\d+')
-          echo "PostgreSQL version: $PG_VERSION (expected: $EXPECTED_VERSION)"
+          PG_FULL_VERSION=$(docker exec vitransfer-postgres psql --version | grep -oP '\d+\.\d+')
+          PG_MAJOR_VERSION=$(echo "$PG_FULL_VERSION" | cut -d'.' -f1)
+          echo "PostgreSQL version: $PG_FULL_VERSION (expected major: $EXPECTED_VERSION)"
           
-          if [[ "$PG_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "[ERROR] Expected PostgreSQL $EXPECTED_VERSION, got $PG_VERSION"
+          if [[ "$PG_MAJOR_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "[ERROR] Expected PostgreSQL major version $EXPECTED_VERSION, got $PG_MAJOR_VERSION (full: $PG_FULL_VERSION)"
             exit 1
           fi
-          echo "[OK] PostgreSQL $EXPECTED_VERSION verified"
+          echo "[OK] PostgreSQL $PG_MAJOR_VERSION.x verified (full version: $PG_FULL_VERSION)"
 
       - name: Verify Redis version
         run: |

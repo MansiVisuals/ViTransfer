@@ -384,8 +384,10 @@ jobs:
             -d '{
               "title": "Post-Upgrade Test Project",
               "description": "Created after upgrade",
-              "clientName": "Upgrade Test Client",
-              "clientEmail": "upgrade@test.local"
+              "recipientName": "Upgrade Test Client",
+              "recipientEmail": "upgrade@test.local",
+              "sharePassword": "UpgradePass456",
+              "authMode": "PASSWORD"
             }')
           
           if [[ "$CREATE_PROJECT" == *"error"* ]]; then

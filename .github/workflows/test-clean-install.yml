@@ -260,8 +260,10 @@ jobs:
             -d '{
               "title": "CI Test Project",
               "description": "Automated test project",
-              "clientName": "Test Client",
-              "clientEmail": "client@test.local"
+              "recipientName": "Test Client",
+              "recipientEmail": "client@test.local",
+              "sharePassword": "TestPass123",
+              "authMode": "PASSWORD"
             }')
           
           if [[ "$CREATE_PROJECT" == *"error"* ]]; then

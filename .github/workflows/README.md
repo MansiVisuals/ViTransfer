@@ -139,24 +139,20 @@ Tests upgrading from a previous version to the current version, ensuring data in
 - [x] Compare database schemas (pg_dump before/after, show tables)
 
 **Summary Generation (Always runs):**
-- Data preservation table (Before Upgrade vs After Upgrade counts)
-- Post-upgrade functionality metrics (Final counts with new test data)
-- All 22 test results with status
+Generates a comprehensive GitHub Actions summary showing:
+- Upgrade path (from version → to version)
+- Data preservation verification (before/after counts must match)
+- Post-upgrade new data creation (tests can create additional data)
+- All 22 test results with pass/fail status
 
-**Example Output:**
-```
-Data Preservation (Existing Data Survived Upgrade)
-| Resource | Before Upgrade | After Upgrade | Status |
-|----------|----------------|---------------|--------|
-| Projects | 1              | 1             | [OK]   |
-| Users    | 1              | 1             | [OK]   |
+**Understanding the Summary Output:**
 
-Post-Upgrade Functionality
-| Check               | Result                                      |
-|---------------------|---------------------------------------------|
-| Final Project Count | 2 (started with 1, created +1 in tests)    |
-| New Data Creation   | [OK] Successfully created new project      |
-```
+The workflow tracks data in three stages:
+1. **BEFORE upgrade**: Baseline counts after seeding (e.g., 1 project, 1 user)
+2. **AFTER upgrade**: Verified counts - must match BEFORE (proves no data loss)
+3. **FINAL**: Counts after running post-upgrade tests (may be higher due to test data creation)
+
+Example: If BEFORE=1 project, AFTER=1 project ✅ (preserved), FINAL=2 projects ✅ (created +1 in tests)
 
 **Triggers:**
 - Push to `main` or `dev` branches

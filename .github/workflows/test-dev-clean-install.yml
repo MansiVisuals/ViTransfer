@@ -208,6 +208,95 @@ jobs:
             exit 1
           fi
           echo "[OK] Admin login successful"
+          
+          # Save session cookie for subsequent API tests
+          echo "$LOGIN_RESPONSE" | grep -o '"token":"[^"]*"' | sed 's/"token":"//;s/"$//' > /tmp/auth_token.txt
+
+      - name: Test API endpoints
+        run: |
+          echo "Testing additional API endpoints..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          # Test session endpoint
+          echo "Testing session endpoint..."
+          SESSION_RESPONSE=$(curl -s http://localhost:4321/api/auth/session \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          if [[ "$SESSION_RESPONSE" != *"admin@test.local"* ]]; then
+            echo "[ERROR] Session endpoint failed"
+            echo "$SESSION_RESPONSE"
+            exit 1
+          fi
+          echo "[OK] Session endpoint working"
+          
+          # Test projects list endpoint
+          echo "Testing projects list..."
+          PROJECTS_RESPONSE=$(curl -s http://localhost:4321/api/projects \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          if [[ "$PROJECTS_RESPONSE" == *"error"* ]]; then
+            echo "[ERROR] Projects endpoint failed"
+            echo "$PROJECTS_RESPONSE"
+            exit 1
+          fi
+          echo "[OK] Projects endpoint working"
+          
+          # Test users list endpoint
+          echo "Testing users list..."
+          USERS_RESPONSE=$(curl -s http://localhost:4321/api/users \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          if [[ "$USERS_RESPONSE" == *"error"* ]] || [[ "$USERS_RESPONSE" != *"admin@test.local"* ]]; then
+            echo "[ERROR] Users endpoint failed"
+            echo "$USERS_RESPONSE"
+            exit 1
+          fi
+          echo "[OK] Users endpoint working"
+          
+          # Test settings endpoint
+          echo "Testing settings endpoint..."
+          SETTINGS_RESPONSE=$(curl -s http://localhost:4321/api/settings \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          if [[ "$SETTINGS_RESPONSE" == *"error"* ]]; then
+            echo "[ERROR] Settings endpoint failed"
+            echo "$SETTINGS_RESPONSE"
+            exit 1
+          fi
+          echo "[OK] Settings endpoint working"
+          
+          # Test analytics endpoint
+          echo "Testing analytics endpoint..."
+          ANALYTICS_RESPONSE=$(curl -s http://localhost:4321/api/analytics \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          if [[ "$ANALYTICS_RESPONSE" == *"error"* ]]; then
+            echo "[ERROR] Analytics endpoint failed"
+            echo "$ANALYTICS_RESPONSE"
+            exit 1
+          fi
+          echo "[OK] Analytics endpoint working"
+
+      - name: Test project creation
+        run: |
+          echo "Testing project creation..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          CREATE_PROJECT=$(curl -s -X POST http://localhost:4321/api/projects \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "title": "CI Test Project",
+              "description": "Automated test project",
+              "clientName": "Test Client",
+              "clientEmail": "client@test.local"
+            }')
+          
+          if [[ "$CREATE_PROJECT" == *"error"* ]]; then
+            echo "[ERROR] Project creation failed"
+            echo "$CREATE_PROJECT"
+            exit 1
+          fi
+          
+          PROJECT_ID=$(echo "$CREATE_PROJECT" | grep -o '"id":"[^"]*"' | head -1 | sed 's/"id":"//;s/"$//')
+          echo "Project created with ID: $PROJECT_ID"
+          echo "$PROJECT_ID" > /tmp/test_project_id.txt
+          echo "[OK] Project creation successful"
 
       - name: Check worker logs
         run: |
@@ -244,6 +333,12 @@ jobs:
           | Database Migrations | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | API Health Endpoint | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Admin Login | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Session API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Projects API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Users API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Settings API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Analytics API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Project Creation | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Worker Initialization | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           
           EOF

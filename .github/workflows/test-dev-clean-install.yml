@@ -309,6 +309,197 @@ jobs:
           echo "$PROJECT_ID" > /tmp/test_project_id.txt
           echo "[OK] Project creation successful"
 
+      - name: Test recipient management
+        run: |
+          echo "[TEST] Testing recipient management..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          PROJECT_ID=$(cat /tmp/test_project_id.txt)
+          
+          # Test adding recipient
+          echo "Adding recipient to project..."
+          ADD_RECIPIENT=$(curl -s -X POST "http://localhost:4321/api/projects/$PROJECT_ID/recipients" \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "email": "devrecipient2@test.local",
+              "name": "Dev Second Recipient",
+              "isPrimary": false
+            }')
+          
+          if [[ "$ADD_RECIPIENT" == *"error"* ]]; then
+            echo "[ERROR] Failed to add recipient"
+            echo "$ADD_RECIPIENT"
+            exit 1
+          fi
+          echo "[OK] Recipient added successfully"
+          
+          # Test listing recipients
+          echo "Listing recipients..."
+          RECIPIENTS=$(curl -s "http://localhost:4321/api/projects/$PROJECT_ID/recipients" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$RECIPIENTS" != *"devrecipient2@test.local"* ]]; then
+            echo "[ERROR] Failed to retrieve recipient"
+            echo "$RECIPIENTS"
+            exit 1
+          fi
+          echo "[OK] Recipients list working"
+
+      - name: Test user creation
+        run: |
+          echo "[TEST] Testing user creation..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          # Create new user
+          CREATE_USER=$(curl -s -X POST http://localhost:4321/api/users \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "email": "devnewuser@test.local",
+              "password": "DevUserPass456!",
+              "name": "Dev New Test User",
+              "role": "ADMIN"
+            }')
+          
+          if [[ "$CREATE_USER" == *"error"* ]]; then
+            echo "[ERROR] Failed to create user"
+            echo "$CREATE_USER"
+            exit 1
+          fi
+          echo "[OK] User creation working"
+          
+          # Verify user appears in users list
+          USERS_LIST=$(curl -s http://localhost:4321/api/users \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$USERS_LIST" != *"devnewuser@test.local"* ]]; then
+            echo "[ERROR] New user not found in users list"
+            exit 1
+          fi
+          echo "[OK] New user verified in database"
+
+      - name: Test notification tables
+        run: |
+          echo "[TEST] Testing notification system tables..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          # Query database to verify NotificationQueue table exists
+          QUEUE_CHECK=$(docker compose -f docker-compose.yml exec -T postgres \
+            psql -U vitransfer -d vitransfer -t -c \
+            "SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public' 
+              AND table_name = 'NotificationQueue'
+            );")
+          
+          if [[ "$QUEUE_CHECK" != *"t"* ]]; then
+            echo "[ERROR] NotificationQueue table missing"
+            exit 1
+          fi
+          echo "[OK] NotificationQueue table exists"
+          
+          # Verify NotificationSchedule table exists
+          SCHEDULE_CHECK=$(docker compose -f docker-compose.yml exec -T postgres \
+            psql -U vitransfer -d vitransfer -t -c \
+            "SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public' 
+              AND table_name = 'NotificationSchedule'
+            );")
+          
+          if [[ "$SCHEDULE_CHECK" != *"t"* ]]; then
+            echo "[ERROR] NotificationSchedule table missing"
+            exit 1
+          fi
+          echo "[OK] NotificationSchedule table exists"
+
+      - name: Test project update
+        run: |
+          echo "[TEST] Testing project update (PATCH)..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          PROJECT_ID=$(cat /tmp/test_project_id.txt)
+          
+          # Update project properties
+          UPDATE_PROJECT=$(curl -s -X PATCH "http://localhost:4321/api/projects/$PROJECT_ID" \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "title": "Updated Dev CI Test Project",
+              "description": "Description updated in dev clean install test",
+              "status": "IN_REVIEW"
+            }')
+          
+          if [[ "$UPDATE_PROJECT" == *"error"* ]]; then
+            echo "[ERROR] Failed to update project"
+            echo "$UPDATE_PROJECT"
+            exit 1
+          fi
+          echo "[OK] Project update working"
+          
+          # Verify the update worked
+          GET_PROJECT=$(curl -s "http://localhost:4321/api/projects/$PROJECT_ID" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$GET_PROJECT" != *"Updated Dev CI Test Project"* ]]; then
+            echo "[ERROR] Project update not reflected in database"
+            exit 1
+          fi
+          echo "[OK] Project update verified in database"
+
+      - name: Test settings update
+        run: |
+          echo "[TEST] Testing settings update (PATCH)..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          # Update global settings
+          UPDATE_SETTINGS=$(curl -s -X PATCH "http://localhost:4321/api/settings" \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "companyName": "Dev Clean Install Test Studio",
+              "defaultPreviewResolution": "1080p",
+              "defaultWatermarkEnabled": true
+            }')
+          
+          if [[ "$UPDATE_SETTINGS" == *"error"* ]]; then
+            echo "[ERROR] Failed to update settings"
+            echo "$UPDATE_SETTINGS"
+            exit 1
+          fi
+          echo "[OK] Settings update working"
+          
+          # Verify the settings were updated
+          GET_SETTINGS=$(curl -s "http://localhost:4321/api/settings" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$GET_SETTINGS" != *"Dev Clean Install Test Studio"* ]]; then
+            echo "[ERROR] Settings update not reflected"
+            exit 1
+          fi
+          echo "[OK] Settings update verified"
+
+      - name: Test project-specific analytics
+        run: |
+          echo "[TEST] Testing project-specific analytics endpoint..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          PROJECT_ID=$(cat /tmp/test_project_id.txt)
+          
+          # Test project-specific analytics endpoint
+          PROJ_ANALYTICS=$(curl -s "http://localhost:4321/api/analytics/$PROJECT_ID" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$PROJ_ANALYTICS" == *"error"* ]]; then
+            echo "[ERROR] Project analytics endpoint failed"
+            echo "$PROJ_ANALYTICS"
+            exit 1
+          fi
+          
+          if [[ "$PROJ_ANALYTICS" != *"stats"* ]] || [[ "$PROJ_ANALYTICS" != *"videoStats"* ]]; then
+            echo "[ERROR] Project analytics response missing required fields"
+            exit 1
+          fi
+          echo "[OK] Project-specific analytics working"
+
       - name: Check worker logs
         run: |
           echo "Checking worker initialization..."
@@ -354,6 +545,12 @@ jobs:
           | Settings API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Analytics API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Project Creation | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Recipient Management | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | User Creation | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Notification Tables | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Project Update (PATCH) | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Settings Update (PATCH) | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Project-Specific Analytics | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Worker Initialization | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           
           EOF

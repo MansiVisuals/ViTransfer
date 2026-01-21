@@ -434,7 +434,199 @@ jobs:
           
           PROJECT_ID=$(echo "$CREATE_PROJECT" | grep -o '"id":"[^"]*"' | head -1 | sed 's/"id":"//;s/"$//')
           echo "New project created after upgrade with ID: $PROJECT_ID"
+          echo "$PROJECT_ID" > /tmp/new_project_id.txt
           echo "[OK] Project creation still works after upgrade"
+
+      - name: Test recipient management after upgrade
+        run: |
+          echo "[TEST] Testing recipient management after upgrade..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          PROJECT_ID=$(cat /tmp/new_project_id.txt)
+          
+          # Test adding recipient
+          echo "Adding recipient to project..."
+          ADD_RECIPIENT=$(curl -s -X POST "http://localhost:4321/api/projects/$PROJECT_ID/recipients" \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "email": "recipient2@test.local",
+              "name": "Second Recipient",
+              "isPrimary": false
+            }')
+          
+          if [[ "$ADD_RECIPIENT" == *"error"* ]]; then
+            echo "[ERROR] Failed to add recipient"
+            echo "$ADD_RECIPIENT"
+            exit 1
+          fi
+          echo "[OK] Recipient added successfully"
+          
+          # Test listing recipients
+          echo "Listing recipients..."
+          RECIPIENTS=$(curl -s "http://localhost:4321/api/projects/$PROJECT_ID/recipients" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$RECIPIENTS" != *"recipient2@test.local"* ]]; then
+            echo "[ERROR] Failed to retrieve recipient"
+            echo "$RECIPIENTS"
+            exit 1
+          fi
+          echo "[OK] Recipients list working"
+
+      - name: Test user creation after upgrade
+        run: |
+          echo "[TEST] Testing user creation after upgrade..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          # Create new user
+          CREATE_USER=$(curl -s -X POST http://localhost:4321/api/users \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "email": "newuser@test.local",
+              "password": "NewUserPass123!",
+              "name": "New Test User",
+              "role": "ADMIN"
+            }')
+          
+          if [[ "$CREATE_USER" == *"error"* ]]; then
+            echo "[ERROR] Failed to create user"
+            echo "$CREATE_USER"
+            exit 1
+          fi
+          echo "[OK] User creation working"
+          
+          # Verify user appears in users list
+          USERS_LIST=$(curl -s http://localhost:4321/api/users \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$USERS_LIST" != *"newuser@test.local"* ]]; then
+            echo "[ERROR] New user not found in users list"
+            exit 1
+          fi
+          echo "[OK] New user verified in database"
+
+      - name: Test notification tables after upgrade
+        run: |
+          echo "[TEST] Testing notification system tables..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          # Query database to verify NotificationQueue table exists
+          QUEUE_CHECK=$(docker compose -f docker-compose.yml exec -T postgres \
+            psql -U vitransfer -d vitransfer -t -c \
+            "SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public' 
+              AND table_name = 'NotificationQueue'
+            );")
+          
+          if [[ "$QUEUE_CHECK" != *"t"* ]]; then
+            echo "[ERROR] NotificationQueue table missing"
+            exit 1
+          fi
+          echo "[OK] NotificationQueue table exists"
+          
+          # Verify NotificationSchedule table exists
+          SCHEDULE_CHECK=$(docker compose -f docker-compose.yml exec -T postgres \
+            psql -U vitransfer -d vitransfer -t -c \
+            "SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public' 
+              AND table_name = 'NotificationSchedule'
+            );")
+          
+          if [[ "$SCHEDULE_CHECK" != *"t"* ]]; then
+            echo "[ERROR] NotificationSchedule table missing"
+            exit 1
+          fi
+          echo "[OK] NotificationSchedule table exists"
+
+      - name: Test project update after upgrade
+        run: |
+          echo "[TEST] Testing project update (PATCH) after upgrade..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          PROJECT_ID=$(cat /tmp/new_project_id.txt)
+          
+          # Update project properties
+          UPDATE_PROJECT=$(curl -s -X PATCH "http://localhost:4321/api/projects/$PROJECT_ID" \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "title": "Updated Post-Upgrade Project",
+              "description": "Description updated after upgrade test",
+              "status": "IN_REVIEW"
+            }')
+          
+          if [[ "$UPDATE_PROJECT" == *"error"* ]]; then
+            echo "[ERROR] Failed to update project"
+            echo "$UPDATE_PROJECT"
+            exit 1
+          fi
+          echo "[OK] Project update working"
+          
+          # Verify the update worked
+          GET_PROJECT=$(curl -s "http://localhost:4321/api/projects/$PROJECT_ID" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$GET_PROJECT" != *"Updated Post-Upgrade Project"* ]]; then
+            echo "[ERROR] Project update not reflected in database"
+            exit 1
+          fi
+          echo "[OK] Project update verified in database"
+
+      - name: Test settings update after upgrade
+        run: |
+          echo "[TEST] Testing settings update (PATCH) after upgrade..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          
+          # Update global settings
+          UPDATE_SETTINGS=$(curl -s -X PATCH "http://localhost:4321/api/settings" \
+            -H "Authorization: Bearer $AUTH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "companyName": "Upgrade Test Studio",
+              "defaultPreviewResolution": "1080p",
+              "defaultWatermarkEnabled": true
+            }')
+          
+          if [[ "$UPDATE_SETTINGS" == *"error"* ]]; then
+            echo "[ERROR] Failed to update settings"
+            echo "$UPDATE_SETTINGS"
+            exit 1
+          fi
+          echo "[OK] Settings update working"
+          
+          # Verify the settings were updated
+          GET_SETTINGS=$(curl -s "http://localhost:4321/api/settings" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$GET_SETTINGS" != *"Upgrade Test Studio"* ]]; then
+            echo "[ERROR] Settings update not reflected"
+            exit 1
+          fi
+          echo "[OK] Settings update verified"
+
+      - name: Test project-specific analytics after upgrade
+        run: |
+          echo "[TEST] Testing project-specific analytics endpoint..."
+          AUTH_TOKEN=$(cat /tmp/auth_token.txt)
+          PROJECT_ID=$(cat /tmp/new_project_id.txt)
+          
+          # Test project-specific analytics endpoint
+          PROJ_ANALYTICS=$(curl -s "http://localhost:4321/api/analytics/$PROJECT_ID" \
+            -H "Authorization: Bearer $AUTH_TOKEN")
+          
+          if [[ "$PROJ_ANALYTICS" == *"error"* ]]; then
+            echo "[ERROR] Project analytics endpoint failed"
+            echo "$PROJ_ANALYTICS"
+            exit 1
+          fi
+          
+          if [[ "$PROJ_ANALYTICS" != *"stats"* ]] || [[ "$PROJ_ANALYTICS" != *"videoStats"* ]]; then
+            echo "[ERROR] Project analytics response missing required fields"
+            exit 1
+          fi
+          echo "[OK] Project-specific analytics working"
 
       - name: Test worker after upgrade
         run: |
@@ -460,28 +652,39 @@ jobs:
       - name: Generate upgrade summary
         if: always()
         run: |
-          # Get data counts (use verified counts from before additional test data was created)
+          # Get data counts for preservation check
           PROJECTS_BEFORE=$(cat /tmp/before_projects.txt 2>/dev/null || echo "0")
           USERS_BEFORE=$(cat /tmp/before_users.txt 2>/dev/null || echo "0")
           
-          PROJECTS_AFTER=$(cat /tmp/after_projects_verified.txt 2>/dev/null || echo "0")
-          USERS_AFTER=$(cat /tmp/after_users_verified.txt 2>/dev/null || echo "0")
+          PROJECTS_PRESERVED=$(cat /tmp/after_projects_verified.txt 2>/dev/null || echo "0")
+          USERS_PRESERVED=$(cat /tmp/after_users_verified.txt 2>/dev/null || echo "0")
           
-          # Determine data integrity status
-          if [[ "$PROJECTS_BEFORE" == "$PROJECTS_AFTER" ]] && [[ "$USERS_BEFORE" == "$USERS_AFTER" ]]; then
-            DATA_INTEGRITY="[OK] All data preserved"
+          # Get final counts (after testing new data creation)
+          PROJECTS_FINAL=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"Project\";" 2>/dev/null | tr -d ' ' || echo "0")
+          USERS_FINAL=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"User\";" 2>/dev/null | tr -d ' ' || echo "0")
+          
+          # Determine data preservation status
+          if [[ "$PROJECTS_BEFORE" == "$PROJECTS_PRESERVED" ]] && [[ "$USERS_BEFORE" == "$USERS_PRESERVED" ]]; then
+            DATA_PRESERVATION="[OK] All seeded data preserved"
           else
-            DATA_INTEGRITY="[WARN] Data count mismatch detected"
+            DATA_PRESERVATION="[ERROR] Data loss detected"
           fi
           
-          # Pre-calculate status for table rows
-          if [[ "$PROJECTS_BEFORE" == "$PROJECTS_AFTER" ]]; then
+          # Determine new data creation status
+          if [[ "$PROJECTS_FINAL" -gt "$PROJECTS_PRESERVED" ]]; then
+            NEW_DATA_STATUS="[OK] Successfully created new project after upgrade"
+          else
+            NEW_DATA_STATUS="[WARN] No new data created in post-upgrade tests"
+          fi
+          
+          # Pre-calculate status for preservation table
+          if [[ "$PROJECTS_BEFORE" == "$PROJECTS_PRESERVED" ]]; then
             PROJECTS_STATUS="[OK]"
           else
             PROJECTS_STATUS="[ERROR]"
           fi
           
-          if [[ "$USERS_BEFORE" == "$USERS_AFTER" ]]; then
+          if [[ "$USERS_BEFORE" == "$USERS_PRESERVED" ]]; then
             USERS_STATUS="[OK]"
           else
             USERS_STATUS="[ERROR]"
@@ -496,14 +699,21 @@ jobs:
           - **PostgreSQL**: \`${{ steps.versions.outputs.postgres_version }}\`
           - **Redis**: \`${{ steps.versions.outputs.redis_version }}\`
           
-          ## Data Integrity Check
+          ## Data Preservation (Existing Data Survived Upgrade)
           
           | Resource | Before Upgrade | After Upgrade | Status |
           |----------|----------------|---------------|--------|
-          | Projects | ${PROJECTS_BEFORE} | ${PROJECTS_AFTER} | ${PROJECTS_STATUS} |
-          | Users | ${USERS_BEFORE} | ${USERS_AFTER} | ${USERS_STATUS} |
+          | Projects | ${PROJECTS_BEFORE} | ${PROJECTS_PRESERVED} | ${PROJECTS_STATUS} |
+          | Users | ${USERS_BEFORE} | ${USERS_PRESERVED} | ${USERS_STATUS} |
           
-          **Overall Data Integrity**: ${DATA_INTEGRITY}
+          **Data Preservation**: ${DATA_PRESERVATION}
+          
+          ## Post-Upgrade Functionality
+          
+          | Check | Result |
+          |-------|--------|
+          | Final Project Count | ${PROJECTS_FINAL} (started with ${PROJECTS_BEFORE}, created +$((PROJECTS_FINAL - PROJECTS_BEFORE)) in tests) |
+          | New Data Creation | ${NEW_DATA_STATUS} |
           
           ## Test Results
           
@@ -523,7 +733,13 @@ jobs:
           | Users API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Settings API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Analytics API | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
-          | Project Creation After Upgrade | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Project Creation | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Recipient Management | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | User Creation | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Notification Tables | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Project Update (PATCH) | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Settings Update (PATCH) | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Project-Specific Analytics | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           | Worker Service | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
           EOF
 

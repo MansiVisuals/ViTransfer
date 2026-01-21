@@ -305,6 +305,10 @@ jobs:
           fi
           
           echo "[OK] Data integrity verified - all counts match"
+          
+          # Store verified counts for summary (before creating more test data)
+          echo "$AFTER_PROJECTS" > /tmp/after_projects_verified.txt
+          echo "$AFTER_USERS" > /tmp/after_users_verified.txt
 
       - name: Test functionality after upgrade
         run: |
@@ -456,12 +460,12 @@ jobs:
       - name: Generate upgrade summary
         if: always()
         run: |
-          # Get data counts
+          # Get data counts (use verified counts from before additional test data was created)
           PROJECTS_BEFORE=$(cat /tmp/before_projects.txt 2>/dev/null || echo "0")
           USERS_BEFORE=$(cat /tmp/before_users.txt 2>/dev/null || echo "0")
           
-          PROJECTS_AFTER=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"Project\";" 2>/dev/null | tr -d ' ' || echo "0")
-          USERS_AFTER=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"User\";" 2>/dev/null | tr -d ' ' || echo "0")
+          PROJECTS_AFTER=$(cat /tmp/after_projects_verified.txt 2>/dev/null || echo "0")
+          USERS_AFTER=$(cat /tmp/after_users_verified.txt 2>/dev/null || echo "0")
           
           # Determine data integrity status
           if [[ "$PROJECTS_BEFORE" == "$PROJECTS_AFTER" ]] && [[ "$USERS_BEFORE" == "$USERS_AFTER" ]]; then

@@ -10,18 +10,15 @@ echo "=============================="
 echo ""
 
 BASE_DIR="/podman/vitransfer"
-CONTAINER_DIR="/home/hsadmin/.config/containers/systemd"
+CONTAINER_DIR="$HOME/.config/containers/systemd"
 
-# Check if running as hsadmin or root
+# Detect current user
 CURRENT_USER=$(whoami)
-if [[ "$CURRENT_USER" != "hsadmin" ]] && [[ $EUID -ne 0 ]]; then
-    echo "⚠️  Warning: This script should be run as hsadmin or root"
-    echo "   Current user: $CURRENT_USER"
-    read -p "Continue anyway? (yes/no) [no]: " CONTINUE
-    if [[ "$CONTINUE" != "yes" ]]; then
-        exit 1
-    fi
-fi
+CURRENT_UID=$(id -u)
+CURRENT_GID=$(id -g)
+
+echo "Running as user: $CURRENT_USER (UID: $CURRENT_UID, GID: $CURRENT_GID)"
+echo ""
 
 echo "Creating directory structure..."
 echo ""
@@ -45,8 +42,8 @@ echo "  Creating: $BASE_DIR/uploads"
 sudo mkdir -p "$BASE_DIR/uploads"
 
 echo ""
-echo "Setting ownership to hsadmin (1000:1000)..."
-sudo chown -R 1000:1000 "$BASE_DIR"
+echo "Setting ownership to $CURRENT_USER ($CURRENT_UID:$CURRENT_GID)..."
+sudo chown -R $CURRENT_UID:$CURRENT_GID "$BASE_DIR"
 
 echo ""
 echo "Setting permissions..."

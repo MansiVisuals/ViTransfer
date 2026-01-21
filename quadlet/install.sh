@@ -9,10 +9,10 @@ echo "🚀 ViTransfer Quadlet Installation"
 echo "===================================="
 echo ""
 
-# Check if running as hsadmin
+# Check if running as $USER
 CURRENT_USER=$(whoami)
-if [[ "$CURRENT_USER" != "hsadmin" ]]; then
-    echo "⚠️  Warning: This should be run as hsadmin user"
+if [[ "$CURRENT_USER" != "$USER" ]]; then
+    echo "⚠️  Warning: This should be run as $USER user"
     echo "   Current user: $CURRENT_USER"
     read -p "Continue anyway? (yes/no) [no]: " CONTINUE
     if [[ "$CONTINUE" != "yes" ]]; then
@@ -20,9 +20,9 @@ if [[ "$CURRENT_USER" != "hsadmin" ]]; then
     fi
 fi
 
-INSTALL_DIR="/home/hsadmin/.config/containers/systemd"
+INSTALL_DIR="$HOME/.config/containers/systemd"
 SYSTEMCTL="systemctl --user"
-echo "📦 Installing for hsadmin user (rootless Podman)"
+echo "📦 Installing for $USER user (rootless Podman)"
 echo "   Config dir: $INSTALL_DIR"
 echo "   Data dir: /podman/vitransfer"
 echo ""
@@ -124,7 +124,7 @@ echo ""
 echo "📋 Next steps:"
 echo ""
 echo "1. Enable lingering (allows rootless services to start on boot):"
-echo "   sudo loginctl enable-linger hsadmin"
+echo "   sudo loginctl enable-linger $USER"
 echo ""
 echo "2. Start services:"
 echo "   systemctl --user start vitransfer-postgres.service"

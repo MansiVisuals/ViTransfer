@@ -8,7 +8,7 @@ Image=docker.io/library/postgres:18.1-alpine
 ContainerName=vitransfer-postgres
 AutoUpdate=registry
 
-# User/Group - runs as hsadmin (1000:1000)
+# User/Group - runs as $USER (1000:1000)
 User=1000:1000
 
 # Environment variables - CHANGE THESE VALUES

@@ -296,15 +296,6 @@ jobs:
           # Store verified counts for summary (before creating more test data)
           echo "$AFTER_PROJECTS" > /tmp/after_projects_verified.txt
           echo "$AFTER_USERS" > /tmp/after_users_verified.txt
-            exit 1
-          fi
-          
-          if [[ "$AFTER_USERS" != "$BEFORE_USERS" ]]; then
-            echo "[ERROR] User count mismatch!"
-            exit 1
-          fi
-          
-          echo "[OK] Data integrity verified - all counts match"
 
       - name: Test functionality after upgrade
         run: |

@@ -103,11 +103,11 @@ jobs:
           HTTPS_ENABLED=false
           EOF
           
-          # Append secrets separately to avoid bash interpretation issues
-          echo "ENCRYPTION_KEY=$ENCRYPTION_KEY" >> .env
-          echo "JWT_SECRET=$JWT_SECRET" >> .env
-          echo "JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET" >> .env
-          echo "SHARE_TOKEN_SECRET=$SHARE_TOKEN_SECRET" >> .env
+          # Append secrets separately with quotes to handle special characters
+          echo "ENCRYPTION_KEY=\"$ENCRYPTION_KEY\"" >> .env
+          echo "JWT_SECRET=\"$JWT_SECRET\"" >> .env
+          echo "JWT_REFRESH_SECRET=\"$JWT_REFRESH_SECRET\"" >> .env
+          echo "SHARE_TOKEN_SECRET=\"$SHARE_TOKEN_SECRET\"" >> .env
 
       - name: Deploy old version
         run: |

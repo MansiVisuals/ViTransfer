@@ -315,6 +315,56 @@ jobs:
           echo "Schema dump created. Tables present:"
           docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -c "\dt"
 
+      - name: Generate upgrade summary
+        if: always()
+        run: |
+          # Get data counts
+          PROJECTS_BEFORE=$(cat /tmp/before_projects.txt 2>/dev/null || echo "0")
+          USERS_BEFORE=$(cat /tmp/before_users.txt 2>/dev/null || echo "0")
+          
+          PROJECTS_AFTER=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"Project\";" 2>/dev/null | tr -d ' ' || echo "0")
+          USERS_AFTER=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"User\";" 2>/dev/null | tr -d ' ' || echo "0")
+          
+          # Determine data integrity status
+          if [[ "$PROJECTS_BEFORE" == "$PROJECTS_AFTER" ]] && [[ "$USERS_BEFORE" == "$USERS_AFTER" ]]; then
+            DATA_INTEGRITY="[OK] All data preserved"
+          else
+            DATA_INTEGRITY="[WARN] Data count mismatch detected"
+          fi
+          
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          # Production Upgrade Test Results
+          
+          ## Upgrade Path
+          - **From Version**: \`${{ steps.versions.outputs.from_version }}\`
+          - **To Version**: \`${{ steps.versions.outputs.to_version }}\`
+          - **PostgreSQL**: \`${{ steps.versions.outputs.postgres_version }}\`
+          - **Redis**: \`${{ steps.versions.outputs.redis_version }}\`
+          
+          ## Data Integrity Check
+          
+          | Resource | Before Upgrade | After Upgrade | Status |
+          |----------|----------------|---------------|--------|
+          | Projects | ${PROJECTS_BEFORE} | ${PROJECTS_AFTER} | ${PROJECTS_BEFORE} == ${PROJECTS_AFTER} && echo "[OK]" || echo "[ERROR]" |
+          | Users | ${USERS_BEFORE} | ${USERS_AFTER} | ${USERS_BEFORE} == ${USERS_AFTER} && echo "[OK]" || echo "[ERROR]" |
+          
+          **Overall Data Integrity**: ${DATA_INTEGRITY}
+          
+          ## Test Results
+          
+          | Test | Status |
+          |------|--------|
+          | Initial Deployment | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Data Seeding | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Database Backup | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Version Upgrade | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Database Migrations | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Data Verification | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | API Functionality | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Admin Login | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Worker Service | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          EOF
+
       - name: Show upgrade logs on failure
         if: failure()
         run: |

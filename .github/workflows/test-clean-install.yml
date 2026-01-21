@@ -190,6 +190,33 @@ jobs:
           fi
           echo "[OK] Worker started successfully"
 
+      - name: Generate test summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # Production Clean Install Test Results
+          
+          ## Test Configuration
+          - **Docker Image**: `crypt010/vitransfer:latest`
+          - **PostgreSQL**: `${{ steps.versions.outputs.postgres_version }}`
+          - **Redis**: `${{ steps.versions.outputs.redis_version }}`
+          - **Branch**: `${{ github.ref_name }}`
+          - **Commit**: `${{ github.sha }}`
+          
+          ## Test Results
+          
+          | Test | Status |
+          |------|--------|
+          | Container Health | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | PostgreSQL Connection | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Redis Connection | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Database Migrations | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | API Health Endpoint | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Admin Login | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          | Worker Initialization | ${{ job.status == 'success' && '[OK] Passed' || '[ERROR] Failed' }} |
+          
+          EOF
+
       - name: Show application logs on failure
         if: failure()
         run: |

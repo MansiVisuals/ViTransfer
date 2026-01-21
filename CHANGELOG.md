@@ -63,7 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Applies to new installations only
   - Existing installations continue to work without changes
   - Fully backward compatible, seamless upgrade
-- **PostgreSQL updated to 18.1-alpine**: Latest PostgreSQL version for new installations
+- **PostgreSQL updated to 18-alpine**: Latest PostgreSQL version for new installations
+  - Uses major version tag (18-alpine) for automatic patch updates
   - Applies to new installations only
   - Existing installations continue to work without changes
   - Optional upgrade for existing users (requires manual backup and migration according to your infrastructure practices)

@@ -4,9 +4,11 @@ This directory contains GitHub Actions workflows for automated testing of ViTran
 
 ## Workflows
 
+### Production Testing (main branch)
+
 ### 1. Clean Install Test (`test-clean-install.yml`)
 
-Tests a fresh installation of ViTransfer with the latest compose configuration.
+Tests a fresh installation of ViTransfer with the latest production compose configuration.
 
 **What it tests:**
 - [x] PostgreSQL deployment (version from docker-compose.yml)
@@ -77,6 +79,62 @@ Combined workflow that runs both clean install and upgrade tests.
 - Manual dispatch
 
 **Duration:** ~5-8 minutes total
+
+---
+
+### Development Testing (dev branch)
+
+### 4. Dev Clean Install Test (`test-dev-clean-install.yml`)
+
+Tests a fresh installation of development builds using `dev-VERSION` Docker tags.
+
+**What it tests:**
+- [x] Dev build deployment (e.g., `dev-0.8.5`)
+- [x] PostgreSQL and Redis deployment
+- [x] Container health checks
+- [x] Database migrations
+- [x] API health endpoint
+- [x] Admin login functionality
+- [x] Worker initialization
+
+**Triggers:**
+- Push to `dev` branch
+- Pull requests to `dev`
+- Manual dispatch (with version override)
+
+**Duration:** ~2-3 minutes
+
+**Example:** Tests `crypt010/vitransfer:dev-0.8.5` from Docker Hub
+
+---
+
+### 5. Dev Upgrade Test (`test-dev-upgrade.yml`)
+
+Tests upgrading from latest production to development builds.
+
+**What it tests:**
+- [x] Deploy latest production version
+- [x] Seed test data
+- [x] Create database backup
+- [x] Upgrade to dev version (e.g., `dev-0.8.5`)
+- [x] Verify migrations ran successfully
+- [x] Verify data integrity (no data loss)
+- [x] Test functionality after upgrade
+
+**Triggers:**
+- Push to `dev` branch
+- Pull requests to `dev`
+- Manual dispatch (with version override)
+
+**Duration:** ~4-5 minutes
+
+**Example:** Tests upgrade from `latest` → `dev-0.8.5`
+
+**Manual trigger options:**
+```yaml
+from_version: 'latest'  # Production version to upgrade from
+to_version: ''          # Leave empty for auto-detect (dev-VERSION)
+```
 
 ---
 

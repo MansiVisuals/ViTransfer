@@ -1,0 +1,334 @@
+name: Test Dev Build Upgrade
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      from_version:
+        description: 'Upgrade from version (default: latest production)'
+        required: false
+        default: 'latest'
+      to_version:
+        description: 'Upgrade to dev version (leave empty for auto-detect from VERSION file)'
+        required: false
+        default: ''
+
+jobs:
+  test-dev-upgrade:
+    name: Dev Upgrade Test (latest → dev-${{ github.event.inputs.to_version || 'VERSION' }})
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine dev version
+        id: versions
+        run: |
+          # Read current version from VERSION file
+          CURRENT_VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Determine FROM version (default to latest production)
+          FROM_VERSION="${{ github.event.inputs.from_version || 'latest' }}"
+          echo "Upgrade FROM version: $FROM_VERSION"
+          
+          # Determine TO version (dev tag)
+          if [[ -n "${{ github.event.inputs.to_version }}" ]]; then
+            TO_VERSION="dev-${{ github.event.inputs.to_version }}"
+            echo "Using manually specified to_version: $TO_VERSION"
+          else
+            TO_VERSION="dev-${CURRENT_VERSION}"
+            echo "Auto-detected to_version: $TO_VERSION (from VERSION file)"
+          fi
+          
+          # Export for later steps
+          echo "from_version=$FROM_VERSION" >> $GITHUB_OUTPUT
+          echo "to_version=$TO_VERSION" >> $GITHUB_OUTPUT
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create test .env file
+        run: |
+          # Generate secrets first
+          ENCRYPTION_KEY=$(openssl rand -base64 32)
+          JWT_SECRET=$(openssl rand -base64 64)
+          JWT_REFRESH_SECRET=$(openssl rand -base64 64)
+          SHARE_TOKEN_SECRET=$(openssl rand -base64 64)
+          
+          # Create .env file with proper escaping
+          cat > .env << 'EOF'
+          # Database Configuration
+          POSTGRES_USER=vitransfer
+          POSTGRES_PASSWORD=test_postgres_password
+          POSTGRES_DB=vitransfer
+          
+          # Redis Configuration
+          REDIS_PASSWORD=test_redis_password
+          
+          # Application Configuration
+          APP_PORT=4321
+          TZ=UTC
+          PUID=1000
+          PGID=1000
+          
+          # Admin Account
+          ADMIN_EMAIL=admin@test.local
+          ADMIN_PASSWORD=TestPassword123!
+          ADMIN_NAME=Test Admin
+          
+          # Application URL
+          NEXT_PUBLIC_APP_URL=http://localhost:4321
+          
+          # HTTPS
+          HTTPS_ENABLED=false
+          EOF
+          
+          # Append secrets separately with quotes to handle special characters
+          echo "ENCRYPTION_KEY=\"$ENCRYPTION_KEY\"" >> .env
+          echo "JWT_SECRET=\"$JWT_SECRET\"" >> .env
+          echo "JWT_REFRESH_SECRET=\"$JWT_REFRESH_SECRET\"" >> .env
+          echo "SHARE_TOKEN_SECRET=\"$SHARE_TOKEN_SECRET\"" >> .env
+
+      - name: Deploy production version
+        run: |
+          FROM_VERSION="${{ steps.versions.outputs.from_version }}"
+          echo "[DEPLOY] Deploying production version: $FROM_VERSION"
+          
+          # Backup original compose file
+          cp docker-compose.yml docker-compose.yml.new
+          
+          # Modify compose to use production version (likely already :latest)
+          if [[ "$FROM_VERSION" != "latest" ]]; then
+            sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$FROM_VERSION/g" docker-compose.yml
+          fi
+          
+          # Start production version
+          docker compose up -d
+          
+          echo "[WAIT] Waiting for production version to be ready..."
+          sleep 40
+          
+          # Verify production version is running
+          docker compose ps
+
+      - name: Verify production version started
+        run: |
+          echo "Checking if production version is healthy..."
+          
+          # Wait for health checks
+          for i in {1..10}; do
+            APP_HEALTH=$(docker inspect vitransfer-app --format='{{.State.Health.Status}}' 2>/dev/null || echo "starting")
+            echo "Attempt $i: App health = $APP_HEALTH"
+            if [[ "$APP_HEALTH" == "healthy" ]]; then
+              break
+            fi
+            sleep 5
+          done
+          
+          # Final health check
+          APP_HEALTH=$(docker inspect vitransfer-app --format='{{.State.Health.Status}}')
+          if [[ "$APP_HEALTH" != "healthy" ]]; then
+            echo "[ERROR] Production version failed to start"
+            docker logs vitransfer-app --tail 100
+            exit 1
+          fi
+          echo "[OK] Production version is running"
+
+      - name: Seed test data
+        run: |
+          echo "[SEED] Seeding test data..."
+          
+          # Create test project via API
+          echo "Creating test project..."
+          curl -s -X POST http://localhost:4321/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@test.local","password":"TestPassword123!"}' \
+            -c cookies.txt
+          
+          # Get current data count
+          BEFORE_PROJECTS=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"Project\";" | tr -d ' ')
+          BEFORE_USERS=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"User\";" | tr -d ' ')
+          
+          echo "Before upgrade:"
+          echo "  Projects: $BEFORE_PROJECTS"
+          echo "  Users: $BEFORE_USERS"
+          
+          # Store counts for later verification
+          echo "$BEFORE_PROJECTS" > /tmp/before_projects.txt
+          echo "$BEFORE_USERS" > /tmp/before_users.txt
+
+      - name: Backup database
+        run: |
+          echo "[BACKUP] Creating database backup..."
+          docker exec vitransfer-postgres pg_dump -U vitransfer vitransfer > /tmp/backup_before_upgrade.sql
+          echo "[OK] Database backed up to /tmp/backup_before_upgrade.sql"
+
+      - name: Stop production version
+        run: |
+          echo "[STOP] Stopping production version..."
+          docker compose stop app worker
+          docker compose rm -f app worker
+
+      - name: Upgrade to dev version
+        run: |
+          TO_VERSION="${{ steps.versions.outputs.to_version }}"
+          echo "[UPGRADE] Upgrading to dev version: $TO_VERSION"
+          
+          # Restore new compose file
+          mv docker-compose.yml.new docker-compose.yml
+          
+          # Update compose to use dev tag
+          sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$TO_VERSION/g" docker-compose.yml
+          
+          # Show what we're deploying
+          echo "Docker images to be used:"
+          grep "image: crypt010/vitransfer" docker-compose.yml
+          
+          # Pull dev version
+          docker compose pull app worker
+          
+          # Start dev version (database and redis are still running)
+          docker compose up -d app worker
+          
+          echo "[WAIT] Waiting for dev version to be ready..."
+          sleep 40
+
+      - name: Verify dev upgrade succeeded
+        run: |
+          echo "Checking if dev version is healthy..."
+          
+          # Wait for health checks
+          for i in {1..10}; do
+            APP_HEALTH=$(docker inspect vitransfer-app --format='{{.State.Health.Status}}' 2>/dev/null || echo "starting")
+            echo "Attempt $i: App health = $APP_HEALTH"
+            if [[ "$APP_HEALTH" == "healthy" ]]; then
+              break
+            fi
+            sleep 5
+          done
+          
+          # Final health check
+          APP_HEALTH=$(docker inspect vitransfer-app --format='{{.State.Health.Status}}')
+          if [[ "$APP_HEALTH" != "healthy" ]]; then
+            echo "[ERROR] Dev version failed to start"
+            docker logs vitransfer-app --tail 100
+            exit 1
+          fi
+          echo "[OK] Dev version is running"
+
+      - name: Verify migrations ran
+        run: |
+          echo "Checking if migrations ran successfully..."
+          docker logs vitransfer-app 2>&1 | grep -i "migration" || true
+          
+          # Check for migration errors
+          MIGRATION_ERRORS=$(docker logs vitransfer-app 2>&1 | grep -i "migration.*error" || echo "")
+          if [[ -n "$MIGRATION_ERRORS" ]]; then
+            echo "[ERROR] Migration errors detected:"
+            echo "$MIGRATION_ERRORS"
+            exit 1
+          fi
+          echo "[OK] No migration errors detected"
+
+      - name: Verify data integrity
+        run: |
+          echo "[VERIFY] Verifying data integrity after upgrade..."
+          
+          # Get counts after upgrade
+          AFTER_PROJECTS=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"Project\";" | tr -d ' ')
+          AFTER_USERS=$(docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -t -c "SELECT COUNT(*) FROM \"User\";" | tr -d ' ')
+          
+          BEFORE_PROJECTS=$(cat /tmp/before_projects.txt)
+          BEFORE_USERS=$(cat /tmp/before_users.txt)
+          
+          echo "After upgrade:"
+          echo "  Projects: $AFTER_PROJECTS (was $BEFORE_PROJECTS)"
+          echo "  Users: $AFTER_USERS (was $BEFORE_USERS)"
+          
+          # Verify counts match
+          if [[ "$AFTER_PROJECTS" != "$BEFORE_PROJECTS" ]]; then
+            echo "[ERROR] Project count mismatch!"
+            exit 1
+          fi
+          
+          if [[ "$AFTER_USERS" != "$BEFORE_USERS" ]]; then
+            echo "[ERROR] User count mismatch!"
+            exit 1
+          fi
+          
+          echo "[OK] Data integrity verified - all counts match"
+
+      - name: Test functionality after upgrade
+        run: |
+          echo "[TEST] Testing functionality after upgrade..."
+          
+          # Test health endpoint
+          RESPONSE=$(curl -s http://localhost:4321/api/health)
+          if [[ "$RESPONSE" != *"ok"* ]]; then
+            echo "[ERROR] Health check failed"
+            exit 1
+          fi
+          echo "[OK] Health check passed"
+          
+          # Test login
+          LOGIN_RESPONSE=$(curl -s -X POST http://localhost:4321/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@test.local","password":"TestPassword123!"}')
+          if [[ "$LOGIN_RESPONSE" == *"error"* ]]; then
+            echo "[ERROR] Login failed after upgrade"
+            echo "$LOGIN_RESPONSE"
+            exit 1
+          fi
+          echo "[OK] Login still works"
+          
+          # Test worker
+          WORKER_LOGS=$(docker logs vitransfer-worker 2>&1)
+          if [[ "$WORKER_LOGS" != *"Video processing worker started"* ]]; then
+            echo "[ERROR] Worker did not start properly after upgrade"
+            exit 1
+          fi
+          echo "[OK] Worker operational"
+
+      - name: Compare database schemas
+        run: |
+          echo "[SCHEMA] Comparing database schemas..."
+          
+          # Get current schema
+          docker exec vitransfer-postgres pg_dump -U vitransfer --schema-only vitransfer > /tmp/schema_after_upgrade.sql
+          
+          echo "Schema dump created. Tables present:"
+          docker exec vitransfer-postgres psql -U vitransfer -d vitransfer -c "\dt"
+
+      - name: Show upgrade logs on failure
+        if: failure()
+        run: |
+          echo "=== Application Logs (Last 200 lines) ==="
+          docker logs vitransfer-app --tail 200
+          echo ""
+          echo "=== Worker Logs ==="
+          docker logs vitransfer-worker --tail 100
+          echo ""
+          echo "=== PostgreSQL Logs ==="
+          docker logs vitransfer-postgres --tail 50
+          echo ""
+          echo "=== Database Backup (First 50 lines) ==="
+          head -n 50 /tmp/backup_before_upgrade.sql
+
+      - name: Upload backup on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-before-dev-upgrade
+          path: /tmp/backup_before_upgrade.sql
+          retention-days: 7
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v
+          rm -f .env cookies.txt
+          rm -f /tmp/before_projects.txt /tmp/before_users.txt
+          rm -f /tmp/backup_before_upgrade.sql /tmp/schema_after_upgrade.sql

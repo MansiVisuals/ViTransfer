@@ -209,8 +209,15 @@ jobs:
           fi
           echo "[OK] Admin login successful"
           
-          # Save session cookie for subsequent API tests
-          echo "$LOGIN_RESPONSE" | grep -o '"token":"[^"]*"' | sed 's/"token":"//;s/"$//' > /tmp/auth_token.txt
+          # Extract accessToken from the tokens object in the response
+          AUTH_TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"accessToken":"[^"]*"' | head -1 | sed 's/"accessToken":"//;s/"$//')
+          if [[ -z "$AUTH_TOKEN" ]]; then
+            echo "[ERROR] Failed to extract access token from login response"
+            echo "Full response: $LOGIN_RESPONSE"
+            exit 1
+          fi
+          echo "$AUTH_TOKEN" > /tmp/auth_token.txt
+          echo "Token extracted successfully (length: ${#AUTH_TOKEN})"
 
       - name: Test API endpoints
         run: |
@@ -221,9 +228,10 @@ jobs:
           echo "Testing session endpoint..."
           SESSION_RESPONSE=$(curl -s http://localhost:4321/api/auth/session \
             -H "Authorization: Bearer $AUTH_TOKEN")
-          if [[ "$SESSION_RESPONSE" != *"admin@test.local"* ]]; then
+          echo "Session response: $SESSION_RESPONSE"
+          if [[ "$SESSION_RESPONSE" != *"admin@test.local"* ]] || [[ "$SESSION_RESPONSE" == *'"authenticated":false'* ]]; then
             echo "[ERROR] Session endpoint failed"
-            echo "$SESSION_RESPONSE"
+            echo "Full session response: $SESSION_RESPONSE"
             exit 1
           fi
           echo "[OK] Session endpoint working"

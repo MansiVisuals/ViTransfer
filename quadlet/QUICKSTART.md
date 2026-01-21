@@ -1,11 +1,11 @@
-# ViTransfer Quadlet - Quick Start (hsadmin Setup)
+# ViTransfer Quadlet - Quick Start ($USER Setup)
 
 ## Overview
 
 This setup deploys ViTransfer using:
-- **User:** hsadmin (UID 1000, GID 1000)
+- **User:** $USER (UID 1000, GID 1000)
 - **Data directory:** `/podman/vitransfer`
-- **Container configs:** `/home/hsadmin/.config/containers/systemd`
+- **Container configs:** `~/.config/containers/systemd`
 - **Rootless Podman** with systemd user services
 
 ## Directory Structure
@@ -16,7 +16,7 @@ This setup deploys ViTransfer using:
 ├── redis-data/          # Redis cache
 └── uploads/             # Video uploads and processed files
 
-/home/hsadmin/.config/containers/systemd/
+~/.config/containers/systemd/
 ├── vitransfer-postgres.container
 ├── vitransfer-redis.container
 ├── vitransfer-app.container
@@ -27,11 +27,11 @@ This setup deploys ViTransfer using:
 ## Automated Installation (Recommended)
 
 ```bash
-# 1. Copy quadlet directory to server (as hsadmin user)
-scp -r quadlet/ hsadmin@server:/tmp/
+# 1. Copy quadlet directory to server (as $USER user)
+scp -r quadlet/ $USER@server:/tmp/
 
-# 2. SSH as hsadmin
-ssh hsadmin@server
+# 2. SSH as $USER
+ssh $USER@server
 
 # 3. Move to permanent location
 cd /tmp/quadlet
@@ -42,7 +42,7 @@ cd /tmp/quadlet
 ./install.sh              # Install to systemd
 
 # 5. Enable lingering (allows services to start on boot without login)
-sudo loginctl enable-linger hsadmin
+sudo loginctl enable-linger $USER
 
 # 6. Start services
 systemctl --user start vitransfer-postgres.service
@@ -98,7 +98,7 @@ systemctl --user daemon-reload
 podman pull docker.io/crypt010/vitransfer:latest
 
 # 7. Enable lingering
-sudo loginctl enable-linger hsadmin
+sudo loginctl enable-linger $USER
 
 # 8. Start services (see above)
 ```
@@ -267,10 +267,10 @@ If services don't start on boot:
 
 ```bash
 # Enable lingering
-sudo loginctl enable-linger hsadmin
+sudo loginctl enable-linger $USER
 
 # Verify
-loginctl show-user hsadmin | grep Linger
+loginctl show-user $USER | grep Linger
 # Should show: Linger=yes
 ```
 
@@ -313,7 +313,7 @@ systemctl --user start vitransfer-*.service
 
 1. **Lingering must be enabled** for services to auto-start on boot:
    ```bash
-   sudo loginctl enable-linger hsadmin
+   sudo loginctl enable-linger $USER
    ```
 
 2. **All data is in `/podman/vitransfer`** - backup this directory!
@@ -325,7 +325,7 @@ systemctl --user start vitransfer-*.service
 
 4. **Container configs are user-specific** - installed in `~/.config/`
 
-5. **Services run as hsadmin (1000:1000)** - no root needed
+5. **Services run as $USER (1000:1000)** - no root needed
 
 ## Resources
 
@@ -339,5 +339,5 @@ systemctl --user start vitransfer-*.service
 For issues:
 - Check logs: `journalctl --user -u vitransfer-app.service -f`
 - Verify permissions: `ls -la /podman/vitransfer/`
-- Check lingering: `loginctl show-user hsadmin | grep Linger`
+- Check lingering: `loginctl show-user $USER | grep Linger`
 - Ensure directories exist: `ls -la /podman/vitransfer/`

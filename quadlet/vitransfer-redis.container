@@ -8,7 +8,7 @@ Image=docker.io/library/redis:8-alpine
 ContainerName=vitransfer-redis
 AutoUpdate=registry
 
-# User/Group - runs as hsadmin (1000:1000)
+# User/Group - runs as current user (use your UID:GID, typically 1000:1000)
 User=1000:1000
 
 # Command with password - CHANGE THIS PASSWORD

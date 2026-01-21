@@ -365,15 +365,7 @@ jobs:
             echo "[ERROR] NotificationQueue table missing"
             exit 1
           fi
-          echo "[OK] NotificationQueue table exists" 
-              AND table_name = 'NotificationSchedule'
-            );")
-          
-          if [[ "$SCHEDULE_CHECK" != *"t"* ]]; then
-            echo "[ERROR] NotificationSchedule table missing"
-            exit 1
-          fi
-          echo "[OK] NotificationSchedule table exists"
+          echo "[OK] NotificationQueue table exists"
 
       - name: Test project update
         run: |

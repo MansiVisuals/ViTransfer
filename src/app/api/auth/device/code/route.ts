@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateDeviceCode, storeDeviceCode } from '@/lib/device-code'
 import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
+import { logSecurityEvent } from '@/lib/video-access'
+import { getClientIpAddress } from '@/lib/utils'
 
 // Valid client IDs for workflow integrations
 const VALID_CLIENT_IDS = [
@@ -22,6 +24,8 @@ const VALID_CLIENT_IDS = [
  * Output: { deviceCode, userCode, verificationUri, verificationUriComplete, expiresIn, interval }
  */
 export async function POST(request: NextRequest) {
+  const ipAddress = getClientIpAddress(request)
+
   // Rate limit: 10 requests per 10 minutes per IP
   const rateLimitResult = await rateLimit(request, {
     windowMs: 10 * 60 * 1000,
@@ -29,7 +33,16 @@ export async function POST(request: NextRequest) {
     message: 'Too many device code requests. Please try again later.',
   }, 'device-code')
 
-  if (rateLimitResult) return rateLimitResult
+  if (rateLimitResult) {
+    void logSecurityEvent({
+      type: 'DEVICE_CODE_RATE_LIMIT_HIT',
+      severity: 'WARNING',
+      ipAddress,
+      details: { endpoint: 'device/code' },
+      wasBlocked: true,
+    })
+    return rateLimitResult
+  }
 
   try {
     const body = await request.json()
@@ -65,6 +78,15 @@ export async function POST(request: NextRequest) {
     const baseUri = settings.appDomain.replace(/\/$/, '')
     const verificationUri = `${baseUri}/device`
     const verificationUriComplete = `${baseUri}/device?code=${userCode}`
+
+    // Log successful device code issuance
+    void logSecurityEvent({
+      type: 'DEVICE_CODE_ISSUED',
+      severity: 'INFO',
+      ipAddress,
+      details: { clientId, userCode },
+      wasBlocked: false,
+    })
 
     return NextResponse.json({
       deviceCode,

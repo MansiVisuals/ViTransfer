@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authorizeDeviceCode } from '@/lib/device-code'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { logSecurityEvent } from '@/lib/video-access'
+import { getClientIpAddress } from '@/lib/utils'
 
 /**
  * POST /api/auth/device/authorize
@@ -16,6 +18,8 @@ import { rateLimit } from '@/lib/rate-limit'
  * Output: { success: true }
  */
 export async function POST(request: NextRequest) {
+  const ipAddress = getClientIpAddress(request)
+
   // Rate limit: 20 requests per 10 minutes
   const rateLimitResult = await rateLimit(request, {
     windowMs: 10 * 60 * 1000,
@@ -23,7 +27,16 @@ export async function POST(request: NextRequest) {
     message: 'Too many authorization attempts.',
   }, 'device-authorize')
 
-  if (rateLimitResult) return rateLimitResult
+  if (rateLimitResult) {
+    void logSecurityEvent({
+      type: 'DEVICE_CODE_RATE_LIMIT_HIT',
+      severity: 'WARNING',
+      ipAddress,
+      details: { endpoint: 'device/authorize' },
+      wasBlocked: true,
+    })
+    return rateLimitResult
+  }
 
   try {
     // Require authenticated admin user
@@ -60,11 +73,35 @@ export async function POST(request: NextRequest) {
     const result = await authorizeDeviceCode(normalizedCode, user.id)
 
     if (!result.success) {
+      void logSecurityEvent({
+        type: 'DEVICE_CODE_AUTH_FAILED',
+        severity: 'WARNING',
+        ipAddress,
+        details: {
+          userId: user.id,
+          userCode: normalizedCode,
+          error: result.error,
+        },
+        wasBlocked: false,
+      })
       return NextResponse.json(
         { error: result.error || 'Authorization failed' },
         { status: 400 }
       )
     }
+
+    // Log successful authorization
+    void logSecurityEvent({
+      type: 'DEVICE_CODE_AUTHORIZED',
+      severity: 'INFO',
+      ipAddress,
+      details: {
+        userId: user.id,
+        userEmail: user.email,
+        userCode: normalizedCode,
+      },
+      wasBlocked: false,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

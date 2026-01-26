@@ -6,6 +6,8 @@ import { getDeviceCodeStatus, consumeDeviceCode, checkPollRate } from '@/lib/dev
 import { issueAdminTokens } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
+import { logSecurityEvent } from '@/lib/video-access'
+import { getClientIpAddress } from '@/lib/utils'
 
 /**
  * POST /api/auth/device/token
@@ -22,6 +24,8 @@ import { rateLimit } from '@/lib/rate-limit'
  *   200 { tokens: {...}, user: {...} }
  */
 export async function POST(request: NextRequest) {
+  const ipAddress = getClientIpAddress(request)
+
   // Rate limit: 120 requests per 10 minutes per IP (polling at 5s = 120 in 10min)
   const rateLimitResult = await rateLimit(request, {
     windowMs: 10 * 60 * 1000,
@@ -29,7 +33,16 @@ export async function POST(request: NextRequest) {
     message: 'Too many token requests.',
   }, 'device-token')
 
-  if (rateLimitResult) return rateLimitResult
+  if (rateLimitResult) {
+    void logSecurityEvent({
+      type: 'DEVICE_CODE_RATE_LIMIT_HIT',
+      severity: 'WARNING',
+      ipAddress,
+      details: { endpoint: 'device/token' },
+      wasBlocked: true,
+    })
+    return rateLimitResult
+  }
 
   try {
     const body = await request.json()
@@ -119,6 +132,19 @@ export async function POST(request: NextRequest) {
 
         // Issue tokens
         const tokenData = await issueAdminTokens(user)
+
+        // Log successful token issuance
+        void logSecurityEvent({
+          type: 'DEVICE_CODE_TOKEN_ISSUED',
+          severity: 'INFO',
+          ipAddress,
+          details: {
+            userId: user.id,
+            userEmail: user.email,
+            clientId,
+          },
+          wasBlocked: false,
+        })
 
         return NextResponse.json({
           tokens: {

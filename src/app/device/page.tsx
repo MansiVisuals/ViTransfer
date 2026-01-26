@@ -182,10 +182,10 @@ function DeviceAuthForm() {
               <Monitor className="w-8 h-8 text-primary-foreground" />
             </div>
             <h1 className="text-3xl font-bold text-foreground">
-              Authorize Plugin
+              Authorize Workflow Integration
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Connect your DaVinci Resolve plugin to ViTransfer
+              Connect your workflow integration to ViTransfer
             </p>
           </div>
 
@@ -198,7 +198,7 @@ function DeviceAuthForm() {
                   Sign In
                 </CardTitle>
                 <CardDescription>
-                  Authenticate to authorize the plugin
+                  Authenticate to authorize the workflow integration
                 </CardDescription>
               </CardHeader>
 
@@ -209,27 +209,6 @@ function DeviceAuthForm() {
                       <p className="text-sm text-destructive font-medium">{error}</p>
                     </div>
                   )}
-
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="default"
-                    className="w-full"
-                    disabled={passkeyLoading}
-                    onClick={handlePasskeyLogin}
-                  >
-                    <Fingerprint className="w-4 h-4 mr-2" />
-                    {passkeyLoading ? 'Authenticating...' : 'Sign in with PassKey'}
-                  </Button>
-
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">Or use password</span>
-                    </div>
-                  </div>
 
                   <form onSubmit={handlePasswordLogin} className="space-y-4">
                     <div className="space-y-2">
@@ -261,15 +240,36 @@ function DeviceAuthForm() {
 
                     <Button
                       type="submit"
-                      variant="outline"
+                      variant="default"
                       size="default"
                       className="w-full"
                       disabled={loading}
                     >
                       <LogIn className="w-4 h-4 mr-2" />
-                      {loading ? 'Signing in...' : 'Sign In with Password'}
+                      {loading ? 'Signing in...' : 'Sign In'}
                     </Button>
                   </form>
+
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="default"
+                    className="w-full"
+                    disabled={passkeyLoading}
+                    onClick={handlePasskeyLogin}
+                  >
+                    <Fingerprint className="w-4 h-4 mr-2" />
+                    {passkeyLoading ? 'Authenticating...' : 'Use PassKey'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -284,7 +284,7 @@ function DeviceAuthForm() {
                   Authorize Device
                 </CardTitle>
                 <CardDescription>
-                  Confirm the code shown in your DaVinci Resolve plugin
+                  Confirm the code shown in your workflow integration
                 </CardDescription>
               </CardHeader>
 
@@ -309,7 +309,7 @@ function DeviceAuthForm() {
                       required
                     />
                     <p className="text-xs text-muted-foreground text-center">
-                      Enter the code displayed in your DaVinci Resolve plugin
+                      Enter the code displayed in your workflow integration
                     </p>
                   </div>
 
@@ -321,7 +321,7 @@ function DeviceAuthForm() {
                     disabled={authorizeLoading || !userCode}
                     onClick={handleAuthorize}
                   >
-                    {authorizeLoading ? 'Authorizing...' : 'Authorize Plugin'}
+                    {authorizeLoading ? 'Authorizing...' : 'Authorize Workflow Integration'}
                   </Button>
                 </div>
               </CardContent>
@@ -339,7 +339,7 @@ function DeviceAuthForm() {
                   <div>
                     <h2 className="text-xl font-semibold text-foreground">Authorization Complete</h2>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Your DaVinci Resolve plugin is now connected. You can close this window.
+                      Your workflow integration is now connected. You can close this window.
                     </p>
                   </div>
                 </div>
@@ -358,7 +358,7 @@ function DeviceAuthForm() {
                   <div>
                     <h2 className="text-xl font-semibold text-foreground">Authorization Failed</h2>
                     <p className="text-sm text-muted-foreground mt-2">
-                      {error || 'Something went wrong. Please try again from your plugin.'}
+                      {error || 'Something went wrong. Please try again from your workflow integration.'}
                     </p>
                   </div>
                   <Button

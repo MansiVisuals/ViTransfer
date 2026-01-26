@@ -6,13 +6,19 @@ import { generateDeviceCode, storeDeviceCode } from '@/lib/device-code'
 import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 
+// Valid client IDs for workflow integrations
+const VALID_CLIENT_IDS = [
+  'vitransfer-resolve',
+  'vitransfer-premiere',
+]
+
 /**
  * POST /api/auth/device/code
  *
  * Issues a new device code for the device authorization flow.
  * No authentication required. Rate limited per IP.
  *
- * Input: { clientId: "vitransfer-resolve" }
+ * Input: { clientId: "vitransfer-resolve" | "vitransfer-premiere" }
  * Output: { deviceCode, userCode, verificationUri, verificationUriComplete, expiresIn, interval }
  */
 export async function POST(request: NextRequest) {
@@ -29,7 +35,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { clientId } = body
 
-    if (!clientId || clientId !== 'vitransfer-resolve') {
+    if (!clientId || !VALID_CLIENT_IDS.includes(clientId)) {
       return NextResponse.json(
         { error: 'Invalid client_id' },
         { status: 400 }

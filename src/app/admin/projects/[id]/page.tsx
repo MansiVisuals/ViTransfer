@@ -21,7 +21,6 @@ export default function ProjectPage() {
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [shareUrl, setShareUrl] = useState('')
-  const [companyName, setCompanyName] = useState('Studio')
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
 
   // Fetch project data function (extracted so it can be called on upload complete)
@@ -111,22 +110,6 @@ export default function ProjectPage() {
     fetchShareUrl()
   }, [project?.slug])
 
-  // Fetch company name
-  useEffect(() => {
-    async function fetchCompanyName() {
-      try {
-        const response = await apiFetch('/api/settings')
-        if (response.ok) {
-          const data = await response.json()
-          setCompanyName(data.companyName || 'Studio')
-        }
-      } catch (error) {
-        console.error('Error fetching company name:', error)
-      }
-    }
-
-    fetchCompanyName()
-  }, [])
 
   if (loading) {
     return (
@@ -174,12 +157,11 @@ export default function ProjectPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Actions Panel - Top on mobile, right on desktop */}
           <div className="lg:col-start-3 lg:row-start-1 min-w-0">
-            <ProjectActions 
-              project={project} 
-              videos={project.videos} 
+            <ProjectActions
+              project={project}
+              videos={project.videos}
               onRefresh={fetchProject}
               shareUrl={shareUrl}
-              companyName={companyName}
               recipients={project.recipients || []}
             />
           </div>
@@ -211,7 +193,6 @@ export default function ProjectPage() {
                 videos={project.videos}
                 projectStatus={project.status}
                 restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                companyName={companyName}
                 onRefresh={fetchProject}
                 sortMode={sortMode}
                 maxRevisions={project.maxRevisions}

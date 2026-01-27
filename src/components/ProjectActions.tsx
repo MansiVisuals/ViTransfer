@@ -35,11 +35,10 @@ interface ProjectActionsProps {
   videos: Video[]
   onRefresh?: () => void
   shareUrl?: string
-  companyName?: string
   recipients?: any[]
 }
 
-export default function ProjectActions({ project, videos, onRefresh, shareUrl = '', companyName, recipients = [] }: ProjectActionsProps) {
+export default function ProjectActions({ project, videos, onRefresh, shareUrl = '', recipients = [] }: ProjectActionsProps) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingApproval, setIsTogglingApproval] = useState(false)
@@ -316,17 +315,33 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           <div className="pb-3 border-b border-border">
             <div className="text-sm">
               <p className="text-muted-foreground mb-1">Client</p>
-              <p className="font-medium break-words">
-                {(() => {
-                  const primaryRecipient = recipients?.find((r: any) => r.isPrimary) || recipients?.[0]
-                  return companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
-                })()}
-              </p>
-              {!companyName && recipients?.[0]?.name && recipients?.[0]?.email && (
-                <p className="text-xs text-muted-foreground break-all">
-                  {recipients[0].email}
-                </p>
-              )}
+              {(() => {
+                const clientCompany = (project as any).companyName
+                const primaryRecipient = recipients?.find((r: any) => r.isPrimary) || recipients?.[0]
+                const clientName = primaryRecipient?.name
+                const clientEmail = primaryRecipient?.email
+
+                return (
+                  <>
+                    {clientCompany && (
+                      <p className="font-medium break-words">{clientCompany}</p>
+                    )}
+                    {clientName && (
+                      <p className={clientCompany ? "text-muted-foreground break-words" : "font-medium break-words"}>
+                        {clientName}
+                      </p>
+                    )}
+                    {clientEmail && (
+                      <p className="text-xs text-muted-foreground break-all">
+                        {clientEmail}
+                      </p>
+                    )}
+                    {!clientCompany && !clientName && !clientEmail && (
+                      <p className="font-medium">No client info</p>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </div>
 

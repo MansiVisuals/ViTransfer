@@ -1,6 +1,6 @@
 {
   "name": "vitransfer",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -33,7 +33,7 @@
     "ioredis": "^5.8.2",
     "isomorphic-dompurify": "^2.31.0",
     "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.553.0",
+    "lucide-react": "^0.563.0",
     "next": "^16.0.7",
     "nodemailer": "^7.0.9",
     "react": "^19.2.1",
@@ -45,9 +45,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/archiver": "^6.0.2",
+    "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^22",
+    "@types/node": "^24.10.9",
     "@types/nodemailer": "^7.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",

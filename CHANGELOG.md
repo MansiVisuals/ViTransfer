@@ -5,6 +5,25 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-01-27
+
+### Added
+- **Device code authentication (RFC 8628)**: OAuth 2.0 device authorization flow for workflow integrations (DaVinci Resolve and Premiere Pro)
+  - Device code endpoint for initiating authentication
+  - User authorization page for approving device requests
+  - Token endpoint for device polling
+  - Security event logging for device code authentication
+- **Per-project playback setting**: Configure approved video playback behavior per project
+
+### Fixed
+- Approved videos no longer incorrectly show 'with Watermark' in status
+- Client share page now shows client company and name instead of instance company name
+- Page now reloads after video approval to properly update status
+- Restored approval API call in client share page
+
+### Changed
+- Added ON DELETE CASCADE to Comment-Video relation for proper cleanup
+
 ## [0.8.4] - 2026-01-20
 
 ### Added

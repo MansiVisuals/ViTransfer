@@ -1,9 +1,9 @@
 /**
  * Device Code Grant (RFC 8628) - Core Logic
  *
- * Enables OAuth-style device authorization flow for the DaVinci Resolve plugin.
- * The plugin obtains a device code, opens a browser for authentication,
- * and polls for tokens once the user authorizes.
+ * Enables OAuth-style device authorization flow for workflow integrations
+ * (DaVinci Resolve and Premiere Pro). The plugin obtains a device code,
+ * opens a browser for authentication, and polls for tokens once the user authorizes.
  *
  * Redis Keys:
  * - device_code:dc:{deviceCode} → JSON metadata (10 min TTL)

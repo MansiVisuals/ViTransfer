@@ -105,6 +105,7 @@ export async function PATCH(request: NextRequest) {
       adminNotificationSchedule,
       adminNotificationTime,
       adminNotificationDay,
+      defaultUsePreviewForApprovedPlayback,
     } = body
 
     // SECURITY: Validate notification schedule
@@ -226,6 +227,7 @@ export async function PATCH(request: NextRequest) {
       adminNotificationSchedule,
       adminNotificationTime,
       adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
+      defaultUsePreviewForApprovedPlayback,
     }
 
     // Only update password if it's not the placeholder

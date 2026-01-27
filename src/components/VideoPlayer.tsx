@@ -41,6 +41,7 @@ interface VideoPlayerProps {
     displayVideos: any[]
     displayLabel: string
   }) => void // Callback to expose video state for mobile layout
+  usePreviewForApprovedPlayback?: boolean // Use preview for approved playback instead of original
 }
 
 export default function VideoPlayer({
@@ -67,6 +68,7 @@ export default function VideoPlayer({
   timestampDisplayMode = 'TIMECODE', // Default to TIMECODE format
   onCommentFocus, // Callback when timeline marker is clicked
   onVideoStateChange, // Callback to expose video state for mobile layout
+  usePreviewForApprovedPlayback = false, // Default to false (use original)
 }: VideoPlayerProps) {
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
   const [videoUrl, setVideoUrl] = useState<string>('')
@@ -763,6 +765,7 @@ export default function VideoPlayer({
         shareToken={shareToken}
         activeVideoName={activeVideoName}
         className="hidden lg:block lg:order-3"
+        usePreviewForApprovedPlayback={usePreviewForApprovedPlayback}
       />
     </div>
   )

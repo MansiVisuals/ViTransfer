@@ -156,6 +156,7 @@ export async function POST(request: NextRequest) {
         defaultWatermarkEnabled: true,
         defaultWatermarkText: true,
         defaultTimestampDisplay: true,
+        defaultUsePreviewForApprovedPlayback: true,
       },
     })
 
@@ -185,6 +186,7 @@ export async function POST(request: NextRequest) {
           watermarkEnabled: settings?.defaultWatermarkEnabled ?? true,
           watermarkText: settings?.defaultWatermarkText || null,
           timestampDisplay: settings?.defaultTimestampDisplay || 'TIMECODE',
+          usePreviewForApprovedPlayback: settings?.defaultUsePreviewForApprovedPlayback ?? false,
           createdById: admin.id,
         },
       })

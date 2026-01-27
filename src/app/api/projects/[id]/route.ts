@@ -265,6 +265,11 @@ export async function PATCH(
       updateData.clientCanApprove = validatedBody.clientCanApprove
     }
 
+    // Handle approved playback setting
+    if (validatedBody.usePreviewForApprovedPlayback !== undefined) {
+      updateData.usePreviewForApprovedPlayback = validatedBody.usePreviewForApprovedPlayback
+    }
+
     // Handle password, authMode, and guest settings updates
     // Fetch current project once if any security field is being updated
     let passwordWasChanged = false

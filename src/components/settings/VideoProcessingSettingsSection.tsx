@@ -15,6 +15,8 @@ interface VideoProcessingSettingsSectionProps {
   setDefaultTimestampDisplay: (value: string) => void
   autoApproveProject: boolean
   setAutoApproveProject: (value: boolean) => void
+  defaultUsePreviewForApprovedPlayback: boolean
+  setDefaultUsePreviewForApprovedPlayback: (value: boolean) => void
   show: boolean
   setShow: (value: boolean) => void
 }
@@ -30,6 +32,8 @@ export function VideoProcessingSettingsSection({
   setDefaultTimestampDisplay,
   autoApproveProject,
   setAutoApproveProject,
+  defaultUsePreviewForApprovedPlayback,
+  setDefaultUsePreviewForApprovedPlayback,
   show,
   setShow,
 }: VideoProcessingSettingsSectionProps) {
@@ -99,6 +103,29 @@ export function VideoProcessingSettingsSection({
               <span className="text-warning">Only letters, numbers, spaces, and these characters: - _ . ( )</span>
             </p>
           </div>
+        )}
+      </div>
+
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5 flex-1">
+            <Label htmlFor="defaultUsePreviewForApprovedPlayback">Use Preview for Approved Playback</Label>
+            <p className="text-xs text-muted-foreground">
+              After approval, play the browser-compatible preview instead of the original file.
+              Useful when originals use codecs browsers cannot play (ProRes, PCM audio).
+              Downloads always provide the original file.
+            </p>
+          </div>
+          <Switch
+            id="defaultUsePreviewForApprovedPlayback"
+            checked={defaultUsePreviewForApprovedPlayback}
+            onCheckedChange={setDefaultUsePreviewForApprovedPlayback}
+          />
+        </div>
+        {defaultUsePreviewForApprovedPlayback && defaultWatermarkEnabled && (
+          <p className="text-xs text-muted-foreground italic">
+            When enabled with watermarks, a clean preview without watermarks will be generated when videos are approved.
+          </p>
         )}
       </div>
 

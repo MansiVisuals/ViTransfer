@@ -92,6 +92,7 @@ interface Project {
   watermarkText: string | null
   allowAssetDownload: boolean
   clientCanApprove: boolean
+  usePreviewForApprovedPlayback: boolean
   clientNotificationSchedule: string
   clientNotificationTime: string | null
   clientNotificationDay: number | null
@@ -130,6 +131,7 @@ export default function ProjectSettingsPage() {
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
   const [allowAssetDownload, setAllowAssetDownload] = useState(true)
   const [clientCanApprove, setClientCanApprove] = useState(true)
+  const [usePreviewForApprovedPlayback, setUsePreviewForApprovedPlayback] = useState(false)
 
   // Notification settings state
   const [clientNotificationSchedule, setClientNotificationSchedule] = useState('HOURLY')
@@ -207,6 +209,7 @@ export default function ProjectSettingsPage() {
         setUseCustomWatermark(!!data.watermarkText)
         setAllowAssetDownload(data.allowAssetDownload ?? true)
         setClientCanApprove(data.clientCanApprove ?? true)
+        setUsePreviewForApprovedPlayback(data.usePreviewForApprovedPlayback ?? false)
         setAuthMode(data.authMode || 'PASSWORD')
         setGuestMode(data.guestMode || false)
         setGuestLatestOnly(data.guestLatestOnly ?? true)
@@ -306,6 +309,7 @@ export default function ProjectSettingsPage() {
         watermarkText: useCustomWatermark ? watermarkText : null,
         allowAssetDownload,
         clientCanApprove,
+        usePreviewForApprovedPlayback,
         sharePassword: sharePassword || null,
         authMode,
         guestMode,
@@ -694,6 +698,29 @@ export default function ProjectSettingsPage() {
                     onCheckedChange={setAllowAssetDownload}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="usePreviewForApprovedPlayback">Use Preview for Approved Playback</Label>
+                    <p className="text-xs text-muted-foreground">
+                      After approval, play the browser-compatible preview instead of the original file.
+                      Useful when originals use codecs browsers cannot play (ProRes, PCM audio).
+                      Downloads always provide the original file.
+                    </p>
+                  </div>
+                  <Switch
+                    id="usePreviewForApprovedPlayback"
+                    checked={usePreviewForApprovedPlayback}
+                    onCheckedChange={setUsePreviewForApprovedPlayback}
+                  />
+                </div>
+                {usePreviewForApprovedPlayback && watermarkEnabled && (
+                  <p className="text-xs text-muted-foreground italic">
+                    A clean preview without watermarks will be generated when videos are approved.
+                  </p>
+                )}
               </div>
 
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">

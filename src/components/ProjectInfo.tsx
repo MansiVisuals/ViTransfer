@@ -18,7 +18,7 @@ import { getAccessToken } from '@/lib/token-store'
 import { cn } from '@/lib/utils'
 
 interface ProjectInfoProps {
-  selectedVideo: Video & { name?: string; approved?: boolean; downloadUrl?: string }
+  selectedVideo: Video & { name?: string; approved?: boolean; downloadUrl?: string; cleanPreview720Path?: string | null; cleanPreview1080Path?: string | null }
   displayLabel: string
   isVideoApproved: boolean
   projectTitle?: string
@@ -37,6 +37,7 @@ interface ProjectInfoProps {
   shareToken?: string | null
   activeVideoName?: string
   className?: string
+  usePreviewForApprovedPlayback?: boolean
 }
 
 export default function ProjectInfo({
@@ -58,6 +59,7 @@ export default function ProjectInfo({
   shareToken = null,
   activeVideoName,
   className,
+  usePreviewForApprovedPlayback = false,
 }: ProjectInfoProps) {
   const [showInfoDialog, setShowInfoDialog] = useState(false)
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false)
@@ -260,7 +262,11 @@ export default function ProjectInfo({
                       <span className="text-muted-foreground">Status:</span>
                       <span className="font-medium break-words">
                         {isVideoApproved
-                          ? 'Approved - Original Quality'
+                          ? usePreviewForApprovedPlayback
+                            ? (selectedVideo.cleanPreview720Path || selectedVideo.cleanPreview1080Path)
+                              ? `Approved - Preview (${defaultQuality})`
+                              : `Approved - Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
+                            : 'Approved - Original Quality'
                           : `Downscaled Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
                         }
                       </span>

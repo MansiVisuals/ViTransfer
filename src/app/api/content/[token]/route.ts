@@ -206,7 +206,15 @@ export async function GET(
         // Admin downloads should always use the original file, even before approval
         filePath = originalPath
       } else if (video.approved && originalPath) {
-        filePath = originalPath
+        // Check if project prefers preview playback after approval (for streaming, not downloads)
+        if (!isDownload && video.project.usePreviewForApprovedPlayback) {
+          // Prefer clean preview if available, fall back to watermarked preview, then original
+          const cleanPath = video.cleanPreview1080Path || video.cleanPreview720Path
+          const watermarkedPath = video.preview1080Path || video.preview720Path
+          filePath = cleanPath || watermarkedPath || originalPath
+        } else {
+          filePath = originalPath
+        }
       } else {
         filePath = video.preview1080Path || video.preview720Path
       }

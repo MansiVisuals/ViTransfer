@@ -26,6 +26,7 @@ interface Settings {
   defaultWatermarkText: string | null
   defaultTimestampDisplay: string | null
   autoApproveProject: boolean | null
+  defaultUsePreviewForApprovedPlayback: boolean | null
   adminNotificationSchedule: string | null
   adminNotificationTime: string | null
   adminNotificationDay: number | null
@@ -90,6 +91,7 @@ export default function GlobalSettingsPage() {
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
   const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
+  const [defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback] = useState(false)
 
   // Form state for admin notification settings
   const [adminNotificationSchedule, setAdminNotificationSchedule] = useState('HOURLY')
@@ -140,6 +142,7 @@ export default function GlobalSettingsPage() {
     setDefaultWatermarkText(data.defaultWatermarkText || '')
     setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
     setAutoApproveProject(data.autoApproveProject ?? true)
+    setDefaultUsePreviewForApprovedPlayback(data.defaultUsePreviewForApprovedPlayback ?? false)
     setTestEmailAddress(data.smtpFromAddress || '')
     setAdminNotificationSchedule(data.adminNotificationSchedule || 'HOURLY')
     setAdminNotificationTime(data.adminNotificationTime || '09:00')
@@ -324,6 +327,7 @@ export default function GlobalSettingsPage() {
         defaultWatermarkText: defaultWatermarkText || null,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject: autoApproveProject,
+        defaultUsePreviewForApprovedPlayback: defaultUsePreviewForApprovedPlayback,
         adminNotificationSchedule: adminNotificationSchedule,
         adminNotificationTime: (adminNotificationSchedule === 'DAILY' || adminNotificationSchedule === 'WEEKLY') ? adminNotificationTime : null,
         adminNotificationDay: adminNotificationSchedule === 'WEEKLY' ? adminNotificationDay : null,
@@ -523,6 +527,8 @@ export default function GlobalSettingsPage() {
             setDefaultTimestampDisplay={setDefaultTimestampDisplay}
             autoApproveProject={autoApproveProject}
             setAutoApproveProject={setAutoApproveProject}
+            defaultUsePreviewForApprovedPlayback={defaultUsePreviewForApprovedPlayback}
+            setDefaultUsePreviewForApprovedPlayback={setDefaultUsePreviewForApprovedPlayback}
             show={showVideoProcessing}
             setShow={setShowVideoProcessing}
           />

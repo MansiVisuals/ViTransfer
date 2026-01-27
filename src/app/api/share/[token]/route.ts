@@ -142,6 +142,8 @@ export async function GET(
       thumbnailUrl: null,
       preview720Path: undefined,
       preview1080Path: undefined,
+      cleanPreview720Path: undefined,
+      cleanPreview1080Path: undefined,
       originalStoragePath: undefined,
       thumbnailPath: undefined,
     }))
@@ -267,6 +269,7 @@ export async function GET(
         hideFeedback: project.hideFeedback,
         previewResolution: project.previewResolution,
         watermarkEnabled: project.watermarkEnabled,
+        usePreviewForApprovedPlayback: project.usePreviewForApprovedPlayback,
       }),
 
       allowAssetDownload: project.allowAssetDownload,

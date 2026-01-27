@@ -336,10 +336,24 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           let downloadToken = null
 
           if (video.approved) {
-            const originalToken = await fetchVideoToken(video.id, 'original')
-            streamToken720p = originalToken
-            streamToken1080p = originalToken
-            downloadToken = originalToken
+            // Check if project uses preview for approved playback
+            if (project?.usePreviewForApprovedPlayback) {
+              // Use preview tokens for streaming, original for download
+              const [token720, token1080, originalToken] = await Promise.all([
+                fetchVideoToken(video.id, '720p'),
+                fetchVideoToken(video.id, '1080p'),
+                fetchVideoToken(video.id, 'original'),
+              ])
+              streamToken720p = token720
+              streamToken1080p = token1080
+              downloadToken = originalToken
+            } else {
+              // Default: original for everything
+              const originalToken = await fetchVideoToken(video.id, 'original')
+              streamToken720p = originalToken
+              streamToken1080p = originalToken
+              downloadToken = originalToken
+            }
           } else {
             const [token720, token1080] = await Promise.all([
               fetchVideoToken(video.id, '720p'),
@@ -809,6 +823,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                   onCommentFocus={(commentId) => setFocusCommentId(commentId)}
                   onVideoStateChange={setVideoState}
+                  usePreviewForApprovedPlayback={project.usePreviewForApprovedPlayback}
                 />
               </div>
 
@@ -861,6 +876,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     allowAssetDownload={project.allowAssetDownload}
                     shareToken={shareToken}
                     activeVideoName={activeVideoName}
+                    usePreviewForApprovedPlayback={project.usePreviewForApprovedPlayback}
                   />
                 </div>
               )}

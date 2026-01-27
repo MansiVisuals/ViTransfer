@@ -67,6 +67,9 @@ model Project {
   allowAssetDownload Boolean @default(true) // Allow clients to download video assets when project is approved
   clientCanApprove   Boolean @default(true) // Allow clients to approve videos (false = admin only)
 
+  // Approved playback settings
+  usePreviewForApprovedPlayback Boolean @default(false) // Use browser-compatible preview instead of original after approval
+
   // Client notification settings (per-project)
   // Note: Approval emails are always IMMEDIATE regardless of this setting
   clientNotificationSchedule String    @default("HOURLY") // IMMEDIATE, HOURLY, DAILY, WEEKLY
@@ -136,6 +139,10 @@ model Video {
   preview1080Path String?
   preview720Path  String?
   thumbnailPath   String?
+
+  // Clean (non-watermarked) previews for approved playback
+  cleanPreview1080Path String?
+  cleanPreview720Path  String?
 
   // Per-video approval
   approved   Boolean   @default(false)
@@ -268,6 +275,9 @@ model Settings {
   // Default Comment Timestamp Display
   // TIMECODE = HH:MM:SS:FF (or DF), AUTO = MM:SS or HH:MM:SS based on video length
   defaultTimestampDisplay String @default("TIMECODE")
+
+  // Default Approved Playback Setting
+  defaultUsePreviewForApprovedPlayback Boolean @default(false)
 
   // Project Behavior
   autoApproveProject Boolean @default(true) // Auto-approve project when all videos approved

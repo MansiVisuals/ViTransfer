@@ -531,5 +531,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker compose down -v
-          rm .env
+          docker compose down -v || true
+          rm -f .env

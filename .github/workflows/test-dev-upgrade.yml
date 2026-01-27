@@ -727,7 +727,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker compose down -v
+          docker compose down -v || true
           rm -f .env cookies.txt
           rm -f /tmp/before_projects.txt /tmp/before_users.txt
           rm -f /tmp/backup_before_upgrade.sql /tmp/schema_after_upgrade.sql

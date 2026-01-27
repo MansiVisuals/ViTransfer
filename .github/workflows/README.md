@@ -4,11 +4,12 @@ This directory contains GitHub Actions workflows for automated testing of ViTran
 
 ## Overview
 
-**Total Workflows: 4**
-- `test-clean-install.yml` (main branch) - **19 tests** - Fresh installation
-- `test-upgrade.yml` (main branch) - **22 tests** - Version upgrades with data preservation
-- `test-dev-clean-install.yml` (dev branch) - **19 tests** - Dev build fresh installation
-- `test-dev-upgrade.yml` (dev branch) - **22 tests** - Production → Dev upgrade
+**Total Workflows: 5**
+- `test-clean-install.yml` (main branch) - **19 tests** - Fresh installation (runs on releases only)
+- `test-upgrade.yml` (main branch) - **22 tests** - Version upgrades (runs on releases only)
+- `test-dev-clean-install.yml` (dev branch) - **19 tests** - Build from source, fresh installation
+- `test-dev-upgrade.yml` (dev branch) - **22 tests** - Build from source → upgrade test
+- `docker-integration-tests.yml` (dev branch) - Orchestrates dev tests
 
 **Test Categories:**
 - Infrastructure (PostgreSQL, Redis, health checks)
@@ -69,8 +70,7 @@ Tests a fresh installation of ViTransfer with the latest production compose conf
 - [x] No worker errors
 
 **Triggers:**
-- Push to `main` or `dev` branches
-- Pull requests to `main` or `dev`
+- New release published (tests Docker Hub images)
 - Manual dispatch
 
 **Duration:** ~2-3 minutes
@@ -155,8 +155,7 @@ The workflow tracks data in three stages:
 Example: If BEFORE=1 project, AFTER=1 project ✅ (preserved), FINAL=2 projects ✅ (created +1 in tests)
 
 **Triggers:**
-- Push to `main` or `dev` branches
-- Pull requests to `main` or `dev`
+- New release published (tests Docker Hub images)
 - Manual dispatch (with version selection)
 
 **Duration:** ~4-5 minutes
@@ -171,19 +170,22 @@ to_version: 'latest'   # Version to upgrade to (or 'dev', specific tag, etc.)
 
 ### 3. Docker Integration Tests (`docker-integration-tests.yml`)
 
-Combined workflow that runs both clean install and upgrade tests.
+Orchestrator workflow that runs dev clean install and upgrade tests sequentially.
 
 **What it does:**
-- Runs clean install test first
-- If successful, runs upgrade test
+- Runs dev clean install test first (builds from source)
+- If successful, runs dev upgrade test
 - Provides summary of all test results
 
 **Triggers:**
-- Push/PR with changes to:
+- Push to `dev` branch with changes to:
   - `docker-compose*.yml`
   - `Dockerfile`
   - `prisma/**`
+  - `src/**`
+  - `package*.json`
   - Workflow files
+- Pull requests to `dev`
 - Manual dispatch
 
 **Duration:** ~5-8 minutes total
@@ -194,60 +196,51 @@ Combined workflow that runs both clean install and upgrade tests.
 
 ### 4. Dev Clean Install Test (`test-dev-clean-install.yml`)
 
-Tests a fresh installation of development builds using `dev-VERSION` Docker tags.
+Builds the Docker image from source and tests a fresh installation.
 
 **Total Tests: 19** (same as production clean install)
 
 **What it tests:**
-- [x] Dev build deployment (e.g., `dev-0.8.5` from Docker Hub)
+- [x] Build image from source using BuildKit
 - All 19 tests identical to production clean install test
 - Infrastructure, Authentication, API endpoints, Analytics, Write operations, Database schema, Worker tests
 
 **Triggers:**
-- Push to `dev` branch
-- Pull requests to `dev`
+- Called by `docker-integration-tests.yml`
 - Manual dispatch (with version override)
 
 **Duration:** ~2-3 minutes
 
-**Example:** Tests `crypt010/vitransfer:dev-0.8.5` from Docker Hub
-- Push to `dev` branch
-- Pull requests to `dev`
-- Manual dispatch (with version override)
-
-**Duration:** ~2-3 minutes
-
-**Example:** Tests `crypt010/vitransfer:dev-0.8.5` from Docker Hub
+**Key feature:** Builds directly from source code, ensuring the actual codebase is tested (not a pre-built Docker Hub image)
 
 ---
 
 ### 5. Dev Upgrade Test (`test-dev-upgrade.yml`)
 
-Tests upgrading from latest production to development builds.
+Tests upgrading from latest production (Docker Hub) to development build (from source).
 
 **Total Tests: 22** (same as production upgrade test)
 
 **What it tests:**
-- [x] Deploy latest production version
+- [x] Deploy latest production version from Docker Hub
 - [x] Seed test data
 - [x] Create database backup
-- [x] Upgrade to dev version (e.g., `dev-0.8.5`)
+- [x] Build and upgrade to dev version from source
 - All 22 tests identical to production upgrade test
 - Data integrity verification, Post-upgrade functionality, Database comparison, Summary generation
 
 **Triggers:**
-- Push to `dev` branch
-- Pull requests to `dev`
+- Called by `docker-integration-tests.yml`
 - Manual dispatch (with version override)
 
 **Duration:** ~4-5 minutes
 
-**Example:** Tests upgrade from `latest` → `dev-0.8.5`
+**Key feature:** FROM version pulls from Docker Hub (production), TO version builds from source
 
 **Manual trigger options:**
 ```yaml
-from_version: 'latest'  # Production version to upgrade from
-to_version: ''          # Leave empty for auto-detect (dev-VERSION)
+from_version: 'latest'  # Production version from Docker Hub
+to_version: ''          # Leave empty for auto-detect (builds from source)
 ```
 
 ---

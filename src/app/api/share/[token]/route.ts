@@ -145,7 +145,6 @@ export async function GET(
       cleanPreview720Path: undefined,
       cleanPreview1080Path: undefined,
       originalStoragePath: undefined,
-      thumbnailPath: undefined,
     }))
 
     const videosByName = videosSanitizedBase.reduce((acc: any, video: any) => {

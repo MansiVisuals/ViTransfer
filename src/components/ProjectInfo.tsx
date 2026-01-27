@@ -284,9 +284,7 @@ export default function ProjectInfo({
                       <span className="font-medium break-words">
                         {isVideoApproved
                           ? usePreviewForApprovedPlayback
-                            ? (selectedVideo.cleanPreview720Path || selectedVideo.cleanPreview1080Path)
-                              ? `Approved - Preview (${defaultQuality})`
-                              : `Approved - Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
+                            ? `Approved - Preview (${defaultQuality})`
                             : 'Approved - Original Quality'
                           : `Downscaled Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
                         }

@@ -30,6 +30,13 @@ export type SecurityEventType =
   | 'PASSKEY_DELETE_UNAUTHORIZED'
   | 'PASSKEY_DELETED'
 
+  // Device Code Auth Events (Workflow Integrations)
+  | 'DEVICE_CODE_ISSUED'
+  | 'DEVICE_CODE_AUTHORIZED'
+  | 'DEVICE_CODE_AUTH_FAILED'
+  | 'DEVICE_CODE_TOKEN_ISSUED'
+  | 'DEVICE_CODE_RATE_LIMIT_HIT'
+
   // Share Page Password Events
   | 'PASSWORD_ACCESS'
   | 'PASSWORD_RATE_LIMIT_HIT'
@@ -57,7 +64,7 @@ export type SecurityEventSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
 export interface SecurityEventMetadata {
   label: string
   description: string
-  category: 'Admin Auth' | 'Passkey Auth' | 'Share Auth' | 'Video Access' | 'Security'
+  category: 'Admin Auth' | 'Passkey Auth' | 'Device Auth' | 'Share Auth' | 'Video Access' | 'Security'
   severity: SecurityEventSeverity
 }
 
@@ -177,6 +184,38 @@ export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMet
     description: 'Passkey credential successfully removed from user account.',
     category: 'Passkey Auth',
     severity: 'INFO',
+  },
+
+  // Device Code Auth Events (Workflow Integrations)
+  DEVICE_CODE_ISSUED: {
+    label: 'Device Code Issued',
+    description: 'New device code issued for workflow integration (DaVinci Resolve or Premiere Pro plugin).',
+    category: 'Device Auth',
+    severity: 'INFO',
+  },
+  DEVICE_CODE_AUTHORIZED: {
+    label: 'Device Code Authorized',
+    description: 'User authorized a device code from a workflow integration plugin.',
+    category: 'Device Auth',
+    severity: 'INFO',
+  },
+  DEVICE_CODE_AUTH_FAILED: {
+    label: 'Device Code Auth Failed',
+    description: 'Failed device code authorization - invalid code, expired, or already used.',
+    category: 'Device Auth',
+    severity: 'WARNING',
+  },
+  DEVICE_CODE_TOKEN_ISSUED: {
+    label: 'Device Code Token Issued',
+    description: 'Access tokens issued to workflow integration after successful device code authorization.',
+    category: 'Device Auth',
+    severity: 'INFO',
+  },
+  DEVICE_CODE_RATE_LIMIT_HIT: {
+    label: 'Device Code Rate Limited',
+    description: 'Too many device code requests from integration - temporarily blocked.',
+    category: 'Device Auth',
+    severity: 'WARNING',
   },
 
   // Share Page Password Events

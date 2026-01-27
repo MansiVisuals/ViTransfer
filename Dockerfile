@@ -1,190 +1,103 @@
-# ViTransfer - Production-Ready Multi-Architecture Docker Image
-# Supports: amd64 (Intel/AMD x86_64), arm64 (Apple Silicon, ARM servers)
-# Uses CPU-based encoding for maximum compatibility
-# Security: Runs as configurable non-root user via PUID/PGID
-# Database: Automatic migrations on startup, no manual intervention required
+# ViTransfer - Multi-Architecture Docker Image
+# Supports: amd64, arm64 | Security: non-root user via PUID/PGID
 
 FROM node:24-alpine3.23 AS base
 
-# Build arguments for architecture detection
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG BUILDPLATFORM
 
-# Update npm to latest version
-RUN npm install -g npm@latest
+# Install system dependencies
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache \
+        openssl openssl-dev \
+        ffmpeg ffmpeg-libs fontconfig ttf-dejavu \
+        bash curl ca-certificates shadow su-exec \
+    && apk add --no-cache --upgrade cjson libsndfile giflib orc \
+    && ffmpeg -version
 
-# Security: Update Alpine to latest packages and apply security patches
-# This ensures all packages are at their latest available versions
-# Note: Some CVEs remain in Alpine packages (libsndfile, giflib, orc) awaiting upstream fixes
-# See SECURITY.md for full CVE risk assessment
-RUN apk update && apk upgrade --no-cache
-
-# Install OpenSSL 3.x compatibility for Prisma
-RUN apk add --no-cache \
-    openssl \
-    openssl-dev
-
-# Install FFmpeg for CPU-based video processing with latest security patches
-# Note: Some CVEs exist in FFmpeg's dependencies (libsndfile, giflib, orc, crossbeam-channel)
-# All packages are at their latest Alpine versions - awaiting upstream security fixes
-# Risk is minimal as these are internal FFmpeg dependencies, not directly exposed
-# See SECURITY.md for detailed CVE risk assessment
-RUN apk add --no-cache \
-    ffmpeg \
-    ffmpeg-libs \
-    fontconfig \
-    ttf-dejavu \
-    && apk add --no-cache --upgrade \
-        cjson \
-        libsndfile \
-        giflib \
-        orc \
-    && echo "FFmpeg version:" && ffmpeg -version
-
-# Install common utilities and su-exec for user switching
-# Using su-exec instead of gosu to avoid Golang CVEs (native Alpine C implementation)
-RUN apk add --no-cache \
-    bash \
-    curl \
-    ca-certificates \
-    shadow \
-    su-exec
-
-# ========================================
-# Dependencies stage
-# ========================================
+# === Dependencies ===
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+COPY --link package.json package-lock.json* ./
+COPY --link prisma ./prisma
 
-# Copy Prisma schema before npm ci (needed for postinstall script)
-COPY prisma ./prisma
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps
 
-# Install all dependencies
-RUN npm install --legacy-peer-deps
-
-# Copy node_modules for production (we'll use all deps for now to avoid prisma issues)
 RUN cp -R node_modules /tmp/prod_node_modules
 
-# Run security audit - fail build if HIGH or CRITICAL vulnerabilities found
-# This ensures we never deploy with known security issues
-RUN echo "Running npm security audit..." && \
-    npm audit --audit-level=high || \
-    (echo "SECURITY ALERT: High or critical vulnerabilities found!" && \
-     echo "Run 'npm audit' locally to see details and 'npm audit fix' to resolve." && \
-     exit 1)
+RUN npm audit --audit-level=high || \
+    (echo "SECURITY: High/critical vulnerabilities found!" && exit 1)
 
-# ========================================
-# Builder stage
-# ========================================
+# === Builder ===
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps --link /app/node_modules ./node_modules
+COPY --link . .
 
-# Generate Prisma client
 RUN npx prisma generate
 
-# Build Next.js (skip static optimization for pages that need runtime data)
-# Accept APP_VERSION from build arg and set as env var for Next.js build
 ARG APP_VERSION
 ENV NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
 ENV SKIP_ENV_VALIDATION=1
 ENV NEXT_PHASE=phase-production-build
 RUN npm run build
 
-# ========================================
-# Runner stage (production)
-# ========================================
+# === Production ===
 FROM base AS runner
 WORKDIR /app
 
+ARG APP_VERSION
+LABEL org.opencontainers.image.title="ViTransfer"
+LABEL org.opencontainers.image.description="Video review and approval platform"
+LABEL org.opencontainers.image.source="https://github.com/MansiVisuals/ViTransfer"
+LABEL org.opencontainers.image.version="${APP_VERSION}"
+LABEL org.opencontainers.image.licenses="MIT"
+
 ENV NODE_ENV=production
 
-# Install Python runtime for Apprise-based external notifications (used by the worker).
-# This keeps notifications provider logic out of the Node.js codebase while remaining in a single image.
-RUN apk add --no-cache \
-    python3 \
-    py3-pip \
-    py3-virtualenv \
-  && python3 -m venv /opt/apprise-venv \
-  && /opt/apprise-venv/bin/pip install --no-cache-dir --disable-pip-version-check apprise==1.9.6
+# Python for Apprise notifications
+RUN apk add --no-cache python3 py3-pip py3-virtualenv \
+    && python3 -m venv /opt/apprise-venv \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --disable-pip-version-check apprise==1.9.6
 
-# Prefer the venv Python when invoking Apprise from the worker.
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3
 
-# Build arguments for runtime info
 ARG TARGETPLATFORM
 ARG TARGETARCH
+RUN echo "Building for: $TARGETPLATFORM ($TARGETARCH)" && uname -a
 
-# Display architecture info at build time
-RUN echo "Building for platform: $TARGETPLATFORM (arch: $TARGETARCH)" && \
-    echo "System info:" && \
-    uname -a
+# App user (UID 911, remappable via PUID/PGID)
+RUN addgroup -g 911 app && adduser -D -u 911 -G app -h /app app
 
-# Create application user with UID 911 (non-standard to avoid host user conflicts)
-# Can be remapped at runtime via PUID/PGID environment variables
-RUN addgroup -g 911 app && \
-    adduser -D -u 911 -G app -h /app app
+# Copy production files
+COPY --from=deps --link /tmp/prod_node_modules ./node_modules
+COPY --from=builder --link /app/public ./public
+COPY --from=builder --link /app/.next ./.next
+COPY --from=builder --link /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --link /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --link /app/prisma ./prisma
+COPY --from=builder --link /app/src ./src
+COPY --from=builder --link /app/package.json ./package.json
+COPY --from=builder --link /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --link /app/next.config.js ./next.config.js
+COPY --from=builder --link /app/worker.mjs ./worker.mjs
+COPY --link docker-entrypoint.sh /usr/local/bin/
 
-# Copy only production dependencies
-COPY --from=deps /tmp/prod_node_modules ./node_modules
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
+    chown -R app:app /app && \
+    chmod -R a+rX /app/src /app/.next /app/node_modules /app/public /app/prisma
 
-# Copy built application from builder
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
+ENV PUID=1000 PGID=1000
 
-# Copy Prisma files for migrations
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/prisma ./prisma
-
-# Copy necessary runtime files
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/next.config.js ./next.config.js
-
-# Copy worker script
-COPY --from=builder /app/worker.mjs ./worker.mjs
-
-# Copy entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Set proper ownership for app user
-RUN chown -R app:app /app
-
-# This allows containers starting as any UID to read app code built as UID 911
-# Only affects app code, NOT user uploads (handled by volume mount permissions)
-# Safe: These directories contain application code and public packages, not secrets
-RUN chmod -R a+rX /app/src \
-                  /app/.next \
-                  /app/node_modules \
-                  /app/public \
-                  /app/prisma
-
-# Environment variables for PUID/PGID (can be overridden at runtime)
-ENV PUID=1000 \
-    PGID=1000
-
-# Container starts as root to handle PUID/PGID remapping
-# Entrypoint script switches to app user after remapping
-
-# Health check - verifies app is responding and core services (DB, Redis) are available
-# Compatible with K8s HTTP probes and TrueNAS health checks
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4321/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+    CMD node -e "require('http').get('http://localhost:4321/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
 EXPOSE 4321
-
-ENV PORT=4321
-ENV HOSTNAME="0.0.0.0"
+ENV PORT=4321 HOSTNAME="0.0.0.0"
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["npm", "start"]

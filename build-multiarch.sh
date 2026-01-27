@@ -1,136 +1,77 @@
 #!/bin/bash
-
 # ViTransfer Multi-Architecture Build Script
-# Builds for both amd64 and arm64 platforms
-# Usage: ./build-multiarch.sh [version|--dev|--dev-<name>|-dev<version>] [--no-cache]
+# Usage: ./build-multiarch.sh [version] [--no-cache]
 # Examples:
-#   ./build-multiarch.sh 0.1.0         # Tag as 0.1.0 and latest
-#   ./build-multiarch.sh --dev         # Tag as dev only
-#   ./build-multiarch.sh --dev-newUI   # Tag as dev-newUI only (no latest)
-#   ./build-multiarch.sh -dev0.6.0     # Tag as dev-0.6.0 only (no latest)
-#   ./build-multiarch.sh --dev --no-cache    # Tag as dev with no cache
-#   ./build-multiarch.sh               # Tag as latest
+#   ./build-multiarch.sh 0.8.5        # Tags: 0.8.5, latest
+#   ./build-multiarch.sh --dev        # Tags: dev
+#   ./build-multiarch.sh -dev0.8.5    # Tags: dev-0.8.5
+#   ./build-multiarch.sh              # Tags: latest
 
 set -e
 
-DOCKERHUB_USERNAME="crypt010"
-IMAGE_NAME="vitransfer"
+DOCKER_USER="crypt010"
+IMAGE="vitransfer"
 VERSION="${1:-latest}"
-NO_CACHE_FLAG=""
+NO_CACHE=""
+PLATFORMS="linux/amd64,linux/arm64"
+BUILDER="multiarch-builder"
 
-# Check for --no-cache flag
-if [ "$2" = "--no-cache" ] || [ "$1" = "--no-cache" ]; then
-    NO_CACHE_FLAG="--no-cache"
-    echo "🔨 Building with --no-cache flag"
-fi
+# Parse arguments
+[[ "$1" == "--no-cache" || "$2" == "--no-cache" ]] && NO_CACHE="--no-cache"
 
-# Check if we're building dev version with -dev or --dev- prefix
-if [[ "$VERSION" == -dev* ]]; then
-    # Dev version format (-dev0.6.0 or -dev-newUI) - tag as dev-<version> only, no latest
-    VERSION="${VERSION:1}"  # Remove leading -
-    TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION}"
-elif [[ "$VERSION" == --dev-* ]]; then
-    # Dev branch format (--dev-newUI) - tag as dev-<name> only, no latest
-    VERSION="${VERSION:2}"  # Remove leading --
-    TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION}"
-# Check if we're building dev
-elif [ "$VERSION" = "--dev" ] || [ "$VERSION" = "dev" ]; then
-    TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:dev"
-    VERSION="dev"
-# If version is provided, tag as both version and latest
-elif [ "$VERSION" != "latest" ]; then
-    TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
-else
-    TAGS="${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
-fi
+# Determine tags based on version
+case "$VERSION" in
+    -dev*)    VERSION="${VERSION:1}"; TAGS="$DOCKER_USER/$IMAGE:$VERSION" ;;
+    --dev-*)  VERSION="${VERSION:2}"; TAGS="$DOCKER_USER/$IMAGE:$VERSION" ;;
+    --dev|dev) VERSION="dev"; TAGS="$DOCKER_USER/$IMAGE:dev" ;;
+    latest)   TAGS="$DOCKER_USER/$IMAGE:latest" ;;
+    *)        TAGS="$DOCKER_USER/$IMAGE:$VERSION $DOCKER_USER/$IMAGE:latest" ;;
+esac
 
-echo "🏗️  ViTransfer Multi-Architecture Build"
-echo "========================================"
+echo "ViTransfer Multi-Architecture Build"
+echo "===================================="
+echo "Version:   $VERSION"
+echo "Platforms: $PLATFORMS"
+echo "Tags:      $TAGS"
+[[ -n "$NO_CACHE" ]] && echo "Cache:     disabled"
 echo ""
 
-# Check if logged in to Docker Hub
-echo "🔑 Checking Docker Hub login..."
-if ! docker info | grep -q "Username: ${DOCKERHUB_USERNAME}"; then
-    echo "⚠️  Not logged in to Docker Hub"
-    echo "Please login:"
+# Check Docker Hub login
+if ! docker info 2>/dev/null | grep -q "Username: $DOCKER_USER"; then
+    echo "Docker Hub login required..."
     docker login
+fi
+
+# Setup buildx
+if ! docker buildx ls | grep -q "$BUILDER"; then
+    echo "Creating builder: $BUILDER"
+    docker buildx create --name $BUILDER --driver docker-container --use
 else
-    echo "✅ Logged in to Docker Hub as ${DOCKERHUB_USERNAME}"
+    docker buildx use $BUILDER
 fi
-
-echo ""
-
-# Check if buildx is available
-echo "🔧 Checking Docker buildx..."
-if ! docker buildx version &> /dev/null; then
-    echo "❌ Error: Docker buildx is not available"
-    echo "   Install with: docker buildx install"
-    exit 1
-fi
-echo "✅ Docker buildx available"
-
-echo ""
-
-# Create or use existing buildx builder
-echo "🛠️  Setting up multi-arch builder..."
-if ! docker buildx ls | grep -q "multiarch-builder"; then
-    echo "Creating new builder: multiarch-builder"
-    docker buildx create --name multiarch-builder --driver docker-container --use
-else
-    echo "Using existing builder: multiarch-builder"
-    docker buildx use multiarch-builder
-fi
-
-# Inspect builder
-docker buildx inspect --bootstrap
-
-echo ""
-echo "🏗️  Building multi-architecture image..."
-echo "   Version: ${VERSION}"
-echo "   Platforms: linux/amd64, linux/arm64"
-if [[ "$VERSION" == dev* ]]; then
-    echo "   Tags: ${VERSION} (testing only, will NOT update latest)"
-elif [ "$VERSION" != "latest" ]; then
-    echo "   Tags: ${VERSION}, latest"
-else
-    echo "   Tags: latest"
-fi
-echo ""
+docker buildx inspect --bootstrap > /dev/null
 
 # Build tag arguments
 TAG_ARGS=""
-for tag in $TAGS; do
-    TAG_ARGS="$TAG_ARGS --tag $tag"
-done
+for tag in $TAGS; do TAG_ARGS="$TAG_ARGS --tag $tag"; done
 
-# Build and push for both architectures
+# Build and push
+echo "Building..."
+START=$(date +%s)
+
 docker buildx build \
-    --platform linux/amd64,linux/arm64 \
-    --build-arg APP_VERSION="${VERSION}" \
+    --platform $PLATFORMS \
+    --build-arg APP_VERSION="$VERSION" \
     $TAG_ARGS \
-    $NO_CACHE_FLAG \
+    $NO_CACHE \
     --push \
     .
 
+END=$(date +%s)
+DURATION=$((END - START))
+
 echo ""
-echo "✅ Multi-architecture build complete!"
+echo "Build complete in ${DURATION}s"
+echo "Pushed: $TAGS"
 echo ""
-echo "📦 Image(s) pushed to Docker Hub:"
-for tag in $TAGS; do
-    echo "   $tag"
-done
-echo ""
-echo "🔍 Supported architectures:"
-echo "   - linux/amd64 (x86_64)"
-echo "   - linux/arm64 (aarch64)"
-echo ""
-if [ "$VERSION" != "latest" ]; then
-    echo "📥 Pull specific version:"
-    echo "   docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${VERSION}"
-    echo ""
-    echo "📥 Or pull latest:"
-fi
-echo "   docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
-echo "   (will automatically select the correct architecture)"
-echo ""
-echo "🎉 Done!"
+echo "Pull: docker pull $DOCKER_USER/$IMAGE:$VERSION"

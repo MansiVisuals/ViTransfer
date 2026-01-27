@@ -1,10 +1,7 @@
 name: Test Dev Build Upgrade
 
 on:
-  push:
-    branches: [dev]
-  pull_request:
-    branches: [dev]
+  workflow_call:
   workflow_dispatch:
     inputs:
       from_version:

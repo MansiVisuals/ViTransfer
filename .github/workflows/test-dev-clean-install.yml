@@ -6,101 +6,74 @@ on:
   pull_request:
     branches: [dev]
   workflow_dispatch:
-    inputs:
-      dev_version:
-        description: 'Dev version to test (leave empty for auto-detect from VERSION file)'
-        required: false
-        default: ''
 
 jobs:
   test-dev-install:
-    name: Dev Clean Install Test (dev-${{ github.event.inputs.dev_version || 'VERSION' }})
+    name: Dev Clean Install Test (build from source)
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Detect dev version and database versions
+      - name: Detect version and database versions
         id: versions
         run: |
-          # Read current version from VERSION file
-          CURRENT_VERSION=$(cat VERSION | tr -d '\n\r')
-          echo "Current version: $CURRENT_VERSION"
-          
-          # Determine dev version
-          if [[ -n "${{ github.event.inputs.dev_version }}" ]]; then
-            DEV_VERSION="dev-${{ github.event.inputs.dev_version }}"
-          else
-            DEV_VERSION="dev-${CURRENT_VERSION}"
-          fi
-          echo "Dev version to test: $DEV_VERSION"
-          echo "dev_version=$DEV_VERSION" >> $GITHUB_OUTPUT
-          
-          # Extract PostgreSQL version from docker-compose.yml
+          VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
           PG_IMAGE=$(grep -A 1 "postgres:" docker-compose.yml | grep "image:" | sed 's/.*postgres:\([^-]*\).*/\1/')
-          echo "Expected PostgreSQL version: $PG_IMAGE"
           echo "postgres_version=$PG_IMAGE" >> $GITHUB_OUTPUT
-          
-          # Extract Redis version from docker-compose.yml
+
           REDIS_IMAGE=$(grep -A 1 "redis:" docker-compose.yml | grep "image:" | sed 's/.*redis:\([^-]*\).*/\1/')
-          echo "Expected Redis version: $REDIS_IMAGE"
           echo "redis_version=$REDIS_IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image from source
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: vitransfer:ci-test
+          build-args: |
+            APP_VERSION=${{ steps.versions.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Configure docker-compose for local image
+        run: |
+          sed -i "s|image: crypt010/vitransfer:latest|image: vitransfer:ci-test|g" docker-compose.yml
+          echo "Configured to use locally built image"
 
       - name: Create test .env file
         run: |
-          # Generate secrets first
           ENCRYPTION_KEY=$(openssl rand -base64 32)
           JWT_SECRET=$(openssl rand -base64 64)
           JWT_REFRESH_SECRET=$(openssl rand -base64 64)
           SHARE_TOKEN_SECRET=$(openssl rand -base64 64)
-          
-          # Create .env file with proper escaping
+
           cat > .env << 'EOF'
-          # Database Configuration
           POSTGRES_USER=vitransfer
           POSTGRES_PASSWORD=test_postgres_password
           POSTGRES_DB=vitransfer
-          
-          # Redis Configuration
           REDIS_PASSWORD=test_redis_password
-          
-          # Application Configuration
           APP_PORT=4321
           TZ=UTC
           PUID=1000
           PGID=1000
-          
-          # Admin Account
           ADMIN_EMAIL=admin@test.local
           ADMIN_PASSWORD=TestPassword123!
           ADMIN_NAME=Test Admin
-          
-          # Application URL
           NEXT_PUBLIC_APP_URL=http://localhost:4321
-          
-          # HTTPS
           HTTPS_ENABLED=false
           EOF
-          
-          # Append secrets separately with quotes to handle special characters
+
           echo "ENCRYPTION_KEY=\"$ENCRYPTION_KEY\"" >> .env
           echo "JWT_SECRET=\"$JWT_SECRET\"" >> .env
           echo "JWT_REFRESH_SECRET=\"$JWT_REFRESH_SECRET\"" >> .env
           echo "SHARE_TOKEN_SECRET=\"$SHARE_TOKEN_SECRET\"" >> .env
-
-      - name: Configure Docker image tag for dev
-        run: |
-          DEV_VERSION="${{ steps.versions.outputs.dev_version }}"
-          echo "Configuring Docker Compose to use dev tag: $DEV_VERSION"
-          
-          # Update compose file to use dev tag
-          sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$DEV_VERSION/g" docker-compose.yml
-          echo "Updated docker-compose.yml to use :$DEV_VERSION"
-          
-          # Show what we're using
-          echo "Docker images configured:"
-          grep "image: crypt010/vitransfer" docker-compose.yml
 
       - name: Start services with docker compose
         run: |
@@ -506,13 +479,13 @@ jobs:
         run: |
           cat >> $GITHUB_STEP_SUMMARY << 'EOF'
           # Dev Build Clean Install Test Results
-          
+
           ## Test Configuration
-          - **Docker Image**: `crypt010/vitransfer:${{ steps.versions.outputs.dev_version }}`
+          - **Docker Image**: Built from source (commit ${{ github.sha }})
+          - **Version**: `${{ steps.versions.outputs.version }}`
           - **PostgreSQL**: `${{ steps.versions.outputs.postgres_version }}`
           - **Redis**: `${{ steps.versions.outputs.redis_version }}`
           - **Branch**: `${{ github.ref_name }}`
-          - **Commit**: `${{ github.sha }}`
           
           ## Test Results
           

@@ -11,44 +11,37 @@ on:
         description: 'Upgrade from version (default: latest production)'
         required: false
         default: 'latest'
-      to_version:
-        description: 'Upgrade to dev version (leave empty for auto-detect from VERSION file)'
-        required: false
-        default: ''
 
 jobs:
   test-dev-upgrade:
-    name: Dev Upgrade Test (latest → dev-${{ github.event.inputs.to_version || 'VERSION' }})
+    name: Dev Upgrade Test (latest → build from source)
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Determine dev version
+      - name: Determine versions
         id: versions
         run: |
-          # Read current version from VERSION file
-          CURRENT_VERSION=$(cat VERSION | tr -d '\n\r')
-          echo "Current version: $CURRENT_VERSION"
-          
-          # Determine FROM version (default to latest production)
+          VERSION=$(cat VERSION | tr -d '\n\r')
           FROM_VERSION="${{ github.event.inputs.from_version || 'latest' }}"
-          echo "Upgrade FROM version: $FROM_VERSION"
-          
-          # Determine TO version (dev tag)
-          if [[ -n "${{ github.event.inputs.to_version }}" ]]; then
-            TO_VERSION="dev-${{ github.event.inputs.to_version }}"
-            echo "Using manually specified to_version: $TO_VERSION"
-          else
-            TO_VERSION="dev-${CURRENT_VERSION}"
-            echo "Auto-detected to_version: $TO_VERSION (from VERSION file)"
-          fi
-          
-          # Export for later steps
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "from_version=$FROM_VERSION" >> $GITHUB_OUTPUT
-          echo "to_version=$TO_VERSION" >> $GITHUB_OUTPUT
-          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build target image from source
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: vitransfer:ci-upgrade-target
+          build-args: |
+            APP_VERSION=${{ steps.versions.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Create test .env file
         run: |
@@ -204,27 +197,21 @@ jobs:
           docker compose stop app worker
           docker compose rm -f app worker
 
-      - name: Upgrade to dev version
+      - name: Upgrade to dev version (built from source)
         run: |
-          TO_VERSION="${{ steps.versions.outputs.to_version }}"
-          echo "[UPGRADE] Upgrading to dev version: $TO_VERSION"
-          
+          echo "[UPGRADE] Upgrading to locally built image"
+
           # Restore new compose file
           mv docker-compose.yml.new docker-compose.yml
-          
-          # Update compose to use dev tag
-          sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$TO_VERSION/g" docker-compose.yml
-          
-          # Show what we're deploying
-          echo "Docker images to be used:"
-          grep "image: crypt010/vitransfer" docker-compose.yml
-          
-          # Pull dev version
-          docker compose pull app worker
-          
+
+          # Update compose to use locally built image
+          sed -i "s|image: crypt010/vitransfer:latest|image: vitransfer:ci-upgrade-target|g" docker-compose.yml
+
+          echo "Using locally built image: vitransfer:ci-upgrade-target"
+
           # Start dev version (database and redis are still running)
           docker compose up -d app worker
-          
+
           echo "[WAIT] Waiting for dev version to be ready..."
           sleep 40
 
@@ -664,12 +651,11 @@ jobs:
           
           cat >> $GITHUB_STEP_SUMMARY << EOF
           # Dev Build Upgrade Test Results
-          
+
           ## Upgrade Path
-          - **From Version**: \`${{ steps.versions.outputs.from_version }}\` (production)
-          - **To Version**: \`${{ steps.versions.outputs.to_version }}\` (development)
-          - **PostgreSQL**: \`${{ steps.versions.outputs.postgres_version }}\`
-          - **Redis**: \`${{ steps.versions.outputs.redis_version }}\`
+          - **From Version**: \`${{ steps.versions.outputs.from_version }}\` (from Docker Hub)
+          - **To Version**: Built from source (commit ${{ github.sha }})
+          - **Version**: \`${{ steps.versions.outputs.version }}\`
           
           ## Data Preservation (Existing Data Survived Upgrade)
           

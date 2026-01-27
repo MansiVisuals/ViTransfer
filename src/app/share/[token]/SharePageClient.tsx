@@ -862,6 +862,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     selectedVideo={videoState.selectedVideo}
                     displayLabel={videoState.displayLabel}
                     isVideoApproved={videoState.isVideoApproved}
+                    projectId={project.id}
                     projectTitle={project.title}
                     projectDescription={project.description}
                     clientName={project.clientName}

@@ -21,6 +21,7 @@ interface ProjectInfoProps {
   selectedVideo: Video & { name?: string; approved?: boolean; downloadUrl?: string; cleanPreview720Path?: string | null; cleanPreview1080Path?: string | null }
   displayLabel: string
   isVideoApproved: boolean
+  projectId: string
   projectTitle?: string
   projectDescription?: string
   clientName?: string
@@ -44,6 +45,7 @@ export default function ProjectInfo({
   selectedVideo,
   displayLabel,
   isVideoApproved,
+  projectId,
   projectTitle,
   projectDescription,
   clientName,
@@ -131,13 +133,35 @@ export default function ProjectInfo({
   }
 
   const handleApprove = async () => {
-    if (!onApprove) return
-
     setLoading(true)
+
+    const authHeaders = buildAuthHeaders(shareToken)
+
     try {
-      await onApprove()
+      const response = await fetch(`/api/projects/${projectId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({
+          selectedVideoId: selectedVideo.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to approve project')
+      }
+
+      // Store the current video group name in sessionStorage to restore after reload
+      if (activeVideoName) {
+        sessionStorage.setItem('approvedVideoName', activeVideoName)
+      }
+
+      // Call the optional callback if provided (for parent component to refresh data)
+      if (onApprove) {
+        await onApprove()
+      }
     } catch (error) {
-      alert('Failed to approve project')
+      alert(error instanceof Error ? error.message : 'Failed to approve project')
     } finally {
       setLoading(false)
       setShowApprovalConfirm(false)

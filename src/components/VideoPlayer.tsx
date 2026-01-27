@@ -750,6 +750,7 @@ export default function VideoPlayer({
         selectedVideo={selectedVideo}
         displayLabel={displayLabel}
         isVideoApproved={isVideoApproved}
+        projectId={projectId}
         projectTitle={projectTitle}
         projectDescription={projectDescription}
         clientName={clientName}

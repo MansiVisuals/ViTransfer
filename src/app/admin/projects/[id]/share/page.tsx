@@ -505,6 +505,7 @@ export default function AdminSharePage() {
                     selectedVideo={videoState.selectedVideo}
                     displayLabel={videoState.displayLabel}
                     isVideoApproved={videoState.isVideoApproved}
+                    projectId={project.id}
                     projectTitle={project.title}
                     projectDescription={project.description}
                     clientName={project.clientName}

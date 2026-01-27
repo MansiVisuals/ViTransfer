@@ -156,13 +156,10 @@ export default function ProjectInfo({
         sessionStorage.setItem('approvedVideoName', activeVideoName)
       }
 
-      // Call the optional callback if provided (for parent component to refresh data)
-      if (onApprove) {
-        await onApprove()
-      }
+      // Reload the page to show updated approval status
+      window.location.reload()
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to approve project')
-    } finally {
       setLoading(false)
       setShowApprovalConfirm(false)
     }

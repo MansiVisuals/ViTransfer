@@ -4,7 +4,7 @@
 # Security: Runs as configurable non-root user via PUID/PGID
 # Database: Automatic migrations on startup, no manual intervention required
 
-FROM node:24.13.0-alpine3.23 AS base
+FROM node:24-alpine3.23 AS base
 
 # Build arguments for architecture detection
 ARG TARGETPLATFORM

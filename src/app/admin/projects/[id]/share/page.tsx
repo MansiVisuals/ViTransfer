@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
-import VideoSidebar from '@/components/VideoSidebar'
+import ThumbnailGrid from '@/components/ThumbnailGrid'
+import ThumbnailReel from '@/components/ThumbnailReel'
 import ProjectInfo from '@/components/ProjectInfo'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,9 @@ export default function AdminSharePage() {
     displayVideos: any[]
     displayLabel: string
   } | null>(null)
+  const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
+  const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
+  const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
   const sessionIdRef = useRef<string>(`admin:${Date.now()}`)
 
@@ -321,11 +325,89 @@ export default function AdminSharePage() {
     }
   }, [activeVideosRaw])
 
-  // Handle video selection (identical to public share)
-  const handleVideoSelect = (videoName: string) => {
+  // Fetch thumbnails for all video groups (for grid and reel display)
+  useEffect(() => {
+    let isMounted = true
+    const sessionId = sessionIdRef.current
+
+    async function fetchThumbnails() {
+      if (!project?.videosByName || !id) {
+        return
+      }
+
+      setThumbnailsLoading(true)
+      const newThumbnails = new Map<string, string>()
+
+      try {
+        await Promise.all(
+          Object.entries(project.videosByName).map(async ([name, videos]: [string, any[]]) => {
+            // Find a video with a thumbnail
+            const videoWithThumb = videos.find((v: any) => v.thumbnailPath)
+            if (videoWithThumb) {
+              const responseThumbnail = await apiFetch(
+                `/api/admin/video-token?videoId=${videoWithThumb.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`
+              )
+              if (responseThumbnail.ok && isMounted) {
+                const dataThumbnail = await responseThumbnail.json()
+                newThumbnails.set(name, `/api/content/${dataThumbnail.token}`)
+              }
+            }
+          })
+        )
+
+        if (isMounted) {
+          setThumbnailsByName(newThumbnails)
+        }
+      } catch (error) {
+        // Failed to load thumbnails
+      } finally {
+        if (isMounted) {
+          setThumbnailsLoading(false)
+        }
+      }
+    }
+
+    fetchThumbnails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [project?.videosByName, id])
+
+  // Determine initial view state based on video count and URL params
+  useEffect(() => {
+    if (!project?.videosByName) return
+
+    const videoNames = Object.keys(project.videosByName)
+    const hasMultiple = videoNames.length > 1
+
+    // If single video, always go to player
+    if (!hasMultiple) {
+      setViewState('player')
+      return
+    }
+
+    // If URL specifies a video, go to player
+    if (urlVideoName && project.videosByName[urlVideoName]) {
+      setViewState('player')
+      return
+    }
+
+    // Multiple videos without URL param: show grid
+    setViewState('grid')
+  }, [project?.videosByName, urlVideoName])
+
+  // Handle video selection
+  const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)
     setActiveVideosRaw(project.videosByName[videoName])
-  }
+    setViewState('player')
+  }, [project?.videosByName])
+
+  // Handle back to grid
+  const handleBackToGrid = useCallback(() => {
+    setViewState('grid')
+  }, [])
 
   // Show loading state while project loads
   if (loading) {
@@ -380,15 +462,58 @@ export default function AdminSharePage() {
     return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
   })()
 
+  // Show thumbnail grid for multi-video projects when in grid view
+  if (viewState === 'grid' && hasMultipleVideos) {
+    return (
+      <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-screen-2xl mx-auto w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
+            {/* Header */}
+            <div className="mb-6 flex flex-wrap items-center gap-4">
+              <Button
+                variant="ghost"
+                size="default"
+                className="px-3"
+                onClick={() => router.push(projectUrl)}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Back to Project</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
+                  {project.title}
+                </h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Share View
+                </p>
+              </div>
+            </div>
+
+            <ThumbnailGrid
+              videosByName={project.videosByName}
+              thumbnailsByName={thumbnailsByName}
+              thumbnailsLoading={thumbnailsLoading}
+              onVideoSelect={handleVideoSelect}
+              projectTitle={project.title}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex-1 min-h-0 bg-background flex flex-col lg:flex-row overflow-hidden">
-      {/* Video Sidebar */}
-      {project.videosByName && hasMultipleVideos && (
-        <VideoSidebar
+    <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
+      {/* Thumbnail Reel for multi-video projects */}
+      {hasMultipleVideos && (
+        <ThumbnailReel
           videosByName={project.videosByName}
+          thumbnailsByName={thumbnailsByName}
           activeVideoName={activeVideoName}
           onVideoSelect={handleVideoSelect}
-          className="w-64 flex-shrink-0"
+          onBackToGrid={handleBackToGrid}
+          showBackButton={true}
         />
       )}
 

@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
-import VideoSidebar from '@/components/VideoSidebar'
+import ThumbnailGrid from '@/components/ThumbnailGrid'
+import ThumbnailReel from '@/components/ThumbnailReel'
 import ProjectInfo from '@/components/ProjectInfo'
 import { OTPInput } from '@/components/OTPInput'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -60,6 +61,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     displayVideos: any[]
     displayLabel: string
   } | null>(null)
+  const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
+  const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
+  const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const storageKey = token || ''
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
 
@@ -415,11 +419,85 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [activeVideosRaw, shareToken])
 
+  // Fetch thumbnails for all video groups (for grid and reel display)
+  useEffect(() => {
+    let isMounted = true
+
+    async function fetchThumbnails() {
+      if (!project?.videosByName || !shareToken) {
+        return
+      }
+
+      setThumbnailsLoading(true)
+      const newThumbnails = new Map<string, string>()
+
+      try {
+        await Promise.all(
+          Object.entries(project.videosByName).map(async ([name, videos]: [string, any[]]) => {
+            // Find a video with a thumbnail
+            const videoWithThumb = videos.find((v: any) => v.thumbnailPath)
+            if (videoWithThumb) {
+              const thumbToken = await fetchVideoToken(videoWithThumb.id, 'thumbnail')
+              if (thumbToken && isMounted) {
+                newThumbnails.set(name, `/api/content/${thumbToken}`)
+              }
+            }
+          })
+        )
+
+        if (isMounted) {
+          setThumbnailsByName(newThumbnails)
+        }
+      } catch (error) {
+        // Failed to load thumbnails
+      } finally {
+        if (isMounted) {
+          setThumbnailsLoading(false)
+        }
+      }
+    }
+
+    fetchThumbnails()
+
+    return () => {
+      isMounted = false
+    }
+  }, [project?.videosByName, shareToken])
+
+  // Determine initial view state based on video count and URL params
+  useEffect(() => {
+    if (!project?.videosByName) return
+
+    const videoNames = Object.keys(project.videosByName)
+    const hasMultiple = videoNames.length > 1
+
+    // If single video, always go to player
+    if (!hasMultiple) {
+      setViewState('player')
+      return
+    }
+
+    // If URL specifies a video, go to player
+    if (urlVideoName && project.videosByName[urlVideoName]) {
+      setViewState('player')
+      return
+    }
+
+    // Multiple videos without URL param: show grid
+    setViewState('grid')
+  }, [project?.videosByName, urlVideoName])
+
   // Handle video selection
-  const handleVideoSelect = (videoName: string) => {
+  const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)
     setActiveVideosRaw(project.videosByName[videoName])
-  }
+    setViewState('player')
+  }, [project?.videosByName])
+
+  // Handle back to grid
+  const handleBackToGrid = useCallback(() => {
+    setViewState('grid')
+  }, [])
 
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault()
@@ -758,15 +836,36 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
+  // Show thumbnail grid for multi-video projects when in grid view
+  if (viewState === 'grid' && hasMultipleVideos) {
+    return (
+      <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <ThumbnailGrid
+              videosByName={project.videosByName}
+              thumbnailsByName={thumbnailsByName}
+              thumbnailsLoading={thumbnailsLoading}
+              onVideoSelect={handleVideoSelect}
+              projectTitle={project.title}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex-1 min-h-0 bg-background flex flex-col lg:flex-row overflow-hidden">
-      {/* Video Sidebar - contains both desktop and mobile versions internally */}
-      {project.videosByName && (
-        <VideoSidebar
+    <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
+      {/* Thumbnail Reel for multi-video projects */}
+      {hasMultipleVideos && (
+        <ThumbnailReel
           videosByName={project.videosByName}
+          thumbnailsByName={thumbnailsByName}
           activeVideoName={activeVideoName}
           onVideoSelect={handleVideoSelect}
-          className="w-64 flex-shrink-0"
+          onBackToGrid={handleBackToGrid}
+          showBackButton={true}
         />
       )}
 

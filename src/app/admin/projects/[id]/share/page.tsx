@@ -340,7 +340,7 @@ export default function AdminSharePage() {
 
       try {
         await Promise.all(
-          Object.entries(project.videosByName).map(async ([name, videos]: [string, any[]]) => {
+          Object.entries(project.videosByName as Record<string, any[]>).map(async ([name, videos]) => {
             // Find a video with a thumbnail
             const videoWithThumb = videos.find((v: any) => v.thumbnailPath)
             if (videoWithThumb) {

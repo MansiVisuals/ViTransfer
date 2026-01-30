@@ -94,7 +94,7 @@ export default function SecurityEventsClient() {
   ]
 
   const [events, setEvents] = useState<SecurityEvent[]>([])
-  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, pages: 0 })
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 })
   const [stats, setStats] = useState<Array<{ type: string; count: number }>>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)

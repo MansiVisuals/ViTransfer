@@ -669,10 +669,10 @@ export default function VideoPlayer({
       {/* Video Player Container */}
       <div
         ref={containerRef}
-        className={`relative overflow-hidden group ${
+        className={`relative overflow-hidden group rounded-xl ${
           fillContainer
-            ? 'flex-1 min-h-0 bg-background'
-            : 'rounded-lg flex-shrink min-h-0 lg:order-1 bg-muted'
+            ? 'lg:flex-1 min-h-0 bg-background'
+            : 'flex-shrink min-h-0 lg:order-1 bg-muted'
         }`}
         style={fillContainer ? {} : {
           aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
@@ -751,7 +751,7 @@ export default function VideoPlayer({
         )}
       </div>
 
-      {/* Video & Project Information - visible on desktop, hidden on mobile (shown separately below comments) */}
+      {/* Video & Project Information */}
       <ProjectInfo
         selectedVideo={selectedVideo}
         displayLabel={displayLabel}
@@ -771,7 +771,7 @@ export default function VideoPlayer({
         allowAssetDownload={allowAssetDownload}
         shareToken={shareToken}
         activeVideoName={activeVideoName}
-        className="hidden lg:block lg:order-3"
+        className="mt-3 lg:order-3"
         usePreviewForApprovedPlayback={usePreviewForApprovedPlayback}
       />
     </div>

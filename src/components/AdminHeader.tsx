@@ -35,7 +35,7 @@ export default function AdminHeader() {
   if (!user) return null
 
   const repoUrl = 'https://github.com/MansiVisuals/ViTransfer'
-  const websiteUrl = 'https://vitransfer.com'
+  const websiteUrl = 'https://www.vitransfer.com'
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
 
   const navLinks: Array<{ href: string; label: string; icon: typeof FolderKanban; title?: string }> = [

@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
-import { ArrowLeft, Settings, ArrowUpDown, Video } from 'lucide-react'
+import { ArrowLeft, Settings, ArrowUpDown, Video, Upload } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
 // Force dynamic rendering (no static pre-rendering)
@@ -22,6 +22,7 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true)
   const [shareUrl, setShareUrl] = useState('')
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
+  const videoManagerRef = useRef<{ triggerUpload: () => void } | null>(null)
 
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = async () => {
@@ -146,12 +147,24 @@ export default function ProjectPage() {
               <span className="sm:hidden">Back</span>
             </Button>
           </Link>
-          <Link href={`/admin/projects/${id}/settings`}>
-            <Button variant="outline" size="default">
-              <Settings className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Project Settings</span>
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {project && project.status !== 'APPROVED' && (
+              <Button
+                variant="default"
+                size="default"
+                onClick={() => videoManagerRef.current?.triggerUpload()}
+              >
+                <Upload className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Upload Video(s)</span>
+              </Button>
+            )}
+            <Link href={`/admin/projects/${id}/settings`}>
+              <Button variant="outline" size="default">
+                <Settings className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Project Settings</span>
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -189,6 +202,7 @@ export default function ProjectPage() {
                 )}
               </div>
               <AdminVideoManager
+                ref={videoManagerRef}
                 projectId={project.id}
                 videos={project.videos}
                 projectStatus={project.status}

@@ -31,8 +31,38 @@ export default function ThumbnailReel({
   onToggleCommentPanel,
 }: ThumbnailReelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  // Start collapsed on first load
   const [isExpanded, setIsExpanded] = useState(false)
+  const [showHint, setShowHint] = useState(true)
   const hasScrolledRef = useRef(false)
+  const hintTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Auto-hide hint after 3 seconds on first load
+  useEffect(() => {
+    hintTimerRef.current = setTimeout(() => {
+      setShowHint(false)
+    }, 3000)
+
+    return () => {
+      if (hintTimerRef.current) {
+        clearTimeout(hintTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Hide hint when user interacts
+  const hideHint = () => {
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current)
+      hintTimerRef.current = null
+    }
+    setShowHint(false)
+  }
+
+  const handleToggleExpanded = () => {
+    hideHint()
+    setIsExpanded(!isExpanded)
+  }
 
   // Sort videos: For review (not approved) first, then approved, both alphabetically
   const videoNames = useMemo(() => {
@@ -65,12 +95,14 @@ export default function ThumbnailReel({
 
   // Navigation
   const handlePrevVideo = () => {
+    hideHint()
     if (activeIndex > 0) {
       onVideoSelect(videoNames[activeIndex - 1])
     }
   }
 
   const handleNextVideo = () => {
+    hideHint()
     if (activeIndex < totalVideos - 1) {
       onVideoSelect(videoNames[activeIndex + 1])
     }
@@ -135,61 +167,64 @@ export default function ThumbnailReel({
           </div>
 
           {/* Center: Video selector */}
-          <div className="flex-1 flex items-center justify-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePrevVideo}
-              disabled={activeIndex <= 0}
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              title="Previous video"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
+          <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handlePrevVideo}
+                disabled={activeIndex <= 0}
+                className="h-7 w-7 sm:h-8 sm:w-8"
+                title="Previous video"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
 
-            <div
-              className="flex items-center gap-1.5 px-2"
-              title={hasApprovedCurrent ? `${activeVideoName} (Approved)` : `${activeVideoName} (Pending review)`}
-            >
-              <CheckCircle2
+              <button
+                onClick={handleToggleExpanded}
                 className={cn(
-                  "w-4 h-4",
-                  hasApprovedCurrent ? "text-success" : "text-muted-foreground/50"
+                  "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all",
+                  "hover:bg-muted/80 active:scale-95",
+                  isExpanded && "bg-muted/50"
                 )}
-              />
-              <span className="text-sm text-muted-foreground tabular-nums">
-                {activeIndex + 1}/{totalVideos}
-              </span>
+                title={isExpanded ? "Hide video thumbnails" : "Show video thumbnails (click to browse all videos)"}
+              >
+                <CheckCircle2
+                  className={cn(
+                    "w-4 h-4",
+                    hasApprovedCurrent ? "text-success" : "text-muted-foreground/50"
+                  )}
+                />
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {activeIndex + 1}/{totalVideos}
+                </span>
+              </button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleNextVideo}
+                disabled={activeIndex >= totalVideos - 1}
+                className="h-7 w-7 sm:h-8 sm:w-8"
+                title="Next video"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNextVideo}
-              disabled={activeIndex >= totalVideos - 1}
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              title="Next video"
+            {/* Hint text - shows when collapsed to encourage clicking */}
+            <span
+              className={cn(
+                "text-[10px] text-muted-foreground/70 transition-all duration-300",
+                showHint && !isExpanded ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
+              )}
             >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+              click to browse all videos
+            </span>
           </div>
 
           {/* Right: Toggle buttons */}
           <div className="flex items-center gap-1">
-            {/* Thumbnail reel toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="h-8 w-8"
-              title={isExpanded ? 'Hide thumbnails' : 'Show thumbnails'}
-            >
-              {isExpanded ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </Button>
 
             {/* Comment panel toggle */}
             {showCommentToggle && onToggleCommentPanel && (
@@ -216,7 +251,9 @@ export default function ThumbnailReel({
 
       {/* Floating Thumbnail Overlay - Appears below the bar, overlays content */}
       {isExpanded && (
-        <div className="absolute left-2 right-2 sm:left-3 sm:right-3 top-full z-30 mt-1">
+        <div
+          className="absolute left-2 right-2 sm:left-3 sm:right-3 top-full z-30 mt-1"
+        >
           <div className="bg-background/90 backdrop-blur-md shadow-lg rounded-xl">
             <div className="px-2 py-3 sm:px-4">
               {/* Thumbnails container */}
@@ -241,6 +278,7 @@ export default function ThumbnailReel({
                       key={name}
                       data-thumbnail
                       onClick={() => {
+                        hideHint()
                         onVideoSelect(name)
                         setIsExpanded(false) // Close after selection
                       }}
@@ -314,7 +352,10 @@ export default function ThumbnailReel({
       {isExpanded && (
         <div
           className="fixed inset-0 z-20"
-          onClick={() => setIsExpanded(false)}
+          onClick={() => {
+            hideHint()
+            setIsExpanded(false)
+          }}
           aria-hidden="true"
         />
       )}

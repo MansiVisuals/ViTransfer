@@ -863,6 +863,17 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               clientName={isGuest ? undefined : project.clientName}
             />
           </div>
+          {/* Powered by footer */}
+          <div className="pb-4 text-center">
+            <a
+              href="https://www.vitransfer.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            >
+              Powered by ViTransfer
+            </a>
+          </div>
         </div>
       </div>
     )
@@ -872,7 +883,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const showCommentPanel = !project.hideFeedback && !isGuest && !hideComments
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+    <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
       {/* Thumbnail Reel for multi-video projects - always visible, collapsible */}
       {hasMultipleVideos && (
         <ThumbnailReel
@@ -895,8 +906,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         </div>
       )}
 
-      {/* Main Content Area - fills remaining height */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
+      {/* Main Content Area - scrollable on mobile, fixed on desktop */}
+      <div className="flex-1 lg:min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
         {readyVideos.length === 0 ? (
           <div className="flex-1 flex items-center justify-center p-4">
             <Card className="bg-card border-border">
@@ -909,8 +920,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           </div>
         ) : (
           <>
-            {/* Video Player - fills available space */}
-            <div className={`flex-1 min-h-0 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
+            {/* Video Player - auto height on mobile, fills space on desktop */}
+            <div className={`lg:min-h-0 lg:flex-1 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
               <VideoPlayer
                 videos={readyVideos}
                 projectId={project.id}
@@ -938,9 +949,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               />
             </div>
 
-            {/* Comments Section - proportional side panel on desktop, collapsible on mobile */}
+            {/* Comments Section - max one screen height on mobile, side panel on desktop */}
             {showCommentPanel && (
-              <div className="shrink-0 lg:shrink lg:flex-1 lg:max-w-[30%] xl:max-w-[25%] lg:min-w-[280px] flex flex-col max-h-[35vh] lg:max-h-full lg:h-full overflow-hidden rounded-xl bg-card">
+              <div className="max-h-[100vh] lg:shrink lg:flex-1 lg:max-w-[30%] xl:max-w-[25%] lg:min-w-[280px] flex flex-col lg:max-h-full lg:h-full overflow-hidden rounded-xl bg-card">
                 <CommentSection
                   projectId={project.id}
                   comments={filteredComments}

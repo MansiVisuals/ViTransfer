@@ -59,10 +59,11 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV NODE_ENV=production
 
-# Python for Apprise notifications
+# Python for Apprise notifications (with security updates)
 RUN apk add --no-cache python3 py3-pip py3-virtualenv \
     && python3 -m venv /opt/apprise-venv \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --disable-pip-version-check apprise==1.9.6
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --upgrade pip==25.3 wheel==0.46.2 \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir apprise==1.9.6
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3
 

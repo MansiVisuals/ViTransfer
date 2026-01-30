@@ -40,6 +40,7 @@ interface CommentSectionProps {
   authenticatedEmail?: string | null
   onToggleVisibility?: () => void
   showToggleButton?: boolean
+  onMobileExpandedChange?: (expanded: boolean) => void
 }
 
 export default function CommentSection({
@@ -65,6 +66,7 @@ export default function CommentSection({
   authenticatedEmail = null,
   onToggleVisibility,
   showToggleButton = false,
+  onMobileExpandedChange,
 }: CommentSectionProps) {
   const [isMobileCollapsed, setIsMobileCollapsed] = useState(initialMobileCollapsed)
   const {
@@ -393,7 +395,11 @@ export default function CommentSection({
         {/* Collapsible header for messages (mobile only) - NOW includes "Feedback & Discussion" title */}
         {mobileCollapsible && (
           <button
-            onClick={() => setIsMobileCollapsed(!isMobileCollapsed)}
+            onClick={() => {
+              const newCollapsed = !isMobileCollapsed
+              setIsMobileCollapsed(newCollapsed)
+              onMobileExpandedChange?.(!newCollapsed)
+            }}
             className="order-2 lg:hidden w-full p-3 flex items-center justify-between bg-muted/30"
           >
             <span className="text-sm font-medium flex items-center gap-2">

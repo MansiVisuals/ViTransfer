@@ -500,7 +500,7 @@ export default function AdminSharePage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+    <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
       {/* Thumbnail Reel for multi-video projects */}
       {hasMultipleVideos && (
         <ThumbnailReel
@@ -539,8 +539,8 @@ export default function AdminSharePage() {
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
+      {/* Main Content Area - scrollable on mobile, fixed on desktop */}
+      <div className="flex-1 lg:min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
         {readyVideos.length === 0 ? (
           <div className="flex-1 flex items-center justify-center p-4">
             <Card className="bg-card">
@@ -553,8 +553,8 @@ export default function AdminSharePage() {
           </div>
         ) : (
           <>
-            {/* Video Player */}
-            <div className={`flex-1 min-h-0 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
+            {/* Video Player - auto height on mobile, fills space on desktop */}
+            <div className={`lg:min-h-0 lg:flex-1 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
               <VideoPlayer
                 videos={readyVideos}
                 projectId={project.id}
@@ -581,9 +581,9 @@ export default function AdminSharePage() {
               />
             </div>
 
-            {/* Comments Section */}
+            {/* Comments Section - max one screen height on mobile, side panel on desktop */}
             {showCommentPanel && (
-              <div className="shrink-0 lg:shrink lg:flex-1 lg:max-w-[30%] xl:max-w-[25%] lg:min-w-[280px] flex flex-col max-h-[35vh] lg:max-h-full lg:h-full overflow-hidden rounded-xl bg-card">
+              <div className="max-h-[100vh] lg:shrink lg:flex-1 lg:max-w-[30%] xl:max-w-[25%] lg:min-w-[280px] flex flex-col lg:max-h-full lg:h-full overflow-hidden rounded-xl bg-card">
                 <CommentSection
                   projectId={project.id}
                   projectSlug={project.slug}

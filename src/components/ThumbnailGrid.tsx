@@ -52,24 +52,24 @@ export default function ThumbnailGrid({
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Project Info Header */}
-      <div className="text-center mb-6 sm:mb-8">
+      <div className="text-center mb-8 sm:mb-12 pt-4">
+        {clientName && (
+          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+            {clientName}
+          </p>
+        )}
         {projectTitle && (
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground mb-1">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground mb-4">
             {projectTitle}
           </h1>
         )}
-        {clientName && (
-          <p className="text-sm text-muted-foreground mb-2">
-            For {clientName}
-          </p>
-        )}
         {projectDescription && (
-          <p className="text-sm text-muted-foreground max-w-2xl mx-auto mb-4">
+          <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto mb-6">
             {projectDescription}
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Select a video to start reviewing
+          Select a video to begin
         </p>
       </div>
 

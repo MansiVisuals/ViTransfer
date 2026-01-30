@@ -14,7 +14,10 @@ import {
   Trash2,
   Loader2,
   Download,
-  Copy
+  Copy,
+  Package,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
@@ -37,9 +40,10 @@ interface VideoAssetListProps {
   projectId: string
   onAssetDeleted?: () => void
   refreshTrigger?: number // Used to trigger refetch from parent
+  defaultCollapsed?: boolean // Default: true - collapsed by default
 }
 
-export function VideoAssetList({ videoId, videoName, versionLabel, projectId, onAssetDeleted, refreshTrigger }: VideoAssetListProps) {
+export function VideoAssetList({ videoId, videoName, versionLabel, projectId, onAssetDeleted, refreshTrigger, defaultCollapsed = true }: VideoAssetListProps) {
   const [assets, setAssets] = useState<VideoAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -47,6 +51,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   const [showCopyModal, setShowCopyModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentThumbnailPath, setCurrentThumbnailPath] = useState<string | null>(null)
+  const [isExpanded, setIsExpanded] = useState(!defaultCollapsed)
 
   useEffect(() => {
     fetchAssets()
@@ -241,8 +246,9 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Loading assets...</span>
       </div>
     )
   }
@@ -257,19 +263,40 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
 
   if (assets.length === 0) {
     return (
-      <div className="text-center py-6 text-sm text-muted-foreground">
-        No assets uploaded for this video yet
+      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+        <Package className="h-4 w-4" />
+        <span>No assets</span>
       </div>
     )
   }
 
+  // Collapsed view - just show count with expand button
+  if (!isExpanded) {
+    return (
+      <button
+        onClick={() => setIsExpanded(true)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+      >
+        <Package className="h-4 w-4" />
+        <span>Assets ({assets.length})</span>
+        <ChevronDown className="h-4 w-4" />
+      </button>
+    )
+  }
+
+  // Expanded view - full asset list
   return (
     <>
       <div className="space-y-2">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-sm font-medium text-muted-foreground">
-            Uploaded Assets ({assets.length})
-          </div>
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Package className="h-4 w-4" />
+            <span>Assets ({assets.length})</span>
+            <ChevronUp className="h-4 w-4" />
+          </button>
           {assets.length > 0 && (
             <Button
               type="button"

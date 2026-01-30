@@ -596,7 +596,7 @@ export default function CustomVideoControls({
                       absolute bottom-full mb-2 ${getTooltipAlignment(primaryMarker.position)}
                       bg-black/95 text-white backdrop-blur-sm
                       rounded-lg shadow-2xl
-                      p-2 min-w-[160px] max-w-[240px]
+                      p-2 w-[180px] sm:w-[220px] max-w-[calc(100vw-2rem)]
                       z-50
                       animate-in fade-in-0 slide-in-from-bottom-1 duration-150
                     `}
@@ -672,6 +672,7 @@ export default function CustomVideoControls({
             onClick={() => onFrameStep('backward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
             aria-label="Previous frame"
+            title="Previous frame (Ctrl+J)"
           >
             <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
@@ -681,6 +682,7 @@ export default function CustomVideoControls({
             onClick={onPlayPause}
             className="p-2.5 sm:p-3 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
             aria-label={isPlaying ? 'Pause' : 'Play'}
+            title={isPlaying ? 'Pause (Ctrl+Space)' : 'Play (Ctrl+Space)'}
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
@@ -694,6 +696,7 @@ export default function CustomVideoControls({
             onClick={() => onFrameStep('forward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
             aria-label="Next frame"
+            title="Next frame (Ctrl+L)"
           >
             <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
@@ -716,6 +719,7 @@ export default function CustomVideoControls({
               onClick={onToggleMute}
               className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
               aria-label={isMuted ? 'Unmute' : 'Mute'}
+              title={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted || volume === 0 ? (
                 <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -749,6 +753,7 @@ export default function CustomVideoControls({
             onClick={onToggleFullscreen}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFullscreen ? (
               <Minimize className="w-4 h-4 sm:w-5 sm:h-5 text-white" />

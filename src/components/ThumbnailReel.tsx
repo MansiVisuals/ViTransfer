@@ -1,9 +1,10 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
-import { CheckCircle2, ChevronUp, ChevronDown, Film, Layers, Grid3X3 } from 'lucide-react'
+import { useRef, useEffect, useState, useMemo } from 'react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Film, Layers, Grid3X3, ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import ThemeToggle from '@/components/ThemeToggle'
 
 interface ThumbnailReelProps {
   videosByName: Record<string, any[]>
@@ -12,6 +13,10 @@ interface ThumbnailReelProps {
   onVideoSelect: (videoName: string) => void
   onBackToGrid?: () => void
   showBackButton?: boolean
+  // Comment panel controls
+  showCommentToggle?: boolean
+  isCommentPanelVisible?: boolean
+  onToggleCommentPanel?: () => void
 }
 
 export default function ThumbnailReel({
@@ -21,207 +26,297 @@ export default function ThumbnailReel({
   onVideoSelect,
   onBackToGrid,
   showBackButton = true,
+  showCommentToggle = false,
+  isCommentPanelVisible = true,
+  onToggleCommentPanel,
 }: ThumbnailReelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const [isMobile, setIsMobile] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(false) // Will be set based on screen size
-  const [isChevronBlinking, setIsChevronBlinking] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const hasScrolledRef = useRef(false)
-  const hasInitializedRef = useRef(false)
 
-  // Detect mobile and set initial collapsed state
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768 // md breakpoint
-      setIsMobile(mobile)
+  // Sort videos: For review (not approved) first, then approved, both alphabetically
+  const videoNames = useMemo(() => {
+    const names = Object.keys(videosByName)
 
-      // On first load, set collapsed state based on screen size
-      if (!hasInitializedRef.current) {
-        hasInitializedRef.current = true
-        if (!mobile) {
-          // Desktop: start collapsed with blinking hint
-          setIsCollapsed(true)
-          setIsChevronBlinking(true)
-          setTimeout(() => setIsChevronBlinking(false), 4500)
-        } else {
-          // Mobile: start expanded (can still collapse manually)
-          setIsCollapsed(false)
-        }
+    // Separate into review and approved
+    const forReview: string[] = []
+    const approved: string[] = []
+
+    names.forEach(name => {
+      const videos = videosByName[name]
+      const hasApprovedVideo = videos.some((v: any) => v.approved === true)
+      if (hasApprovedVideo) {
+        approved.push(name)
+      } else {
+        forReview.push(name)
       }
+    })
+
+    // Sort each group alphabetically
+    forReview.sort((a, b) => a.localeCompare(b))
+    approved.sort((a, b) => a.localeCompare(b))
+
+    // Return: review first, then approved
+    return [...forReview, ...approved]
+  }, [videosByName])
+
+  const activeIndex = videoNames.indexOf(activeVideoName)
+  const totalVideos = videoNames.length
+
+  // Navigation
+  const handlePrevVideo = () => {
+    if (activeIndex > 0) {
+      onVideoSelect(videoNames[activeIndex - 1])
     }
+  }
 
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  const handleNextVideo = () => {
+    if (activeIndex < totalVideos - 1) {
+      onVideoSelect(videoNames[activeIndex + 1])
+    }
+  }
 
-  const videoNames = Object.keys(videosByName).sort((a, b) => a.localeCompare(b))
-
-  // Scroll to active thumbnail only on initial mount
+  // Scroll to active thumbnail when expanded
   useEffect(() => {
     const container = scrollContainerRef.current
-    if (!container || !activeVideoName || isCollapsed || hasScrolledRef.current) return
+    if (!container || !activeVideoName || !isExpanded) return
 
-    const activeIndex = videoNames.indexOf(activeVideoName)
-    if (activeIndex === -1) return
+    // Reset scroll flag when expanding
+    if (!hasScrolledRef.current) {
+      const idx = videoNames.indexOf(activeVideoName)
+      if (idx === -1) return
 
-    // Find the active thumbnail element
-    const thumbnails = container.querySelectorAll('[data-thumbnail]')
-    const activeThumbnail = thumbnails[activeIndex] as HTMLElement
-    if (!activeThumbnail) return
+      // Find the active thumbnail element
+      const thumbnails = container.querySelectorAll('[data-thumbnail]')
+      const activeThumbnail = thumbnails[idx] as HTMLElement
+      if (!activeThumbnail) return
 
-    // Scroll to center the active thumbnail (only once on mount)
-    const containerWidth = container.clientWidth
-    const thumbnailLeft = activeThumbnail.offsetLeft
-    const thumbnailWidth = activeThumbnail.offsetWidth
-    const scrollTo = thumbnailLeft - containerWidth / 2 + thumbnailWidth / 2
+      // Scroll to center the active thumbnail
+      const containerWidth = container.clientWidth
+      const thumbnailLeft = activeThumbnail.offsetLeft
+      const thumbnailWidth = activeThumbnail.offsetWidth
+      const scrollTo = thumbnailLeft - containerWidth / 2 + thumbnailWidth / 2
 
-    container.scrollTo({ left: scrollTo, behavior: 'smooth' })
-    hasScrolledRef.current = true
-  }, [activeVideoName, videoNames, isCollapsed])
+      container.scrollTo({ left: scrollTo, behavior: 'smooth' })
+      hasScrolledRef.current = true
+    }
+  }, [activeVideoName, videoNames, isExpanded])
+
+  // Reset scroll flag when collapsing
+  useEffect(() => {
+    if (!isExpanded) {
+      hasScrolledRef.current = false
+    }
+  }, [isExpanded])
+
+  // Get current video info
+  const currentVideos = activeVideoName ? videosByName[activeVideoName] : []
+  const hasApprovedCurrent = currentVideos.some((v: any) => v.approved === true)
 
   return (
-    <div className="relative bg-card border-b border-border">
-      {/* Header row with collapse toggle and back button on right */}
-      <div className="flex items-center gap-1.5 sm:gap-2 px-2 py-2 sm:px-4 sm:py-2.5">
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* All Videos button */}
-        {showBackButton && onBackToGrid && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBackToGrid}
-            className="shrink-0 gap-1.5 px-2 sm:px-3 h-8 sm:h-9"
-          >
-            <Grid3X3 className="w-4 h-4" />
-            <span className="hidden sm:inline text-sm">All Videos</span>
-          </Button>
-        )}
-
-        {/* Collapse/Expand toggle */}
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setIsCollapsed(!isCollapsed)
-              setIsChevronBlinking(false) // Stop blinking when clicked
-            }}
-            className={cn(
-              'shrink-0 h-8 w-8',
-              !isMobile && isChevronBlinking && 'bg-primary/20'
+    <div className="relative shrink-0 z-20 p-2 sm:p-3">
+      {/* Compact Control Bar - Always visible */}
+      <div className="bg-card/95 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Left: Back to grid */}
+          <div className="flex items-center">
+            {showBackButton && onBackToGrid && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onBackToGrid}
+                className="shrink-0 gap-1.5 px-2 sm:px-3 h-8"
+                title="Back to all videos"
+              >
+                <Grid3X3 className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">All Videos</span>
+              </Button>
             )}
-            style={!isMobile && isChevronBlinking ? {
-              animation: 'blink 1.5s ease-in-out 3'
-            } : undefined}
-            title={isCollapsed ? 'Show video selector' : 'Hide video selector'}
-          >
-            {isCollapsed ? (
-              <ChevronDown className={cn('w-4 h-4', !isMobile && isChevronBlinking && 'text-primary')} />
-            ) : (
-              <ChevronUp className="w-4 h-4" />
-            )}
-          </Button>
+          </div>
 
-          {/* Info tooltip when blinking - Desktop only */}
-          {!isMobile && isChevronBlinking && (
-            <div className="absolute right-0 top-full mt-2 bg-foreground text-background text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-50 animate-in fade-in slide-in-from-top-1">
-              Click to show videos
-              <div className="absolute -top-1 right-3 w-2 h-2 bg-foreground rotate-45" />
+          {/* Center: Video selector */}
+          <div className="flex-1 flex items-center justify-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePrevVideo}
+              disabled={activeIndex <= 0}
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              title="Previous video"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+
+            <div
+              className="flex items-center gap-1.5 px-2"
+              title={hasApprovedCurrent ? `${activeVideoName} (Approved)` : `${activeVideoName} (Pending review)`}
+            >
+              <CheckCircle2
+                className={cn(
+                  "w-4 h-4",
+                  hasApprovedCurrent ? "text-success" : "text-muted-foreground/50"
+                )}
+              />
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {activeIndex + 1}/{totalVideos}
+              </span>
             </div>
-          )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNextVideo}
+              disabled={activeIndex >= totalVideos - 1}
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              title="Next video"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Right: Toggle buttons */}
+          <div className="flex items-center gap-1">
+            {/* Thumbnail reel toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-8 w-8"
+              title={isExpanded ? 'Hide thumbnails' : 'Show thumbnails'}
+            >
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </Button>
+
+            {/* Comment panel toggle */}
+            {showCommentToggle && onToggleCommentPanel && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleCommentPanel}
+                className="hidden lg:flex h-8 w-8"
+                title={isCommentPanelVisible ? 'Hide feedback' : 'Show feedback'}
+              >
+                {isCommentPanelVisible ? (
+                  <PanelRightClose className="w-4 h-4" />
+                ) : (
+                  <PanelRightOpen className="w-4 h-4" />
+                )}
+              </Button>
+            )}
+
+            {/* Theme toggle */}
+            <ThemeToggle />
+          </div>
         </div>
       </div>
 
-      {/* Thumbnails row - collapsible */}
-      {!isCollapsed && (
-        <div className="px-2 pb-2 sm:px-4 sm:pb-3">
-          {/* Thumbnails container - native touch scrolling */}
-          <div
-            ref={scrollContainerRef}
-            className="flex gap-2 sm:gap-3 overflow-x-auto overscroll-x-contain snap-x snap-mandatory"
-            style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            {videoNames.map((name) => {
-              const videos = videosByName[name]
-              const hasApprovedVideo = videos.some((v: any) => v.approved === true)
-              const versionCount = videos.length
-              const thumbnailUrl = thumbnailsByName.get(name)
-              const isActive = activeVideoName === name
+      {/* Floating Thumbnail Overlay - Appears below the bar, overlays content */}
+      {isExpanded && (
+        <div className="absolute left-2 right-2 sm:left-3 sm:right-3 top-full z-30 mt-1">
+          <div className="bg-background/90 backdrop-blur-md shadow-lg rounded-xl">
+            <div className="px-2 py-3 sm:px-4">
+              {/* Thumbnails container */}
+              <div
+                ref={scrollContainerRef}
+                className="flex gap-2 sm:gap-3 overflow-x-auto overscroll-x-contain snap-x snap-mandatory justify-center"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {videoNames.map((name) => {
+                  const videos = videosByName[name]
+                  const hasApprovedVideo = videos.some((v: any) => v.approved === true)
+                  const versionCount = videos.length
+                  const thumbnailUrl = thumbnailsByName.get(name)
+                  const isActive = activeVideoName === name
 
-              return (
-                <button
-                  key={name}
-                  data-thumbnail
-                  onClick={() => onVideoSelect(name)}
-                  className={cn(
-                    'shrink-0 rounded-md sm:rounded-lg overflow-hidden snap-start',
-                    'bg-muted border-2 transition-all duration-150',
-                    'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background',
-                    'w-[72px] sm:w-[100px] md:w-[140px] lg:w-[160px]',
-                    isActive
-                      ? 'border-primary'
-                      : 'border-transparent hover:border-border'
-                  )}
-                >
-                  {/* Thumbnail - 16:9 aspect ratio */}
-                  <div className="aspect-video relative bg-muted">
-                    {thumbnailUrl ? (
-                      <img
-                        src={thumbnailUrl}
-                        alt={name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Film className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/50" />
-                      </div>
-                    )}
-
-                    {/* Approved badge */}
-                    {hasApprovedVideo && (
-                      <div className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-success text-success-foreground rounded-full p-0.5">
-                        <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                      </div>
-                    )}
-
-                    {/* Version count badge */}
-                    {versionCount > 1 && (
-                      <div className="absolute bottom-0.5 right-0.5 sm:bottom-1 sm:right-1 bg-black/70 text-white text-[8px] sm:text-[10px] px-1 py-0.5 rounded flex items-center gap-0.5">
-                        <Layers className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-                        <span>{versionCount}</span>
-                      </div>
-                    )}
-
-                    {/* Active indicator overlay */}
-                    {isActive && (
-                      <div className="absolute inset-0 bg-primary/10" />
-                    )}
-                  </div>
-
-                  {/* Name */}
-                  <div className="px-1 py-1 sm:px-2 sm:py-1.5 bg-card">
-                    <p
+                  return (
+                    <button
+                      key={name}
+                      data-thumbnail
+                      onClick={() => {
+                        onVideoSelect(name)
+                        setIsExpanded(false) // Close after selection
+                      }}
                       className={cn(
-                        'text-[10px] sm:text-xs truncate text-left',
-                        isActive ? 'text-primary font-medium' : 'text-foreground'
+                        'shrink-0 rounded-md sm:rounded-lg overflow-hidden snap-start',
+                        'bg-muted border-2 transition-all duration-150',
+                        'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background',
+                        'w-[80px] sm:w-[110px] md:w-[130px] lg:w-[150px]',
+                        isActive
+                          ? 'border-primary ring-2 ring-primary/30'
+                          : 'border-transparent hover:border-border'
                       )}
                     >
-                      {name}
-                    </p>
-                  </div>
-                </button>
-              )
-            })}
+                      {/* Thumbnail */}
+                      <div className="aspect-video relative bg-muted">
+                        {thumbnailUrl ? (
+                          <img
+                            src={thumbnailUrl}
+                            alt={name}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            draggable={false}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Film className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground/50" />
+                          </div>
+                        )}
+
+                        {/* Approved badge */}
+                        {hasApprovedVideo && (
+                          <div className="absolute top-1 right-1 bg-success text-success-foreground rounded-full p-0.5">
+                            <CheckCircle2 className="w-3 h-3" />
+                          </div>
+                        )}
+
+                        {/* Version count badge */}
+                        {versionCount > 1 && (
+                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <Layers className="w-2.5 h-2.5" />
+                            <span>{versionCount}</span>
+                          </div>
+                        )}
+
+                        {/* Active overlay */}
+                        {isActive && (
+                          <div className="absolute inset-0 bg-primary/10" />
+                        )}
+                      </div>
+
+                      {/* Name */}
+                      <div className="px-1.5 py-1 sm:px-2 sm:py-1.5 bg-card/80">
+                        <p
+                          className={cn(
+                            'text-[10px] sm:text-xs truncate text-center',
+                            isActive ? 'text-primary font-medium' : 'text-foreground'
+                          )}
+                        >
+                          {name}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Click outside to close */}
+      {isExpanded && (
+        <div
+          className="fixed inset-0 z-20"
+          onClick={() => setIsExpanded(false)}
+          aria-hidden="true"
+        />
       )}
     </div>
   )

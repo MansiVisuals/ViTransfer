@@ -65,7 +65,7 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-[70vh] overflow-y-auto bg-card border border-border rounded-lg shadow-lg p-2">
+        <div className="absolute right-0 top-full mt-1 z-50 w-[200px] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto bg-card border border-border rounded-lg shadow-lg p-2">
           {groups.map((group, index) => {
             const allSelected = group.options.length > 0 && group.selected.size === group.options.length
 

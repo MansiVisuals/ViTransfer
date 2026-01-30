@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Label } from './ui/label'
-import { ChevronDown, ChevronUp, Plus, Video, CheckCircle2, Pencil } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plus, Video, CheckCircle2, Pencil, Upload, X } from 'lucide-react'
 import VideoUpload from './VideoUpload'
 import VideoList from './VideoList'
 import { InlineEdit } from './InlineEdit'
-import { cn } from '@/lib/utils'
+import { cn, formatFileSize } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { apiPatch } from '@/lib/api-client'
 
@@ -56,16 +55,81 @@ export default function AdminVideoManager({
   const hasVideos = videos.length > 0
   // Only allow one video expanded at a time - default collapsed
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
-  const [showNewVideoForm, setShowNewVideoForm] = useState(!hasVideos) // Auto-show if no videos
-  const [newVideoName, setNewVideoName] = useState('')
+  const [pendingUploads, setPendingUploads] = useState<Array<{ id: string; file: File; videoName: string }>>([])
+  const [isDragging, setIsDragging] = useState(false)
   const [editingGroupName, setEditingGroupName] = useState<string | null>(null)
   const [editGroupValue, setEditGroupValue] = useState('')
   const [savingGroupName, setSavingGroupName] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Notify parent when component mounts with first video
-  useEffect(() => {
-    // No auto-expansion on mount; admin will expand explicitly
-  }, [])
+  // Extract video name from filename (remove extension)
+  const getVideoNameFromFile = (file: File): string => {
+    const name = file.name
+    const lastDot = name.lastIndexOf('.')
+    return lastDot > 0 ? name.substring(0, lastDot) : name
+  }
+
+  // Drag and drop handlers for quick video add
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (projectStatus !== 'APPROVED') {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    if (projectStatus === 'APPROVED') return
+
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/'))
+    if (files.length > 0) {
+      const newUploads = files.map(file => ({
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file,
+        videoName: getVideoNameFromFile(file)
+      }))
+      setPendingUploads(prev => [...prev, ...newUploads])
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('video/'))
+    if (files.length > 0) {
+      const newUploads = files.map(file => ({
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file,
+        videoName: getVideoNameFromFile(file)
+      }))
+      setPendingUploads(prev => [...prev, ...newUploads])
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleRemovePendingUpload = (id: string) => {
+    setPendingUploads(prev => prev.filter(u => u.id !== id))
+  }
+
+  const handleUploadCompleteForPending = (id: string) => {
+    setPendingUploads(prev => prev.filter(u => u.id !== id))
+    onRefresh?.()
+  }
+
+  const handleUpdateVideoName = (id: string, newName: string) => {
+    setPendingUploads(prev => prev.map(u => u.id === id ? { ...u, videoName: newName } : u))
+  }
 
   const toggleGroup = (name: string) => {
     const wasExpanded = expandedGroup === name
@@ -79,18 +143,7 @@ export default function AdminVideoManager({
     }
   }
 
-  const handleAddNewVideo = () => {
-    if (newVideoName.trim()) {
-      setExpandedGroup(newVideoName)
-      setShowNewVideoForm(false)
-      setNewVideoName('')
-    }
-  }
-
   const handleUploadComplete = () => {
-    // Reset the "Add New Video" form when upload completes
-    setShowNewVideoForm(false)
-    setNewVideoName('')
     // Refresh the project data to show the new video
     onRefresh?.()
   }
@@ -153,13 +206,96 @@ export default function AdminVideoManager({
   })
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Hidden file input for click-to-upload (multiple) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="video/*"
+        multiple
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      {/* Compact upload zone at top */}
+      {projectStatus !== 'APPROVED' && (
+        <div className="space-y-2">
+          {/* Drop zone - compact */}
+          <div
+            className={cn(
+              'border-2 border-dashed rounded-lg px-4 py-2.5 transition-all cursor-pointer flex items-center gap-3',
+              isDragging
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50 hover:bg-accent/30'
+            )}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="w-5 h-5 text-muted-foreground shrink-0" />
+            <p className="text-sm flex-1">
+              {isDragging ? 'Drop videos here' : 'Drop videos or click to add'}
+            </p>
+            <Plus className="w-5 h-5 text-muted-foreground shrink-0" />
+          </div>
+
+          {/* Pending uploads queue */}
+          {pendingUploads.length > 0 && (
+            <div className="space-y-2">
+              {pendingUploads.map((upload) => (
+                <div key={upload.id} className="border rounded-lg p-3 bg-card">
+                  <div className="flex items-start gap-3">
+                    <Video className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={upload.videoName}
+                          onChange={(e) => handleUpdateVideoName(upload.id, e.target.value)}
+                          placeholder="Video name"
+                          className="h-8 text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemovePendingUpload(upload.id)}
+                          className="h-8 w-8 shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {upload.file.name} ({formatFileSize(upload.file.size)})
+                      </p>
+                      {upload.videoName.trim() && (
+                        <VideoUpload
+                          projectId={projectId}
+                          videoName={upload.videoName.trim()}
+                          onUploadComplete={() => handleUploadCompleteForPending(upload.id)}
+                          initialFile={upload.file}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {sortedGroupNames.map((groupName) => {
         const groupVideos = videoGroups[groupName]
         const isExpanded = expandedGroup === groupName
         const latestVideo = groupVideos.sort((a, b) => b.version - a.version)[0]
         const approvedCount = groupVideos.filter(v => v.approved).length
         const hasApprovedVideos = approvedCount > 0
+        const processingCount = groupVideos.filter(v => v.status === 'PROCESSING').length
+        const hasProcessingVideos = processingCount > 0
+        const errorCount = groupVideos.filter(v => v.status === 'ERROR').length
+        const hasErrorVideos = errorCount > 0
 
         return (
           <Card key={groupName} className="overflow-hidden">
@@ -198,8 +334,19 @@ export default function AdminVideoManager({
                             <Pencil className="w-3 h-3" />
                           </Button>
                         )}
+                        {hasProcessingVideos && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-primary-visible text-primary border border-primary-visible flex-shrink-0">
+                            <div className="animate-spin rounded-full h-2.5 w-2.5 border-b border-primary"></div>
+                            {processingCount} Processing
+                          </span>
+                        )}
+                        {hasErrorVideos && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-destructive-visible text-destructive border border-destructive-visible flex-shrink-0">
+                            {errorCount} Error
+                          </span>
+                        )}
                         {hasApprovedVideos && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 ml-2 rounded text-xs font-medium bg-success-visible text-success border border-success-visible flex-shrink-0">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible flex-shrink-0">
                             <CheckCircle2 className="w-3 h-3" />
                             {approvedCount} Approved
                           </span>
@@ -265,70 +412,6 @@ export default function AdminVideoManager({
           </Card>
         )
       })}
-
-      {/* Add new video button */}
-      {projectStatus !== 'APPROVED' && (
-        <div>
-          {!showNewVideoForm ? (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => setShowNewVideoForm(true)}
-              className="w-full border-dashed"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Video
-            </Button>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Add New Video</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="videoName">Video Name *</Label>
-                  <Input
-                    id="videoName"
-                    value={newVideoName}
-                    onChange={(e) => setNewVideoName(e.target.value)}
-                    placeholder="e.g., Introduction, Tutorial, Demo"
-                    autoFocus
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Give this video a descriptive name
-                  </p>
-                </div>
-
-                {newVideoName.trim() ? (
-                  <VideoUpload
-                    projectId={projectId}
-                    videoName={newVideoName.trim()}
-                    onUploadComplete={handleUploadComplete}
-                  />
-                ) : (
-                  <div className="p-4 border-2 border-dashed border-border rounded-lg text-center text-sm text-muted-foreground">
-                    Enter a video name to start uploading
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowNewVideoForm(false)
-                      setNewVideoName('')
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
     </div>
   )
 }

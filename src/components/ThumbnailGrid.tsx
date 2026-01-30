@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { CheckCircle2, Film, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,7 +23,31 @@ export default function ThumbnailGrid({
   projectDescription,
   clientName,
 }: ThumbnailGridProps) {
-  const videoNames = Object.keys(videosByName).sort((a, b) => a.localeCompare(b))
+  // Sort videos: For review (not approved) first, then approved, both alphabetically
+  const videoNames = useMemo(() => {
+    const names = Object.keys(videosByName)
+
+    // Separate into review and approved
+    const forReview: string[] = []
+    const approved: string[] = []
+
+    names.forEach(name => {
+      const videos = videosByName[name]
+      const hasApprovedVideo = videos.some((v: any) => v.approved === true)
+      if (hasApprovedVideo) {
+        approved.push(name)
+      } else {
+        forReview.push(name)
+      }
+    })
+
+    // Sort each group alphabetically
+    forReview.sort((a, b) => a.localeCompare(b))
+    approved.sort((a, b) => a.localeCompare(b))
+
+    // Return: review first, then approved
+    return [...forReview, ...approved]
+  }, [videosByName])
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">

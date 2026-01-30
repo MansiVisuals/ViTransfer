@@ -7,11 +7,11 @@ import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
 import ThumbnailGrid from '@/components/ThumbnailGrid'
 import ThumbnailReel from '@/components/ThumbnailReel'
-import ProjectInfo from '@/components/ProjectInfo'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, MessageSquare } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function AdminSharePage() {
   const params = useParams()
@@ -41,12 +41,6 @@ export default function AdminSharePage() {
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [adminUser, setAdminUser] = useState<any>(null)
   const [hideComments, setHideComments] = useState(false)
-  const [videoState, setVideoState] = useState<{
-    selectedVideo: any
-    isVideoApproved: boolean
-    displayVideos: any[]
-    displayLabel: string
-  } | null>(null)
   const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
@@ -223,7 +217,6 @@ export default function AdminSharePage() {
   // Listen for comment updates (post, delete, etc.)
   useEffect(() => {
     const handleCommentPosted = (e: CustomEvent) => {
-      // Use the comments data from the event if available, otherwise refetch
       if (e.detail?.comments) {
         setComments(e.detail.comments)
       } else {
@@ -326,7 +319,7 @@ export default function AdminSharePage() {
     }
   }, [activeVideosRaw])
 
-  // Fetch thumbnails for all video groups (for grid and reel display)
+  // Fetch thumbnails for all video groups
   useEffect(() => {
     let isMounted = true
     const sessionId = sessionIdRef.current
@@ -342,7 +335,6 @@ export default function AdminSharePage() {
       try {
         await Promise.all(
           Object.entries(project.videosByName as Record<string, any[]>).map(async ([name, videos]) => {
-            // Find a video with a thumbnail
             const videoWithThumb = videos.find((v: any) => v.thumbnailPath)
             if (videoWithThumb) {
               const responseThumbnail = await apiFetch(
@@ -382,49 +374,46 @@ export default function AdminSharePage() {
     const videoNames = Object.keys(project.videosByName)
     const hasMultiple = videoNames.length > 1
 
-    // If single video, always go to player
     if (!hasMultiple) {
       setViewState('player')
       return
     }
 
-    // If URL specifies a video, go to player
     if (urlVideoName && project.videosByName[urlVideoName]) {
       setViewState('player')
       return
     }
 
-    // Multiple videos without URL param: show grid
     setViewState('grid')
   }, [project?.videosByName, urlVideoName])
 
-  // Handle video selection - update URL so refresh preserves state
+  // Handle video selection
   const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)
     setActiveVideosRaw(project.videosByName[videoName])
     setViewState('player')
 
-    // Update URL with video parameter (preserves state on refresh)
     const params = new URLSearchParams(searchParams?.toString() || '')
     params.set('video', videoName)
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [project?.videosByName, searchParams, pathname, router])
 
-  // Handle back to grid - remove video param from URL
+  // Handle back to grid
   const handleBackToGrid = useCallback(() => {
     setViewState('grid')
 
-    // Remove video parameter from URL
     const params = new URLSearchParams(searchParams?.toString() || '')
     params.delete('video')
     const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
     router.replace(newUrl || '', { scroll: false })
   }, [searchParams, pathname, router])
 
-  // Show loading state while project loads
+  const projectUrl = `/admin/projects/${id}`
+
+  // Show loading state
   if (loading) {
     return (
-      <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     )
@@ -433,8 +422,8 @@ export default function AdminSharePage() {
   // Show project not found
   if (!project) {
     return (
-      <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
-        <Card className="bg-card border-border">
+      <div className="fixed inset-0 bg-background flex items-center justify-center p-4">
+        <Card className="bg-card">
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground mb-4">Project not found</p>
             <Link href="/admin/projects">
@@ -449,10 +438,9 @@ export default function AdminSharePage() {
     )
   }
 
-  // Filter to READY videos first (identical to public share)
+  // Filter to READY videos
   let readyVideos = activeVideos.filter((v: any) => v.status === 'READY')
 
-  // If any video is approved, show ONLY approved videos (for both admin and client)
   const hasApprovedVideo = readyVideos.some((v: any) => v.approved)
   if (hasApprovedVideo) {
     readyVideos = readyVideos.filter((v: any) => v.approved)
@@ -460,53 +448,50 @@ export default function AdminSharePage() {
 
   const hasMultipleVideos = project.videosByName && Object.keys(project.videosByName).length > 1
 
-  // Filter comments to only show comments for active videos (identical to public share)
   const activeVideoIds = new Set(activeVideos.map((v: any) => v.id))
   const filteredComments = comments.filter((comment: any) => {
-    // Show general comments (no videoId) or comments for active videos
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
-
-  const projectUrl = `/admin/projects/${id}`
 
   const clientDisplayName = (() => {
     const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
     return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
   })()
 
+  const showCommentPanel = !project.hideFeedback && !hideComments
+
   // Show thumbnail grid for multi-video projects when in grid view
   if (viewState === 'grid' && hasMultipleVideos) {
     return (
-      <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
+      <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+        {/* Theme toggle */}
+        <div className="absolute top-3 right-3 z-20">
+          <ThemeToggle />
+        </div>
+        {/* Back button */}
+        <div className="absolute top-3 left-3 z-20">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(projectUrl)}
+            className="bg-card/95 backdrop-blur-sm"
+            title="Back to project"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Back to Project</span>
+            <span className="sm:hidden">Back</span>
+          </Button>
+        </div>
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-screen-2xl mx-auto w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-            {/* Header */}
-            <div className="mb-6 flex flex-wrap items-center gap-4">
-              <Button
-                variant="ghost"
-                size="default"
-                className="px-3"
-                onClick={() => router.push(projectUrl)}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Back to Project</span>
-                <span className="sm:hidden">Back</span>
-              </Button>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
-                  {project.title}
-                </h1>
-                <p className="text-muted-foreground text-sm mt-1">
-                  Share View
-                </p>
-              </div>
-            </div>
-
+          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 pt-16">
             <ThumbnailGrid
               videosByName={project.videosByName}
               thumbnailsByName={thumbnailsByName}
               thumbnailsLoading={thumbnailsLoading}
               onVideoSelect={handleVideoSelect}
+              projectTitle={project.title}
+              projectDescription={project.description}
+              clientName={clientDisplayName}
             />
           </div>
         </div>
@@ -515,7 +500,7 @@ export default function AdminSharePage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
       {/* Thumbnail Reel for multi-video projects */}
       {hasMultipleVideos && (
         <ThumbnailReel
@@ -525,135 +510,107 @@ export default function AdminSharePage() {
           onVideoSelect={handleVideoSelect}
           onBackToGrid={handleBackToGrid}
           showBackButton={true}
+          showCommentToggle={!project.hideFeedback}
+          isCommentPanelVisible={!hideComments}
+          onToggleCommentPanel={() => setHideComments(!hideComments)}
         />
       )}
 
-      {/* Single video: show simple header */}
+      {/* Theme toggle for single-video projects */}
       {!hasMultipleVideos && (
-        <div className="bg-card border-b border-border px-3 py-2 sm:px-4 sm:py-2.5 flex items-center gap-2">
+        <div className="absolute top-3 right-3 z-20">
+          <ThemeToggle />
+        </div>
+      )}
+
+      {/* Back button for single-video projects */}
+      {!hasMultipleVideos && (
+        <div className="absolute top-3 left-3 z-20">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => router.push(projectUrl)}
-            className="shrink-0 gap-1.5 px-2 sm:px-3 h-8 sm:h-9"
+            className="bg-card/95 backdrop-blur-sm"
+            title="Back to project"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline text-sm">Back</span>
+            <span className="hidden sm:inline ml-2">Back</span>
           </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-sm sm:text-base font-semibold text-foreground truncate">
-              {project.title}
-            </h1>
-          </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <div className="max-w-screen-2xl mx-auto w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-6 flex-1 min-h-0 flex flex-col">
-          {/* Main Content */}
-            {readyVideos.length === 0 ? (
-              <Card className="bg-card border-border rounded-lg">
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">
-                    {tokensLoading ? 'Loading video...' : 'No videos are ready for review yet. Please check back later.'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-            <div className={`flex-1 min-h-0 ${project.hideFeedback || hideComments ? 'flex flex-col w-full' : 'flex flex-col lg:grid gap-4 sm:gap-6 lg:grid-cols-3'}`}>
-              {/* Video Player - order-1 on both mobile and desktop */}
-              <div className={`${project.hideFeedback || hideComments ? 'flex-1 min-h-0 flex flex-col relative' : 'order-1 lg:col-span-2'}`}>
-                {/* Show Comments Toggle Button - visible when comments are hidden */}
-                {!project.hideFeedback && hideComments && (
-                  <Button
-                    onClick={() => setHideComments(false)}
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-4 right-4 z-10 hidden lg:flex items-center gap-2 bg-background/95 backdrop-blur-sm shadow-lg hover:bg-background"
-                    title="Show feedback & discussion"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    Show Feedback
-                  </Button>
-                )}
-                <VideoPlayer
-                  videos={readyVideos}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
+        {readyVideos.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center p-4">
+            <Card className="bg-card">
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  {tokensLoading ? 'Loading video...' : 'No videos are ready for review yet.'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <>
+            {/* Video Player */}
+            <div className={`flex-1 min-h-0 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
+              <VideoPlayer
+                videos={readyVideos}
+                projectId={project.id}
+                projectStatus={project.status}
+                defaultQuality={defaultQuality}
+                projectTitle={project.title}
+                projectDescription={project.description}
+                clientName={project.clientName}
+                isPasswordProtected={!!project.sharePassword}
+                watermarkEnabled={project.watermarkEnabled}
+                activeVideoName={activeVideoName}
+                initialSeekTime={initialSeekTime}
+                initialVideoIndex={initialVideoIndex}
+                isAdmin={true}
+                isGuest={false}
+                allowAssetDownload={project.allowAssetDownload}
+                shareToken={null}
+                onApprove={undefined}
+                hideDownloadButton={true}
+                comments={!project.hideFeedback ? filteredComments : []}
+                timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
+                onCommentFocus={(commentId) => setFocusCommentId(commentId)}
+                fillContainer={true}
+              />
+            </div>
+
+            {/* Comments Section */}
+            {showCommentPanel && (
+              <div className="shrink-0 lg:shrink lg:flex-1 lg:max-w-[30%] xl:max-w-[25%] lg:min-w-[280px] flex flex-col max-h-[35vh] lg:max-h-full lg:h-full overflow-hidden rounded-xl bg-card">
+                <CommentSection
                   projectId={project.id}
-                  projectStatus={project.status}
-                  defaultQuality={defaultQuality}
-                  projectTitle={project.title}
-                  projectDescription={project.description}
-                  clientName={project.clientName}
+                  projectSlug={project.slug}
+                  comments={filteredComments}
+                  focusCommentId={focusCommentId}
+                  clientName={clientDisplayName}
+                  clientEmail={project.recipients?.[0]?.email}
+                  isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
+                  restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+                  videos={readyVideos}
+                  isAdminView={true}
+                  smtpConfigured={project.smtpConfigured}
                   isPasswordProtected={!!project.sharePassword}
-                  watermarkEnabled={project.watermarkEnabled}
-                  activeVideoName={activeVideoName}
-                  initialSeekTime={initialSeekTime}
-                  initialVideoIndex={initialVideoIndex}
-                  isAdmin={true}
-                  isGuest={false}
-                  allowAssetDownload={project.allowAssetDownload}
+                  adminUser={adminUser}
+                  recipients={project.recipients || []}
                   shareToken={null}
-                  onApprove={undefined}
-                  hideDownloadButton={true}
-                  comments={!project.hideFeedback ? filteredComments : []}
+                  showShortcutsButton={true}
                   timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
-                  onCommentFocus={(commentId) => setFocusCommentId(commentId)}
-                  onVideoStateChange={setVideoState}
+                  mobileCollapsible={true}
+                  initialMobileCollapsed={true}
+                  onToggleVisibility={() => setHideComments(!hideComments)}
+                  showToggleButton={false}
                 />
               </div>
-
-              {/* Comments Section (input + collapsible messages) - order-2 */}
-              {!project.hideFeedback && !hideComments && (
-                <div className="order-2 lg:sticky lg:top-6 lg:self-start">
-                  <CommentSection
-                    projectId={project.id}
-                    projectSlug={project.slug}
-                    comments={filteredComments}
-                    focusCommentId={focusCommentId}
-                    clientName={clientDisplayName}
-                    clientEmail={project.recipients?.[0]?.email}
-                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
-                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                    videos={readyVideos}
-                    isAdminView={true}
-                    smtpConfigured={project.smtpConfigured}
-                    isPasswordProtected={!!project.sharePassword}
-                    adminUser={adminUser}
-                    recipients={project.recipients || []}
-                    shareToken={null}
-                    showShortcutsButton={true}
-                    timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
-                    mobileCollapsible={true}
-                    initialMobileCollapsed={true}
-                    onToggleVisibility={() => setHideComments(!hideComments)}
-                    showToggleButton={true}
-                  />
-                </div>
-              )}
-
-              {/* Project Info - order-3 on mobile only, hidden on desktop */}
-              {videoState && (
-                <div className="order-3 lg:hidden">
-                  <ProjectInfo
-                    selectedVideo={videoState.selectedVideo}
-                    displayLabel={videoState.displayLabel}
-                    isVideoApproved={videoState.isVideoApproved}
-                    projectId={project.id}
-                    projectTitle={project.title}
-                    projectDescription={project.description}
-                    clientName={project.clientName}
-                    isPasswordProtected={!!project.sharePassword}
-                    watermarkEnabled={project.watermarkEnabled}
-                    defaultQuality={defaultQuality}
-                    isAdmin={true}
-                    hideDownloadButton={true}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

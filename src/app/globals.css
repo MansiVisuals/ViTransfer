@@ -5,16 +5,16 @@
 @layer base {
   /* Light Mode Theme */
   :root {
-    /* Base colors - light theme */
-    --background: 0 0% 98%;
+    /* Base colors - light theme (soft grey instead of white) */
+    --background: 220 14% 92%;
     --foreground: 0 0% 13%;
 
-    /* Card colors - elevated surfaces */
-    --card: 0 0% 100%;
+    /* Card colors - elevated surfaces (slightly lighter than background) */
+    --card: 220 14% 96%;
     --card-foreground: 0 0% 13%;
 
     /* Popover colors */
-    --popover: 0 0% 100%;
+    --popover: 220 14% 96%;
     --popover-foreground: 0 0% 13%;
 
     /* Primary - Blue (#007AFF) */
@@ -23,15 +23,15 @@
     --primary-visible: 211 100% 95%;
 
     /* Secondary - Gray */
-    --secondary: 240 5% 96%;
+    --secondary: 220 14% 89%;
     --secondary-foreground: 0 0% 13%;
 
     /* Muted - subtle backgrounds */
-    --muted: 240 5% 96%;
+    --muted: 220 14% 89%;
     --muted-foreground: 0 0% 45%;
 
     /* Accent - tint color */
-    --accent: 240 5% 96%;
+    --accent: 220 14% 89%;
     --accent-foreground: 211 100% 50%;
 
     /* Success - Green (#34C759) */
@@ -55,8 +55,8 @@
     --info-visible: 200 100% 95%;
 
     /* Border and input */
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
+    --border: 220 14% 85%;
+    --input: 220 14% 85%;
     --ring: 211 100% 50%;
 
     /* Border radius values */

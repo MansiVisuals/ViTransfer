@@ -258,7 +258,7 @@ export default function TimelineMarkers({
                     absolute bottom-full mb-2 ${getTooltipAlignment(primaryMarker.position)}
                     bg-black/95 text-white backdrop-blur-sm
                     rounded-lg shadow-2xl
-                    p-2.5 min-w-[180px] max-w-[260px]
+                    p-2 sm:p-2.5 w-[200px] sm:w-[240px] max-w-[calc(100vw-2rem)]
                     z-50
                     animate-in fade-in-0 slide-in-from-bottom-1 duration-150
                   `}

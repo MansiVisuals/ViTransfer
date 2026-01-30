@@ -42,6 +42,7 @@ interface VideoPlayerProps {
     displayLabel: string
   }) => void // Callback to expose video state for mobile layout
   usePreviewForApprovedPlayback?: boolean // Use preview for approved playback instead of original
+  fillContainer?: boolean // Fill parent container height (for full-viewport layouts)
 }
 
 export default function VideoPlayer({
@@ -69,6 +70,7 @@ export default function VideoPlayer({
   onCommentFocus, // Callback when timeline marker is clicked
   onVideoStateChange, // Callback to expose video state for mobile layout
   usePreviewForApprovedPlayback = false, // Default to false (use original)
+  fillContainer = false, // Default to false (standard aspect ratio)
 }: VideoPlayerProps) {
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
   const [videoUrl, setVideoUrl] = useState<string>('')
@@ -640,10 +642,10 @@ export default function VideoPlayer({
   }
 
   return (
-    <div className="space-y-4 flex flex-col max-h-full">
+    <div className={`flex flex-col ${fillContainer ? 'h-full' : 'space-y-4 max-h-full'}`}>
       {/* Version Selector - Show ABOVE video on mobile, BELOW on desktop */}
       {displayVideos.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto py-2 flex-shrink-0 lg:order-2">
+        <div className={`flex gap-2 overflow-x-auto py-2 px-2 flex-shrink-0 ${fillContainer ? '' : 'lg:order-2'}`}>
           {displayVideos.map((video, index) => {
             const videoApproved = (video as any).approved === true
             return (
@@ -651,10 +653,11 @@ export default function VideoPlayer({
                 key={video.id}
                 onClick={() => setSelectedVideoIndex(index)}
                 variant={selectedVideoIndex === index ? 'default' : 'outline'}
+                size="sm"
                 className="whitespace-nowrap relative"
               >
                 {videoApproved && (
-                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-success" />
                 )}
                 {videoApproved ? 'Approved Version' : video.versionLabel}
               </Button>
@@ -664,10 +667,14 @@ export default function VideoPlayer({
       )}
 
       {/* Video Player Container */}
-      <div 
+      <div
         ref={containerRef}
-        className="relative bg-background rounded-lg flex-shrink min-h-0 overflow-hidden group lg:order-1"
-        style={{
+        className={`relative overflow-hidden group ${
+          fillContainer
+            ? 'flex-1 min-h-0 bg-background'
+            : 'rounded-lg flex-shrink min-h-0 lg:order-1 bg-muted'
+        }`}
+        style={fillContainer ? {} : {
           aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
           // Constrain vertical videos (9:16, portrait) to prevent massive size
           ...(selectedVideo && selectedVideo.height > selectedVideo.width ? {
@@ -698,7 +705,6 @@ export default function VideoPlayer({
               x-webkit-airplay="allow"
               style={{
                 objectFit: 'contain',
-                backgroundColor: '#000',
               }}
             />
 

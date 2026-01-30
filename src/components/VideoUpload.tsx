@@ -23,15 +23,16 @@ interface VideoUploadProps {
   projectId: string
   videoName: string // Required video name for multi-video support
   onUploadComplete?: () => void // Callback when upload completes successfully
+  initialFile?: File | null // Pre-selected file from drag & drop
 }
 
-export default function VideoUpload({ projectId, videoName, onUploadComplete }: VideoUploadProps) {
+export default function VideoUpload({ projectId, videoName, onUploadComplete, initialFile }: VideoUploadProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadRef = useRef<tus.Upload | null>(null)
   const videoIdRef = useRef<string | null>(null)
 
-  const [file, setFile] = useState<File | null>(null)
+  const [file, setFile] = useState<File | null>(initialFile || null)
   const [uploading, setUploading] = useState(false)
   const [paused, setPaused] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -39,6 +40,13 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete }: 
   const [versionLabel, setVersionLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+
+  // Set file from initialFile prop when it changes
+  useEffect(() => {
+    if (initialFile) {
+      setFile(initialFile)
+    }
+  }, [initialFile])
 
   // Warn before leaving page if upload is in progress
   useEffect(() => {

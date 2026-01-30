@@ -307,9 +307,9 @@ export default function CommentSection({
   }
 
   return (
-    <Card className="bg-card border border-border flex flex-col h-auto lg:h-full max-h-[75vh] rounded-lg overflow-hidden" data-comment-section>
+    <Card className="bg-card border-0 flex flex-col h-full lg:max-h-full rounded-none lg:rounded-lg overflow-hidden" data-comment-section>
       {/* Desktop: Show header at top, Mobile: Hide header (will show below input) */}
-      <CardHeader className={cn("border-b border-border flex-shrink-0", mobileCollapsible && "hidden lg:block")}>
+      <CardHeader className={cn("flex-shrink-0", mobileCollapsible && "hidden lg:block")}>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-foreground flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
@@ -394,7 +394,7 @@ export default function CommentSection({
         {mobileCollapsible && (
           <button
             onClick={() => setIsMobileCollapsed(!isMobileCollapsed)}
-            className="order-2 lg:hidden w-full p-3 flex items-center justify-between border-t border-border bg-muted/30"
+            className="order-2 lg:hidden w-full p-3 flex items-center justify-between bg-muted/30"
           >
             <span className="text-sm font-medium flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />

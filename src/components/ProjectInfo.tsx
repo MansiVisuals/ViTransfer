@@ -179,7 +179,7 @@ export default function ProjectInfo({
 
   return (
     <div className={cn(
-      `rounded-lg p-4 text-card-foreground flex-shrink-0 ${!isVideoApproved ? 'bg-accent/50 border-2 border-primary/20' : 'bg-card border border-border'}`,
+      'rounded-lg p-4 text-card-foreground flex-shrink-0 bg-card',
       className
     )}>
       {/* Shortcuts Dialog */}
@@ -236,6 +236,7 @@ export default function ProjectInfo({
               onClick={() => setShowApprovalConfirm(true)}
               variant="success"
               size="sm"
+              title="Approve this video version"
             >
               <CheckCircle2 className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Approve</span>
@@ -246,7 +247,7 @@ export default function ProjectInfo({
           {!isGuest && (
             <Dialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" title="View video information">
                   <Info className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Info</span>
                 </Button>
@@ -337,7 +338,7 @@ export default function ProjectInfo({
 
           {/* Download Button - Only show when video is approved and not in guest mode */}
           {isVideoApproved && !isGuest && !hideDownloadButton && (
-            <Button onClick={handleDownload} variant="default" size="sm">
+            <Button onClick={handleDownload} variant="default" size="sm" title="Download original quality video">
               <Download className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Download</span>
             </Button>

@@ -6,14 +6,14 @@ import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
 import ThumbnailGrid from '@/components/ThumbnailGrid'
 import ThumbnailReel from '@/components/ThumbnailReel'
-import ProjectInfo from '@/components/ProjectInfo'
 import { OTPInput } from '@/components/OTPInput'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
-import { Lock, Check, Mail, KeyRound, MessageSquare } from 'lucide-react'
+import { Lock, Check, Mail, KeyRound } from 'lucide-react'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
+import ThemeToggle from '@/components/ThemeToggle'
 
 interface SharePageClientProps {
   token: string
@@ -57,12 +57,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [hideComments, setHideComments] = useState(false)
-  const [videoState, setVideoState] = useState<{
-    selectedVideo: any
-    isVideoApproved: boolean
-    displayVideos: any[]
-    displayLabel: string
-  } | null>(null)
   const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
@@ -849,12 +843,16 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
-  // Show thumbnail grid for multi-video projects when in grid view
+  // Show thumbnail grid for multi-video projects when in grid view (scrollable)
   if (viewState === 'grid' && hasMultipleVideos) {
     return (
-      <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
+      <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+        {/* Theme toggle for grid view */}
+        <div className="absolute top-3 right-3 z-20">
+          <ThemeToggle />
+        </div>
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
             <ThumbnailGrid
               videosByName={project.videosByName}
               thumbnailsByName={thumbnailsByName}
@@ -870,9 +868,12 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     )
   }
 
+  // Whether to show comment panel (not hidden by project settings, user toggle, or guest status)
+  const showCommentPanel = !project.hideFeedback && !isGuest && !hideComments
+
   return (
-    <div className="flex-1 min-h-0 bg-background flex flex-col overflow-hidden">
-      {/* Thumbnail Reel for multi-video projects */}
+    <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+      {/* Thumbnail Reel for multi-video projects - always visible, collapsible */}
       {hasMultipleVideos && (
         <ThumbnailReel
           videosByName={project.videosByName}
@@ -881,15 +882,23 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           onVideoSelect={handleVideoSelect}
           onBackToGrid={handleBackToGrid}
           showBackButton={true}
+          showCommentToggle={!project.hideFeedback && !isGuest}
+          isCommentPanelVisible={!hideComments}
+          onToggleCommentPanel={() => setHideComments(!hideComments)}
         />
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Content Area */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1 min-h-0 flex flex-col">
-          {/* Content Area */}
-          {readyVideos.length === 0 ? (
+      {/* Theme toggle for single-video projects (floating in top-right) */}
+      {!hasMultipleVideos && (
+        <div className="absolute top-3 right-3 z-20">
+          <ThemeToggle />
+        </div>
+      )}
+
+      {/* Main Content Area - fills remaining height */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
+        {readyVideos.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center p-4">
             <Card className="bg-card border-border">
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
@@ -897,107 +906,67 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 </p>
               </CardContent>
             </Card>
-          ) : (
-            <div className={`flex-1 min-h-0 ${(project.hideFeedback || isGuest || hideComments) ? 'flex flex-col max-w-7xl mx-auto w-full' : 'flex flex-col lg:grid gap-4 sm:gap-6 lg:grid-cols-3'}`}>
-              {/* Video Player - order-1 on both mobile and desktop */}
-              <div className={`${(project.hideFeedback || isGuest || hideComments) ? 'flex-1 min-h-0 flex flex-col relative' : 'order-1 lg:col-span-2'}`}>
-                {/* Show Comments Toggle Button - visible when comments are hidden */}
-                {!project.hideFeedback && !isGuest && hideComments && (
-                  <Button
-                    onClick={() => setHideComments(false)}
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-4 right-4 z-10 hidden lg:flex items-center gap-2 bg-background/95 backdrop-blur-sm shadow-lg hover:bg-background"
-                    title="Show feedback & discussion"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    Show Feedback
-                  </Button>
-                )}
-                <VideoPlayer
-                  videos={readyVideos}
+          </div>
+        ) : (
+          <>
+            {/* Video Player - fills available space */}
+            <div className={`flex-1 min-h-0 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
+              <VideoPlayer
+                videos={readyVideos}
+                projectId={project.id}
+                projectStatus={project.status}
+                defaultQuality={defaultQuality}
+                projectTitle={project.title}
+                projectDescription={isGuest ? null : project.description}
+                clientName={isGuest ? null : project.clientName}
+                isPasswordProtected={isPasswordProtected || false}
+                watermarkEnabled={project.watermarkEnabled}
+                activeVideoName={activeVideoName}
+                onApprove={isGuest ? undefined : fetchProjectData}
+                initialSeekTime={initialSeekTime}
+                initialVideoIndex={initialVideoIndex}
+                isAdmin={false}
+                isGuest={isGuest}
+                allowAssetDownload={project.allowAssetDownload}
+                clientCanApprove={project.clientCanApprove}
+                shareToken={shareToken}
+                comments={!project.hideFeedback && !isGuest ? filteredComments : []}
+                timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
+                onCommentFocus={(commentId) => setFocusCommentId(commentId)}
+                usePreviewForApprovedPlayback={project.usePreviewForApprovedPlayback}
+                fillContainer={true}
+              />
+            </div>
+
+            {/* Comments Section - proportional side panel on desktop, collapsible on mobile */}
+            {showCommentPanel && (
+              <div className="shrink-0 lg:shrink lg:flex-1 lg:max-w-[30%] xl:max-w-[25%] lg:min-w-[280px] flex flex-col max-h-[35vh] lg:max-h-full lg:h-full overflow-hidden rounded-xl bg-card">
+                <CommentSection
                   projectId={project.id}
-                  projectStatus={project.status}
-                  defaultQuality={defaultQuality}
-                  projectTitle={project.title}
-                  projectDescription={isGuest ? null : project.description}
-                  clientName={isGuest ? null : project.clientName}
+                  comments={filteredComments}
+                  focusCommentId={focusCommentId}
+                  clientName={project.clientName}
+                  clientEmail={project.clientEmail}
+                  isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
+                  restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+                  videos={readyVideos}
+                  isAdminView={false}
+                  smtpConfigured={project.smtpConfigured}
                   isPasswordProtected={isPasswordProtected || false}
-                  watermarkEnabled={project.watermarkEnabled}
-                  activeVideoName={activeVideoName}
-                  onApprove={isGuest ? undefined : fetchProjectData}
-                  initialSeekTime={initialSeekTime}
-                  initialVideoIndex={initialVideoIndex}
-                  isAdmin={false}
-                  isGuest={isGuest}
-                  allowAssetDownload={project.allowAssetDownload}
-                  clientCanApprove={project.clientCanApprove}
+                  recipients={project.recipients || []}
                   shareToken={shareToken}
-                  comments={!project.hideFeedback && !isGuest ? filteredComments : []}
+                  showShortcutsButton={true}
                   timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
-                  onCommentFocus={(commentId) => setFocusCommentId(commentId)}
-                  onVideoStateChange={setVideoState}
-                  usePreviewForApprovedPlayback={project.usePreviewForApprovedPlayback}
+                  mobileCollapsible={true}
+                  initialMobileCollapsed={true}
+                  authenticatedEmail={authenticatedEmail}
+                  onToggleVisibility={() => setHideComments(!hideComments)}
+                  showToggleButton={false}
                 />
               </div>
-
-              {/* Comments Section (input + collapsible messages) - order-2 */}
-              {!project.hideFeedback && !isGuest && !hideComments && (
-                <div className="order-2 lg:sticky lg:top-6 lg:self-start">
-                  <CommentSection
-                    projectId={project.id}
-                    comments={filteredComments}
-                    focusCommentId={focusCommentId}
-                    clientName={project.clientName}
-                    clientEmail={project.clientEmail}
-                    isApproved={project.status === 'APPROVED' || project.status === 'SHARE_ONLY'}
-                    restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                    videos={readyVideos}
-                    isAdminView={false}
-                    smtpConfigured={project.smtpConfigured}
-                    isPasswordProtected={isPasswordProtected || false}
-                    recipients={project.recipients || []}
-                    shareToken={shareToken}
-                    showShortcutsButton={true}
-                    timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
-                    mobileCollapsible={true}
-                    initialMobileCollapsed={true}
-                    authenticatedEmail={authenticatedEmail}
-                    onToggleVisibility={() => setHideComments(!hideComments)}
-                    showToggleButton={true}
-                  />
-                </div>
-              )}
-
-              {/* Project Info - order-3 on mobile only, hidden on desktop */}
-              {videoState && !isGuest && (
-                <div className="order-3 lg:hidden">
-                  <ProjectInfo
-                    selectedVideo={videoState.selectedVideo}
-                    displayLabel={videoState.displayLabel}
-                    isVideoApproved={videoState.isVideoApproved}
-                    projectId={project.id}
-                    projectTitle={project.title}
-                    projectDescription={project.description}
-                    clientName={project.clientName}
-                    isPasswordProtected={isPasswordProtected || false}
-                    watermarkEnabled={project.watermarkEnabled}
-                    defaultQuality={defaultQuality}
-                    onApprove={fetchProjectData}
-                    isAdmin={false}
-                    clientCanApprove={project.clientCanApprove}
-                    isGuest={false}
-                    hideDownloadButton={false}
-                    allowAssetDownload={project.allowAssetDownload}
-                    shareToken={shareToken}
-                    activeVideoName={activeVideoName}
-                    usePreviewForApprovedPlayback={project.usePreviewForApprovedPlayback}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

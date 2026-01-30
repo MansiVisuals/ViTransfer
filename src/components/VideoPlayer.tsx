@@ -671,8 +671,8 @@ export default function VideoPlayer({
           aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
           // Constrain vertical videos (9:16, portrait) to prevent massive size
           ...(selectedVideo && selectedVideo.height > selectedVideo.width ? {
-            maxWidth: '400px',
-            maxHeight: '80vh',
+            maxWidth: '300px',
+            maxHeight: '60vh',
             marginLeft: 'auto',
             marginRight: 'auto',
           } : {})

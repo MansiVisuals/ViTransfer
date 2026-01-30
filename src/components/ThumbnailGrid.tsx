@@ -9,6 +9,8 @@ interface ThumbnailGridProps {
   thumbnailsLoading: boolean
   onVideoSelect: (videoName: string) => void
   projectTitle?: string
+  projectDescription?: string
+  clientName?: string
 }
 
 export default function ThumbnailGrid({
@@ -17,25 +19,37 @@ export default function ThumbnailGrid({
   thumbnailsLoading,
   onVideoSelect,
   projectTitle,
+  projectDescription,
+  clientName,
 }: ThumbnailGridProps) {
   const videoNames = Object.keys(videosByName).sort((a, b) => a.localeCompare(b))
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Header */}
+      {/* Project Info Header */}
       <div className="text-center mb-6 sm:mb-8">
         {projectTitle && (
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground mb-2">
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground mb-1">
             {projectTitle}
           </h1>
         )}
-        <p className="text-sm text-muted-foreground">
+        {clientName && (
+          <p className="text-sm text-muted-foreground mb-2">
+            For {clientName}
+          </p>
+        )}
+        {projectDescription && (
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto mb-4">
+            {projectDescription}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
           Select a video to start reviewing
         </p>
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:gap-6 xl:grid-cols-4 2xl:grid-cols-5">
         {videoNames.map((name) => {
           const videos = videosByName[name]
           const hasApprovedVideo = videos.some((v: any) => v.approved === true)
@@ -99,9 +113,6 @@ export default function ThumbnailGrid({
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 text-left">
                   {versionCount} {versionCount === 1 ? 'version' : 'versions'}
-                  {hasApprovedVideo && (
-                    <span className="text-success ml-2">Approved</span>
-                  )}
                 </p>
               </div>
             </button>

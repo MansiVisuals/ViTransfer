@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
 import ThumbnailGrid from '@/components/ThumbnailGrid'
@@ -21,6 +21,8 @@ interface SharePageClientProps {
 
 export default function SharePageClient({ token }: SharePageClientProps) {
   const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
 
   // Parse URL parameters for video seeking
   const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
@@ -487,17 +489,28 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     setViewState('grid')
   }, [project?.videosByName, urlVideoName])
 
-  // Handle video selection
+  // Handle video selection - update URL so refresh preserves state
   const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)
     setActiveVideosRaw(project.videosByName[videoName])
     setViewState('player')
-  }, [project?.videosByName])
 
-  // Handle back to grid
+    // Update URL with video parameter (preserves state on refresh)
+    const params = new URLSearchParams(searchParams?.toString() || '')
+    params.set('video', videoName)
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [project?.videosByName, searchParams, pathname, router])
+
+  // Handle back to grid - remove video param from URL
   const handleBackToGrid = useCallback(() => {
     setViewState('grid')
-  }, [])
+
+    // Remove video parameter from URL
+    const params = new URLSearchParams(searchParams?.toString() || '')
+    params.delete('video')
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+    router.replace(newUrl || '', { scroll: false })
+  }, [searchParams, pathname, router])
 
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault()
@@ -848,6 +861,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               thumbnailsLoading={thumbnailsLoading}
               onVideoSelect={handleVideoSelect}
               projectTitle={project.title}
+              projectDescription={isGuest ? undefined : project.description}
+              clientName={isGuest ? undefined : project.clientName}
             />
           </div>
         </div>

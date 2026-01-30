@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useParams, useSearchParams, useRouter } from 'next/navigation'
+import { useParams, useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
@@ -17,6 +17,7 @@ export default function AdminSharePage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const pathname = usePathname()
   const id = params?.id as string
 
   // Parse URL parameters for video seeking (same as public share page)
@@ -397,17 +398,28 @@ export default function AdminSharePage() {
     setViewState('grid')
   }, [project?.videosByName, urlVideoName])
 
-  // Handle video selection
+  // Handle video selection - update URL so refresh preserves state
   const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)
     setActiveVideosRaw(project.videosByName[videoName])
     setViewState('player')
-  }, [project?.videosByName])
 
-  // Handle back to grid
+    // Update URL with video parameter (preserves state on refresh)
+    const params = new URLSearchParams(searchParams?.toString() || '')
+    params.set('video', videoName)
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }, [project?.videosByName, searchParams, pathname, router])
+
+  // Handle back to grid - remove video param from URL
   const handleBackToGrid = useCallback(() => {
     setViewState('grid')
-  }, [])
+
+    // Remove video parameter from URL
+    const params = new URLSearchParams(searchParams?.toString() || '')
+    params.delete('video')
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+    router.replace(newUrl || '', { scroll: false })
+  }, [searchParams, pathname, router])
 
   // Show loading state while project loads
   if (loading) {
@@ -495,7 +507,6 @@ export default function AdminSharePage() {
               thumbnailsByName={thumbnailsByName}
               thumbnailsLoading={thumbnailsLoading}
               onVideoSelect={handleVideoSelect}
-              projectTitle={project.title}
             />
           </div>
         </div>
@@ -517,31 +528,29 @@ export default function AdminSharePage() {
         />
       )}
 
+      {/* Single video: show simple header */}
+      {!hasMultipleVideos && (
+        <div className="bg-card border-b border-border px-3 py-2 sm:px-4 sm:py-2.5 flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(projectUrl)}
+            className="shrink-0 gap-1.5 px-2 sm:px-3 h-8 sm:h-9"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Back</span>
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-sm sm:text-base font-semibold text-foreground truncate">
+              {project.title}
+            </h1>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <div className="max-w-screen-2xl mx-auto w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-6 flex-1 min-h-0 flex flex-col">
-          {/* Header */}
-          <div className="mb-6 flex flex-wrap items-center gap-4">
-            <Button
-              variant="ghost"
-              size="default"
-              className="px-3"
-              onClick={() => router.push(projectUrl)}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Back to Project</span>
-              <span className="sm:hidden">Back</span>
-            </Button>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
-                {project.title}
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Share View
-              </p>
-            </div>
-          </div>
-
           {/* Main Content */}
             {readyVideos.length === 0 ? (
               <Card className="bg-card border-border rounded-lg">

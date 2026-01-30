@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { Comment } from '@prisma/client'
 import { getUserColor } from '@/lib/utils'
 import { timecodeToSeconds } from '@/lib/timecode'
@@ -89,6 +89,15 @@ export default function TimelineMarkers({
 }: TimelineMarkersProps) {
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null)
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile for responsive comment limit
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Process comments into markers - only show comments with valid timestamps for this video
   const markers = useMemo((): MarkerData[] => {
@@ -254,7 +263,7 @@ export default function TimelineMarkers({
                     animate-in fade-in-0 slide-in-from-bottom-1 duration-150
                   `}
                 >
-                  {group.slice(0, 3).map((marker, idx) => {
+                  {group.slice(0, isMobile ? 2 : 4).map((marker, idx) => {
                     const markerColors = COLOR_MAP[marker.colorKey] || COLOR_MAP['border-gray-500']
                     return (
                       <div
@@ -282,9 +291,9 @@ export default function TimelineMarkers({
                       </div>
                     )
                   })}
-                  {group.length > 3 && (
+                  {group.length > (isMobile ? 2 : 4) && (
                     <p className="text-[10px] text-white/60 mt-2 pt-2 border-t border-white/20">
-                      +{group.length - 3} more
+                      +{group.length - (isMobile ? 2 : 4)} more
                     </p>
                   )}
                 </div>

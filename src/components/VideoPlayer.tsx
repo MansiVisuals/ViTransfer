@@ -505,7 +505,7 @@ export default function VideoPlayer({
     }))
   }
 
-  // Auto-hide controls when not in use
+  // Auto-hide controls when not in use (2 seconds is standard for most video players)
   const resetControlsTimeout = () => {
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current)
@@ -514,9 +514,22 @@ export default function VideoPlayer({
     if (isPlaying) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false)
-      }, 3000)
+      }, 2000)
     }
   }
+
+  // Start auto-hide timer when video starts playing
+  useEffect(() => {
+    if (isPlaying) {
+      resetControlsTimeout()
+    } else {
+      // Show controls when paused
+      setShowControls(true)
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
+    }
+  }, [isPlaying])
 
   // Track video play/pause events
   useEffect(() => {
@@ -582,20 +595,38 @@ export default function VideoPlayer({
     }
   }, [])
 
-  // Show controls on mouse move
+  // Show controls on mouse move and touch (only within video player)
   useEffect(() => {
     const container = containerRef.current
-    const handleMouseMove = () => {
+
+    const handleInteraction = () => {
       resetControlsTimeout()
     }
 
+    // Hide controls when mouse leaves video player area
+    const handleMouseLeave = () => {
+      if (isPlaying) {
+        if (controlsTimeoutRef.current) {
+          clearTimeout(controlsTimeoutRef.current)
+        }
+        // Hide controls immediately when mouse leaves during playback
+        controlsTimeoutRef.current = setTimeout(() => {
+          setShowControls(false)
+        }, 500) // Short delay before hiding
+      }
+    }
+
     if (container) {
-      container.addEventListener('mousemove', handleMouseMove)
+      container.addEventListener('mousemove', handleInteraction)
+      container.addEventListener('touchstart', handleInteraction)
+      container.addEventListener('mouseleave', handleMouseLeave)
     }
 
     return () => {
       if (container) {
-        container.removeEventListener('mousemove', handleMouseMove)
+        container.removeEventListener('mousemove', handleInteraction)
+        container.removeEventListener('touchstart', handleInteraction)
+        container.removeEventListener('mouseleave', handleMouseLeave)
       }
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
@@ -673,7 +704,7 @@ export default function VideoPlayer({
           fillContainer
             ? 'lg:flex-1 min-h-0 bg-background'
             : 'flex-shrink min-h-0 lg:order-1 bg-muted'
-        }`}
+        } ${isPlaying && !showControls ? 'cursor-none' : ''}`}
         style={fillContainer ? {} : {
           aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
           // Constrain vertical videos (9:16, portrait) to prevent massive size

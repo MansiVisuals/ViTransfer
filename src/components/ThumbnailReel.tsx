@@ -293,16 +293,16 @@ export default function ThumbnailReel({
                       )}
                     >
                       {/* Thumbnail */}
-                      <div className="aspect-video relative bg-muted">
+                      <div className="aspect-video relative bg-black">
                         {thumbnailUrl ? (
                           <img
                             src={thumbnailUrl}
                             alt={name}
-                            className="absolute inset-0 w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-contain"
                             draggable={false}
                           />
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
                             <Film className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground/50" />
                           </div>
                         )}

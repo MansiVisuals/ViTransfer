@@ -73,6 +73,9 @@ export default function AnalyticsClient({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const [expandedVideos, setExpandedVideos] = useState<Set<string>>(new Set())
+  const [activityPage, setActivityPage] = useState(1)
+  const ACTIVITY_PER_PAGE = 20
 
   const toggleExpand = (itemId: string) => {
     setExpandedItems(prev => {
@@ -81,6 +84,18 @@ export default function AnalyticsClient({ id }: { id: string }) {
         next.delete(itemId)
       } else {
         next.add(itemId)
+      }
+      return next
+    })
+  }
+
+  const toggleVideoExpand = (videoName: string) => {
+    setExpandedVideos(prev => {
+      const next = new Set(prev)
+      if (next.has(videoName)) {
+        next.delete(videoName)
+      } else {
+        next.add(videoName)
       }
       return next
     })
@@ -199,64 +214,68 @@ export default function AnalyticsClient({ id }: { id: string }) {
 
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 overflow-hidden">
           <Card className="overflow-hidden">
-            <CardHeader>
-              <CardTitle>Videos in this Project</CardTitle>
-              <CardDescription>Analytics grouped by video name, showing all versions</CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Videos in this Project</CardTitle>
+              <CardDescription className="text-xs">Download stats per video</CardDescription>
             </CardHeader>
-            <CardContent className="overflow-x-hidden">
+            <CardContent className="overflow-x-hidden pt-0">
               {videoStats.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No videos available</p>
+                <p className="text-center text-muted-foreground py-4 text-sm">No videos available</p>
               ) : (
-                <div className="space-y-4">
-                  {videoStats.map((video) => (
-                    <div key={video.videoName} className="border rounded-lg p-3 sm:p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm sm:text-base break-words">{video.videoName}</h4>
-                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                            {video.versions.length} version{video.versions.length !== 1 ? 's' : ''}
-                          </p>
+                <div className="space-y-1">
+                  {videoStats.map((video) => {
+                    const isExpanded = expandedVideos.has(video.videoName)
+                    return (
+                      <div
+                        key={video.videoName}
+                        className="border rounded-md text-sm hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => toggleVideoExpand(video.videoName)}
+                      >
+                        <div className="flex items-center gap-3 px-3 py-2">
+                          <Video className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="flex-1 min-w-0 truncate font-medium text-sm">{video.videoName}</span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {video.versions.length}v • {video.totalDownloads} dl
+                          </span>
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          )}
                         </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <div className="text-sm">
-                          <div className="text-xs text-muted-foreground mb-1">Total Downloads</div>
-                          <div className="font-medium text-base sm:text-lg">{video.totalDownloads}</div>
-                        </div>
-                      </div>
-
-                      {video.versions.length > 0 && (
-                        <div className="mt-3 pt-3 border-t">
-                          <div className="text-xs text-muted-foreground mb-2">Per-version breakdown:</div>
-                          <div className="space-y-1.5">
-                            {video.versions.map((version) => (
-                              <div key={version.id} className="flex items-center justify-between gap-2 text-xs sm:text-sm bg-accent/50 rounded px-2 py-1.5">
-                                <span className="text-muted-foreground truncate">{version.versionLabel}</span>
-                                <span className="font-medium whitespace-nowrap flex-shrink-0">{version.downloads} download{version.downloads !== 1 ? 's' : ''}</span>
-                              </div>
-                            ))}
+                        {isExpanded && video.versions.length > 0 && (
+                          <div className="px-3 pb-2 pt-1 border-t bg-muted/30">
+                            <div className="space-y-1">
+                              {video.versions.map((version) => (
+                                <div key={version.id} className="flex items-center justify-between gap-2 text-xs">
+                                  <span className="text-muted-foreground truncate">{version.versionLabel}</span>
+                                  <span className="font-medium whitespace-nowrap">{version.downloads} dl</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
 
           <Card className="overflow-hidden">
-            <CardHeader>
-              <CardTitle>Project Activity</CardTitle>
-              <CardDescription>All authentication and download events</CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Project Activity</CardTitle>
+              <CardDescription className="text-xs">
+                {activity.length > 0 ? `${activity.length} events` : 'Authentication and download events'}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="overflow-x-hidden">
+            <CardContent className="overflow-x-hidden pt-0">
               {activity.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No activity yet</p>
+                <p className="text-center text-muted-foreground py-4 text-sm">No activity yet</p>
               ) : (
-                <div className="space-y-2">
-                  {activity.map((event) => {
+                <div className="space-y-1">
+                  {activity.slice((activityPage - 1) * ACTIVITY_PER_PAGE, activityPage * ACTIVITY_PER_PAGE).map((event) => {
                     const isExpanded = expandedItems.has(event.id)
                     return (
                       <div
@@ -359,6 +378,31 @@ export default function AnalyticsClient({ id }: { id: string }) {
                       </div>
                     )
                   })}
+
+                  {/* Pagination Controls */}
+                  {activity.length > ACTIVITY_PER_PAGE && (
+                    <div className="flex items-center justify-between pt-3 border-t mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActivityPage(p => Math.max(1, p - 1))}
+                        disabled={activityPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Page {activityPage} of {Math.ceil(activity.length / ACTIVITY_PER_PAGE)}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActivityPage(p => Math.min(Math.ceil(activity.length / ACTIVITY_PER_PAGE), p + 1))}
+                        disabled={activityPage >= Math.ceil(activity.length / ACTIVITY_PER_PAGE)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

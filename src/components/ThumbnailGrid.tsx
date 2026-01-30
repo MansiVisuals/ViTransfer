@@ -94,20 +94,20 @@ export default function ThumbnailGrid({
               )}
             >
               {/* Thumbnail */}
-              <div className="aspect-video relative bg-muted">
+              <div className="aspect-video relative bg-black">
                 {thumbnailsLoading ? (
                   // Loading skeleton
                   <div className="absolute inset-0 animate-pulse bg-muted" />
                 ) : thumbnailUrl ? (
-                  // Thumbnail image
+                  // Thumbnail image - object-contain preserves aspect ratio
                   <img
                     src={thumbnailUrl}
                     alt={name}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-contain"
                   />
                 ) : (
                   // Placeholder
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
                     <Film className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/50" />
                   </div>
                 )}

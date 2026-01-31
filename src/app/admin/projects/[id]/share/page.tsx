@@ -367,17 +367,9 @@ export default function AdminSharePage() {
     }
   }, [project?.videosByName, id])
 
-  // Determine initial view state based on video count and URL params
+  // Determine initial view state based on URL params (same behavior as public share)
   useEffect(() => {
     if (!project?.videosByName) return
-
-    const videoNames = Object.keys(project.videosByName)
-    const hasMultiple = videoNames.length > 1
-
-    if (!hasMultiple) {
-      setViewState('player')
-      return
-    }
 
     if (urlVideoName && project.videosByName[urlVideoName]) {
       setViewState('player')
@@ -446,8 +438,6 @@ export default function AdminSharePage() {
     readyVideos = readyVideos.filter((v: any) => v.approved)
   }
 
-  const hasMultipleVideos = project.videosByName && Object.keys(project.videosByName).length > 1
-
   const activeVideoIds = new Set(activeVideos.map((v: any) => v.id))
   const filteredComments = comments.filter((comment: any) => {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
@@ -460,11 +450,11 @@ export default function AdminSharePage() {
 
   const showCommentPanel = !project.hideFeedback && !hideComments
 
-  // Show thumbnail grid for multi-video projects when in grid view
-  if (viewState === 'grid' && hasMultipleVideos) {
+  // Show thumbnail grid when in grid view (same as public share layout)
+  if (viewState === 'grid') {
     return (
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
-        {/* Theme toggle */}
+        {/* Theme toggle for grid view */}
         <div className="absolute top-3 right-3 z-20">
           <ThemeToggle />
         </div>
@@ -483,7 +473,7 @@ export default function AdminSharePage() {
           </Button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 pt-16">
+          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
             <ThumbnailGrid
               videosByName={project.videosByName}
               thumbnailsByName={thumbnailsByName}
@@ -501,44 +491,18 @@ export default function AdminSharePage() {
 
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
-      {/* Thumbnail Reel for multi-video projects */}
-      {hasMultipleVideos && (
-        <ThumbnailReel
-          videosByName={project.videosByName}
-          thumbnailsByName={thumbnailsByName}
-          activeVideoName={activeVideoName}
-          onVideoSelect={handleVideoSelect}
-          onBackToGrid={handleBackToGrid}
-          showBackButton={true}
-          showCommentToggle={!project.hideFeedback}
-          isCommentPanelVisible={!hideComments}
-          onToggleCommentPanel={() => setHideComments(!hideComments)}
-        />
-      )}
-
-      {/* Theme toggle for single-video projects */}
-      {!hasMultipleVideos && (
-        <div className="absolute top-3 right-3 z-20">
-          <ThemeToggle />
-        </div>
-      )}
-
-      {/* Back button for single-video projects */}
-      {!hasMultipleVideos && (
-        <div className="absolute top-3 left-3 z-20">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(projectUrl)}
-            className="bg-card/95 backdrop-blur-sm"
-            title="Back to project"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline ml-2">Back</span>
-          </Button>
-        </div>
-      )}
-
+      {/* Thumbnail Reel - always visible, collapsible */}
+      <ThumbnailReel
+        videosByName={project.videosByName}
+        thumbnailsByName={thumbnailsByName}
+        activeVideoName={activeVideoName}
+        onVideoSelect={handleVideoSelect}
+        onBackToGrid={handleBackToGrid}
+        showBackButton={true}
+        showCommentToggle={!project.hideFeedback}
+        isCommentPanelVisible={!hideComments}
+        onToggleCommentPanel={() => setHideComments(!hideComments)}
+      />
       {/* Main Content Area - scrollable on mobile, fixed on desktop */}
       <div className="flex-1 lg:min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
         {readyVideos.length === 0 ? (
@@ -554,7 +518,7 @@ export default function AdminSharePage() {
         ) : (
           <>
             {/* Video Player - auto height on mobile, fills space on desktop */}
-            <div className={`lg:min-h-0 lg:flex-1 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
+            <div className={`lg:min-h-0 lg:flex-1 min-w-0 flex flex-col ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
               <VideoPlayer
                 videos={readyVideos}
                 projectId={project.id}

@@ -515,7 +515,7 @@ export default function CustomVideoControls({
   }
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2 sm:p-3">
+    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2 sm:p-3 rounded-b-xl">
       {/* Timeline Container */}
       <div className="mb-2 sm:mb-3 px-1">
         <div

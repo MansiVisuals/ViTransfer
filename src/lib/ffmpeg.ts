@@ -421,7 +421,7 @@ export async function generateThumbnail(
     '-ss', timestamp.toString(), // Seek before input (faster - avoids decoding entire video)
     '-i', inputPath,
     '-vframes', '1', // Extract single frame
-    '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2', // Maintain aspect ratio with padding
+    '-vf', 'scale=w=min(1280\\,iw):h=min(720\\,ih):force_original_aspect_ratio=decrease', // Scale down if needed, preserve aspect ratio, no padding
     '-q:v', '2', // High quality JPEG (1-31 scale, 2 = excellent quality)
     '-y', // Overwrite output file
     outputPath

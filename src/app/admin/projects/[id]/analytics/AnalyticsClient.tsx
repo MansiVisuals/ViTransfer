@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, Video, Eye, Download, Calendar, Clock, ArrowLeft, Mail, Lock, UserCircle, Users, Globe, ChevronDown, ChevronRight } from 'lucide-react'
+import { BarChart3, Video, Eye, Download, ArrowLeft, Mail, Lock, UserCircle, Users, Globe, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
 
@@ -64,8 +64,25 @@ interface AnalyticsData {
   activity: Activity[]
 }
 
-function getAccessMethodColor(method: string): string {
-  return 'bg-primary-visible text-primary border-2 border-primary-visible'
+// Calculate page size to fill available height without scrolling
+function calculatePageSize(rowHeight: number, headerOffset: number): number {
+  if (typeof window === 'undefined') return 15
+  const available = window.innerHeight - headerOffset
+  return Math.max(5, Math.floor(available / rowHeight))
+}
+
+function useResponsivePageSize(rowHeight: number, headerOffset: number): number {
+  // Calculate initial value synchronously to prevent flickering on mount
+  const [pageSize, setPageSize] = useState(() => calculatePageSize(rowHeight, headerOffset))
+
+  useEffect(() => {
+    // Only listen for resize events, don't recalculate on mount
+    const handleResize = () => setPageSize(calculatePageSize(rowHeight, headerOffset))
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [rowHeight, headerOffset])
+
+  return pageSize
 }
 
 export default function AnalyticsClient({ id }: { id: string }) {
@@ -75,7 +92,8 @@ export default function AnalyticsClient({ id }: { id: string }) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [expandedVideos, setExpandedVideos] = useState<Set<string>>(new Set())
   const [activityPage, setActivityPage] = useState(1)
-  const ACTIVITY_PER_PAGE = 20
+  // Row ~36px, header/stats/nav ~380px offset
+  const activityPerPage = useResponsivePageSize(36, 380)
 
   const toggleExpand = (itemId: string) => {
     setExpandedItems(prev => {
@@ -167,75 +185,83 @@ export default function AnalyticsClient({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Visits</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalVisits.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.uniqueVisits} unique sessions
-              </p>
-            </CardContent>
-          </Card>
+        {/* Compact Stats Bar */}
+        <Card className="p-3 mb-4">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                <Eye className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Visits</p>
+                <p className="text-base font-semibold tabular-nums">{stats.totalVisits.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                <Users className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Unique</p>
+                <p className="text-base font-semibold tabular-nums">{stats.uniqueVisits.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                <Download className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Downloads</p>
+                <p className="text-base font-semibold tabular-nums">{stats.totalDownloads.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                <Video className="w-4 h-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Videos</p>
+                <p className="text-base font-semibold tabular-nums">{stats.videoCount}</p>
+              </div>
+            </div>
+          </div>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unique Visitors</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.uniqueVisits.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Downloads</CardTitle>
-              <Download className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalDownloads.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Videos</CardTitle>
-              <Video className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.videoCount}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 overflow-hidden">
+        <div className="grid gap-4 lg:grid-cols-2 overflow-hidden">
           <Card className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Videos in this Project</CardTitle>
-              <CardDescription className="text-xs">Download stats per video</CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-hidden pt-0">
+            <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+              <span className="text-sm font-medium">Videos in this Project</span>
+              <span className="text-xs text-muted-foreground">{videoStats.length} videos</span>
+            </div>
+            <div className="overflow-x-hidden">
               {videoStats.length === 0 ? (
                 <p className="text-center text-muted-foreground py-4 text-sm">No videos available</p>
               ) : (
-                <div className="space-y-1">
+                <div className="divide-y">
+                  {/* Table Header */}
+                  <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-muted-foreground bg-muted/20">
+                    <span className="w-4 flex-shrink-0"></span>
+                    <span className="flex-1 min-w-0">Name</span>
+                    <span className="w-16 text-right">Versions</span>
+                    <span className="w-20 text-right">Downloads</span>
+                    <span className="w-4 flex-shrink-0"></span>
+                  </div>
                   {videoStats.map((video) => {
                     const isExpanded = expandedVideos.has(video.videoName)
                     return (
                       <div
                         key={video.videoName}
-                        className="border rounded-md text-sm hover:bg-accent/50 transition-colors cursor-pointer"
+                        className="text-sm hover:bg-accent/30 transition-colors cursor-pointer"
                         onClick={() => toggleVideoExpand(video.videoName)}
                       >
                         <div className="flex items-center gap-3 px-3 py-2">
                           <Video className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          <span className="flex-1 min-w-0 truncate font-medium text-sm">{video.videoName}</span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {video.versions.length}v • {video.totalDownloads} dl
+                          <span className="flex-1 min-w-0 truncate font-medium">{video.videoName}</span>
+                          <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">
+                            {video.versions.length}
+                          </span>
+                          <span className="w-20 text-right text-xs font-medium tabular-nums">
+                            {video.totalDownloads}
                           </span>
                           {isExpanded ? (
                             <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -244,12 +270,12 @@ export default function AnalyticsClient({ id }: { id: string }) {
                           )}
                         </div>
                         {isExpanded && video.versions.length > 0 && (
-                          <div className="px-3 pb-2 pt-1 border-t bg-muted/30">
-                            <div className="space-y-1">
+                          <div className="px-3 pb-2 bg-muted/20">
+                            <div className="pl-7 space-y-0.5">
                               {video.versions.map((version) => (
-                                <div key={version.id} className="flex items-center justify-between gap-2 text-xs">
+                                <div key={version.id} className="flex items-center justify-between gap-2 text-xs py-0.5">
                                   <span className="text-muted-foreground truncate">{version.versionLabel}</span>
-                                  <span className="font-medium whitespace-nowrap">{version.downloads} dl</span>
+                                  <span className="font-medium tabular-nums">{version.downloads} downloads</span>
                                 </div>
                               ))}
                             </div>
@@ -260,62 +286,67 @@ export default function AnalyticsClient({ id }: { id: string }) {
                   })}
                 </div>
               )}
-            </CardContent>
+            </div>
           </Card>
 
           <Card className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Project Activity</CardTitle>
-              <CardDescription className="text-xs">
-                {activity.length > 0 ? `${activity.length} events` : 'Authentication and download events'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-hidden pt-0">
+            <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+              <span className="text-sm font-medium">Project Activity</span>
+              <span className="text-xs text-muted-foreground">{activity.length} events</span>
+            </div>
+            {/* Table Header */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground bg-muted/20 border-b">
+              <span className="w-24 flex-shrink-0">Type</span>
+              <span className="flex-1 min-w-0">Details</span>
+              <span className="w-32 hidden md:block">Date</span>
+              <span className="w-4"></span>
+            </div>
+            <div className="overflow-x-hidden">
               {activity.length === 0 ? (
                 <p className="text-center text-muted-foreground py-4 text-sm">No activity yet</p>
               ) : (
-                <div className="space-y-1">
-                  {activity.slice((activityPage - 1) * ACTIVITY_PER_PAGE, activityPage * ACTIVITY_PER_PAGE).map((event) => {
+                <div className="divide-y">
+                  {activity.slice((activityPage - 1) * activityPerPage, activityPage * activityPerPage).map((event) => {
                     const isExpanded = expandedItems.has(event.id)
+                    const ActivityIcon = event.type === 'AUTH'
+                      ? (event.accessMethod === 'OTP' ? Mail : event.accessMethod === 'PASSWORD' ? Lock : event.accessMethod === 'GUEST' ? UserCircle : Globe)
+                      : Download
+                    const iconColor = event.type === 'AUTH' ? 'text-primary' : 'text-success'
+
                     return (
                       <div
                         key={event.id}
-                        className="rounded-lg border text-sm hover:bg-accent/50 transition-colors cursor-pointer"
+                        className="text-sm hover:bg-accent/30 transition-colors cursor-pointer"
                         onClick={() => toggleExpand(event.id)}
                       >
-                        <div className="flex items-center gap-3 p-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${event.type === 'AUTH' ? getAccessMethodColor(event.accessMethod) : 'bg-success-visible text-success border-2 border-success-visible'}`}>
-                            {event.type === 'AUTH' ? (
-                              event.accessMethod === 'OTP' ? 'Email OTP' :
-                              event.accessMethod === 'PASSWORD' ? 'Password' :
-                              event.accessMethod === 'GUEST' ? 'Guest Access' :
-                              'Public Access'
-                            ) : (
-                              <>
-                                <Download className="w-3 h-3 inline mr-1" />
-                                {event.assetIds ? 'ZIP' : event.assetId ? 'Asset' : 'Video'}
-                              </>
-                            )}
-                          </span>
-
-                          <div className="flex-1 min-w-0 flex items-center justify-center">
-                            <span className="text-muted-foreground text-sm truncate">
+                        {/* Table Row */}
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          {/* Type */}
+                          <div className="w-24 flex-shrink-0 flex items-center gap-1.5">
+                            <ActivityIcon className={`w-4 h-4 flex-shrink-0 ${iconColor}`} />
+                            <span className="text-xs font-medium hidden sm:inline">
                               {event.type === 'AUTH' ? (
-                                event.email ? (
-                                  isExpanded ? event.email : `${event.email.substring(0, 20)}${event.email.length > 20 ? '...' : ''}`
-                                ) : (
-                                  event.accessMethod === 'GUEST' ? 'Guest visitor' : 'Public visitor'
-                                )
+                                event.accessMethod === 'OTP' ? 'OTP' :
+                                event.accessMethod === 'PASSWORD' ? 'Password' :
+                                event.accessMethod === 'GUEST' ? 'Guest' : 'Public'
                               ) : (
-                                isExpanded ? event.videoName : `${event.videoName.substring(0, 25)}${event.videoName.length > 25 ? '...' : ''}`
+                                event.assetIds ? 'ZIP' : event.assetId ? 'Asset' : 'Download'
                               )}
                             </span>
                           </div>
-
-                          <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                          {/* Details */}
+                          <span className="flex-1 min-w-0 text-muted-foreground truncate">
+                            {event.type === 'AUTH' ? (
+                              event.email || (event.accessMethod === 'GUEST' ? 'Guest visitor' : 'Public visitor')
+                            ) : (
+                              event.videoName
+                            )}
+                          </span>
+                          {/* Date */}
+                          <span className="w-32 text-xs text-muted-foreground whitespace-nowrap hidden md:block">
                             {formatDateTime(event.createdAt)}
-                          </div>
-
+                          </span>
+                          {/* Chevron */}
                           {isExpanded ? (
                             <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           ) : (
@@ -324,88 +355,91 @@ export default function AnalyticsClient({ id }: { id: string }) {
                         </div>
 
                         {isExpanded && (
-                          <div className="px-4 pb-4 pt-3 border-t bg-muted/30">
-                            {event.type === 'AUTH' ? (
-                              <div className="space-y-2">
-                                <div className="flex items-start gap-2">
-                                  <span className="text-xs font-semibold text-foreground min-w-[80px]">Action</span>
-                                  <span className="text-sm text-muted-foreground">Accessed the project</span>
-                                </div>
-                                {event.email && (
-                                  <div className="flex items-start gap-2">
-                                    <span className="text-xs font-semibold text-foreground min-w-[80px]">Email</span>
-                                    <span className="text-sm text-muted-foreground break-all">{event.email}</span>
-                                  </div>
-                                )}
+                          <div className="px-3 pb-2 bg-muted/20">
+                            <div className="pl-6 text-xs space-y-1">
+                              {/* Date - shown on mobile only */}
+                              <div className="flex gap-2 md:hidden">
+                                <span className="text-muted-foreground">Date:</span>
+                                <span>{formatDateTime(event.createdAt)}</span>
                               </div>
-                            ) : (
-                              <div className="space-y-3">
-                                <div className="flex items-start gap-2">
-                                  <span className="text-xs font-semibold text-foreground min-w-[80px]">Video</span>
-                                  <span className="text-sm text-muted-foreground">{event.videoName} ({event.versionLabel})</span>
-                                </div>
-
-                                <div className="flex items-start gap-2">
-                                  <span className="text-xs font-semibold text-foreground min-w-[80px]">Content</span>
-                                  <div className="flex-1">
-                                    {event.assetFileNames && event.assetFileNames.length > 0 ? (
-                                      <div>
-                                        <p className="text-sm text-muted-foreground mb-2">
-                                          ZIP archive with {event.assetFileNames.length} asset{event.assetFileNames.length !== 1 ? 's' : ''}
-                                        </p>
-                                        <div className="space-y-1 pl-3 border-l-2 border-border">
-                                          {event.assetFileNames.map((fileName, idx) => (
-                                            <div key={idx} className="text-sm text-muted-foreground break-all font-mono text-xs">
-                                              {fileName}
-                                            </div>
-                                          ))}
+                              {event.type === 'AUTH' ? (
+                                <>
+                                  <div className="flex gap-2">
+                                    <span className="text-muted-foreground">Action:</span>
+                                    <span>Accessed the project</span>
+                                  </div>
+                                  {event.email && (
+                                    <div className="flex gap-2">
+                                      <span className="text-muted-foreground">Email:</span>
+                                      <span className="break-all">{event.email}</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex gap-2">
+                                    <span className="text-muted-foreground">Video:</span>
+                                    <span>{event.videoName}</span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <span className="text-muted-foreground">Version:</span>
+                                    <span>{event.versionLabel}</span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <span className="text-muted-foreground">Content:</span>
+                                    <span>
+                                      {event.assetFileNames && event.assetFileNames.length > 0
+                                        ? `ZIP (${event.assetFileNames.length} assets)`
+                                        : event.assetFileName
+                                        ? event.assetFileName
+                                        : 'Full video file'}
+                                    </span>
+                                  </div>
+                                  {event.assetFileNames && event.assetFileNames.length > 0 && (
+                                    <div className="pl-3 mt-1 border-l-2 border-border space-y-0.5">
+                                      {event.assetFileNames.map((fileName, idx) => (
+                                        <div key={idx} className="text-muted-foreground font-mono break-all">
+                                          {fileName}
                                         </div>
-                                      </div>
-                                    ) : event.assetFileName ? (
-                                      <div className="text-sm text-muted-foreground">
-                                        <p className="mb-1">Single asset file</p>
-                                        <p className="font-mono text-xs break-all pl-3 border-l-2 border-border">{event.assetFileName}</p>
-                                      </div>
-                                    ) : (
-                                      <span className="text-sm text-muted-foreground">Full video file</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
                     )
                   })}
-
-                  {/* Pagination Controls */}
-                  {activity.length > ACTIVITY_PER_PAGE && (
-                    <div className="flex items-center justify-between pt-3 border-t mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setActivityPage(p => Math.max(1, p - 1))}
-                        disabled={activityPage === 1}
-                      >
-                        Previous
-                      </Button>
-                      <span className="text-xs text-muted-foreground">
-                        Page {activityPage} of {Math.ceil(activity.length / ACTIVITY_PER_PAGE)}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setActivityPage(p => Math.min(Math.ceil(activity.length / ACTIVITY_PER_PAGE), p + 1))}
-                        disabled={activityPage >= Math.ceil(activity.length / ACTIVITY_PER_PAGE)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )}
-            </CardContent>
+
+              {/* Pagination Controls */}
+              {activity.length > activityPerPage && (
+                <div className="flex items-center justify-between px-3 py-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); setActivityPage(p => Math.max(1, p - 1)) }}
+                    disabled={activityPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Page {activityPage} of {Math.ceil(activity.length / activityPerPage)}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); setActivityPage(p => Math.min(Math.ceil(activity.length / activityPerPage), p + 1)) }}
+                    disabled={activityPage >= Math.ceil(activity.length / activityPerPage)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </div>
           </Card>
         </div>
       </div>

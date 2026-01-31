@@ -636,6 +636,7 @@ export default function VideoPlayer({
   }, [isPlaying])
 
 
+
   // Expose video state to parent for mobile layout
   useEffect(() => {
     if (onVideoStateChange && selectedVideo) {
@@ -700,21 +701,11 @@ export default function VideoPlayer({
       {/* Video Player Container */}
       <div
         ref={containerRef}
-        className={`relative overflow-hidden group rounded-xl ${
+        className={`relative group w-full ${
           fillContainer
-            ? 'lg:flex-1 min-h-0 bg-background'
-            : 'flex-shrink min-h-0 lg:order-1 bg-muted'
+            ? 'flex-1 min-h-0 flex items-center justify-center'
+            : 'flex-shrink min-h-0 lg:order-1'
         } ${isPlaying && !showControls ? 'cursor-none' : ''}`}
-        style={fillContainer ? {} : {
-          aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
-          // Constrain vertical videos (9:16, portrait) to prevent massive size
-          ...(selectedVideo && selectedVideo.height > selectedVideo.width ? {
-            maxWidth: '300px',
-            maxHeight: '60vh',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          } : {})
-        }}
       >
         {videoUrl ? (
           <>
@@ -723,7 +714,11 @@ export default function VideoPlayer({
               ref={videoRef}
               src={videoUrl}
               poster={(selectedVideo as any).thumbnailUrl || undefined}
-              className="w-full h-full rounded-lg cursor-pointer"
+              className={`rounded-xl cursor-pointer ${
+                selectedVideo && selectedVideo.height > selectedVideo.width
+                  ? 'max-h-[50vh] sm:max-h-full'
+                  : ''
+              }`}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}
@@ -735,6 +730,10 @@ export default function VideoPlayer({
               webkit-playsinline="true"
               x-webkit-airplay="allow"
               style={{
+                maxWidth: '100%',
+                width: fillContainer ? 'auto' : '100%',
+                height: fillContainer ? 'auto' : 'auto',
+                aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
                 objectFit: 'contain',
               }}
             />

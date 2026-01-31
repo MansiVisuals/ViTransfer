@@ -5,6 +5,22 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-01-31
+
+### Changed
+- **Analytics page**: Replaced 4 stat cards with compact horizontal stats bar; added table header for Project Activity (Type, Details, Date); dynamic page size fills screen height
+- **Security Events page**: Added table header with aligned columns (Severity, Event Type, IP Address, Date, Block); expandable rows with single chevron; dynamic page size fills screen height
+- **Projects list**: Replaced list view with table view (Name, Client, Status, Videos, Comments, Updated columns)
+- **Admin share page**: Now matches client share page behavior - grid view first for all projects including single-video
+- **Video player**: Improved sizing and styling for all aspect ratios including vertical videos
+
+### Fixed
+- **Thumbnail generation**: Preserves original video aspect ratio (9:16, 4:3, 1:1, etc.) instead of forcing 16:9 with black padding
+- **Mobile page load**: Fixed Analytics and Security Events pages flickering on initial load by calculating page size synchronously
+
+### Migration Note
+Existing thumbnails with black bars need reprocessing. Go to Project Settings, change Preview Resolution, save without reprocessing, change back, then save with reprocessing.
+
 ## [0.8.7] - 2026-01-31
 
 ### Changed

@@ -460,18 +460,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [project?.videosByName, shareToken])
 
-  // Determine initial view state based on video count and URL params
+  // Determine initial view state based on URL params
   useEffect(() => {
     if (!project?.videosByName) return
-
-    const videoNames = Object.keys(project.videosByName)
-    const hasMultiple = videoNames.length > 1
-
-    // If single video, always go to player
-    if (!hasMultiple) {
-      setViewState('player')
-      return
-    }
 
     // If URL specifies a video, go to player
     if (urlVideoName && project.videosByName[urlVideoName]) {
@@ -479,7 +470,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       return
     }
 
-    // Multiple videos without URL param: show grid
+    // Default: show grid (same behavior for single and multiple videos)
     setViewState('grid')
   }, [project?.videosByName, urlVideoName])
 
@@ -834,8 +825,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     readyVideos = readyVideos.filter((v: any) => v.approved)
   }
 
-  const hasMultipleVideos = project.videosByName && Object.keys(project.videosByName).length > 1
-
   // Filter comments to only show comments for active videos
   const activeVideoIds = new Set(activeVideos.map((v: any) => v.id))
   const filteredComments = comments.filter((comment: any) => {
@@ -843,8 +832,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
-  // Show thumbnail grid for multi-video projects when in grid view (scrollable)
-  if (viewState === 'grid' && hasMultipleVideos) {
+  // Show thumbnail grid when in grid view (scrollable)
+  if (viewState === 'grid') {
     return (
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
         {/* Theme toggle for grid view */}
@@ -884,27 +873,18 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
-      {/* Thumbnail Reel for multi-video projects - always visible, collapsible */}
-      {hasMultipleVideos && (
-        <ThumbnailReel
-          videosByName={project.videosByName}
-          thumbnailsByName={thumbnailsByName}
-          activeVideoName={activeVideoName}
-          onVideoSelect={handleVideoSelect}
-          onBackToGrid={handleBackToGrid}
-          showBackButton={true}
-          showCommentToggle={!project.hideFeedback && !isGuest}
-          isCommentPanelVisible={!hideComments}
-          onToggleCommentPanel={() => setHideComments(!hideComments)}
-        />
-      )}
-
-      {/* Theme toggle for single-video projects (floating in top-right) */}
-      {!hasMultipleVideos && (
-        <div className="absolute top-3 right-3 z-20">
-          <ThemeToggle />
-        </div>
-      )}
+      {/* Thumbnail Reel - always visible, collapsible */}
+      <ThumbnailReel
+        videosByName={project.videosByName}
+        thumbnailsByName={thumbnailsByName}
+        activeVideoName={activeVideoName}
+        onVideoSelect={handleVideoSelect}
+        onBackToGrid={handleBackToGrid}
+        showBackButton={true}
+        showCommentToggle={!project.hideFeedback && !isGuest}
+        isCommentPanelVisible={!hideComments}
+        onToggleCommentPanel={() => setHideComments(!hideComments)}
+      />
 
       {/* Main Content Area - scrollable on mobile, fixed on desktop */}
       <div className="flex-1 lg:min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
@@ -921,7 +901,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         ) : (
           <>
             {/* Video Player - auto height on mobile, fills space on desktop */}
-            <div className={`lg:min-h-0 lg:flex-1 min-w-0 flex flex-col rounded-xl overflow-hidden ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
+            <div className={`lg:min-h-0 lg:flex-1 min-w-0 flex flex-col ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
               <VideoPlayer
                 videos={readyVideos}
                 projectId={project.id}

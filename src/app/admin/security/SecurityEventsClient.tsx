@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, Unlock, Tag } from 'lucide-react'
+import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, ChevronDown, Unlock, Tag, ShieldX } from 'lucide-react'
 import FilterDropdown from '@/components/FilterDropdown'
 import { formatDateTime } from '@/lib/utils'
 import { apiDelete, apiFetch } from '@/lib/api-client'
@@ -57,33 +57,32 @@ interface SecurityEventsResponse {
   }>
 }
 
-function getSeverityColor(severity: string): string {
-  const map: Record<string, string> = {
-    'CRITICAL': 'bg-destructive-visible text-destructive border-2 border-destructive-visible',
-    'WARNING': 'bg-warning-visible text-warning border-2 border-warning-visible',
-    'INFO': 'bg-primary-visible text-primary border-2 border-primary-visible',
-  }
-  return map[severity] || 'bg-muted text-muted-foreground border border-border'
-}
-
-function getSeverityIcon(severity: string) {
-  switch (severity) {
-    case 'CRITICAL':
-      return <XCircle className="w-4 h-4" />
-    case 'WARNING':
-      return <AlertTriangle className="w-4 h-4" />
-    case 'INFO':
-      return <Info className="w-4 h-4" />
-    default:
-      return <Shield className="w-4 h-4" />
-  }
-}
-
 interface RateLimitEntry {
   key: string
   lockoutUntil: number
   count: number
   type: string
+}
+
+// Calculate page size to fill available height without scrolling
+function calculatePageSize(rowHeight: number, headerOffset: number): number {
+  if (typeof window === 'undefined') return 15
+  const available = window.innerHeight - headerOffset
+  return Math.max(5, Math.floor(available / rowHeight))
+}
+
+function useResponsivePageSize(rowHeight: number, headerOffset: number): number {
+  // Calculate initial value synchronously to prevent flickering on mount
+  const [pageSize, setPageSize] = useState(() => calculatePageSize(rowHeight, headerOffset))
+
+  useEffect(() => {
+    // Only listen for resize events, don't recalculate on mount
+    const handleResize = () => setPageSize(calculatePageSize(rowHeight, headerOffset))
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [rowHeight, headerOffset])
+
+  return pageSize
 }
 
 export default function SecurityEventsClient() {
@@ -93,8 +92,11 @@ export default function SecurityEventsClient() {
     { value: 'INFO', label: 'Info' },
   ]
 
+  // Row ~40px, header/stats/filters ~280px offset
+  const dynamicLimit = useResponsivePageSize(40, 280)
   const [events, setEvents] = useState<SecurityEvent[]>([])
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 })
+  // Initialize pagination with dynamic limit to prevent re-fetch on mount
+  const [pagination, setPagination] = useState(() => ({ page: 1, limit: calculatePageSize(40, 280), total: 0, pages: 0 }))
   const [stats, setStats] = useState<Array<{ type: string; count: number }>>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
@@ -178,9 +180,14 @@ export default function SecurityEventsClient() {
     }
   }
 
+  // Update pagination limit when screen size changes
+  useEffect(() => {
+    setPagination(p => ({ ...p, limit: dynamicLimit, page: 1 }))
+  }, [dynamicLimit])
+
   useEffect(() => {
     loadEvents()
-  }, [pagination.page, typeFilter, severityFilter])
+  }, [pagination.page, pagination.limit, typeFilter, severityFilter])
 
   useEffect(() => {
     if (showRateLimitsModal) {
@@ -332,124 +339,160 @@ export default function SecurityEventsClient() {
         </Card>
 
         {/* Events List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Security Events</CardTitle>
-            <CardDescription>
-              Showing {events.length} of {pagination.total} events
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+            <span className="text-sm font-medium">Security Events</span>
+            <span className="text-xs text-muted-foreground">
+              Showing {events.length} of {pagination.total}
+            </span>
+          </div>
+          {/* Table Header */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground bg-muted/20 border-b">
+            <span className="w-20 flex-shrink-0">Severity</span>
+            <span className="flex-1 min-w-0">Event Type</span>
+            <span className="w-28 hidden md:block">IP Address</span>
+            <span className="w-32 hidden lg:block">Date</span>
+            <span className="w-8 text-center">Block</span>
+            <span className="w-4"></span>
+          </div>
+          <div>
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">Loading events...</div>
             ) : events.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">No security events found</div>
             ) : (
-              <div className="space-y-2">
-                {events.map((event) => (
-                  <div key={event.id} className="border rounded-lg p-2 sm:p-3">
-                    <div className="space-y-2">
-                      {/* Header Row - Mobile Optimized */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getSeverityColor(event.severity)}`}>
-                              {getSeverityIcon(event.severity)}
-                              <span className="hidden sm:inline">{event.severity}</span>
-                            </span>
-                            {event.wasBlocked && (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-destructive-visible text-destructive border border-destructive-visible">
-                                BLOCKED
-                              </span>
-                            )}
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-muted-foreground bg-muted">
-                              <Tag className="w-3 h-3" />
-                              {getSecurityEventCategory(event.type)}
-                            </span>
-                          </div>
-                          <h3 className="text-base font-semibold text-foreground">
-                            {formatSecurityEventType(event.type)}
-                          </h3>
+              <div className="divide-y">
+                {events.map((event) => {
+                  const isExpanded = expandedDetails.has(event.id)
+                  const severityColor = event.severity === 'CRITICAL' ? 'text-destructive' :
+                                       event.severity === 'WARNING' ? 'text-warning' : 'text-primary'
+                  const SeverityIcon = event.severity === 'CRITICAL' ? XCircle :
+                                      event.severity === 'WARNING' ? AlertTriangle : Info
+
+                  return (
+                    <div
+                      key={event.id}
+                      className="text-sm hover:bg-accent/30 transition-colors cursor-pointer"
+                      onClick={() => toggleDetails(event.id)}
+                    >
+                      {/* Table Row */}
+                      <div className="flex items-center gap-2 px-3 py-2">
+                        {/* Severity */}
+                        <div className="w-20 flex-shrink-0 flex items-center gap-1.5">
+                          <SeverityIcon className={`w-4 h-4 flex-shrink-0 ${severityColor}`} />
+                          <span className={`text-xs font-medium hidden sm:inline ${severityColor}`}>
+                            {event.severity}
+                          </span>
                         </div>
-                        <div className="text-xs text-muted-foreground text-right whitespace-nowrap shrink-0">
+                        {/* Event Type */}
+                        <span className="flex-1 min-w-0 font-medium truncate">
+                          {formatSecurityEventType(event.type)}
+                        </span>
+                        {/* IP Address */}
+                        <span className="w-28 text-xs text-muted-foreground truncate hidden md:block">
+                          {event.ipAddress ? formatIpAddress(event.ipAddress) : '-'}
+                        </span>
+                        {/* Date */}
+                        <span className="w-32 text-xs text-muted-foreground whitespace-nowrap hidden lg:block">
                           {formatDateTime(event.createdAt)}
-                        </div>
+                        </span>
+                        {/* Blocked */}
+                        <span className="w-8 flex justify-center">
+                          {event.wasBlocked ? (
+                            <span title="Blocked">
+                              <ShieldX className="w-4 h-4 text-destructive" />
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/30">-</span>
+                          )}
+                        </span>
+                        {/* Chevron */}
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        )}
                       </div>
 
-                      {/* Description */}
-                      <div className="text-sm text-foreground bg-muted/50 rounded border-l-2 border-primary p-2">
-                        {getSecurityEventDescription(event.type)}
-                      </div>
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div className="px-3 pb-3 bg-muted/20">
+                          <div className="pl-6 space-y-2">
+                            {/* Description */}
+                            <div className="text-xs text-muted-foreground border-l-2 border-primary pl-2 py-1">
+                              {getSecurityEventDescription(event.type)}
+                            </div>
 
-                      {/* Event Details */}
-                      {(event.ipAddress || event.sessionId || event.project || event.referer) && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                          {event.ipAddress && (
-                            <div className="break-all">
-                              <span className="font-medium text-foreground">IP Address:</span>
-                              <div className="text-muted-foreground">{formatIpAddress(event.ipAddress)}</div>
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                              {event.ipAddress && (
+                                <div className="flex gap-2">
+                                  <span className="text-muted-foreground">IP:</span>
+                                  <span className="break-all">{formatIpAddress(event.ipAddress)}</span>
+                                </div>
+                              )}
+                              {event.sessionId && (
+                                <div className="flex gap-2">
+                                  <span className="text-muted-foreground">Session:</span>
+                                  <span className="break-all">{formatSessionId(event.sessionId)}</span>
+                                </div>
+                              )}
+                              {event.project && (
+                                <div className="flex gap-2">
+                                  <span className="text-muted-foreground">Project:</span>
+                                  <span>{event.project.title}</span>
+                                </div>
+                              )}
+                              <div className="flex gap-2 sm:hidden">
+                                <span className="text-muted-foreground">Time:</span>
+                                <span>{formatDateTime(event.createdAt)}</span>
+                              </div>
+                              {event.referer && (
+                                <div className="flex gap-2 sm:col-span-2">
+                                  <span className="text-muted-foreground">Referer:</span>
+                                  <span className="break-all">{event.referer}</span>
+                                </div>
+                              )}
+                              <div className="flex gap-2">
+                                <span className="text-muted-foreground">Category:</span>
+                                <span>{getSecurityEventCategory(event.type)}</span>
+                              </div>
                             </div>
-                          )}
-                          {event.sessionId && (
-                            <div className="break-all">
-                              <span className="font-medium text-foreground">Session:</span>
-                              <div className="text-muted-foreground">{formatSessionId(event.sessionId)}</div>
-                            </div>
-                          )}
-                          {event.project && (
-                            <div className="break-words">
-                              <span className="font-medium text-foreground">Project:</span>
-                              <div className="text-muted-foreground">{event.project.title}</div>
-                            </div>
-                          )}
-                          {event.referer && (
-                            <div className="break-all sm:col-span-2">
-                              <span className="font-medium text-foreground">Referer:</span>
-                              <div className="text-muted-foreground">{event.referer}</div>
-                            </div>
-                          )}
-                        </div>
-                      )}
 
-                      {/* Technical Details Toggle */}
-                      {event.details && (
-                        <div>
-                          <button
-                            onClick={() => toggleDetails(event.id)}
-                            className="text-xs font-medium flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <ChevronRight className={`w-3 h-3 transition-transform ${expandedDetails.has(event.id) ? 'rotate-90' : ''}`} />
-                            {expandedDetails.has(event.id) ? 'Hide' : 'Show'} Technical Details
-                          </button>
-                          {expandedDetails.has(event.id) && (
-                            <pre className="mt-2 text-xs bg-muted/50 p-3 rounded border overflow-auto max-h-48">
-                              {JSON.stringify(event.details, null, 2)}
-                            </pre>
-                          )}
+                            {/* Technical Details - shown inline */}
+                            {event.details && (
+                              <div className="text-xs">
+                                <span className="text-muted-foreground">Technical Details:</span>
+                                <pre className="mt-1 bg-muted/50 p-2 rounded border overflow-auto max-h-32">
+                                  {JSON.stringify(event.details, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
             {/* Pagination */}
             {pagination.pages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
+              <div className="flex items-center justify-between px-3 py-2 border-t">
                 <Button
-                  onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                  onClick={(e) => { e.stopPropagation(); setPagination(p => ({ ...p, page: p.page - 1 })) }}
                   disabled={pagination.page === 1 || loading}
                   variant="outline"
                   size="sm"
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Page {pagination.page} of {pagination.pages}
                 </span>
                 <Button
-                  onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                  onClick={(e) => { e.stopPropagation(); setPagination(p => ({ ...p, page: p.page + 1 })) }}
                   disabled={pagination.page === pagination.pages || loading}
                   variant="outline"
                   size="sm"
@@ -458,7 +501,7 @@ export default function SecurityEventsClient() {
                 </Button>
               </div>
             )}
-          </CardContent>
+          </div>
         </Card>
       </div>
 

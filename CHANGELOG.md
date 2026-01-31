@@ -16,7 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Thumbnail generation**: Preserves original video aspect ratio (9:16, 4:3, 1:1, etc.) instead of forcing 16:9 with black padding
-- **Mobile page load**: Fixed Analytics and Security Events pages flickering on initial load by calculating page size synchronously
 
 ### Migration Note
 Existing thumbnails with black bars need reprocessing. Go to Project Settings, change Preview Resolution, save without reprocessing, change back, then save with reprocessing.

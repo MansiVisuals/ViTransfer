@@ -56,9 +56,6 @@ jobs:
           ADMIN_PASSWORD=TestPassword123!
           ADMIN_NAME=Test Admin
           
-          # Application URL
-          NEXT_PUBLIC_APP_URL=http://localhost:4321
-          
           # HTTPS
           HTTPS_ENABLED=false
           EOF

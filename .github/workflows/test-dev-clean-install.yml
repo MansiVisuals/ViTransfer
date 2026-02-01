@@ -63,7 +63,6 @@ jobs:
           ADMIN_EMAIL=admin@test.local
           ADMIN_PASSWORD=TestPassword123!
           ADMIN_NAME=Test Admin
-          NEXT_PUBLIC_APP_URL=http://localhost:4321
           HTTPS_ENABLED=false
           EOF
 

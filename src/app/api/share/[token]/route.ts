@@ -215,6 +215,7 @@ export async function GET(
       streamUrl1080p: video.streamUrl1080p,
       downloadUrl: video.downloadUrl,
       thumbnailUrl: video.thumbnailUrl,
+      thumbnailPath: video.thumbnailPath,
     })) : videosSanitizedBase
 
     const sanitizedVideosByName = isGuest ? Object.keys(sortedVideosByName).reduce((acc: any, name: string) => {
@@ -232,6 +233,7 @@ export async function GET(
         streamUrl1080p: video.streamUrl1080p,
         downloadUrl: video.downloadUrl,
         thumbnailUrl: video.thumbnailUrl,
+        thumbnailPath: video.thumbnailPath,
       }))
       return acc
     }, {}) : sortedVideosByName

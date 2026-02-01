@@ -16,6 +16,8 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 
 💖 **Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
 
+🤖 **NOTE:** Code-assisted development with AI, built with focus on security and best practices.
+
 ## Quick start (Docker)
 1. Download [docker-compose.yml](docker-compose.yml) and [.env.example](.env.example).
 2. Create `.env` and generate the required secrets.

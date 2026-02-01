@@ -157,6 +157,7 @@ export async function processAdminNotifications() {
         for (const admin of admins) {
           const html = generateAdminSummaryEmail({
             companyName,
+            accentColor: emailSettings.accentColor || undefined,
             adminName: admin.name || '',
             period,
             projects

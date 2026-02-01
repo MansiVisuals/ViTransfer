@@ -169,6 +169,7 @@ export async function processClientNotifications() {
 
             const html = generateNotificationSummaryEmail({
               companyName,
+              accentColor: emailSettings.accentColor || undefined,
               projectTitle: project.title,
               shareUrl,
               recipientName: recipient.name || recipient.email!,

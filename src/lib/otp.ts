@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { prisma } from './db'
-import { EMAIL_BRAND, renderUnsubscribeSection, sendEmail, escapeHtml, getEmailSettings, renderEmailShell } from './email'
+import { renderUnsubscribeSection, sendEmail, escapeHtml, getEmailSettings, renderEmailShell, getEmailBrand } from './email'
 import { getRedis } from './redis'
 
 // OTP Configuration
@@ -195,6 +195,7 @@ export async function sendOTPEmail(
 ): Promise<void> {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   // SECURITY: Escape HTML to prevent XSS
   const safeProjectTitle = escapeHtml(projectTitle)
@@ -204,25 +205,26 @@ export async function sendOTPEmail(
     companyName,
     title: 'Verification Code',
     preheader: `Your verification code for ${projectTitle}`,
+    brand,
     bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.5;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.textSubtle}; line-height: 1.5;">
         Your verification code for <strong>${safeProjectTitle}</strong> is:
       </p>
 
-      <div style="background: ${EMAIL_BRAND.surfaceAlt}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 12px; padding: 26px; text-align: center; margin-bottom: 24px;">
-        <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: ${EMAIL_BRAND.text}; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">
+      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 12px; padding: 26px; text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: ${brand.text}; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">
           ${code}
         </div>
       </div>
 
-      <p style="margin: 0 0 10px 0; font-size: 14px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.5;">
+      <p style="margin: 0 0 10px 0; font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
         This code will expire in ${OTP_EXPIRY_MINUTES} minutes.
       </p>
 
-      <p style="margin: 0; font-size: 13px; color: ${EMAIL_BRAND.muted}; line-height: 1.5;">
+      <p style="margin: 0; font-size: 13px; color: ${brand.muted}; line-height: 1.5;">
         If you didn't request this code, please ignore this email.
       </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl) : ''}
+      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
     `,
   })
 

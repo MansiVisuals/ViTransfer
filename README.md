@@ -13,19 +13,20 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 [![Upgrade Test](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-upgrade.yml/badge.svg)](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-upgrade.yml)
 
 ## Quick start (Docker)
-1. Download `docker-compose.yml` and `.env.example`.
+1. Download [docker-compose.yml](docker-compose.yml) and [.env.example](.env.example).
 2. Create `.env` and generate the required secrets.
 3. Start with `docker-compose up -d`.
 4. Open `http://localhost:4321` and login.
 
 ## Documentation (Wiki)
-Full docs live in the GitHub Wiki and in `docs/wiki` (v0.8.9).
+Full docs live in the GitHub Wiki and are mirrored in `docs/wiki` (v0.8.9).
 
-- Start here: `docs/wiki/Home.md`
-- Installation: `docs/wiki/Installation.md`
-- Features: `docs/wiki/Features.md`
-- Configuration: `docs/wiki/Configuration.md`
-- Admin settings: `docs/wiki/Admin-Settings.md`
+- GitHub Wiki: https://github.com/MansiVisuals/ViTransfer/wiki
+- Start here: [docs/wiki/Home.md](docs/wiki/Home.md)
+- Installation: [docs/wiki/Installation.md](docs/wiki/Installation.md)
+- Features: [docs/wiki/Features.md](docs/wiki/Features.md)
+- Configuration: [docs/wiki/Configuration.md](docs/wiki/Configuration.md)
+- Admin settings: [docs/wiki/Admin-Settings.md](docs/wiki/Admin-Settings.md)
 
 ## Screenshots
 
@@ -39,7 +40,8 @@ Full docs live in the GitHub Wiki and in `docs/wiki` (v0.8.9).
 <img src="docs/screenshots/Share Page - Approved.png" alt="Share Page - Approved" width="600">
 
 ## Contributing
-We’re community-driven — feedback, issues, and PRs are more than welcome. See `CONTRIBUTING.md` for guidelines.
+We’re community-driven — feedback, issues, and PRs are more than welcome.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and https://github.com/MansiVisuals/ViTransfer/discussions.
 
 ## Support
 - Issues: https://github.com/MansiVisuals/ViTransfer/issues

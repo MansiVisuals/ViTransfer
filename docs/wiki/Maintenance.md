@@ -42,3 +42,6 @@ docker exec vitransfer-postgres pg_dump -U vitransfer vitransfer > backup.sql
 # Restore
 docker exec -i vitransfer-postgres psql -U vitransfer vitransfer < backup.sql
 ```
+
+---
+Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Contributing](Contributing) | [License](License)

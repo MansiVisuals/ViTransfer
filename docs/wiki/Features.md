@@ -33,3 +33,6 @@
 - PostgreSQL + Prisma ORM for data access.
 - JWT refresh rotation, bearer-only auth, and passkey support.
 - Resumable uploads with progress tracking.
+
+---
+Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Contributing](Contributing) | [License](License)

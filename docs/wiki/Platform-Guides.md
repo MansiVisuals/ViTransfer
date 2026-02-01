@@ -33,3 +33,6 @@ Note: Set **App Domain** in Admin Settings after login (required for email links
 ## Other platforms
 - Rootless Podman quadlets are available in `quadlet/`.
 - Community guides welcome.
+
+---
+Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Contributing](Contributing) | [License](License)

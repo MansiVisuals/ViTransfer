@@ -886,8 +886,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         onToggleCommentPanel={() => setHideComments(!hideComments)}
       />
 
-      {/* Main Content Area - scrollable on mobile, fixed on desktop */}
-      <div className="flex-1 lg:min-h-0 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
+      {/* Main Content Area - scrollable on mobile, fixed on desktop (xl breakpoint for better vertical video support) */}
+      <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
         {readyVideos.length === 0 ? (
           <div className="flex-1 flex items-center justify-center p-4">
             <Card className="bg-card border-border">
@@ -900,8 +900,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           </div>
         ) : (
           <>
-            {/* Video Player - auto height on mobile, fills space on desktop */}
-            <div className={`lg:min-h-0 lg:flex-1 min-w-0 flex flex-col ${showCommentPanel ? 'lg:flex-[2] xl:flex-[2.5]' : ''}`}>
+            {/* Video Player - natural height on mobile, fills space on desktop */}
+            <div className={`xl:h-full xl:min-h-0 xl:flex-1 min-w-0 flex flex-col ${showCommentPanel ? 'xl:flex-[2] 2xl:flex-[2.5]' : ''}`}>
               <VideoPlayer
                 videos={readyVideos}
                 projectId={project.id}
@@ -931,7 +931,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
             {/* Comments Section - max one screen height on mobile, side panel on desktop */}
             {showCommentPanel && (
-              <div className="max-h-[100vh] lg:shrink lg:flex-1 lg:max-w-[30%] xl:max-w-[25%] lg:min-w-[280px] flex flex-col lg:max-h-full lg:h-full overflow-hidden rounded-xl bg-card">
+              <div className="max-h-[100vh] xl:shrink xl:flex-1 xl:max-w-[30%] 2xl:max-w-[25%] xl:min-w-[280px] flex flex-col xl:max-h-full xl:h-full overflow-hidden rounded-xl bg-card">
                 <CommentSection
                   projectId={project.id}
                   comments={filteredComments}

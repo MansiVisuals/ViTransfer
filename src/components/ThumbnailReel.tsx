@@ -33,14 +33,23 @@ export default function ThumbnailReel({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   // Start collapsed on first load
   const [isExpanded, setIsExpanded] = useState(false)
-  const [showHint, setShowHint] = useState(true)
+  const [showHint, setShowHint] = useState(false)
   const hasScrolledRef = useRef(false)
   const hintTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Auto-hide hint after 3 seconds on first load
+  // Check sessionStorage and show hint only if not shown before this session
   useEffect(() => {
+    const hintShown = sessionStorage.getItem('thumbnailReelHintShown')
+    if (hintShown) {
+      setShowHint(false)
+      return
+    }
+
+    // Show hint and auto-hide after 3 seconds
+    setShowHint(true)
     hintTimerRef.current = setTimeout(() => {
       setShowHint(false)
+      sessionStorage.setItem('thumbnailReelHintShown', 'true')
     }, 3000)
 
     return () => {
@@ -57,6 +66,7 @@ export default function ThumbnailReel({
       hintTimerRef.current = null
     }
     setShowHint(false)
+    sessionStorage.setItem('thumbnailReelHintShown', 'true')
   }
 
   const handleToggleExpanded = () => {
@@ -167,7 +177,7 @@ export default function ThumbnailReel({
           </div>
 
           {/* Center: Video selector */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
+          <div className="flex-1 flex items-center justify-center">
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -180,25 +190,42 @@ export default function ThumbnailReel({
                 <ChevronLeft className="w-4 h-4" />
               </Button>
 
-              <button
-                onClick={handleToggleExpanded}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all",
-                  "hover:bg-muted/80 active:scale-95",
-                  isExpanded && "bg-muted/50"
-                )}
-                title={isExpanded ? "Hide video thumbnails" : "Show video thumbnails (click to browse all videos)"}
-              >
-                <CheckCircle2
+              <div className="relative">
+                <button
+                  onClick={handleToggleExpanded}
                   className={cn(
-                    "w-4 h-4",
-                    hasApprovedCurrent ? "text-success" : "text-muted-foreground/50"
+                    "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all",
+                    "hover:bg-muted/80 active:scale-95",
+                    isExpanded && "bg-muted/50"
                   )}
-                />
-                <span className="text-sm text-muted-foreground tabular-nums">
-                  {activeIndex + 1}/{totalVideos}
-                </span>
-              </button>
+                  title={isExpanded ? "Hide video thumbnails" : "Show video thumbnails (click to browse all videos)"}
+                >
+                  <CheckCircle2
+                    className={cn(
+                      "w-4 h-4",
+                      hasApprovedCurrent ? "text-success" : "text-muted-foreground/50"
+                    )}
+                  />
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {activeIndex + 1}/{totalVideos}
+                  </span>
+                </button>
+
+                {/* Floating hint tooltip - points to counter */}
+                <div
+                  className={cn(
+                    "absolute left-1/2 -translate-x-1/2 top-full mt-2 pointer-events-none transition-all duration-300",
+                    showHint && !isExpanded ? "opacity-100" : "opacity-0"
+                  )}
+                >
+                  {/* Arrow pointing up */}
+                  <div className="absolute left-1/2 -translate-x-1/2 -top-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-foreground/90" />
+                  {/* Tooltip content */}
+                  <div className="bg-foreground/90 text-background text-[11px] px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
+                    Click to browse all videos
+                  </div>
+                </div>
+              </div>
 
               <Button
                 variant="ghost"
@@ -211,16 +238,6 @@ export default function ThumbnailReel({
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
-
-            {/* Hint text - shows when collapsed to encourage clicking */}
-            <span
-              className={cn(
-                "text-[10px] text-muted-foreground/70 transition-all duration-300",
-                showHint && !isExpanded ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
-              )}
-            >
-              click to browse all videos
-            </span>
           </div>
 
           {/* Right: Toggle buttons */}

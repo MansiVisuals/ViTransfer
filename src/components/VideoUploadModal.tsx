@@ -45,11 +45,27 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadRefs = useRef<Map<string, tus.Upload>>(new Map())
 
-  // Extract video name from filename (remove extension)
+  // Maximum length for video names (fits comfortably in modal)
+  const MAX_VIDEO_NAME_LENGTH = 50
+  // Maximum display length for file names before truncation
+  const MAX_FILENAME_DISPLAY_LENGTH = 38
+
+  // Truncate filename for display
+  const truncateFilename = (filename: string, maxLength: number): string => {
+    if (filename.length <= maxLength) return filename
+    const ext = filename.lastIndexOf('.') > 0 ? filename.slice(filename.lastIndexOf('.')) : ''
+    const nameWithoutExt = filename.slice(0, filename.lastIndexOf('.') > 0 ? filename.lastIndexOf('.') : filename.length)
+    const availableLength = maxLength - ext.length - 3 // 3 for "..."
+    if (availableLength <= 0) return filename.slice(0, maxLength - 3) + '...'
+    return nameWithoutExt.slice(0, availableLength) + '...' + ext
+  }
+
+  // Extract video name from filename (remove extension, truncate if needed)
   const getVideoNameFromFile = (file: File): string => {
     const name = file.name
     const lastDot = name.lastIndexOf('.')
-    return lastDot > 0 ? name.substring(0, lastDot) : name
+    const baseName = lastDot > 0 ? name.substring(0, lastDot) : name
+    return baseName.substring(0, MAX_VIDEO_NAME_LENGTH)
   }
 
   // Validate video file format
@@ -149,7 +165,9 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
   }
 
   const handleUpdateName = (id: string, newName: string) => {
-    setPendingUploads(prev => prev.map(u => u.id === id ? { ...u, videoName: newName } : u))
+    // Enforce max length
+    const truncatedName = newName.substring(0, MAX_VIDEO_NAME_LENGTH)
+    setPendingUploads(prev => prev.map(u => u.id === id ? { ...u, videoName: truncatedName } : u))
   }
 
   const handleUpdateVersionLabel = (id: string, newLabel: string) => {
@@ -393,7 +411,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => hasActiveUploads && e.preventDefault()}>
+      <DialogContent className="sm:max-w-lg overflow-hidden" onPointerDownOutside={(e) => hasActiveUploads && e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
@@ -448,13 +466,14 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
                       {/* Video name input */}
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                         <Input
                           value={upload.videoName}
                           onChange={(e) => handleUpdateName(upload.id, e.target.value)}
                           placeholder="Video name"
-                          className="h-9 min-w-0"
+                          className="h-9 flex-1 min-w-0"
                           disabled={upload.status !== 'pending'}
+                          maxLength={MAX_VIDEO_NAME_LENGTH}
                         />
                         {upload.status === 'pending' && (
                           <Button
@@ -474,14 +493,15 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                           value={upload.versionLabel}
                           onChange={(e) => handleUpdateVersionLabel(upload.id, e.target.value)}
                           placeholder="Version label (optional, e.g. v1, Draft 1)"
-                          className="h-8 text-sm min-w-0"
+                          className="h-8 text-sm w-full min-w-0"
                         />
                       )}
 
                       {/* File info */}
-                      <p className="text-xs text-muted-foreground truncate max-w-full">
-                        {upload.file.name} ({formatFileSize(upload.file.size)})
-                      </p>
+                      <div className="text-xs text-muted-foreground">
+                        <span title={upload.file.name}>{truncateFilename(upload.file.name, MAX_FILENAME_DISPLAY_LENGTH)}</span>
+                        <span> ({formatFileSize(upload.file.size)})</span>
+                      </div>
 
                       {/* Progress bar */}
                       {(upload.status === 'uploading' || upload.status === 'completed') && (
@@ -544,7 +564,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                       {/* Error state */}
                       {upload.status === 'error' && (
                         <div className="space-y-2">
-                          <p className="text-xs text-destructive">{upload.error}</p>
+                          <p className="text-xs text-destructive break-words">{upload.error}</p>
                           <div className="flex gap-2">
                             <Button
                               variant="outline"

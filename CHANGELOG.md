@@ -5,6 +5,24 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-02-01
+
+### Fixed
+- Video player now correctly displays all aspect ratios (1:1, 4:3, 4:5, 9:16) without stretching
+- Preview transcoding preserves original aspect ratio instead of forcing 16:9
+- Rounded corners display consistently across all screen sizes
+- Project info positioned correctly below video player
+- Thumbnail reel hint now shows as tooltip overlay without resizing the bar
+- File name truncation in upload modal prevents layout issues
+
+### Changed
+- Video player uses letterbox approach with theme-aware blurred background
+- Responsive breakpoint changed to xl (1280px) for better vertical video support
+- Thumbnail reel hint only shows once per session
+
+### Migration Note
+Existing 1:1 and 4:3 preview videos need reprocessing to fix stretched aspect ratios.
+
 ## [0.8.8] - 2026-01-31
 
 ### Changed

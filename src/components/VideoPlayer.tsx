@@ -701,78 +701,76 @@ export default function VideoPlayer({
       {/* Video Player Container */}
       <div
         ref={containerRef}
-        className={`relative group w-full ${
-          fillContainer
-            ? 'flex-1 min-h-0 flex items-center justify-center'
-            : 'flex-shrink min-h-0 lg:order-1'
+        className={`relative w-full ${
+          fillContainer ? 'xl:flex-1 xl:min-h-0' : 'flex-shrink min-h-0 lg:order-1'
         } ${isPlaying && !showControls ? 'cursor-none' : ''}`}
       >
         {videoUrl ? (
           <>
-            <video
-              key={selectedVideo?.id}
-              ref={videoRef}
-              src={videoUrl}
-              poster={(selectedVideo as any).thumbnailUrl || undefined}
-              className={`rounded-xl cursor-pointer ${
-                selectedVideo && selectedVideo.height > selectedVideo.width
-                  ? 'max-h-[50vh] sm:max-h-full'
-                  : ''
-              }`}
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}
-              onClick={handlePlayPause}
-              crossOrigin="anonymous"
-              playsInline
-              preload="metadata"
-              // @ts-ignore - webkit attributes for iOS
-              webkit-playsinline="true"
-              x-webkit-airplay="allow"
-              style={{
-                maxWidth: '100%',
-                width: fillContainer ? 'auto' : '100%',
-                height: fillContainer ? 'auto' : 'auto',
-                aspectRatio: `${selectedVideo?.width || 16} / ${selectedVideo?.height || 9}`,
-                objectFit: 'contain',
-              }}
-            />
-
-            {/* Custom Video Controls with Integrated Timeline */}
-            <div 
-              className={`transition-opacity duration-300 ${
-                showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
-              }`}
+            {/*
+              Simple letterbox approach:
+              - Container fills available space with 16:9 aspect ratio
+              - Video uses object-contain to maintain its true aspect ratio
+              - Background color matches theme for clean letterboxing
+            */}
+            <div
+              className={`relative group w-full overflow-hidden rounded-xl bg-muted/50 backdrop-blur-sm ${fillContainer ? 'max-h-[60vh] xl:max-h-full' : 'max-h-[70vh]'}`}
+              style={{ aspectRatio: '16 / 9' }}
             >
-              <CustomVideoControls
-                videoRef={videoRef as React.RefObject<HTMLVideoElement>}
-                videoDuration={videoDuration}
-                currentTime={currentTimeState}
-                isPlaying={isPlaying}
-                volume={volume}
-                isMuted={isMuted}
-                isFullscreen={isFullscreen}
-                onPlayPause={handlePlayPause}
-                onSeek={handleTimelineSeek}
-                onVolumeChange={handleVolumeChange}
-                onToggleMute={handleToggleMute}
-                onToggleFullscreen={handleToggleFullscreen}
-                onFrameStep={handleFrameStep}
-                comments={comments}
-                videoFps={selectedVideo?.fps || 24}
-                videoId={selectedVideo?.id}
-                isAdmin={isAdmin}
-                timestampDisplayMode={timestampDisplayMode}
-                onMarkerClick={onCommentFocus}
+              <video
+                key={selectedVideo?.id}
+                ref={videoRef}
+                src={videoUrl}
+                poster={(selectedVideo as any).thumbnailUrl || undefined}
+                className="w-full h-full cursor-pointer object-contain"
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}
+                onClick={handlePlayPause}
+                crossOrigin="anonymous"
+                playsInline
+                preload="metadata"
+                // @ts-ignore - webkit attributes for iOS
+                webkit-playsinline="true"
+                x-webkit-airplay="allow"
               />
-            </div>
 
-            {/* Playback Speed Indicator - Show when speed is not 1.0x */}
-            {playbackSpeed !== 1.0 && (
-              <div className="absolute top-4 right-4 bg-black/80 text-white px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-20">
-                {playbackSpeed.toFixed(2)}x
-              </div>
-            )}
+                {/* Custom Video Controls with Integrated Timeline */}
+                <div
+                  className={`transition-opacity duration-300 ${
+                    showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  <CustomVideoControls
+                    videoRef={videoRef as React.RefObject<HTMLVideoElement>}
+                    videoDuration={videoDuration}
+                    currentTime={currentTimeState}
+                    isPlaying={isPlaying}
+                    volume={volume}
+                    isMuted={isMuted}
+                    isFullscreen={isFullscreen}
+                    onPlayPause={handlePlayPause}
+                    onSeek={handleTimelineSeek}
+                    onVolumeChange={handleVolumeChange}
+                    onToggleMute={handleToggleMute}
+                    onToggleFullscreen={handleToggleFullscreen}
+                    onFrameStep={handleFrameStep}
+                    comments={comments}
+                    videoFps={selectedVideo?.fps || 24}
+                    videoId={selectedVideo?.id}
+                    isAdmin={isAdmin}
+                    timestampDisplayMode={timestampDisplayMode}
+                    onMarkerClick={onCommentFocus}
+                  />
+                </div>
+
+                {/* Playback Speed Indicator - positioned inside video wrapper */}
+                {playbackSpeed !== 1.0 && (
+                  <div className="absolute top-4 right-4 bg-black/80 text-white px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-20">
+                    {playbackSpeed.toFixed(2)}x
+                  </div>
+                )}
+            </div>
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-card-foreground">

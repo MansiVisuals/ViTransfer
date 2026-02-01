@@ -191,21 +191,41 @@ export function calculateOutputDimensions(
   resolution: string
 ): OutputDimensions {
   const isVertical = metadata.height > metadata.width
+  const isSquareOrNearSquare = Math.abs(metadata.width - metadata.height) / Math.max(metadata.width, metadata.height) < 0.2
   const aspectRatio = metadata.width / metadata.height
 
-  console.log(`[WORKER] Video orientation: ${isVertical ? 'vertical' : 'horizontal'} (${metadata.width}x${metadata.height}, ratio: ${aspectRatio.toFixed(2)})`)
+  console.log(`[WORKER] Video orientation: ${isVertical ? 'vertical' : isSquareOrNearSquare ? 'square' : 'horizontal'} (${metadata.width}x${metadata.height}, ratio: ${aspectRatio.toFixed(2)})`)
 
   const preset = RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS] || RESOLUTION_PRESETS['720p']
 
   let dimensions: OutputDimensions
 
   if (isVertical) {
+    // Vertical: constrain by width, calculate height from aspect ratio
     dimensions = {
       width: preset.verticalWidth,
       height: Math.round(preset.verticalWidth / aspectRatio / 2) * 2  // Ensure even number
     }
   } else {
-    dimensions = preset.horizontal
+    // Horizontal or square: constrain by height, calculate width from aspect ratio
+    // This preserves aspect ratio for 4:3, 1:1, and other non-16:9 formats
+    const targetHeight = preset.horizontal.height
+    const calculatedWidth = Math.round(targetHeight * aspectRatio / 2) * 2  // Ensure even number
+
+    // Cap width to preset max to avoid oversized outputs for ultra-wide videos
+    const maxWidth = preset.horizontal.width
+    if (calculatedWidth <= maxWidth) {
+      dimensions = {
+        width: calculatedWidth,
+        height: targetHeight
+      }
+    } else {
+      // Ultra-wide: constrain by width instead
+      dimensions = {
+        width: maxWidth,
+        height: Math.round(maxWidth / aspectRatio / 2) * 2
+      }
+    }
   }
 
   console.log(`[WORKER] Output resolution: ${dimensions.width}x${dimensions.height}`)

@@ -7,18 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.9] - 2026-02-01
 
+### Added
+- **Centralized CPU allocation** (`src/lib/cpu-config.ts`) for video processing
+  - Coordinates worker concurrency and FFmpeg threads to prevent CPU overload
+  - Conservative allocation targeting 30-50% thread utilization
+  - Leaves headroom for system and host processes
+  - Optional `CPU_THREADS` environment variable for Docker resource limit overrides
+
 ### Fixed
 - Video player now correctly displays all aspect ratios (1:1, 4:3, 4:5, 9:16) without stretching
 - Preview transcoding preserves original aspect ratio instead of forcing 16:9
 - Rounded corners display consistently across all screen sizes
 - Project info positioned correctly below video player
-- Thumbnail reel hint now shows as tooltip overlay without resizing the bar
+- Thumbnail reel hint now shows as tooltip overlay without resizing the reel bar
 - File name truncation in upload modal prevents layout issues
+- **Video processing no longer maxes out CPU** - fixed thread allocation that was causing 100% CPU usage
 
 ### Changed
 - Video player uses letterbox approach with theme-aware blurred background
 - Responsive breakpoint changed to xl (1280px) for better vertical video support
 - Thumbnail reel hint only shows once per session
+- FFmpeg thread allocation now coordinated with worker concurrency
+- Worker logs now use correct terminology (threads vs cores)
 
 ### Migration Note
 Existing 1:1 and 4:3 preview videos need reprocessing to fix stretched aspect ratios.

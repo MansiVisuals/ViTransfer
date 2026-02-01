@@ -3,7 +3,7 @@ import { VideoProcessingJob, AssetProcessingJob, ExternalNotificationJob } from 
 import { initStorage } from '../lib/storage'
 import { runCleanup } from '../lib/upload-cleanup'
 import { getRedisForQueue, closeRedisConnection } from '../lib/redis'
-import os from 'os'
+import { getCpuAllocation, logCpuAllocation } from '../lib/cpu-config'
 import { processVideo } from './video-processor'
 import { processAsset } from './asset-processor'
 import { processAdminNotifications } from './admin-notifications'
@@ -19,15 +19,15 @@ const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 async function main() {
   console.log('[WORKER] Initializing video processing worker...')
 
+  // Get centralized CPU allocation (coordinates with FFmpeg threads)
+  const cpuAllocation = getCpuAllocation()
+  logCpuAllocation(cpuAllocation)
+
   if (DEBUG) {
     console.log('[WORKER DEBUG] Debug mode is ENABLED')
     console.log('[WORKER DEBUG] Node version:', process.version)
     console.log('[WORKER DEBUG] Platform:', process.platform)
     console.log('[WORKER DEBUG] Architecture:', process.arch)
-    console.log('[WORKER DEBUG] Memory:', {
-      total: (os.totalmem() / 1024 / 1024 / 1024).toFixed(2) + ' GB',
-      free: (os.freemem() / 1024 / 1024 / 1024).toFixed(2) + ' GB'
-    })
   }
 
   // Ensure temp directory exists
@@ -44,26 +44,10 @@ async function main() {
     console.log('[WORKER DEBUG] Storage initialized')
   }
 
-  // Calculate optimal concurrency based on available CPU cores
-  const cpuCores = os.cpus().length
-  let concurrency = 2
-  if (cpuCores <= 4) {
-    concurrency = 1
-  } else if (cpuCores <= 8) {
-    concurrency = 2
-  } else {
-    concurrency = 3
-  }
+  // Use centralized CPU allocation for worker concurrency
+  const concurrency = cpuAllocation.workerConcurrency
 
-  console.log(`[WORKER] Worker concurrency: ${concurrency} (based on ${cpuCores} CPU cores)`)
-
-  if (DEBUG) {
-    console.log('[WORKER DEBUG] CPU details:', {
-      cores: cpuCores,
-      model: os.cpus()[0]?.model || 'Unknown',
-      concurrency
-    })
-  }
+  console.log(`[WORKER] Worker concurrency: ${concurrency} (from CPU allocation)`)
 
   const worker = new Worker<VideoProcessingJob>('video-processing', processVideo, {
     connection: getRedisForQueue(),

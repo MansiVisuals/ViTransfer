@@ -1,6 +1,7 @@
 import { Job, Worker } from 'bullmq'
 import { prisma } from '../lib/db'
 import { getRedisForQueue } from '../lib/redis'
+import { getCpuAllocation } from '../lib/cpu-config'
 import { transcodeVideo, getVideoMetadata } from '../lib/ffmpeg'
 import { downloadFile, uploadFile } from '../lib/storage'
 import { CleanPreviewJob } from '../lib/queue'
@@ -135,12 +136,15 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
  * Create and configure the clean preview worker
  */
 export function createCleanPreviewWorker() {
+  // Use centralized CPU allocation to coordinate with main video worker
+  const cpuAllocation = getCpuAllocation()
+
   return new Worker<CleanPreviewJob>(
     'clean-preview-processing',
     processCleanPreview,
     {
       connection: getRedisForQueue(),
-      concurrency: 2, // Process 2 clean previews at a time
+      concurrency: cpuAllocation.cleanPreviewConcurrency,
     }
   )
 }

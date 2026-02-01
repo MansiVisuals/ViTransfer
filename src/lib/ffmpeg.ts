@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import crypto from 'crypto'
+import { getCpuAllocation } from './cpu-config'
 
 // Debug mode - outputs verbose FFmpeg logs
 // Enable with: DEBUG_WORKER=true environment variable
@@ -201,36 +202,27 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
   }
 
-  const cpuCores = os.cpus().length
+  // Get CPU allocation from centralized config
+  // This coordinates with worker concurrency to prevent CPU overload
+  const cpuAllocation = getCpuAllocation()
+  const threads = cpuAllocation.threadsPerJob
 
-  // Optimize preset based on CPU cores and workload
-  // - 'ultrafast': 1-2 cores (low-end systems)
-  // - 'faster': 3-4 cores (mid-range systems)
-  // - 'fast': 5-8 cores (good balance)
-  // - 'medium': 9+ cores (best quality/size ratio)
+  // Optimize preset based on available threads
+  // Fewer threads = faster preset to compensate
   let preset = 'fast'
-  if (cpuCores <= 2) {
-    preset = 'ultrafast'
-  } else if (cpuCores <= 4) {
+  if (threads <= 2) {
     preset = 'faster'
-  } else if (cpuCores <= 8) {
+  } else if (threads <= 4) {
     preset = 'fast'
   } else {
     preset = 'medium'
   }
 
-  // IMPORTANT: Limit CPU usage to prevent system freeze
-  // Use 50-75% of available cores, leaving headroom for system operations
-  // This prevents the system from becoming unresponsive during video processing
-  const maxThreads = Math.max(1, Math.floor(cpuCores * 0.75))
-  const threads = Math.min(maxThreads, 12) // Cap at 12 threads max
-
   if (DEBUG) {
     console.log('[FFMPEG DEBUG] CPU optimization:', {
-      totalCores: cpuCores,
-      selectedPreset: preset,
-      maxThreads,
-      threads
+      totalThreads: cpuAllocation.totalThreads,
+      threadsPerJob: threads,
+      selectedPreset: preset
     })
   }
 

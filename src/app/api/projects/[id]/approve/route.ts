@@ -175,16 +175,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (!smtpConfigured) {
         console.log('[APPROVAL] SMTP not configured, skipping notifications')
       } else {
-        // Get all approved videos for multi-video support
-        const approvedVideos = allVideos.filter(v => v.approved)
-        const approvedVideosList = approvedVideos.map(v => ({
-          name: v.name,
-          id: v.id
-        }))
-
         // Determine if this is a complete project approval or partial
         // Complete = ALL unique videos have at least one approved version
         const isCompleteProjectApproval = allApproved && autoApprove
+
+        // For complete approval, send all approved videos
+        // For partial approval (single video), send only the just-approved video
+        let approvedVideosList: Array<{ name: string; id: string }>
+        if (isCompleteProjectApproval) {
+          const approvedVideos = allVideos.filter(v => v.approved)
+          approvedVideosList = approvedVideos.map(v => ({
+            name: v.name,
+            id: v.id
+          }))
+        } else {
+          // Only the video that was just approved
+          approvedVideosList = [{
+            name: selectedVideo.name,
+            id: selectedVideo.id
+          }]
+        }
 
         // Use new unified notification system
         const safeAuthorName = authorName || undefined

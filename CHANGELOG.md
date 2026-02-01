@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Guest thumbnails on share page**: Guests can now see video posters/thumbnails on public share pages (thumbnailPath was missing from guest video data)
+- **Approval emails show wrong video**: Admin approval emails now correctly show the specific video that was just approved instead of the first video in the approved list
 
 ## [0.8.9] - 2026-02-01
 

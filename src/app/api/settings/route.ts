@@ -89,6 +89,8 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
 
     const {
+      defaultTheme,
+      accentColor,
       companyName,
       smtpServer,
       smtpPort,
@@ -107,6 +109,28 @@ export async function PATCH(request: NextRequest) {
       adminNotificationDay,
       defaultUsePreviewForApprovedPlayback,
     } = body
+
+    // SECURITY: Validate theme setting
+    if (defaultTheme !== undefined) {
+      const validThemes = ['auto', 'light', 'dark']
+      if (!validThemes.includes(defaultTheme)) {
+        return NextResponse.json(
+          { error: 'Invalid theme. Must be auto, light, or dark.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // SECURITY: Validate accent color
+    if (accentColor !== undefined) {
+      const validColors = ['blue', 'purple', 'green', 'orange', 'red', 'pink', 'teal', 'amber', 'stone', 'gold']
+      if (!validColors.includes(accentColor)) {
+        return NextResponse.json(
+          { error: 'Invalid accent color.' },
+          { status: 400 }
+        )
+      }
+    }
 
     // SECURITY: Validate notification schedule
     if (adminNotificationSchedule !== undefined) {
@@ -212,6 +236,8 @@ export async function PATCH(request: NextRequest) {
 
     // Build update data (only include password if it should be updated)
     const updateData: any = {
+      defaultTheme,
+      accentColor,
       companyName,
       smtpServer,
       smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
@@ -241,6 +267,8 @@ export async function PATCH(request: NextRequest) {
       update: updateData,
       create: {
         id: 'default',
+        defaultTheme: defaultTheme || 'auto',
+        accentColor: accentColor || 'blue',
         companyName,
         smtpServer,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,

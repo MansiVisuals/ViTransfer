@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conservative allocation targeting 30-50% thread utilization
   - Leaves headroom for system and host processes
   - Optional `CPU_THREADS` environment variable for Docker resource limit overrides
+- **Appearance settings** in Global Settings
+  - Default theme selection (Auto/Light/Dark)
+  - 10 accent color presets (Blue, Purple, Green, Orange, Red, Pink, Teal, Amber, Stone, Gold)
+- **Dynamic email branding** - email templates now use admin-configured accent color
+- **Improved approval emails** - now shows only the specific video approved instead of listing all approved videos
 
 ### Fixed
 - Video player now correctly displays all aspect ratios (1:1, 4:3, 4:5, 9:16) without stretching
@@ -29,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Thumbnail reel hint only shows once per session
 - FFmpeg thread allocation now coordinated with worker concurrency
 - Worker logs now use correct terminology (threads vs cores)
+- **Settings reorganized**: Combined "Appearance", "Company Branding", and "Domain Configuration" into single "Branding & Appearance" section
 
 ### Migration Note
 Existing 1:1 and 4:3 preview videos need reprocessing to fix stretched aspect ratios.

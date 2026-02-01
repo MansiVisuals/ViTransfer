@@ -253,6 +253,10 @@ model NotificationQueue {
 model Settings {
   id String @id @default("default")
 
+  // Appearance
+  defaultTheme String @default("auto") // "light", "dark", or "auto" (system preference)
+  accentColor  String @default("blue") // Preset accent color name
+
   // Company Branding
   companyName String? @default("Studio") // Displayed in feedback/comments
 

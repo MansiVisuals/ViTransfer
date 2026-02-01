@@ -2,7 +2,58 @@ import nodemailer from 'nodemailer'
 import { prisma } from './db'
 import { decrypt } from './encryption'
 
-export const EMAIL_BRAND = {
+// Accent color presets (must match AppearanceSection.tsx)
+const ACCENT_COLOR_HEX: Record<string, string> = {
+  blue: '#007AFF',
+  purple: '#8B5CF6',
+  green: '#22C55E',
+  orange: '#F97316',
+  red: '#EF4444',
+  pink: '#EC4899',
+  teal: '#14B8A6',
+  amber: '#F59E0B',
+  stone: '#9d9487',
+  gold: '#DEC091',
+}
+
+// Helper to generate a lighter tint of a color for backgrounds
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null
+}
+
+function getAccentSoftColors(accentHex: string): { bg: string; border: string } {
+  const rgb = hexToRgb(accentHex)
+  if (!rgb) return { bg: '#eff6ff', border: '#bfdbfe' }
+
+  // Create a light tint for background (95% white blend)
+  const bg = `rgb(${Math.round(rgb.r + (255 - rgb.r) * 0.9)}, ${Math.round(rgb.g + (255 - rgb.g) * 0.9)}, ${Math.round(rgb.b + (255 - rgb.b) * 0.9)})`
+  // Create a medium tint for border (75% white blend)
+  const border = `rgb(${Math.round(rgb.r + (255 - rgb.r) * 0.7)}, ${Math.round(rgb.g + (255 - rgb.g) * 0.7)}, ${Math.round(rgb.b + (255 - rgb.b) * 0.7)})`
+
+  return { bg, border }
+}
+
+// Email brand colors type
+export interface EmailBrandColors {
+  accent: string
+  accentGradient: string
+  accentSoftBg: string
+  accentSoftBorder: string
+  surface: string
+  surfaceAlt: string
+  border: string
+  text: string
+  textSubtle: string
+  muted: string
+}
+
+// Default brand colors (blue accent)
+export const EMAIL_BRAND: EmailBrandColors = {
   accent: '#007AFF',
   accentGradient: 'linear-gradient(135deg, #0A84FF 0%, #007AFF 100%)',
   accentSoftBg: '#eff6ff',
@@ -13,23 +64,53 @@ export const EMAIL_BRAND = {
   text: '#111827',
   textSubtle: '#374151',
   muted: '#6b7280',
-} as const
+}
+
+// Get dynamic email brand colors based on admin accent color setting
+export function getEmailBrand(accentColor?: string | null): EmailBrandColors {
+  const accentKey = accentColor || 'blue'
+  const accentHex = ACCENT_COLOR_HEX[accentKey] || ACCENT_COLOR_HEX.blue
+  const softColors = getAccentSoftColors(accentHex)
+
+  // Generate a slightly darker shade for gradient start
+  const rgb = hexToRgb(accentHex)
+  const darkerHex = rgb
+    ? `rgb(${Math.max(0, rgb.r - 20)}, ${Math.max(0, rgb.g - 20)}, ${Math.max(0, rgb.b - 20)})`
+    : accentHex
+
+  return {
+    accent: accentHex,
+    accentGradient: `linear-gradient(135deg, ${darkerHex} 0%, ${accentHex} 100%)`,
+    accentSoftBg: softColors.bg,
+    accentSoftBorder: softColors.border,
+    surface: '#ffffff',
+    surfaceAlt: '#f9fafb',
+    border: '#e5e7eb',
+    text: '#111827',
+    textSubtle: '#374151',
+    muted: '#6b7280',
+  }
+}
 
 export function renderEmailButton({
   href,
   label,
   variant = 'primary',
   align = 'center',
+  brand = EMAIL_BRAND,
 }: {
   href: string
   label: string
   variant?: 'primary' | 'secondary'
   align?: 'left' | 'center' | 'right'
+  brand?: EmailBrandColors
 }): string {
-  const backgroundColor = variant === 'primary' ? EMAIL_BRAND.accent : EMAIL_BRAND.surfaceAlt
-  const textColor = variant === 'primary' ? '#ffffff' : EMAIL_BRAND.textSubtle
-  const borderStyle = variant === 'primary' ? 'none' : `1px solid ${EMAIL_BRAND.border}`
-  const shadowStyle = variant === 'primary' ? '0 4px 12px rgba(0,122,255,0.25)' : 'none'
+  const backgroundColor = variant === 'primary' ? brand.accent : brand.surfaceAlt
+  const textColor = variant === 'primary' ? '#ffffff' : brand.textSubtle
+  const borderStyle = variant === 'primary' ? 'none' : `1px solid ${brand.border}`
+  // Generate shadow color from accent
+  const shadowColor = variant === 'primary' ? `${brand.accent}40` : 'transparent'
+  const shadowStyle = variant === 'primary' ? `0 4px 12px ${shadowColor}` : 'none'
 
   return `
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="${align}">
@@ -44,11 +125,11 @@ export function renderEmailButton({
   `.trim()
 }
 
-export function renderUnsubscribeSection(unsubscribeUrl: string): string {
+export function renderUnsubscribeSection(unsubscribeUrl: string, brand = EMAIL_BRAND): string {
   return `
-    <div style="margin: 28px 0 0; padding-top: 18px; border-top: 1px solid ${EMAIL_BRAND.border}; text-align: center;">
-      ${renderEmailButton({ href: unsubscribeUrl, label: 'Unsubscribe', variant: 'secondary' })}
-      <p style="margin: 10px 0 0; font-size: 12px; color: ${EMAIL_BRAND.muted}; line-height: 1.5;">
+    <div style="margin: 28px 0 0; padding-top: 18px; border-top: 1px solid ${brand.border}; text-align: center;">
+      ${renderEmailButton({ href: unsubscribeUrl, label: 'Unsubscribe', variant: 'secondary', brand })}
+      <p style="margin: 10px 0 0; font-size: 12px; color: ${brand.muted}; line-height: 1.5;">
         Stops email notifications only. Your share link still works.
       </p>
     </div>
@@ -87,6 +168,7 @@ export interface EmailShellOptions {
   bodyContent: string
   footerNote?: string
   preheader?: string
+  brand?: EmailBrandColors
 }
 
 export function renderEmailShell({
@@ -96,6 +178,7 @@ export function renderEmailShell({
   bodyContent,
   footerNote,
   preheader,
+  brand = EMAIL_BRAND,
 }: EmailShellOptions) {
   const safePreheader = preheader ? escapeHtml(preheader) : ''
 
@@ -111,22 +194,22 @@ export function renderEmailShell({
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f3f4f6; border-collapse: collapse;">
     <tr>
       <td align="center" style="padding: 24px 12px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width: 600px; max-width: 600px; border-collapse: separate; background: ${EMAIL_BRAND.surface}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 12px; overflow: hidden;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width: 600px; max-width: 600px; border-collapse: separate; background: ${brand.surface}; border: 1px solid ${brand.border}; border-radius: 12px; overflow: hidden;">
           <tr>
-            <td style="background: ${EMAIL_BRAND.accentGradient}; padding: 30px 24px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <td style="background: ${brand.accentGradient}; padding: 30px 24px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
               <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.9); margin-bottom: 10px; font-weight: 700;">${escapeHtml(companyName)}</div>
               <div style="font-size: 24px; font-weight: 750; color: #ffffff; margin-bottom: 8px;">${escapeHtml(title)}</div>
               ${subtitle ? `<div style="font-size: 15px; color: rgba(255,255,255,0.95); line-height: 1.4;">${escapeHtml(subtitle)}</div>` : ''}
             </td>
           </tr>
           <tr>
-            <td style="padding: 28px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: ${EMAIL_BRAND.textSubtle}; font-size: 15px; line-height: 1.6;">
+            <td style="padding: 28px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: ${brand.textSubtle}; font-size: 15px; line-height: 1.6;">
               ${bodyContent}
             </td>
           </tr>
           <tr>
-            <td style="background: ${EMAIL_BRAND.surfaceAlt}; padding: 18px 24px; border-top: 1px solid ${EMAIL_BRAND.border}; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-              <div style="font-size: 12px; color: ${EMAIL_BRAND.muted}; line-height: 1.5;">
+            <td style="background: ${brand.surfaceAlt}; padding: 18px 24px; border-top: 1px solid ${brand.border}; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+              <div style="font-size: 12px; color: ${brand.muted}; line-height: 1.5;">
                 ${escapeHtml(footerNote || companyName)}
               </div>
             </td>
@@ -149,6 +232,7 @@ interface EmailSettings {
   smtpSecure: string | null
   appDomain: string | null
   companyName: string | null
+  accentColor: string | null
 }
 
 let cachedSettings: EmailSettings | null = null
@@ -178,6 +262,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
       smtpSecure: true,
       appDomain: true,
       companyName: true,
+      accentColor: true,
     }
   })
 
@@ -194,6 +279,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
     smtpSecure: null,
     appDomain: null,
     companyName: null,
+    accentColor: null,
   }
   settingsCacheTime = now
 
@@ -311,6 +397,7 @@ export async function sendNewVersionEmail({
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   const subject = `New Version Available: ${projectTitle}`
 
@@ -318,41 +405,42 @@ export async function sendNewVersionEmail({
     companyName,
     title: 'New Version Available',
     subtitle: 'Ready for your review',
+    brand,
     bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${EMAIL_BRAND.text}; line-height: 1.5;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
 
-      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.6;">
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">
         A new version of your project is ready for review. Please take a moment to watch it and let us know what you think.
       </p>
 
-      <div style="background: ${EMAIL_BRAND.accentSoftBg}; border: 1px solid ${EMAIL_BRAND.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_BRAND.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Project details</div>
-        <div style="font-size: 15px; color: ${EMAIL_BRAND.text}; padding: 4px 0;">
+      <div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Project details</div>
+        <div style="font-size: 15px; color: ${brand.text}; padding: 4px 0;">
           <strong>${escapeHtml(projectTitle)}</strong>
         </div>
-        <div style="font-size: 14px; color: ${EMAIL_BRAND.textSubtle}; padding: 4px 0;">
-          ${escapeHtml(videoName)} <span style="color: ${EMAIL_BRAND.accent}; font-weight: 600;">${escapeHtml(versionLabel)}</span>
+        <div style="font-size: 14px; color: ${brand.textSubtle}; padding: 4px 0;">
+          ${escapeHtml(videoName)} <span style="color: ${brand.accent}; font-weight: 600;">${escapeHtml(versionLabel)}</span>
         </div>
       </div>
 
       ${isPasswordProtected ? `
-        <div style="background: ${EMAIL_BRAND.surfaceAlt}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px;">
-          <div style="font-size: 14px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.5;">
+        <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px;">
+          <div style="font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
             <strong>Protected project:</strong> Use the password sent separately to access this project.
           </div>
         </div>
       ` : ''}
 
       <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View Project' })}
+        ${renderEmailButton({ href: shareUrl, label: 'View Project', brand })}
       </div>
 
-      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${EMAIL_BRAND.muted}; line-height: 1.5;">
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${brand.muted}; line-height: 1.5;">
         Questions or feedback? Simply reply to this email and we'll get back to you.
       </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl) : ''}
+      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
     `,
   })
 
@@ -385,6 +473,7 @@ export async function sendProjectApprovedEmail({
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   const subject = isComplete
     ? `${projectTitle} - Project Approved and Ready for Download`
@@ -395,38 +484,34 @@ export async function sendProjectApprovedEmail({
     ? 'All videos are approved and ready to deliver'
     : `${approvedVideos[0]?.name || 'Your video'} has been approved`
 
+  const videoName = approvedVideos[0]?.name || 'Your video'
+
+  const bodyText = isComplete
+    ? `Great news! Your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.`
+    : `Great news! <strong>${escapeHtml(videoName)}</strong> from your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.`
+
   const html = renderEmailShell({
     companyName,
     title: statusTitle,
     subtitle: statusMessage,
+    brand,
     bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${EMAIL_BRAND.text}; line-height: 1.5;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
 
-      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.6;">
-        Great news! Your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">
+        ${bodyText}
       </p>
-
-      ${approvedVideos.length > 0 ? `
-        <div style="background: ${EMAIL_BRAND.surfaceAlt}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-          <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_BRAND.accent}; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.12em;">Approved videos</div>
-          ${approvedVideos.map(v => `
-            <div style="font-size: 15px; color: ${EMAIL_BRAND.textSubtle}; padding: 4px 0;">
-              <span style="display: inline-block; width: 6px; height: 6px; background: ${EMAIL_BRAND.accent}; border-radius: 50%; margin-right: 8px;"></span>${escapeHtml(v.name)}
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
 
       <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'Open Project' })}
+        ${renderEmailButton({ href: shareUrl, label: 'Open Project', brand })}
       </div>
 
-      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${EMAIL_BRAND.muted}; line-height: 1.5;">
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${brand.muted}; line-height: 1.5;">
         Questions or need changes? Simply reply to this email and we'll be happy to help.
       </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl) : ''}
+      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
     `,
   })
 
@@ -465,6 +550,7 @@ export async function sendCommentNotificationEmail({
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   const subject = `New Comment: ${projectTitle}`
 
@@ -475,38 +561,39 @@ export async function sendCommentNotificationEmail({
     title: 'New Comment',
     subtitle: `New feedback on ${projectTitle}`,
     preheader: `New comment on ${projectTitle}`,
+    brand,
     bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${EMAIL_BRAND.text}; line-height: 1.5;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
 
-      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.6;">
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">
         We've reviewed your video and left some feedback for you.
       </p>
 
-      <div style="background: ${EMAIL_BRAND.surfaceAlt}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_BRAND.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
-        <div style="font-size: 15px; color: ${EMAIL_BRAND.text}; margin-bottom: 8px;">
+      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
+        <div style="font-size: 15px; color: ${brand.text}; margin-bottom: 8px;">
           <strong>${escapeHtml(projectTitle)}</strong>
         </div>
-        <div style="font-size: 14px; color: ${EMAIL_BRAND.muted};">
-          ${escapeHtml(videoName)} <span style="color: ${EMAIL_BRAND.muted};">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: ${EMAIL_BRAND.muted};">• ${timecodeText}</span>` : ''}
+        <div style="font-size: 14px; color: ${brand.muted};">
+          ${escapeHtml(videoName)} <span style="color: ${brand.muted};">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: ${brand.muted};">• ${timecodeText}</span>` : ''}
         </div>
       </div>
 
-      <div style="background: ${EMAIL_BRAND.accentSoftBg}; border: 1px solid ${EMAIL_BRAND.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 13px; font-weight: 700; color: ${EMAIL_BRAND.text}; margin-bottom: 8px;">${escapeHtml(authorName)}</div>
-        <div style="font-size: 15px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
+      <div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; font-weight: 700; color: ${brand.text}; margin-bottom: 8px;">${escapeHtml(authorName)}</div>
+        <div style="font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
       </div>
 
       <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View and Reply' })}
+        ${renderEmailButton({ href: shareUrl, label: 'View and Reply', brand })}
       </div>
 
-      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${EMAIL_BRAND.muted}; line-height: 1.5;">
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${brand.muted}; line-height: 1.5;">
         Questions? Simply reply to this email.
       </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl) : ''}
+      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
     `,
   })
 
@@ -543,6 +630,7 @@ export async function sendAdminCommentNotificationEmail({
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   const subject = `Client Feedback: ${projectTitle}`
 
@@ -553,36 +641,37 @@ export async function sendAdminCommentNotificationEmail({
     title: 'New Client Feedback',
     subtitle: `New comment on ${projectTitle}`,
     preheader: `New client comment: ${projectTitle}`,
+    brand,
     bodyContent: `
-      <div style="background: ${EMAIL_BRAND.surfaceAlt}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_BRAND.muted}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Client</div>
-        <div style="font-size: 16px; color: ${EMAIL_BRAND.text}; margin-bottom: 4px;">
+      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Client</div>
+        <div style="font-size: 16px; color: ${brand.text}; margin-bottom: 4px;">
           <strong>${escapeHtml(clientName)}</strong>
         </div>
         ${clientEmail ? `
-          <div style="font-size: 14px; color: ${EMAIL_BRAND.muted};">
+          <div style="font-size: 14px; color: ${brand.muted};">
             ${escapeHtml(clientEmail)}
           </div>
         ` : ''}
       </div>
 
-      <div style="background: ${EMAIL_BRAND.surfaceAlt}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_BRAND.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
-        <div style="font-size: 15px; color: ${EMAIL_BRAND.text}; margin-bottom: 8px;">
+      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
+        <div style="font-size: 15px; color: ${brand.text}; margin-bottom: 8px;">
           <strong>${escapeHtml(projectTitle)}</strong>
         </div>
-        <div style="font-size: 14px; color: ${EMAIL_BRAND.muted};">
-          ${escapeHtml(videoName)} <span style="color: ${EMAIL_BRAND.muted};">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: ${EMAIL_BRAND.muted};">• ${timecodeText}</span>` : ''}
+        <div style="font-size: 14px; color: ${brand.muted};">
+          ${escapeHtml(videoName)} <span style="color: ${brand.muted};">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: ${brand.muted};">• ${timecodeText}</span>` : ''}
         </div>
       </div>
 
-      <div style="background: ${EMAIL_BRAND.accentSoftBg}; border: 1px solid ${EMAIL_BRAND.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_BRAND.accent}; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.12em;">Comment</div>
-        <div style="font-size: 15px; color: ${EMAIL_BRAND.textSubtle}; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
+      <div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.12em;">Comment</div>
+        <div style="font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
       </div>
 
       <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View in Admin Panel' })}
+        ${renderEmailButton({ href: shareUrl, label: 'View in Admin Panel', brand })}
       </div>
     `,
   })
@@ -626,6 +715,7 @@ export async function sendAdminProjectApprovedEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const appDomain = settings.appDomain
+  const brand = getEmailBrand(settings.accentColor)
 
   if (!appDomain) {
     throw new Error('App domain not configured. Please configure domain in Settings to enable email notifications.')
@@ -642,25 +732,33 @@ export async function sendAdminProjectApprovedEmail({
     ? `The complete project has been ${isApproval ? 'approved' : 'unapproved'} by the client`
     : `${approvedVideos[0]?.name || 'A video'} has been ${isApproval ? 'approved' : 'unapproved'} by the client`
 
+  const videoName = approvedVideos[0]?.name || 'A video'
+
   const html = renderEmailShell({
     companyName,
     title: statusTitle,
     subtitle: statusMessage,
     preheader: `${statusTitle}: ${projectTitle}`,
+    brand,
     bodyContent: `
-      ${approvedVideos.length > 0 ? `
-        <div style="background: ${EMAIL_BRAND.surfaceAlt}; border: 1px solid ${EMAIL_BRAND.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-          <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_BRAND.accent}; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.12em;">${isApproval ? 'Approved' : 'Unapproved'} videos</div>
-          ${approvedVideos.map(v => `
-            <div style="font-size: 15px; color: ${EMAIL_BRAND.textSubtle}; padding: 4px 0;">
-              <span style="display: inline-block; width: 6px; height: 6px; background: ${EMAIL_BRAND.accent}; border-radius: 50%; margin-right: 8px;"></span>${escapeHtml(v.name)}
-            </div>
-          `).join('')}
+      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
+        <div style="font-size: 16px; color: ${brand.text}; margin-bottom: 4px;">
+          <strong>${escapeHtml(projectTitle)}</strong>
         </div>
-      ` : ''}
+        ${!isComplete ? `
+          <div style="font-size: 14px; color: ${brand.textSubtle}; margin-top: 8px;">
+            <span style="color: ${brand.accent}; font-weight: 600;">${isApproval ? 'Approved' : 'Unapproved'}:</span> ${escapeHtml(videoName)}
+          </div>
+        ` : `
+          <div style="font-size: 14px; color: ${brand.textSubtle}; margin-top: 8px;">
+            Client: ${escapeHtml(clientName)}
+          </div>
+        `}
+      </div>
 
       <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: `${appDomain}/admin`, label: 'View in Admin Panel' })}
+        ${renderEmailButton({ href: `${appDomain}/admin`, label: 'View in Admin Panel', brand })}
       </div>
     `,
   })
@@ -707,11 +805,12 @@ export async function sendProjectGeneralNotificationEmail({
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   const subject = `Project Ready for Review: ${escapeHtml(projectTitle)}`
 
   const passwordNotice = isPasswordProtected
-    ? `<div style="border:1px solid ${EMAIL_BRAND.accentSoftBorder}; border-radius:10px; padding:12px 14px; font-size:14px; color:${EMAIL_BRAND.textSubtle}; margin:0 0 14px; background:${EMAIL_BRAND.accentSoftBg};">
+    ? `<div style="border:1px solid ${brand.accentSoftBorder}; border-radius:10px; padding:12px 14px; font-size:14px; color:${brand.textSubtle}; margin:0 0 14px; background:${brand.accentSoftBg};">
         Protected project. Use the password sent separately to open the link.
       </div>`
     : ''
@@ -721,37 +820,38 @@ export async function sendProjectGeneralNotificationEmail({
     title: 'Project Ready for Review',
     subtitle: projectTitle,
     preheader: `Project ready: ${projectTitle}`,
+    brand,
     bodyContent: `
-      <p style="margin:0 0 20px; font-size:16px; color:${EMAIL_BRAND.text};">
+      <p style="margin:0 0 20px; font-size:16px; color:${brand.text};">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
-      <p style="margin:0 0 24px; font-size:15px; color:${EMAIL_BRAND.textSubtle};">
+      <p style="margin:0 0 24px; font-size:15px; color:${brand.textSubtle};">
         Your project is ready for review. Click below to view and leave feedback.
       </p>
       ${projectDescription ? `
-        <div style="background:${EMAIL_BRAND.accentSoftBg}; border:1px solid ${EMAIL_BRAND.accentSoftBorder}; border-radius:10px; padding:20px; margin-bottom:20px;">
-          <div style="font-size:12px; font-weight:700; color:${EMAIL_BRAND.accent}; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.12em;">Project overview</div>
-          <div style="font-size:15px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6;">${escapeHtml(projectDescription)}</div>
+        <div style="background:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:10px; padding:20px; margin-bottom:20px;">
+          <div style="font-size:12px; font-weight:700; color:${brand.accent}; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.12em;">Project overview</div>
+          <div style="font-size:15px; color:${brand.textSubtle}; line-height:1.6;">${escapeHtml(projectDescription)}</div>
         </div>
       ` : ''}
       ${readyVideos.length > 0 ? `
-        <div style="background:${EMAIL_BRAND.surfaceAlt}; border:1px solid ${EMAIL_BRAND.border}; border-radius:10px; padding:20px; margin-bottom:24px;">
-          <div style="font-size:12px; font-weight:700; color:${EMAIL_BRAND.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">Ready to view</div>
+        <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:20px; margin-bottom:24px;">
+          <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">Ready to view</div>
           ${readyVideos.map(v => `
-            <div style="font-size:15px; color:${EMAIL_BRAND.textSubtle}; padding:6px 0;">
-              • ${escapeHtml(v.name)} <span style="color:${EMAIL_BRAND.accent}; font-weight:600;">${escapeHtml(v.versionLabel)}</span>
+            <div style="font-size:15px; color:${brand.textSubtle}; padding:6px 0;">
+              • ${escapeHtml(v.name)} <span style="color:${brand.accent}; font-weight:600;">${escapeHtml(v.versionLabel)}</span>
             </div>
           `).join('')}
         </div>
       ` : ''}
       ${passwordNotice}
       <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View Project' })}
+        ${renderEmailButton({ href: shareUrl, label: 'View Project', brand })}
       </div>
-      <p style="margin:24px 0 0; font-size:14px; color:${EMAIL_BRAND.muted}; text-align:center;">
+      <p style="margin:24px 0 0; font-size:14px; color:${brand.muted}; text-align:center;">
         Questions? Reply to this email.
       </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl) : ''}
+      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
     `,
   })
 
@@ -780,6 +880,7 @@ export async function sendPasswordEmail({
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   const subject = `Access Password: ${escapeHtml(projectTitle)}`
 
@@ -788,30 +889,31 @@ export async function sendPasswordEmail({
     title: 'Project Password',
     subtitle: projectTitle,
     preheader: `Password for ${projectTitle}`,
+    brand,
     bodyContent: `
-      <p style="margin:0 0 16px; font-size:15px; color:${EMAIL_BRAND.text}; line-height:1.6;">
+      <p style="margin:0 0 16px; font-size:15px; color:${brand.text}; line-height:1.6;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
       </p>
-      <p style="margin:0 0 16px; font-size:15px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6;">
+      <p style="margin:0 0 16px; font-size:15px; color:${brand.textSubtle}; line-height:1.6;">
         Use this password to open your protected project link. We send it separately for security.
       </p>
-      <div style="background:${EMAIL_BRAND.surfaceAlt}; border:1px solid ${EMAIL_BRAND.border}; padding:14px 16px; margin-bottom:12px; border-radius:10px;">
-        <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${EMAIL_BRAND.muted}; margin-bottom:6px; font-weight:700;">Project</div>
-        <div style="font-size:16px; font-weight:700; color:${EMAIL_BRAND.text};">${escapeHtml(projectTitle)}</div>
+      <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:14px 16px; margin-bottom:12px; border-radius:10px;">
+        <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${brand.muted}; margin-bottom:6px; font-weight:700;">Project</div>
+        <div style="font-size:16px; font-weight:700; color:${brand.text};">${escapeHtml(projectTitle)}</div>
       </div>
-      <div style="background:${EMAIL_BRAND.accentSoftBg}; border:1px solid ${EMAIL_BRAND.accentSoftBorder}; padding:16px; margin:6px 0 16px; border-radius:12px; text-align:center;">
-        <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:${EMAIL_BRAND.accent}; font-weight:800; margin-bottom:10px;">Password</div>
-        <div style="display:inline-block; padding:10px 14px; border-radius:10px; border:1px dashed ${EMAIL_BRAND.accent}; font-family:'SFMono-Regular', Menlo, Consolas, monospace; font-size:18px; color:${EMAIL_BRAND.text}; letter-spacing:1px; word-break:break-all; background:#ffffff;">
+      <div style="background:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; padding:16px; margin:6px 0 16px; border-radius:12px; text-align:center;">
+        <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:${brand.accent}; font-weight:800; margin-bottom:10px;">Password</div>
+        <div style="display:inline-block; padding:10px 14px; border-radius:10px; border:1px dashed ${brand.accent}; font-family:'SFMono-Regular', Menlo, Consolas, monospace; font-size:18px; color:${brand.text}; letter-spacing:1px; word-break:break-all; background:#ffffff;">
           ${escapeHtml(password)}
         </div>
       </div>
-      <p style="font-size:13px; color:${EMAIL_BRAND.textSubtle}; padding:0; margin:0 0 10px;">
+      <p style="font-size:13px; color:${brand.textSubtle}; padding:0; margin:0 0 10px;">
         Keep this password confidential. For security, do not forward this email.
       </p>
-      <p style="font-size:13px; color:${EMAIL_BRAND.muted}; margin:0; text-align:center;">
+      <p style="font-size:13px; color:${brand.muted}; margin:0; text-align:center;">
         Pair this password with the review link we sent in the previous email.
       </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl) : ''}
+      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
     `,
   })
 
@@ -836,6 +938,7 @@ export async function sendPasswordResetEmail({
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
 
   const subject = `Reset Your Password - ${companyName}`
 
@@ -844,27 +947,28 @@ export async function sendPasswordResetEmail({
     title: 'Password Reset',
     subtitle: 'Reset your admin account password',
     preheader: 'Reset your password for ViTransfer',
+    brand,
     bodyContent: `
-      <p style="margin:0 0 16px; font-size:15px; color:${EMAIL_BRAND.text}; line-height:1.6;">
+      <p style="margin:0 0 16px; font-size:15px; color:${brand.text}; line-height:1.6;">
         Hi <strong>${escapeHtml(adminName)}</strong>,
       </p>
-      <p style="margin:0 0 20px; font-size:15px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6;">
+      <p style="margin:0 0 20px; font-size:15px; color:${brand.textSubtle}; line-height:1.6;">
         We received a request to reset your password. Click the button below to create a new password.
       </p>
       <div style="margin:24px 0;">
-        ${renderEmailButton({ href: resetUrl, label: 'Reset Password' })}
+        ${renderEmailButton({ href: resetUrl, label: 'Reset Password', brand })}
       </div>
-      <div style="background:${EMAIL_BRAND.surfaceAlt}; border:1px solid ${EMAIL_BRAND.border}; padding:14px 16px; margin:20px 0; border-radius:10px;">
-        <p style="margin:0 0 8px; font-size:13px; color:${EMAIL_BRAND.textSubtle}; line-height:1.5;">
-          <strong style="color:${EMAIL_BRAND.text};">Security Notice:</strong>
+      <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:14px 16px; margin:20px 0; border-radius:10px;">
+        <p style="margin:0 0 8px; font-size:13px; color:${brand.textSubtle}; line-height:1.5;">
+          <strong style="color:${brand.text};">Security Notice:</strong>
         </p>
-        <ul style="margin:0; padding-left:20px; font-size:13px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6;">
+        <ul style="margin:0; padding-left:20px; font-size:13px; color:${brand.textSubtle}; line-height:1.6;">
           <li>This link expires in <strong>30 minutes</strong></li>
           <li>Can only be used once</li>
           <li>All sessions will be logged out after reset</li>
         </ul>
       </div>
-      <p style="margin:20px 0 0; font-size:13px; color:${EMAIL_BRAND.muted}; line-height:1.6; text-align:center;">
+      <p style="margin:20px 0 0; font-size:13px; color:${brand.muted}; line-height:1.6; text-align:center;">
         If you didn't request this, you can safely ignore this email. Your password will not be changed.
       </p>
     `,
@@ -886,6 +990,7 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
     // Use custom config if provided, otherwise load from database
     const settings = customConfig || await getEmailSettings()
     const transporter = await createTransporter(customConfig)
+    const brand = getEmailBrand(settings.accentColor)
 
     // Verify connection
     await transporter.verify()
@@ -896,13 +1001,14 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
       title: 'SMTP Test Succeeded',
       subtitle: 'Email sending is working',
       preheader: 'SMTP configuration is working',
+      brand,
       bodyContent: `
-        <p style="font-size:15px; color:${EMAIL_BRAND.textSubtle}; line-height:1.6; margin:0 0 12px;">
+        <p style="font-size:15px; color:${brand.textSubtle}; line-height:1.6; margin:0 0 12px;">
           Your SMTP configuration is working. Details below for your records.
         </p>
-        <div style="border:1px solid ${EMAIL_BRAND.border}; border-radius:10px; padding:14px 16px; background:${EMAIL_BRAND.surfaceAlt};">
-          <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${EMAIL_BRAND.muted}; margin-bottom:8px; font-weight:700;">Connection details</div>
-          <div style="font-size:14px; color:${EMAIL_BRAND.text}; line-height:1.6;">
+        <div style="border:1px solid ${brand.border}; border-radius:10px; padding:14px 16px; background:${brand.surfaceAlt};">
+          <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${brand.muted}; margin-bottom:8px; font-weight:700;">Connection details</div>
+          <div style="font-size:14px; color:${brand.text}; line-height:1.6;">
             <div><strong>Server:</strong> ${settings.smtpServer}</div>
             <div><strong>Port:</strong> ${settings.smtpPort}</div>
             <div><strong>Security:</strong> ${settings.smtpSecure || 'STARTTLS'}</div>

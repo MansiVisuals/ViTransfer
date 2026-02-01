@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Settings as SettingsIcon, Save } from 'lucide-react'
-import { CompanyBrandingSection } from '@/components/settings/CompanyBrandingSection'
-import { DomainConfigurationSection } from '@/components/settings/DomainConfigurationSection'
+import { AppearanceSection } from '@/components/settings/AppearanceSection'
 import { NotificationsSection } from '@/components/settings/NotificationsSection'
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
@@ -13,6 +12,8 @@ import { apiPatch, apiPost, apiFetch } from '@/lib/api-client'
 
 interface Settings {
   id: string
+  defaultTheme: string | null
+  accentColor: string | null
   companyName: string | null
   smtpServer: string | null
   smtpPort: number | null
@@ -77,6 +78,10 @@ export default function GlobalSettingsPage() {
   const [testEmailResult, setTestEmailResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [testEmailAddress, setTestEmailAddress] = useState('')
 
+  // Form state for appearance
+  const [defaultTheme, setDefaultTheme] = useState('auto')
+  const [accentColor, setAccentColor] = useState('blue')
+
   // Form state for global settings
   const [companyName, setCompanyName] = useState('')
   const [smtpServer, setSmtpServer] = useState('')
@@ -123,12 +128,13 @@ export default function GlobalSettingsPage() {
   const [blocklistsLoading, setBlocklistsLoading] = useState(false)
 
   // Collapsible section state (all collapsed by default)
-  const [showCompanyBranding, setShowCompanyBranding] = useState(false)
-  const [showDomainConfiguration, setShowDomainConfiguration] = useState(false)
+  const [showBrandingAppearance, setShowBrandingAppearance] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
 
   const applySettingsToForm = useCallback((data: Settings) => {
+    setDefaultTheme(data.defaultTheme || 'auto')
+    setAccentColor(data.accentColor || 'blue')
     setCompanyName(data.companyName || '')
     setSmtpServer(data.smtpServer || '')
     setSmtpPort(data.smtpPort?.toString() || '587')
@@ -314,6 +320,8 @@ export default function GlobalSettingsPage() {
 
     try {
       const updates = {
+        defaultTheme: defaultTheme || 'auto',
+        accentColor: accentColor || 'blue',
         companyName: companyName || null,
         smtpServer: smtpServer || null,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : 587,
@@ -398,6 +406,7 @@ export default function GlobalSettingsPage() {
         smtpFromAddress: smtpFromAddress || null,
         smtpSecure: smtpSecure || 'STARTTLS',
         companyName: companyName || 'ViTransfer',
+        accentColor: accentColor || 'blue',
       }
 
       // Validate that all required fields are filled
@@ -474,18 +483,17 @@ export default function GlobalSettingsPage() {
         )}
 
         <div className="space-y-4 sm:space-y-6">
-          <CompanyBrandingSection
+          <AppearanceSection
+            defaultTheme={defaultTheme}
+            setDefaultTheme={setDefaultTheme}
+            accentColor={accentColor}
+            setAccentColor={setAccentColor}
             companyName={companyName}
             setCompanyName={setCompanyName}
-            show={showCompanyBranding}
-            setShow={setShowCompanyBranding}
-          />
-
-          <DomainConfigurationSection
             appDomain={appDomain}
             setAppDomain={setAppDomain}
-            show={showDomainConfiguration}
-            setShow={setShowDomainConfiguration}
+            show={showBrandingAppearance}
+            setShow={setShowBrandingAppearance}
           />
 
           <NotificationsSection

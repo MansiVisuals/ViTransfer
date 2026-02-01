@@ -67,7 +67,6 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       STORAGE_ROOT: /app/uploads
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:4321}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required in .env file}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required in .env file}
       ADMIN_NAME: ${ADMIN_NAME:-Admin}

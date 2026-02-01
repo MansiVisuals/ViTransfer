@@ -28,7 +28,6 @@ Environment=REDIS_PASSWORD=CHANGE_REDIS_PASSWORD
 Environment=STORAGE_ROOT=/app/uploads
 
 # Application URLs - CHANGE TO YOUR DOMAIN
-Environment=NEXT_PUBLIC_APP_URL=http://localhost:4321
 Environment=APP_PORT=4321
 
 # Admin credentials - REQUIRED: CHANGE THESE BEFORE STARTING

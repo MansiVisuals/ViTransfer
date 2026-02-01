@@ -258,7 +258,7 @@ ViTransfer uses standard Docker Compose and should work on most platforms. Below
    - Open `docker-compose.truenas.yml`
    - Replace all `${VARIABLE}` values with your generated secrets
    - Update volume paths to match your dataset paths
-   - Set `NEXT_PUBLIC_APP_URL` to your TrueNAS IP
+   - After login, set your **App Domain** in Admin Settings (needed for email links and Passkey auth)
    - Set `ADMIN_EMAIL` and `ADMIN_PASSWORD`
 
 5. **Deploy via TrueNAS UI**
@@ -301,11 +301,11 @@ Rootless Podman Quadlets are available in the folder quadlet.
 | `JWT_REFRESH_SECRET` | Yes | JWT refresh secret (base64) | - | Generated with `openssl rand -base64 64` |
 | `ADMIN_EMAIL` | Yes | Initial admin email | - | `admin@example.com` |
 | `ADMIN_PASSWORD` | Yes | Initial admin password | - | `Admin1234` (change in production) |
-| `NEXT_PUBLIC_APP_URL` | No | Public URL for emails and links | `http://localhost:4321` | `https://videos.example.com` |
-| `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
+| `ADMIN_NAME` | No | Initial admin display name | `Admin` | `Jane Doe` |
 | `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens | _none_ | |
-| `CLOUDFLARE_TUNNEL` | No | Enable Cloudflare script/connect CSP allowances | `false` | |
+| `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
 | `NEXT_PUBLIC_TUS_ENDPOINT` | No | If TUS is on another origin, add it to connect-src | _none_ | |
+| `CPU_THREADS` | No | Override CPU thread count used by the worker/FFmpeg | auto-detect | `8` |
 
 **Important Notes:**
 - Use `openssl rand -hex 32` for database passwords (no special characters that break URLs)

@@ -71,7 +71,7 @@ Edit each `.container` file and replace the placeholder values:
 - `CHANGE_THIS_SECRET` → JWT secret
 - `CHANGE_THIS_REFRESH_SECRET` → JWT refresh secret
 - `CHANGE_THIS_SHARE_SECRET` → Share token secret
-- `NEXT_PUBLIC_APP_URL` → Your domain (e.g., https://vitransfer.yourdomain.com)
+- Set your **App Domain** in Admin Settings after first login (used for email links and Passkey auth)
 - `CHANGE_THIS_ADMIN_EMAIL` → Your admin email (REQUIRED - valid email format)
 - `CHANGE_THIS_ADMIN_PASSWORD` → Your admin password (REQUIRED - min 8 characters)
 - `ADMIN_NAME` → Admin display name (Optional, defaults to "Admin")

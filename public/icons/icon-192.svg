@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
-  <rect x="96" y="160" width="224" height="192" rx="32" fill="#ffffff"/>
-  <polygon points="320,208 416,144 416,368 320,304" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 24 24" fill="none">
+  <rect width="24" height="24" rx="5" fill="#0a0a0a"/>
+  <rect x="4" y="7" width="11" height="10" rx="2" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m15.5 12 4.2 2.8a.5.5 0 0 0 .8-.41V8.61a.5.5 0 0 0-.76-.43L15.5 11" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -42,6 +42,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.20.6",
     "tus-js-client": "^4.2.3",
+    "web-push": "^3.6.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -51,6 +52,7 @@
     "@types/nodemailer": "^7.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "^16.0.1",
     "postcss": "^8",

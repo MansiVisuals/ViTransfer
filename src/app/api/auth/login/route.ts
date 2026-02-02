@@ -132,6 +132,10 @@ export async function POST(request: NextRequest) {
             .join('\n')
         })(),
         notifyType: 'warning',
+        pushData: {
+          email,
+          ip: ipAddress,
+        },
       }).catch(() => {})
 
       return NextResponse.json(

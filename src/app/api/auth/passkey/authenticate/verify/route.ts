@@ -100,6 +100,9 @@ export async function POST(request: NextRequest) {
           return ['Method: Passkey', link ? `Link: ${link}` : null].filter(Boolean).join('\n')
         })(),
         notifyType: 'warning',
+        pushData: {
+          ip: ipAddress,
+        },
       }).catch(() => {})
 
       return NextResponse.json(

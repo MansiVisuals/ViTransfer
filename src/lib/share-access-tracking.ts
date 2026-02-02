@@ -40,17 +40,18 @@ export async function trackSharePageAccess(params: {
     }
   }
 
+  // Fetch project info once for both body and pushData
+  const project = await prisma.project
+    .findUnique({
+      where: { id: projectId },
+      select: { id: true, title: true, slug: true },
+    })
+    .catch(() => null)
+
   void enqueueExternalNotification({
     eventType: 'SHARE_ACCESS',
     title: 'Successful Share Page Access',
     body: await (async () => {
-      const project = await prisma.project
-        .findUnique({
-          where: { id: projectId },
-          select: { title: true, slug: true },
-        })
-        .catch(() => null)
-
       const shareUrl = project?.slug ? await generateShareUrl(project.slug, request).catch(() => '') : ''
       const baseUrl = await getAppUrl(request).catch(() => '')
 
@@ -64,5 +65,10 @@ export async function trackSharePageAccess(params: {
         .join('\n')
     })(),
     notifyType: 'info',
+    pushData: {
+      projectTitle: project?.title || undefined,
+      projectId: project?.id || undefined,
+      email: email || undefined,
+    },
   }).catch(() => {})
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AccentColorProvider } from "@/components/AccentColorProvider";
+import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
 import { prisma } from "@/lib/db";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -15,10 +16,22 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: "ViTransfer",
   description: "Professional video review and approval platform",
+  manifest: '/manifest.json',
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.svg', type: 'image/svg+xml', sizes: '192x192' },
+      { url: '/icons/icon-512.svg', type: 'image/svg+xml', sizes: '512x512' },
     ],
+    apple: [
+      { url: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon.svg',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'ViTransfer',
   },
 }
 
@@ -26,6 +39,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  themeColor: '#0a0a0a',
 }
 
 // Fetch appearance settings server-side for immediate application
@@ -121,6 +135,7 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.className} flex flex-col min-h-dvh overflow-x-hidden`}>
         <AccentColorProvider />
+        <ServiceWorkerProvider />
         <main className="flex-1 min-h-0 flex flex-col">{children}</main>
       </body>
     </html>

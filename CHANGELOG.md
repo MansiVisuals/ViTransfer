@@ -5,7 +5,24 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-02-01
+## [0.9.0] - 2026-02-02
+
+### Added
+- **Progressive Web App (PWA)**: ViTransfer can now be installed as an app on desktop and mobile devices
+  - Add to home screen support for iOS and Android
+  - Full-screen app experience without browser UI
+  - Offline-capable service worker
+- **Browser Push Notifications**: Real-time push notifications for admin users
+  - Same event types as Apprise: Failed Login, Unauthorized OTP, Share Access, Client Comment, Video Approval
+  - Multi-device support - enable notifications on multiple browsers/devices
+  - Per-device notification preferences
+  - Test notification feature to verify setup
+  - Zero configuration - VAPID keys auto-generated and stored encrypted in database
+- **New Settings Tab**: "Browser Push" tab in Notifications settings for managing push subscriptions
+
+### Changed
+- **Favicon and PWA icons**: Updated to high-resolution filled camera icon design
+- **Auth token storage**: Changed from sessionStorage to localStorage for PWA persistence on iOS
 
 ### Fixed
 - **Guest thumbnails on share page**: Guests can now see video posters/thumbnails on public share pages (thumbnailPath was missing from guest video data)

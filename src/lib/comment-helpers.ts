@@ -259,6 +259,14 @@ export async function handleCommentNotifications(params: {
           .filter(Boolean)
           .join('\n'),
         notifyType: 'info',
+        pushData: {
+          projectTitle: project.title,
+          projectId: project.id,
+          videoName: video?.name || undefined,
+          authorName,
+          content: rawContent,
+          email: authorEmail || undefined,
+        },
       }).catch(() => {})
     }
 

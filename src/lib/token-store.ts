@@ -4,10 +4,14 @@ let cachedRefreshToken: string | null = null
 type TokenChangeListener = (tokens: { accessToken: string | null; refreshToken: string | null }) => void
 const listeners = new Set<TokenChangeListener>()
 
-function syncRefreshFromSession(): string | null {
+// Use localStorage for PWA persistence (survives app close on iOS)
+// sessionStorage would be cleared when iOS closes the PWA
+const STORAGE_KEY = 'vitransfer_refresh_token'
+
+function syncRefreshFromStorage(): string | null {
   if (typeof window === 'undefined') return null
   if (cachedRefreshToken) return cachedRefreshToken
-  const stored = window.sessionStorage.getItem('vitransfer_refresh_token')
+  const stored = window.localStorage.getItem(STORAGE_KEY)
   if (stored) {
     cachedRefreshToken = stored
   }
@@ -19,7 +23,7 @@ export function getAccessToken(): string | null {
 }
 
 export function getRefreshToken(): string | null {
-  return cachedRefreshToken || syncRefreshFromSession()
+  return cachedRefreshToken || syncRefreshFromStorage()
 }
 
 export function setTokens(tokens: { accessToken: string; refreshToken: string }) {
@@ -27,7 +31,7 @@ export function setTokens(tokens: { accessToken: string; refreshToken: string })
   cachedRefreshToken = tokens.refreshToken
 
   if (typeof window !== 'undefined') {
-    window.sessionStorage.setItem('vitransfer_refresh_token', tokens.refreshToken)
+    window.localStorage.setItem(STORAGE_KEY, tokens.refreshToken)
   }
 
   notifyListeners()
@@ -43,7 +47,7 @@ export function clearTokens() {
   cachedRefreshToken = null
 
   if (typeof window !== 'undefined') {
-    window.sessionStorage.removeItem('vitransfer_refresh_token')
+    window.localStorage.removeItem(STORAGE_KEY)
   }
 
   notifyListeners()

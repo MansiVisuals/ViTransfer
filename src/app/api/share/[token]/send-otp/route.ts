@@ -159,6 +159,11 @@ export async function POST(
             .join('\n')
         })(),
         notifyType: 'warning',
+        pushData: {
+          projectTitle: project.title,
+          projectId: project.id,
+          email,
+        },
       }).catch(() => {})
 
       // SECURITY: Add random delay to match timing of valid email path

@@ -309,5 +309,12 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
       .filter(Boolean)
       .join('\n'),
     notifyType: approved ? 'success' : 'warning',
+    pushData: {
+      projectTitle: project.title,
+      projectId: project.id,
+      videoName: videoNames,
+      authorName: authorName || undefined,
+      email: authorEmail || undefined,
+    },
   }).catch(() => {})
 }

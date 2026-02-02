@@ -20,9 +20,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects Project[]
-  comments Comment[]
-  passkeys PasskeyCredential[]
+  projects          Project[]
+  comments          Comment[]
+  passkeys          PasskeyCredential[]
+  pushSubscriptions PushSubscription[]
 }
 
 enum UserRole {
@@ -293,6 +294,10 @@ model Settings {
   adminNotificationDay      Int? // 0-6 for weekly (0 = Sunday)
   lastAdminNotificationSent DateTime?
 
+  // Web Push VAPID Keys (auto-generated on first use)
+  vapidPublicKey  String? // Public key for browser subscription
+  vapidPrivateKey String? // Encrypted private key
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -513,4 +518,27 @@ model PasskeyCredential {
 
   @@index([userId])
   @@index([userId, lastUsedAt])
+}
+
+model PushSubscription {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint String @unique
+
+  // Web Push subscription keys
+  p256dh String
+  auth   String
+
+  // Device metadata for management UI
+  userAgent  String?
+  deviceName String?
+
+  // Event subscriptions (default: all events)
+  subscribedEvents String[] @default(["FAILED_LOGIN", "UNAUTHORIZED_OTP", "SHARE_ACCESS", "CLIENT_COMMENT", "VIDEO_APPROVAL"])
+
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([userId])
 }

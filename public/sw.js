@@ -51,8 +51,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body || 'You have a new notification',
-    icon: payload.icon || '/icons/icon-192.png',
-    badge: payload.badge || '/icons/icon-192.png',
+    icon: payload.icon || '/brand/icon-192.svg',
+    badge: payload.badge || '/brand/icon-192.svg',
     tag: payload.tag || 'default',
     data: payload.data || {},
     vibrate: [100, 50, 100],

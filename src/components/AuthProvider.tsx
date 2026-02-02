@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { apiFetch } from '@/lib/api-client'
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '@/lib/token-store'
@@ -43,7 +43,7 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
   const router = useRouter()
   const pathname = usePathname()
 
-  async function checkAuth() {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await apiFetch('/api/auth/session')
       if (response.ok) {
@@ -59,31 +59,9 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
     } finally{
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => {
-    bootstrap()
-  }, [pathname])
-
-  async function bootstrap() {
-    setLoading(true)
-    const refreshToken = getRefreshToken()
-    const hasAccess = getAccessToken()
-
-    if (!hasAccess && refreshToken) {
-      await refreshWithToken(refreshToken)
-    }
-
-    await checkAuth()
-  }
-
-  useEffect(() => {
-    if (requireAuth && !loading && !user) {
-      router.push(`/login?returnUrl=${encodeURIComponent(pathname || '/')}`)
-    }
-  }, [requireAuth, loading, user, pathname, router])
-
-  async function refreshWithToken(refreshToken: string) {
+  const refreshWithToken = useCallback(async (refreshToken: string) => {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
@@ -110,7 +88,29 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
       clearTokens()
       return false
     }
-  }
+  }, [])
+
+  const bootstrap = useCallback(async () => {
+    setLoading(true)
+    const refreshToken = getRefreshToken()
+    const hasAccess = getAccessToken()
+
+    if (!hasAccess && refreshToken) {
+      await refreshWithToken(refreshToken)
+    }
+
+    await checkAuth()
+  }, [checkAuth, refreshWithToken])
+
+  useEffect(() => {
+    bootstrap()
+  }, [bootstrap, pathname])
+
+  useEffect(() => {
+    if (requireAuth && !loading && !user) {
+      router.push(`/login?returnUrl=${encodeURIComponent(pathname || '/')}`)
+    }
+  }, [requireAuth, loading, user, pathname, router])
 
   /**
    * Secure Logout Function

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { ACCENT_COLORS, AccentColorKey } from '@/components/settings/AppearanceSection'
 
 /**
@@ -8,11 +8,7 @@ import { ACCENT_COLORS, AccentColorKey } from '@/components/settings/AppearanceS
  * Fetches from API and caches in localStorage for faster subsequent loads
  */
 export function AccentColorProvider() {
-  useEffect(() => {
-    applyAppearanceSettings()
-  }, [])
-
-  const applyAppearanceSettings = async () => {
+  const applyAppearanceSettings = useCallback(async () => {
     try {
       // Fetch current setting from API
       const response = await fetch('/api/settings/theme')
@@ -47,7 +43,11 @@ export function AccentColorProvider() {
         applyColorVariables(cachedColor)
       }
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    applyAppearanceSettings()
+  }, [applyAppearanceSettings])
 
   const applyDefaultTheme = (defaultTheme: string) => {
     const root = document.documentElement

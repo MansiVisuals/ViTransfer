@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Comment, Video } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
@@ -111,7 +111,7 @@ export default function CommentSection({
   const [localComments, setLocalComments] = useState<CommentWithReplies[]>(initialComments)
 
   // Fetch comments function (only used for event-triggered updates)
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       const response = isAdminView
         ? await apiFetch(`/api/comments?projectId=${projectId}`)
@@ -130,7 +130,7 @@ export default function CommentSection({
     } catch (error) {
       // Silent fail - keep showing existing comments
     }
-  }
+  }, [isAdminView, projectId, shareToken])
 
   // Initialize localComments only (no polling - hook handles optimistic updates)
   useEffect(() => {
@@ -192,7 +192,7 @@ export default function CommentSection({
       window.removeEventListener('commentPosted', handleCommentPosted as EventListener)
       window.removeEventListener('videoApprovalChanged', handleCommentUpdate)
     }
-  }, [projectId])
+  }, [projectId, fetchComments])
 
   // Get latest video version
   const latestVideoVersion = videos.length > 0

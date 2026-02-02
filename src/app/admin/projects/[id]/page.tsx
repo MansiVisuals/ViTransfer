@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ export default function ProjectPage() {
   const videoManagerRef = useRef<{ triggerUpload: () => void } | null>(null)
 
   // Fetch project data function (extracted so it can be called on upload complete)
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       const response = await apiFetch(`/api/projects/${id}`)
       if (!response.ok) {
@@ -42,12 +42,12 @@ export default function ProjectPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, router])
 
   // Fetch project data on mount
   useEffect(() => {
     fetchProject()
-  }, [id, router])
+  }, [fetchProject])
 
   // Listen for immediate updates (approval changes, comment deletes/posts, etc.)
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function ProjectPage() {
       window.removeEventListener('commentDeleted', handleUpdate)
       window.removeEventListener('commentPosted', handleCommentPosted as EventListener)
     }
-  }, [id])
+  }, [fetchProject])
 
   // Auto-refresh when videos are processing to show real-time progress
   // Centralized polling to prevent duplicate network requests
@@ -91,7 +91,7 @@ export default function ProjectPage() {
 
       return () => clearInterval(interval)
     }
-  }, [project?.videos])
+  }, [project?.videos, fetchProject])
 
   // Fetch share URL
   useEffect(() => {

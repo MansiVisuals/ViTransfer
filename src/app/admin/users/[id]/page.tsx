@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { X, Save, RefreshCw, Eye, EyeOff, Copy, Check, Fingerprint, Plus, Trash2, AlertTriangle, UserCog, KeyRound } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,14 +49,23 @@ export default function EditUserPage() {
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [passkeyError, setPasskeyError] = useState('')
 
-  useEffect(() => {
-    fetchUser()
-    fetchLoggedInUser()
-    fetchPasskeyStatus()
-    fetchPasskeys()
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await apiFetch(`/api/users/${userId}`)
+      if (!res.ok) throw new Error('Failed to fetch user')
+      const data = await res.json()
+      setCurrentUser(data.user)
+      setFormData({
+        email: data.user.email,
+        username: data.user.username || '',
+        name: data.user.name || '',
+      })
+    } catch (err: any) {
+      setError(err.message)
+    }
   }, [userId])
 
-  const fetchLoggedInUser = async () => {
+  const fetchLoggedInUser = useCallback(async () => {
     try {
       const res = await apiFetch('/api/auth/session')
       if (res.ok) {
@@ -66,9 +75,9 @@ export default function EditUserPage() {
     } catch (err) {
       // Silently fail
     }
-  }
+  }, [])
 
-  const fetchPasskeyStatus = async () => {
+  const fetchPasskeyStatus = useCallback(async () => {
     try {
       const res = await apiFetch('/api/auth/passkey/status')
       if (res.ok) {
@@ -79,9 +88,9 @@ export default function EditUserPage() {
     } catch (err) {
       // Silently fail - passkey is optional
     }
-  }
+  }, [])
 
-  const fetchPasskeys = async () => {
+  const fetchPasskeys = useCallback(async () => {
     if (!userId) return
     
     try {
@@ -93,7 +102,14 @@ export default function EditUserPage() {
     } catch (err) {
       // Silently fail
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    fetchUser()
+    fetchLoggedInUser()
+    fetchPasskeyStatus()
+    fetchPasskeys()
+  }, [fetchUser, fetchLoggedInUser, fetchPasskeyStatus, fetchPasskeys])
 
   const handleRegisterPasskey = async () => {
     setPasskeyError('')
@@ -135,22 +151,6 @@ export default function EditUserPage() {
       await fetchPasskeys()
     } catch (err: any) {
       setPasskeyError(err.message)
-    }
-  }
-
-  const fetchUser = async () => {
-    try {
-      const res = await apiFetch(`/api/users/${userId}`)
-      if (!res.ok) throw new Error('Failed to fetch user')
-      const data = await res.json()
-      setCurrentUser(data.user)
-      setFormData({
-        email: data.user.email,
-        username: data.user.username || '',
-        name: data.user.name || '',
-      })
-    } catch (err: any) {
-      setError(err.message)
     }
   }
 

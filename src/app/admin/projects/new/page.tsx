@@ -82,7 +82,7 @@ export default function NewProjectPage() {
     if (recipientEmail && smtpConfigured && authMode === 'PASSWORD') {
       // Don't auto-switch, just show recommendation
     }
-  }, [recipientEmail, smtpConfigured])
+  }, [recipientEmail, smtpConfigured, authMode])
 
   function handleGeneratePassword() {
     setSharePassword(generateSecurePassword())

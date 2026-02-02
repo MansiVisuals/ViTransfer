@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useMemo } from 'react'
 import { CheckCircle2, Film, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -100,10 +101,13 @@ export default function ThumbnailGrid({
                   <div className="absolute inset-0 animate-pulse bg-muted" />
                 ) : thumbnailUrl ? (
                   // Thumbnail image - object-contain preserves aspect ratio
-                  <img
+                  <Image
                     src={thumbnailUrl}
                     alt={name}
-                    className="absolute inset-0 w-full h-full object-contain"
+                    fill
+                    sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    className="object-contain"
+                    draggable={false}
                   />
                 ) : (
                   // Placeholder

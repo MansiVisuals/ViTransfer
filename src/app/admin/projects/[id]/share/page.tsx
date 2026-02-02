@@ -48,7 +48,7 @@ export default function AdminSharePage() {
   const sessionIdRef = useRef<string>(`admin:${Date.now()}`)
 
   // Fetch comments separately for security (same pattern as public share)
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     if (!id) return
 
     setCommentsLoading(true)
@@ -56,14 +56,14 @@ export default function AdminSharePage() {
       const response = await apiFetch(`/api/comments?projectId=${id}`)
       if (response.ok) {
         const commentsData = await response.json()
-        setComments(commentsData)
-      }
-    } catch (error) {
-      // Failed to load comments
-    } finally {
-      setCommentsLoading(false)
+      setComments(commentsData)
     }
+  } catch (error) {
+    // Failed to load comments
+  } finally {
+    setCommentsLoading(false)
   }
+  }, [id])
 
   const transformProjectData = (projectData: any) => {
     const videosByName = projectData.videos.reduce((acc: any, video: any) => {
@@ -86,7 +86,7 @@ export default function AdminSharePage() {
     }
   }
 
-  const fetchTokensForVideos = async (videos: any[]) => {
+  const fetchTokensForVideos = useCallback(async (videos: any[]) => {
     const sessionId = sessionIdRef.current
 
     return Promise.all(
@@ -150,7 +150,7 @@ export default function AdminSharePage() {
         }
       })
     )
-  }
+  }, [id])
 
   // Load project data, settings, and admin user
   useEffect(() => {
@@ -212,7 +212,7 @@ export default function AdminSharePage() {
     return () => {
       isMounted = false
     }
-  }, [id])
+  }, [id, fetchComments])
 
   // Listen for comment updates (post, delete, etc.)
   useEffect(() => {
@@ -235,7 +235,7 @@ export default function AdminSharePage() {
       window.removeEventListener('commentPosted', handleCommentPosted as EventListener)
       window.removeEventListener('commentDeleted', handleCommentDeleted)
     }
-  }, [id])
+  }, [fetchComments])
 
   // Set active video when project loads, handling URL parameters
   useEffect(() => {
@@ -317,7 +317,7 @@ export default function AdminSharePage() {
     return () => {
       isMounted = false
     }
-  }, [activeVideosRaw])
+  }, [activeVideosRaw, fetchTokensForVideos])
 
   // Fetch thumbnails for all video groups
   useEffect(() => {

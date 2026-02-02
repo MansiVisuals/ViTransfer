@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -31,11 +31,7 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
   const [editEmail, setEditEmail] = useState('')
   const [editName, setEditName] = useState('')
 
-  useEffect(() => {
-    loadRecipients()
-  }, [projectId])
-
-  const loadRecipients = async () => {
+  const loadRecipients = useCallback(async () => {
     setLoading(true)
     try {
       const response = await apiFetch(`/api/projects/${projectId}/recipients`)
@@ -50,7 +46,11 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectId, onRecipientsChange])
+
+  useEffect(() => {
+    loadRecipients()
+  }, [loadRecipients])
 
   const addRecipient = async () => {
     if (!newEmail && !newName) {

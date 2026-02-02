@@ -87,7 +87,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
 
   // Fetch comments separately for security
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     if (!token || !shareToken) return
 
     setCommentsLoading(true)
@@ -106,7 +106,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     } finally {
       setCommentsLoading(false)
     }
-  }
+  }, [token, shareToken])
 
   // Listen for comment updates (post, delete, etc.)
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       window.removeEventListener('commentPosted', handleCommentPosted as EventListener)
       window.removeEventListener('commentDeleted', handleCommentDeleted)
     }
-  }, [token, shareToken])
+  }, [fetchComments])
 
   // Fetch project data function (for refresh after approval)
   const fetchProjectData = async (tokenOverride?: string | null) => {
@@ -249,7 +249,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return () => {
       isMounted = false
     }
-  }, [token, shareToken])
+  }, [token, shareToken, storageKey, fetchComments])
 
   // Set active video when project loads, handling URL parameters
   useEffect(() => {
@@ -308,7 +308,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [project?.videosByName, activeVideoName, urlVideoName, urlVersion, urlTimestamp])
 
-  const fetchVideoToken = async (videoId: string, quality: string) => {
+  const fetchVideoToken = useCallback(async (videoId: string, quality: string) => {
     if (!shareToken) return ''
     const response = await fetch(`/api/share/${token}/video-token?videoId=${videoId}&quality=${quality}`, {
       headers: {
@@ -318,9 +318,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     if (!response.ok) return ''
     const data = await response.json()
     return data.token || ''
-  }
+  }, [shareToken, token])
 
-  const fetchTokensForVideos = async (videos: any[]) => {
+  const fetchTokensForVideos = useCallback(async (videos: any[]) => {
     if (!shareToken) return videos
 
     return Promise.all(
@@ -386,7 +386,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         }
       })
     )
-  }
+  }, [shareToken, fetchVideoToken, project?.usePreviewForApprovedPlayback])
 
   useEffect(() => {
     let isMounted = true
@@ -413,7 +413,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return () => {
       isMounted = false
     }
-  }, [activeVideosRaw, shareToken])
+  }, [activeVideosRaw, shareToken, fetchTokensForVideos])
 
   // Fetch thumbnails for all video groups (for grid and reel display)
   useEffect(() => {
@@ -458,7 +458,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return () => {
       isMounted = false
     }
-  }, [project?.videosByName, shareToken])
+  }, [project?.videosByName, shareToken, fetchVideoToken])
 
   // Determine initial view state based on URL params
   useEffect(() => {

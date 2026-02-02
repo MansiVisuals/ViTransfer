@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAccessToken, getRefreshToken, clearTokens, subscribe } from '@/lib/token-store'
 
@@ -59,6 +59,27 @@ export default function SessionMonitor() {
     }
   }, [])
 
+  const handleLogout = useCallback(async () => {
+    const accessToken = getAccessToken()
+    const refreshToken = getRefreshToken()
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...(refreshToken ? { 'X-Refresh-Token': `Bearer ${refreshToken}` } : {}),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      })
+    } catch (error) {
+      // ignore
+    } finally {
+      clearTokens()
+      router.push('/login?sessionExpired=true')
+    }
+  }, [router])
+
   useEffect(() => {
     const onActivity = () => {
       lastActivityRef.current = Date.now()
@@ -90,28 +111,7 @@ export default function SessionMonitor() {
       })
       clearInterval(inactivityTimer)
     }
-  }, [])
-
-  async function handleLogout() {
-    const accessToken = getAccessToken()
-    const refreshToken = getRefreshToken()
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          ...(refreshToken ? { 'X-Refresh-Token': `Bearer ${refreshToken}` } : {}),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
-      })
-    } catch (error) {
-      // ignore
-    } finally {
-      clearTokens()
-      router.push('/login?sessionExpired=true')
-    }
-  }
+  }, [handleLogout])
 
   if (!showWarning) {
     return null

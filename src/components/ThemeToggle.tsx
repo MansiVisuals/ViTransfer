@@ -1,44 +1,11 @@
 'use client'
 
 import { Moon, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-
-    // Check if user has a saved preference
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-
-    if (savedTheme) {
-      // User has manually set a preference - use it
-      setTheme(savedTheme)
-      applyTheme(savedTheme)
-    } else {
-      // No saved preference - fetch admin default and apply
-      fetchAndApplyDefaultTheme()
-    }
-
-    // Listen for system preference changes (when user changes OS theme)
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handleChange = (e: MediaQueryListEvent) => {
-      // Only update if user hasn't set a manual preference AND admin default is 'auto'
-      if (!localStorage.getItem('theme')) {
-        const adminDefault = localStorage.getItem('adminDefaultTheme')
-        if (!adminDefault || adminDefault === 'auto') {
-          const newTheme = e.matches ? 'dark' : 'light'
-          setTheme(newTheme)
-          applyTheme(newTheme)
-        }
-      }
-    }
-
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [])
 
   const applyTheme = (themeToApply: 'light' | 'dark') => {
     if (themeToApply === 'dark') {
@@ -48,7 +15,7 @@ export default function ThemeToggle() {
     }
   }
 
-  const fetchAndApplyDefaultTheme = async () => {
+  const fetchAndApplyDefaultTheme = useCallback(async () => {
     try {
       // Check if we already have a cached admin default
       const cachedDefault = localStorage.getItem('adminDefaultTheme')
@@ -95,7 +62,40 @@ export default function ThemeToggle() {
       setTheme(systemPreference)
       applyTheme(systemPreference)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    setMounted(true)
+
+    // Check if user has a saved preference
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
+
+    if (savedTheme) {
+      // User has manually set a preference - use it
+      setTheme(savedTheme)
+      applyTheme(savedTheme)
+    } else {
+      // No saved preference - fetch admin default and apply
+      fetchAndApplyDefaultTheme()
+    }
+
+    // Listen for system preference changes (when user changes OS theme)
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = (e: MediaQueryListEvent) => {
+      // Only update if user hasn't set a manual preference AND admin default is 'auto'
+      if (!localStorage.getItem('theme')) {
+        const adminDefault = localStorage.getItem('adminDefaultTheme')
+        if (!adminDefault || adminDefault === 'auto') {
+          const newTheme = e.matches ? 'dark' : 'light'
+          setTheme(newTheme)
+          applyTheme(newTheme)
+        }
+      }
+    }
+
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [fetchAndApplyDefaultTheme])
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'

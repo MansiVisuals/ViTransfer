@@ -4,6 +4,7 @@ import { AuthProvider } from '@/components/AuthProvider'
 import AdminHeader from '@/components/AdminHeader'
 import SessionMonitor from '@/components/SessionMonitor'
 import KofiWidget from '@/components/KofiWidget'
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
 export default function AdminLayout({
@@ -12,6 +13,8 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const headerRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
+  const hideHeader = pathname?.match(/^\/admin\/projects\/[^/]+\/share/)
 
   // Prevent caching of admin pages
   useEffect(() => {
@@ -37,6 +40,11 @@ export default function AdminLayout({
 
   // Allow components (e.g. share sidebar) to size to viewport minus header.
   useEffect(() => {
+    if (hideHeader) {
+      document.documentElement.style.setProperty('--admin-header-height', '0px')
+      return
+    }
+
     const headerEl = headerRef.current
     if (!headerEl) return
 
@@ -53,14 +61,16 @@ export default function AdminLayout({
       observer.disconnect()
       document.documentElement.style.setProperty('--admin-header-height', '0px')
     }
-  }, [])
+  }, [hideHeader])
 
   return (
     <AuthProvider requireAuth={true}>
       <div className="flex flex-1 min-h-0 bg-background flex-col overflow-x-hidden">
-        <div ref={headerRef}>
-          <AdminHeader />
-        </div>
+        {!hideHeader && (
+          <div ref={headerRef}>
+            <AdminHeader />
+          </div>
+        )}
         <div className="flex-1 min-h-0 flex flex-col">
           {children}
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -107,7 +107,7 @@ export default function SecurityEventsClient() {
   const [showRateLimitsModal, setShowRateLimitsModal] = useState(false)
   const [showCleanupModal, setShowCleanupModal] = useState(false)
 
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     setLoading(true)
     try {
       // If filters are initialized but empty, show no results
@@ -148,7 +148,7 @@ export default function SecurityEventsClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination.page, pagination.limit, typeFilter, severityFilter, stats.length, SEVERITY_OPTIONS.length])
 
   const loadRateLimits = async () => {
     try {
@@ -187,7 +187,7 @@ export default function SecurityEventsClient() {
 
   useEffect(() => {
     loadEvents()
-  }, [pagination.page, pagination.limit, typeFilter, severityFilter])
+  }, [loadEvents])
 
   useEffect(() => {
     if (showRateLimitsModal) {

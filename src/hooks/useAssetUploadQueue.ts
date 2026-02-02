@@ -79,22 +79,6 @@ export function useAssetUploadQueue({
     return uploadId
   }, [videoId])
 
-  // Auto-start queued uploads when slots are available
-  useEffect(() => {
-    const currentUploading = queue.filter(u => u.status === 'uploading').length
-    const queuedUploads = queue.filter(u => u.status === 'queued')
-
-    // Start queued uploads if we have available slots
-    if (currentUploading < maxConcurrent && queuedUploads.length > 0) {
-      const slotsAvailable = maxConcurrent - currentUploading
-      const uploadsToStart = queuedUploads.slice(0, slotsAvailable)
-
-      uploadsToStart.forEach(upload => {
-        startUpload(upload.id)
-      })
-    }
-  }, [queue, maxConcurrent])
-
   // Warn before leaving page if uploads are in progress
   useEffect(() => {
     const hasActiveUploads = queue.some(u =>
@@ -313,7 +297,23 @@ export function useAssetUploadQueue({
           : u
       ))
     }
-  }, [queue, videoId, onUploadComplete])
+  }, [videoId, onUploadComplete])
+
+  // Auto-start queued uploads when slots are available
+  useEffect(() => {
+    const currentUploading = queue.filter(u => u.status === 'uploading').length
+    const queuedUploads = queue.filter(u => u.status === 'queued')
+
+    // Start queued uploads if we have available slots
+    if (currentUploading < maxConcurrent && queuedUploads.length > 0) {
+      const slotsAvailable = maxConcurrent - currentUploading
+      const uploadsToStart = queuedUploads.slice(0, slotsAvailable)
+
+      uploadsToStart.forEach(upload => {
+        startUpload(upload.id)
+      })
+    }
+  }, [queue, maxConcurrent, startUpload])
 
   // Pause an upload
   const pauseUpload = useCallback((uploadId: string) => {

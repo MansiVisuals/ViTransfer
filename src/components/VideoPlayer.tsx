@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Video, ProjectStatus, Comment } from '@prisma/client'
 import { Button } from './ui/button'
 import { CheckCircle2 } from 'lucide-react'
@@ -506,7 +506,7 @@ export default function VideoPlayer({
   }
 
   // Auto-hide controls when not in use (2 seconds is standard for most video players)
-  const resetControlsTimeout = () => {
+  const resetControlsTimeout = useCallback(() => {
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current)
     }
@@ -516,7 +516,7 @@ export default function VideoPlayer({
         setShowControls(false)
       }, 2000)
     }
-  }
+  }, [isPlaying])
 
   // Start auto-hide timer when video starts playing
   useEffect(() => {
@@ -529,7 +529,7 @@ export default function VideoPlayer({
         clearTimeout(controlsTimeoutRef.current)
       }
     }
-  }, [isPlaying])
+  }, [isPlaying, resetControlsTimeout])
 
   // Track video play/pause events
   useEffect(() => {
@@ -555,7 +555,7 @@ export default function VideoPlayer({
       video.removeEventListener('pause', handlePause)
       video.removeEventListener('volumechange', handleVolumeChangeEvent)
     }
-  }, [])
+  }, [resetControlsTimeout])
 
   // Fullscreen change event (handles both desktop and mobile)
   useEffect(() => {

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, Film, Layers, Grid3X3, ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -312,10 +313,12 @@ export default function ThumbnailReel({
                       {/* Thumbnail */}
                       <div className="aspect-video relative bg-black">
                         {thumbnailUrl ? (
-                          <img
+                          <Image
                             src={thumbnailUrl}
                             alt={name}
-                            className="absolute inset-0 w-full h-full object-contain"
+                            fill
+                            sizes="(min-width: 1024px) 150px, (min-width: 640px) 110px, 80px"
+                            className="object-contain"
                             draggable={false}
                           />
                         ) : (

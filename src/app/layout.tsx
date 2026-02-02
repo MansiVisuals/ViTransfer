@@ -19,14 +19,14 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/icons/icon-192.svg', type: 'image/svg+xml', sizes: '192x192' },
-      { url: '/icons/icon-512.svg', type: 'image/svg+xml', sizes: '512x512' },
+      { url: '/brand/icon.svg', type: 'image/svg+xml' },
+      { url: '/brand/icon-192.svg', type: 'image/svg+xml', sizes: '192x192' },
+      { url: '/brand/icon-512.svg', type: 'image/svg+xml', sizes: '512x512' },
     ],
     apple: [
-      { url: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+      { url: '/brand/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
     ],
-    shortcut: '/icon.svg',
+    shortcut: '/brand/icon.svg',
   },
   appleWebApp: {
     capable: true,

@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
-import { Lock, Video, LogIn, Fingerprint } from 'lucide-react'
+import { Lock, LogIn, Fingerprint } from 'lucide-react'
 import { startAuthentication } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { setTokens, clearTokens } from '@/lib/token-store'
+import LogoMark from '@/components/LogoMark'
 
 function LoginForm() {
   const router = useRouter()
@@ -142,9 +143,7 @@ function LoginForm() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
-            <Video className="w-8 h-8 text-primary-foreground" />
-          </div>
+          <LogoMark size={64} className="mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-foreground">
             ViTransfer
           </h1>
@@ -261,9 +260,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
-            <Video className="w-8 h-8 text-primary-foreground animate-pulse" />
-          </div>
+          <LogoMark size={64} className="mx-auto mb-4 animate-pulse" ariaHidden />
         </div>
       </div>
     }>

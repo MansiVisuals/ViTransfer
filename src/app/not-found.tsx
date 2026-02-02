@@ -3,15 +3,14 @@
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Video, Home } from 'lucide-react'
+import { Home } from 'lucide-react'
+import LogoMark from '@/components/LogoMark'
 
 export default function NotFound() {
   return (
     <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
-          <Video className="w-8 h-8 text-primary-foreground" />
-        </div>
+        <LogoMark size={64} className="mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-foreground mb-2">ViTransfer</h1>
 
         <Card className="mt-6">

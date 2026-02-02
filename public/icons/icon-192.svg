@@ -1,5 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 24 24" fill="none">
-  <rect width="24" height="24" rx="5" fill="#0a0a0a"/>
-  <rect x="4" y="7" width="11" height="10" rx="2" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="m15.5 12 4.2 2.8a.5.5 0 0 0 .8-.41V8.61a.5.5 0 0 0-.76-.43L15.5 11" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 64 64">
+  <!-- tile -->
+  <rect width="64" height="64" rx="14" fill="#000000"/>
+
+  <!-- portal mass (extended left) -->
+  <rect x="7" y="16" width="38" height="32" rx="9" fill="#007BFF"/>
+
+  <!-- release slit -->
+  <rect x="39" y="24" width="12" height="16" rx="5" fill="#000000"/>
+
+  <!-- rounded wedge -->
+  <path d="
+    M57 24
+    C55.5 22.2 52.5 22.2 51 24
+    L46.5 30
+    C44.5 31.8 44.5 32.2 46.5 34
+    L51 40
+    C52.5 41.8 55.5 41.8 57 40
+    C54.5 34 54.5 30 57 24
+    Z" fill="#FFFFFF"/>
 </svg>

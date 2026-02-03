@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer'
 import { prisma } from './db'
 import { decrypt } from './encryption'
+import { buildLogoSvg } from './brand'
 
 // Accent color presets (must match AppearanceSection.tsx)
 const ACCENT_COLOR_HEX: Record<string, string> = {
@@ -92,6 +93,13 @@ export function getEmailBrand(accentColor?: string | null): EmailBrandColors {
   }
 }
 
+// Inline SVG logo for emails (accent-aware, reuses app logomark)
+function buildEmailLogo(accentHex: string): string {
+  const accent = accentHex || ACCENT_COLOR_HEX.blue
+  // Reuse the same SVG used across the app; size 56 for email header balance.
+  return buildLogoSvg(accent, 56)
+}
+
 export function renderEmailButton({
   href,
   label,
@@ -180,7 +188,11 @@ export function renderEmailShell({
   preheader,
   brand = EMAIL_BRAND,
 }: EmailShellOptions) {
+  const safeCompanyName = escapeHtml(companyName)
+  const safeTitle = escapeHtml(title)
+  const safeSubtitle = subtitle ? escapeHtml(subtitle) : ''
   const safePreheader = preheader ? escapeHtml(preheader) : ''
+  const logo = buildEmailLogo(brand.accent)
 
   return `
 <!DOCTYPE html>
@@ -197,9 +209,14 @@ export function renderEmailShell({
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width: 600px; max-width: 600px; border-collapse: separate; background: ${brand.surface}; border: 1px solid ${brand.border}; border-radius: 12px; overflow: hidden;">
           <tr>
             <td style="background: ${brand.accentGradient}; padding: 30px 24px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-              <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.9); margin-bottom: 10px; font-weight: 700;">${escapeHtml(companyName)}</div>
-              <div style="font-size: 24px; font-weight: 750; color: #ffffff; margin-bottom: 8px;">${escapeHtml(title)}</div>
-              ${subtitle ? `<div style="font-size: 15px; color: rgba(255,255,255,0.95); line-height: 1.4;">${escapeHtml(subtitle)}</div>` : ''}
+              <div style="display: inline-flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; margin-bottom: 14px;">
+                ${logo}
+                <div style="text-align: left;">
+                  <div style="font-size: 17px; font-weight: 750; color: #ffffff; line-height: 1.1;">${safeCompanyName}</div>
+                </div>
+              </div>
+              <div style="font-size: 24px; font-weight: 750; color: #ffffff; margin-bottom: 8px;">${safeTitle}</div>
+              ${subtitle ? `<div style="font-size: 15px; color: rgba(255,255,255,0.95); line-height: 1.4;">${safeSubtitle}</div>` : ''}
             </td>
           </tr>
           <tr>

@@ -190,6 +190,14 @@ export async function sendPushNotifications(
   payload: PushNotificationPayload
 ): Promise<{ sent: number; failed: number }> {
   try {
+    const defaultIcon = '/brand/icon-192.svg'
+    const defaultBadge = '/brand/icon-192.svg'
+    const normalizedPayload = {
+      ...payload,
+      icon: payload.icon || defaultIcon,
+      badge: payload.badge || defaultBadge,
+    }
+
     // Get all subscriptions that include this event type
     const subscriptions = await prisma.pushSubscription.findMany({
       where: {
@@ -217,7 +225,7 @@ export async function sendPushNotifications(
       subscriptions.map(async (sub) => {
         const result = await sendToSubscription(
           { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-          payload
+          normalizedPayload
         )
 
         if (result.success) {
@@ -268,8 +276,8 @@ export async function sendTestNotification(
   const payload: PushNotificationPayload = {
     title: 'ViTransfer Test',
     body: `Test notification for ${subscription.deviceName || 'this device'}`,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: '/brand/icon-192.svg',
+    badge: '/brand/icon-192.svg',
     tag: 'test',
     data: { type: 'TEST' },
   }
@@ -292,8 +300,8 @@ export function createNotificationPayload(
   }
 ): PushNotificationPayload {
   const basePayload = {
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: '/brand/icon-192.svg',
+    badge: '/brand/icon-192.svg',
     tag: eventType,
     data: { type: eventType, ...data },
   }

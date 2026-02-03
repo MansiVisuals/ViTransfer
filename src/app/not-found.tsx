@@ -4,13 +4,13 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Home } from 'lucide-react'
-import LogoMark from '@/components/LogoMark'
+import BrandLogo from '@/components/BrandLogo'
 
 export default function NotFound() {
   return (
     <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md text-center">
-        <LogoMark size={64} className="mx-auto mb-4" />
+        <BrandLogo height={64} className="mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-foreground mb-2">ViTransfer</h1>
 
         <Card className="mt-6">

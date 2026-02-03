@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
 import { Lock, Check, Mail, KeyRound } from 'lucide-react'
+import BrandLogo from '@/components/BrandLogo'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import ThemeToggle from '@/components/ThemeToggle'
 
@@ -637,27 +638,29 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   if (isPasswordProtected && !isAuthenticated) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
-        <Card className="bg-card border-border w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Lock className="w-12 h-12 text-muted-foreground" />
-            </div>
-            <CardTitle className="text-foreground">Authentication Required</CardTitle>
-            <p className="text-muted-foreground text-sm mt-2">
-              {authMode === 'PASSWORD' && 'Please enter the password to continue.'}
-              {authMode === 'OTP' && 'Enter your email to receive an access code.'}
-              {authMode === 'BOTH' && 'Choose your preferred authentication method.'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-3 px-4">
-              This authentication is for project recipients only.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Password Authentication - hide when OTP code is being entered */}
-            {(authMode === 'PASSWORD' || authMode === 'BOTH') && !otpSent && (
-              <div className="space-y-4">
-                {authMode === 'BOTH' && (
-                  <div className="flex items-center gap-2">
+        <div className="w-full max-w-md flex flex-col items-center gap-4">
+          <BrandLogo height={64} className="mx-auto" />
+          <Card className="bg-card border-border w-full">
+            <CardHeader className="text-center space-y-3">
+              <div className="flex justify-center">
+                <Lock className="w-12 h-12 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-foreground">Authentication Required</CardTitle>
+              <p className="text-muted-foreground text-sm mt-2">
+                {authMode === 'PASSWORD' && 'Please enter the password to continue.'}
+                {authMode === 'OTP' && 'Enter your email to receive an access code.'}
+                {authMode === 'BOTH' && 'Choose your preferred authentication method.'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-3 px-4">
+                This authentication is for project recipients only.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Password Authentication - hide when OTP code is being entered */}
+              {(authMode === 'PASSWORD' || authMode === 'BOTH') && !otpSent && (
+                <div className="space-y-4">
+                  {authMode === 'BOTH' && (
+                    <div className="flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm font-medium text-foreground">Password</p>
                   </div>
@@ -797,8 +800,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 </Button>
               </>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }

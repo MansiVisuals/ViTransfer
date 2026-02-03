@@ -100,6 +100,17 @@ function buildEmailLogo(accentHex: string): string {
   return buildLogoSvg(accent, 56)
 }
 
+function buildBrandingLogoUrl(settings: EmailSettings): string | null {
+  if (!settings.brandingLogoPath) return null
+  const base = settings.appDomain?.replace(/\/$/, '') || ''
+  const path = settings.brandingLogoPath.startsWith('http')
+    ? settings.brandingLogoPath
+    : settings.brandingLogoPath.startsWith('/')
+      ? settings.brandingLogoPath
+      : `/${settings.brandingLogoPath}`
+  return base ? `${base}${path}` : path
+}
+
 export function renderEmailButton({
   href,
   label,
@@ -177,6 +188,7 @@ export interface EmailShellOptions {
   footerNote?: string
   preheader?: string
   brand?: EmailBrandColors
+  brandingLogoUrl?: string | null
 }
 
 export function renderEmailShell({
@@ -187,12 +199,15 @@ export function renderEmailShell({
   footerNote,
   preheader,
   brand = EMAIL_BRAND,
+  brandingLogoUrl,
 }: EmailShellOptions) {
   const safeCompanyName = escapeHtml(companyName)
   const safeTitle = escapeHtml(title)
   const safeSubtitle = subtitle ? escapeHtml(subtitle) : ''
   const safePreheader = preheader ? escapeHtml(preheader) : ''
-  const logo = buildEmailLogo(brand.accent)
+  const logo = brandingLogoUrl
+    ? `<img src="${escapeHtml(brandingLogoUrl)}" alt="${safeCompanyName} logo" height="44" style="display:block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:132px;" />`
+    : buildEmailLogo(brand.accent)
 
   return `
 <!DOCTYPE html>
@@ -250,6 +265,7 @@ interface EmailSettings {
   appDomain: string | null
   companyName: string | null
   accentColor: string | null
+  brandingLogoPath: string | null
 }
 
 let cachedSettings: EmailSettings | null = null
@@ -280,6 +296,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
       appDomain: true,
       companyName: true,
       accentColor: true,
+      brandingLogoPath: true,
     }
   })
 
@@ -297,6 +314,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
     appDomain: null,
     companyName: null,
     accentColor: null,
+    brandingLogoPath: null,
   }
   settingsCacheTime = now
 
@@ -415,6 +433,7 @@ export async function sendNewVersionEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   const subject = `New Version Available: ${projectTitle}`
 
@@ -423,6 +442,7 @@ export async function sendNewVersionEmail({
     title: 'New Version Available',
     subtitle: 'Ready for your review',
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
@@ -491,6 +511,7 @@ export async function sendProjectApprovedEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   const subject = isComplete
     ? `${projectTitle} - Project Approved and Ready for Download`
@@ -512,6 +533,7 @@ export async function sendProjectApprovedEmail({
     title: statusTitle,
     subtitle: statusMessage,
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
@@ -568,6 +590,7 @@ export async function sendCommentNotificationEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   const subject = `New Comment: ${projectTitle}`
 
@@ -579,6 +602,7 @@ export async function sendCommentNotificationEmail({
     subtitle: `New feedback on ${projectTitle}`,
     preheader: `New comment on ${projectTitle}`,
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
@@ -648,6 +672,7 @@ export async function sendAdminCommentNotificationEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   const subject = `Client Feedback: ${projectTitle}`
 
@@ -659,6 +684,7 @@ export async function sendAdminCommentNotificationEmail({
     subtitle: `New comment on ${projectTitle}`,
     preheader: `New client comment: ${projectTitle}`,
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
         <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Client</div>
@@ -733,6 +759,7 @@ export async function sendAdminProjectApprovedEmail({
   const companyName = settings.companyName || 'ViTransfer'
   const appDomain = settings.appDomain
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   if (!appDomain) {
     throw new Error('App domain not configured. Please configure domain in Settings to enable email notifications.')
@@ -757,6 +784,7 @@ export async function sendAdminProjectApprovedEmail({
     subtitle: statusMessage,
     preheader: `${statusTitle}: ${projectTitle}`,
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
         <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
@@ -823,6 +851,7 @@ export async function sendProjectGeneralNotificationEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   const subject = `Project Ready for Review: ${escapeHtml(projectTitle)}`
 
@@ -838,6 +867,7 @@ export async function sendProjectGeneralNotificationEmail({
     subtitle: projectTitle,
     preheader: `Project ready: ${projectTitle}`,
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <p style="margin:0 0 20px; font-size:16px; color:${brand.text};">
         Hi <strong>${escapeHtml(clientName)}</strong>,
@@ -898,6 +928,7 @@ export async function sendPasswordEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   const subject = `Access Password: ${escapeHtml(projectTitle)}`
 
@@ -907,6 +938,7 @@ export async function sendPasswordEmail({
     subtitle: projectTitle,
     preheader: `Password for ${projectTitle}`,
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <p style="margin:0 0 16px; font-size:15px; color:${brand.text}; line-height:1.6;">
         Hi <strong>${escapeHtml(clientName)}</strong>,
@@ -956,6 +988,7 @@ export async function sendPasswordResetEmail({
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
   const subject = `Reset Your Password - ${companyName}`
 
@@ -965,6 +998,7 @@ export async function sendPasswordResetEmail({
     subtitle: 'Reset your admin account password',
     preheader: 'Reset your password for ViTransfer',
     brand,
+    brandingLogoUrl,
     bodyContent: `
       <p style="margin:0 0 16px; font-size:15px; color:${brand.text}; line-height:1.6;">
         Hi <strong>${escapeHtml(adminName)}</strong>,
@@ -1008,6 +1042,7 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
     const settings = customConfig || await getEmailSettings()
     const transporter = await createTransporter(customConfig)
     const brand = getEmailBrand(settings.accentColor)
+    const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
     // Verify connection
     await transporter.verify()
@@ -1019,6 +1054,7 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
       subtitle: 'Email sending is working',
       preheader: 'SMTP configuration is working',
       brand,
+      brandingLogoUrl,
       bodyContent: `
         <p style="font-size:15px; color:${brand.textSubtle}; line-height:1.6; margin:0 0 12px;">
           Your SMTP configuration is working. Details below for your records.

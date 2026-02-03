@@ -260,6 +260,7 @@ model Settings {
 
   // Company Branding
   companyName String? @default("Studio") // Displayed in feedback/comments
+  brandingLogoPath String? // Path to uploaded custom SVG logo
 
   // SMTP Email Configuration
   smtpServer      String?

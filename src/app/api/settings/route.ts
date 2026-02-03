@@ -92,6 +92,7 @@ export async function PATCH(request: NextRequest) {
       defaultTheme,
       accentColor,
       companyName,
+      brandingLogoPath,
       smtpServer,
       smtpPort,
       smtpUsername,
@@ -130,6 +131,13 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         )
       }
+    }
+
+    if (brandingLogoPath !== undefined && brandingLogoPath !== null && typeof brandingLogoPath !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid branding logo path.' },
+        { status: 400 }
+      )
     }
 
     // SECURITY: Validate notification schedule
@@ -239,6 +247,7 @@ export async function PATCH(request: NextRequest) {
       defaultTheme,
       accentColor,
       companyName,
+      brandingLogoPath,
       smtpServer,
       smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
       smtpUsername,
@@ -270,6 +279,7 @@ export async function PATCH(request: NextRequest) {
         defaultTheme: defaultTheme || 'auto',
         accentColor: accentColor || 'blue',
         companyName,
+        brandingLogoPath: brandingLogoPath || null,
         smtpServer,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
         smtpUsername,

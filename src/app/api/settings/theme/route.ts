@@ -12,15 +12,16 @@ export async function GET() {
   try {
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
-      select: { defaultTheme: true, accentColor: true },
+      select: { defaultTheme: true, accentColor: true, brandingLogoPath: true },
     })
 
     return NextResponse.json({
       defaultTheme: settings?.defaultTheme || 'auto',
       accentColor: settings?.accentColor || 'blue',
+      brandingLogoPath: settings?.brandingLogoPath || null,
     })
   } catch (error) {
     // Default values on error
-    return NextResponse.json({ defaultTheme: 'auto', accentColor: 'blue' })
+    return NextResponse.json({ defaultTheme: 'auto', accentColor: 'blue', brandingLogoPath: null })
   }
 }

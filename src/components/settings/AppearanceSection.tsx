@@ -1,7 +1,8 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
-import { Monitor, Moon, Sun, Check } from 'lucide-react'
+import { Monitor, Moon, Sun, Check, Upload, Trash2, Image as ImageIcon } from 'lucide-react'
+import { useRef } from 'react'
 
 // Accent color presets with HSL values for light and dark modes
 export const ACCENT_COLORS = {
@@ -28,6 +29,11 @@ interface AppearanceSectionProps {
   setCompanyName: (value: string) => void
   appDomain: string
   setAppDomain: (value: string) => void
+  brandingLogoUrl: string | null
+  onUploadLogo: (file: File) => Promise<void>
+  onRemoveLogo: () => Promise<void>
+  logoUploading: boolean
+  logoError?: string | null
   show: boolean
   setShow: (value: boolean) => void
 }
@@ -41,9 +47,15 @@ export function AppearanceSection({
   setCompanyName,
   appDomain,
   setAppDomain,
+  brandingLogoUrl,
+  onUploadLogo,
+  onRemoveLogo,
+  logoUploading,
+  logoError,
   show,
   setShow
 }: AppearanceSectionProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const themeOptions = [
     { value: 'auto', label: 'Auto (System)', icon: Monitor, description: 'Follow device settings' },
     { value: 'light', label: 'Light', icon: Sun, description: 'Always use light theme' },
@@ -72,6 +84,61 @@ export function AppearanceSection({
         <p className="text-xs text-muted-foreground">
           Displayed in email notifications and throughout the application
         </p>
+      </div>
+
+      {/* Custom Logo Upload */}
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <Label>Custom Logo (SVG)</Label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".svg,image/svg+xml"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              onUploadLogo(file)
+              e.target.value = ''
+            }
+          }}
+        />
+        <div className="flex items-center gap-4">
+          <div className="w-24 h-16 rounded-xl border border-border bg-card flex items-center justify-center overflow-hidden">
+            {brandingLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brandingLogoUrl} alt="Custom logo preview" className="w-full h-full object-contain" />
+            ) : (
+              <ImageIcon className="w-6 h-6 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card text-sm hover:border-primary/60 hover:text-primary transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={logoUploading}
+            >
+              <Upload className="w-4 h-4" />
+              {logoUploading ? 'Uploading…' : brandingLogoUrl ? 'Replace Logo' : 'Upload Logo'}
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card text-sm text-destructive hover:border-destructive/60 hover:text-destructive transition-colors disabled:opacity-50"
+              onClick={onRemoveLogo}
+              disabled={!brandingLogoUrl || logoUploading}
+            >
+              <Trash2 className="w-4 h-4" />
+              Remove
+            </button>
+          </div>
+        </div>
+        {logoError ? (
+          <p className="text-xs text-destructive font-medium">{logoError}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Upload an SVG up to 300 KB. Appears in app screens and emails. Favicons stay unchanged.
+          </p>
+        )}
       </div>
 
       {/* Application Domain */}

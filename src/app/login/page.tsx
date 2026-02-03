@@ -12,7 +12,7 @@ import { Lock, LogIn, Fingerprint } from 'lucide-react'
 import { startAuthentication } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { setTokens, clearTokens } from '@/lib/token-store'
-import LogoMark from '@/components/LogoMark'
+import BrandLogo from '@/components/BrandLogo'
 
 function LoginForm() {
   const router = useRouter()
@@ -143,7 +143,7 @@ function LoginForm() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <LogoMark size={64} className="mx-auto mb-4" />
+          <BrandLogo height={64} className="mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-foreground">
             ViTransfer
           </h1>
@@ -260,7 +260,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <div className="text-center">
-          <LogoMark size={64} className="mx-auto mb-4 animate-pulse" ariaHidden />
+          <BrandLogo height={64} className="mx-auto mb-4 animate-pulse" ariaHidden />
         </div>
       </div>
     }>

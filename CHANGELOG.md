@@ -19,10 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test notification feature to verify setup
   - Zero configuration - VAPID keys auto-generated and stored encrypted in database
 - **New Settings Tab**: "Browser Push" tab in Notifications settings for managing push subscriptions
+- **Custom branding logo**: Admins can upload a single SVG (300KB, sanitized) in Branding & Appearance; stored at `/api/branding/logo`. Rendered across auth screens (admin login, share-page authentication), not-found/unsubscribe pages (64px high, auto width) and emails (44px high, auto width) with fallback to the default LogoMark.
 
 ### Changed
 - **Favicon and PWA icons**: Updated to high-resolution filled camera icon design
 - **Auth token storage**: Changed from sessionStorage to localStorage for PWA persistence on iOS
+- **Logo rendering**: LogoMark now uses theme CSS variables for background/slit/wedge colors; BrandLogo component prefers the custom logo when present and preserves non-square aspect ratios.
 
 ### Fixed
 - **Guest thumbnails on share page**: Guests can now see video posters/thumbnails on public share pages (thumbnailPath was missing from guest video data)

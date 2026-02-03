@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Lock, CheckCircle2, AlertTriangle, Eye, EyeOff } from 'lucide-react'
-import LogoMark from '@/components/LogoMark'
+import BrandLogo from '@/components/BrandLogo'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
@@ -86,7 +86,7 @@ export default function ResetPasswordPage() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <LogoMark size={64} className="mx-auto mb-4" />
+            <BrandLogo height={64} className="mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-foreground">ViTransfer</h1>
             <p className="text-sm text-muted-foreground mt-2">Video Review, Feedback & Deliverables</p>
           </div>

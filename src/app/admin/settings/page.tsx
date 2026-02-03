@@ -15,6 +15,7 @@ interface Settings {
   defaultTheme: string | null
   accentColor: string | null
   companyName: string | null
+  brandingLogoPath: string | null
   smtpServer: string | null
   smtpPort: number | null
   smtpUsername: string | null
@@ -81,6 +82,10 @@ export default function GlobalSettingsPage() {
   // Form state for appearance
   const [defaultTheme, setDefaultTheme] = useState('auto')
   const [accentColor, setAccentColor] = useState('blue')
+  const [brandingLogoPath, setBrandingLogoPath] = useState<string | null>(null)
+  const [brandingLogoPreview, setBrandingLogoPreview] = useState<string | null>(null)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError, setLogoError] = useState('')
 
   // Form state for global settings
   const [companyName, setCompanyName] = useState('')
@@ -136,6 +141,8 @@ export default function GlobalSettingsPage() {
     setDefaultTheme(data.defaultTheme || 'auto')
     setAccentColor(data.accentColor || 'blue')
     setCompanyName(data.companyName || '')
+    setBrandingLogoPath(data.brandingLogoPath || null)
+    setBrandingLogoPreview(data.brandingLogoPath ? `/api/branding/logo?ts=${Date.now()}` : null)
     setSmtpServer(data.smtpServer || '')
     setSmtpPort(data.smtpPort?.toString() || '587')
     setSmtpUsername(data.smtpUsername || '')
@@ -170,6 +177,58 @@ export default function GlobalSettingsPage() {
     setTrackAnalytics(data.trackAnalytics ?? true)
     setTrackSecurityLogs(data.trackSecurityLogs ?? true)
     setViewSecurityEvents(data.viewSecurityEvents ?? false)
+  }, [])
+
+  const handleLogoUpload = useCallback(async (file: File) => {
+    setLogoError('')
+    if (!file || (!file.type.includes('svg') && !file.name.toLowerCase().endsWith('.svg'))) {
+      setLogoError('Please upload an SVG file')
+      return
+    }
+    if (file.size > 300 * 1024) {
+      setLogoError('SVG must be 300KB or smaller')
+      return
+    }
+
+    setLogoUploading(true)
+    try {
+      const buffer = await file.arrayBuffer()
+      const res = await apiFetch('/api/settings/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': file.type || 'image/svg+xml' },
+        body: buffer,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to upload logo')
+      }
+      setBrandingLogoPath(data.path || '/uploads/branding/logo.svg')
+      setBrandingLogoPreview(`/api/branding/logo?ts=${Date.now()}`)
+      setSuccess(true)
+    } catch (err: any) {
+      setLogoError(err?.message || 'Failed to upload logo')
+    } finally {
+      setLogoUploading(false)
+    }
+  }, [])
+
+  const handleLogoRemove = useCallback(async () => {
+    setLogoError('')
+    setLogoUploading(true)
+    try {
+      const res = await apiFetch('/api/settings/logo', { method: 'DELETE' })
+      if (!res.ok && res.status !== 404) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error || 'Failed to remove logo')
+      }
+      setBrandingLogoPath(null)
+      setBrandingLogoPreview(null)
+      setSuccess(true)
+    } catch (err: any) {
+      setLogoError(err?.message || 'Failed to remove logo')
+    } finally {
+      setLogoUploading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -323,6 +382,7 @@ export default function GlobalSettingsPage() {
         defaultTheme: defaultTheme || 'auto',
         accentColor: accentColor || 'blue',
         companyName: companyName || null,
+        brandingLogoPath: brandingLogoPath || null,
         smtpServer: smtpServer || null,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : 587,
         smtpUsername: smtpUsername || null,
@@ -492,6 +552,11 @@ export default function GlobalSettingsPage() {
             setCompanyName={setCompanyName}
             appDomain={appDomain}
             setAppDomain={setAppDomain}
+            brandingLogoUrl={brandingLogoPreview}
+            onUploadLogo={handleLogoUpload}
+            onRemoveLogo={handleLogoRemove}
+            logoUploading={logoUploading}
+            logoError={logoError}
             show={showBrandingAppearance}
             setShow={setShowBrandingAppearance}
           />

@@ -11,6 +11,7 @@
     "worker": "tsx src/worker/index.ts"
   },
   "dependencies": {
+    "@isaacs/brace-expansion": "^5.0.1",
     "@prisma/client": "^6.19.0",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-label": "^2.1.8",

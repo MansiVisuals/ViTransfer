@@ -5,11 +5,11 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-02-02
+## [0.9.0] - 2026-02-05
 
 ### Added
 - **New ViTransfer Logo**: Completely redesigned logo and branding throughout the application
-  - New logomark visible on all pages: login, admin dashboard, share pages, and emails
+  - New logomark visible on all pages which showed the old logo before. 
   - Dynamically colored with your chosen accent color
   - Available in both SVG (app) and PNG (email) formats for maximum compatibility
 - **Progressive Web App (PWA)**: ViTransfer can now be installed as an app on desktop and mobile devices
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Per-device notification preferences
   - Test notification feature to verify setup
   - Zero configuration - VAPID keys auto-generated and stored encrypted in database
-- **New Settings Tab**: "Browser Push" tab in Notifications settings for managing push subscriptions
+  - "Browser Push" tab in Notifications settings for managing push subscriptions
 - **Custom Branding Logo**: Upload your own SVG logo (max 300KB, sanitized) in Branding & Appearance
   - Replaces the default ViTransfer logo across all pages and emails
   - Rendered at 64px on app pages, 44px in emails
@@ -33,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Button syntax support: `{{BUTTON:Label:{{URL}}}}`
   - CSS class shortcuts for consistent styling: `info-box`, `secondary-box`, `info-label`
   - Reset to default with one click
-  - Full Outlook and legacy email client compatibility
 - **Email Header Style Options**: Choose between "Logo + Company Name", "Logo Only", "Name Only", or "None" for email headers
 - **Client Directory**: New centralized management of client companies and contacts
   - New "Clients" section in admin navigation
@@ -44,16 +43,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic sync: new recipients and company names are added to directory automatically
   - "Sync Existing" button for bulk import from existing projects
   - Company/Brand name field moved to "Client Information & Notifications" section in project settings
-- **Edit User Modal**: Modal dialog for editing existing admin users
 
 ### Changed
 - **Favicon and PWA icons**: Updated to match new ViTransfer logo design
-- **Auth token storage**: Changed from sessionStorage to localStorage for PWA persistence on iOS
+- **Auth token storage**: Changed from sessionStorage to localStorage for PWA persistence
 - **Admin UI Consistency**: Standardized all admin page headers, modals, and buttons
   - Consistent page header layout with icon, title, and action buttons
   - All modals use same sizing, spacing, and responsive behavior
   - Modal icons use primary accent color for visual consistency
   - Compact buttons on mobile to prevent overflow
+  - Converted user management to show as modal instead of a dedicated page.
+  - Converted Create New Project to show as modal instead of a dedicated page.
 - **Mobile-Optimized Modals**: Create/edit modals use dynamic viewport height for proper mobile display
 
 ### Fixed

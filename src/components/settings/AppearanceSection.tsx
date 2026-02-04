@@ -124,7 +124,7 @@ export function AppearanceSection({
               disabled={logoUploading}
             >
               <Upload className="w-4 h-4" />
-              {logoUploading ? 'Uploading…' : brandingLogoUrl ? 'Replace Logo' : 'Upload Logo'}
+              {logoUploading ? 'Validating…' : brandingLogoUrl ? 'Replace Logo' : 'Upload Logo'}
             </button>
             <button
               type="button"

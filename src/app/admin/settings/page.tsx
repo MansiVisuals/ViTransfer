@@ -88,6 +88,9 @@ export default function GlobalSettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoError, setLogoError] = useState('')
   const [emailHeaderStyle, setEmailHeaderStyle] = useState('LOGO_AND_NAME')
+  // Pending logo changes (staged until save)
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
+  const [pendingLogoRemoval, setPendingLogoRemoval] = useState(false)
 
   // Form state for global settings
   const [companyName, setCompanyName] = useState('')
@@ -145,6 +148,8 @@ export default function GlobalSettingsPage() {
     setCompanyName(data.companyName || '')
     setBrandingLogoPath(data.brandingLogoPath || null)
     setBrandingLogoPreview(data.brandingLogoPath ? `/api/branding/logo?ts=${Date.now()}` : null)
+    setPendingLogoFile(null)
+    setPendingLogoRemoval(false)
     setEmailHeaderStyle(data.emailHeaderStyle || 'LOGO_AND_NAME')
     setSmtpServer(data.smtpServer || '')
     setSmtpPort(data.smtpPort?.toString() || '587')
@@ -182,56 +187,69 @@ export default function GlobalSettingsPage() {
     setViewSecurityEvents(data.viewSecurityEvents ?? false)
   }, [])
 
+  // Validate and stage logo file for upload (mirrors server-side validation in /api/settings/logo)
   const handleLogoUpload = useCallback(async (file: File) => {
     setLogoError('')
-    if (!file || (!file.type.includes('svg') && !file.name.toLowerCase().endsWith('.svg'))) {
-      setLogoError('Please upload an SVG file')
-      return
-    }
-    if (file.size > 300 * 1024) {
-      setLogoError('SVG must be 300KB or smaller')
-      return
-    }
-
     setLogoUploading(true)
+    
     try {
-      const buffer = await file.arrayBuffer()
-      const res = await apiFetch('/api/settings/logo', {
-        method: 'POST',
-        headers: { 'Content-Type': file.type || 'image/svg+xml' },
-        body: buffer,
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        throw new Error(data?.error || 'Failed to upload logo')
+      // File type validation
+      if (!file || (!file.type.includes('svg') && !file.name.toLowerCase().endsWith('.svg'))) {
+        setLogoError('Only SVG files are allowed')
+        return
       }
-      setBrandingLogoPath(data.path || '/uploads/branding/logo.svg')
-      setBrandingLogoPreview(`/api/branding/logo?ts=${Date.now()}`)
-      setSuccess(true)
-    } catch (err: any) {
-      setLogoError(err?.message || 'Failed to upload logo')
+      
+      // Size validation (max 300KB)
+      if (file.size > 300 * 1024) {
+        setLogoError('SVG too large (max 300KB)')
+        return
+      }
+
+      const text = await file.text()
+      
+      // Magic byte check: must start with <svg or <?xml
+      const leading = text.trimStart().slice(0, 256).toLowerCase()
+      if (!leading.startsWith('<svg') && !leading.startsWith('<?xml')) {
+        setLogoError('Invalid SVG file')
+        return
+      }
+      
+      // Security validation (isSafeSvg)
+      const trimmed = text.trim()
+      if (!/^<svg[\s>]/i.test(trimmed)) {
+        setLogoError('Invalid or unsafe SVG content')
+        return
+      }
+      if (/<script[\s>]/i.test(text)) {
+        setLogoError('Invalid or unsafe SVG content')
+        return
+      }
+      if (/on[a-zA-Z]+\s*=/.test(text)) {
+        setLogoError('Invalid or unsafe SVG content')
+        return
+      }
+      if (/javascript:/i.test(text)) {
+        setLogoError('Invalid or unsafe SVG content')
+        return
+      }
+
+      // Stage file for upload on save
+      setPendingLogoFile(file)
+      setPendingLogoRemoval(false)
+      setBrandingLogoPreview(URL.createObjectURL(file))
+    } catch {
+      setLogoError('Invalid SVG file')
     } finally {
       setLogoUploading(false)
     }
   }, [])
 
+  // Stage logo removal for save
   const handleLogoRemove = useCallback(async () => {
     setLogoError('')
-    setLogoUploading(true)
-    try {
-      const res = await apiFetch('/api/settings/logo', { method: 'DELETE' })
-      if (!res.ok && res.status !== 404) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || 'Failed to remove logo')
-      }
-      setBrandingLogoPath(null)
-      setBrandingLogoPreview(null)
-      setSuccess(true)
-    } catch (err: any) {
-      setLogoError(err?.message || 'Failed to remove logo')
-    } finally {
-      setLogoUploading(false)
-    }
+    setPendingLogoFile(null)
+    setPendingLogoRemoval(true)
+    setBrandingLogoPreview(null)
   }, [])
 
   useEffect(() => {
@@ -379,13 +397,58 @@ export default function GlobalSettingsPage() {
     setSaving(true)
     setError('')
     setSuccess(false)
+    setLogoError('')
 
     try {
+      // Handle pending logo upload
+      let newLogoPath = brandingLogoPath
+      if (pendingLogoFile) {
+        setLogoUploading(true)
+        try {
+          const buffer = await pendingLogoFile.arrayBuffer()
+          const res = await apiFetch('/api/settings/logo', {
+            method: 'POST',
+            headers: { 'Content-Type': pendingLogoFile.type || 'image/svg+xml' },
+            body: buffer,
+          })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            throw new Error(data?.error || 'Failed to upload logo')
+          }
+          newLogoPath = data.path || '/uploads/branding/logo.svg'
+          setPendingLogoFile(null)
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Failed to upload logo'
+          setLogoError(message)
+          throw err
+        } finally {
+          setLogoUploading(false)
+        }
+      } else if (pendingLogoRemoval && brandingLogoPath) {
+        // Handle pending logo removal
+        setLogoUploading(true)
+        try {
+          const res = await apiFetch('/api/settings/logo', { method: 'DELETE' })
+          if (!res.ok && res.status !== 404) {
+            const data = await res.json().catch(() => ({}))
+            throw new Error(data?.error || 'Failed to remove logo')
+          }
+          newLogoPath = null
+          setPendingLogoRemoval(false)
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Failed to remove logo'
+          setLogoError(message)
+          throw err
+        } finally {
+          setLogoUploading(false)
+        }
+      }
+
       const updates = {
         defaultTheme: defaultTheme || 'auto',
         accentColor: accentColor || 'blue',
         companyName: companyName || null,
-        brandingLogoPath: brandingLogoPath || null,
+        brandingLogoPath: newLogoPath || null,
         emailHeaderStyle: emailHeaderStyle || 'LOGO_AND_NAME',
         smtpServer: smtpServer || null,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : 587,

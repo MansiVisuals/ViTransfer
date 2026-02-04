@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -298,106 +297,104 @@ export default function ClientsPage() {
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Client Directory
-                </CardTitle>
-                <CardDescription>
-                  Manage your client companies and contacts. New recipients are automatically added when created in projects.
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBackfill}
-                  disabled={backfilling}
-                  title="Import existing clients from historical projects"
-                >
-                  {backfilling ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                  <span className="hidden sm:inline ml-2">Sync Existing</span>
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setNewCompanyName('')
-                    setError('')
-                    setShowAddCompanyModal(true)
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-2">Add Company</span>
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {backfillStats && (
-              <div className="mb-4 p-3 bg-success-visible border border-success-visible rounded-md flex items-center gap-2">
-                <Check className="w-4 h-4 text-success" />
-                <span className="text-sm text-success">{backfillStats}</span>
-              </div>
-            )}
-            
-            {/* Search */}
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search companies or contacts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  data-form-type="other"
-                  data-lpignore="true"
-                  data-1p-ignore
-                />
-              </div>
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+              <Building2 className="w-7 h-7 sm:w-8 sm:h-8" />
+              Client Directory
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+              Manage your client companies and contacts
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="default"
+              onClick={handleBackfill}
+              disabled={backfilling}
+              title="Import existing clients from historical projects"
+            >
+              {backfilling ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline ml-2">Sync Existing</span>
+            </Button>
+            <Button
+              variant="default"
+              size="default"
+              onClick={() => {
+                setNewCompanyName('')
+                setError('')
+                setShowAddCompanyModal(true)
+              }}
+            >
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Company</span>
+            </Button>
+          </div>
+        </div>
 
-            {/* Companies List */}
-            {companies.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">No clients yet</p>
-                <p className="text-sm mt-1">Add your first client company or import from existing projects</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {companies.map((company) => (
-                  <div
-                    key={company.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Building2 className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{company.name}</p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {company.contacts.length} contact{company.contacts.length !== 1 ? 's' : ''}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <FolderKanban className="w-3 h-3" />
-                            {company._count.projects} project{company._count.projects !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      </div>
+        {backfillStats && (
+          <div className="mb-4 p-3 bg-success-visible border border-success-visible rounded-md flex items-center gap-2">
+            <Check className="w-4 h-4 text-success" />
+            <span className="text-sm text-success">{backfillStats}</span>
+          </div>
+        )}
+        
+        {/* Search */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search companies or contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore
+            />
+          </div>
+        </div>
+
+        {/* Companies List */}
+        {companies.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="font-medium">No clients yet</p>
+            <p className="text-sm mt-1">Add your first client company or import from existing projects</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {companies.map((company) => (
+              <div
+                key={company.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Building2 className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{company.name}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {company.contacts.length} contact{company.contacts.length !== 1 ? 's' : ''}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FolderKanban className="w-3 h-3" />
+                        {company._count.projects} project{company._count.projects !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -431,8 +428,6 @@ export default function ClientsPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Add Company Modal */}

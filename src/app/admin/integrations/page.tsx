@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Workflow, MessageSquare, Layers, Upload, Gift, X } from 'lucide-react'
+import { Workflow, MessageSquare, Layers, Upload, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog'
 
 export default function IntegrationsPage() {
   const [showPreorderModal, setShowPreorderModal] = useState(false)
@@ -96,61 +97,53 @@ export default function IntegrationsPage() {
       </div>
 
       {/* Pre-order Modal */}
-      {showPreorderModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowPreorderModal(false)}>
-          <div className="bg-card border border-border rounded-lg max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Gift className="w-6 h-6 text-primary" />
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Special Offer!</h3>
-                  <p className="text-sm text-muted-foreground">Pre-order integrations with 33% off</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPreorderModal(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Dialog open={showPreorderModal} onOpenChange={setShowPreorderModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5 text-primary" />
+              Special Offer!
+            </DialogTitle>
+            <DialogDescription>
+              Pre-order integrations with 33% off
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="space-y-3">
-              <p className="text-sm text-foreground">
-                Get early access to ViTransfer NLE integrations with an exclusive 33% discount!
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-foreground">
+              Get early access to ViTransfer NLE integrations with an exclusive 33% discount!
+            </p>
+
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">Discount Code</span>
+                <code className="text-sm font-mono bg-background px-2 py-1 rounded border border-border text-primary">
+                  VITRANSFER-33-OFF
+                </code>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Use this code at checkout for 33% off
               </p>
-
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">Discount Code</span>
-                  <code className="text-sm font-mono bg-background px-2 py-1 rounded border border-border text-primary">
-                    VITRANSFER-33-OFF
-                  </code>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Use this code at checkout for 33% off
-                </p>
-              </div>
-
-              <a
-                href="https://ko-fi.com/s/bb6256137a"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full"
-              >
-                <Button className="w-full" size="lg">
-                  <Gift className="w-4 h-4 mr-2" />
-                  Pre-order Now (33% Off)
-                </Button>
-              </a>
             </div>
+
+            <a
+              href="https://ko-fi.com/s/bb6256137a"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+            >
+              <Button className="w-full">
+                <Gift className="w-4 h-4 mr-2" />
+                Pre-order Now (33% Off)
+              </Button>
+            </a>
 
             <p className="text-xs text-muted-foreground text-center">
               Professional workflow integrations for DaVinci Resolve & Premiere Pro
             </p>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

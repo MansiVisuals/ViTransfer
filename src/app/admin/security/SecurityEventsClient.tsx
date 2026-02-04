@@ -510,7 +510,7 @@ export default function SecurityEventsClient() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-5 h-5 text-destructive" />
               Delete Security Events
             </DialogTitle>
             <DialogDescription>
@@ -559,7 +559,7 @@ export default function SecurityEventsClient() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Unlock className="w-5 h-5" />
+              <Unlock className="w-5 h-5 text-primary" />
               Active Rate Limits
             </DialogTitle>
             <DialogDescription>

@@ -8,6 +8,9 @@ import {
   type EmailTemplateType,
 } from './email-template-system'
 
+// Email header style options for branding
+export type EmailHeaderStyle = 'NONE' | 'LOGO_ONLY' | 'NAME_ONLY' | 'LOGO_AND_NAME'
+
 // Accent color presets (must match AppearanceSection.tsx)
 const ACCENT_COLOR_HEX: Record<string, string> = {
   blue: '#007AFF',
@@ -101,76 +104,102 @@ export function getEmailBrand(accentColor?: string | null): EmailBrandColors {
 /**
  * Process button syntax in template content
  * Converts {{BUTTON:Label:URL}} to styled HTML buttons
+ * Uses table-based layout for Outlook compatibility
  */
 export function processButtonSyntax(content: string, brand: EmailBrandColors): string {
   return content.replace(/\{\{BUTTON:([^:}]+):([^}]+)\}\}/g, (_, label, url) => {
-    return `<div style="margin: 20px 0; text-align: center;">
-      <a href="${url}" style="display: inline-block; background: ${brand.accent}; color: #ffffff; font-weight: 600; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px;">${label}</a>
-    </div>`
+    return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:20px auto;">
+      <tr>
+        <td bgcolor="${brand.accent}" style="background-color:${brand.accent}; padding:14px 32px;">
+          <a href="${url}" style="color:#ffffff; font-weight:600; font-size:15px; text-decoration:none; display:inline-block;">${label}</a>
+        </td>
+      </tr>
+    </table>`
   })
 }
 
 /**
  * Process email template classes to inline styles
  * Converts class="info-box" etc to styled inline HTML
+ * Uses table-based layouts for Outlook compatibility
  */
 export function processEmailClasses(content: string, brand: EmailBrandColors): string {
-  // Process info-box class
+  // Process info-box class - use table for Outlook compatibility
   content = content.replace(
     /<div class="info-box">([\s\S]*?)<\/div>/gi,
-    `<div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">$1</div>`
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+      <tr>
+        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; padding:16px;">$1</td>
+      </tr>
+    </table>`
   )
 
   // Process secondary-box class (neutral background)
   content = content.replace(
     /<div class="secondary-box">([\s\S]*?)<\/div>/gi,
-    `<div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">$1</div>`
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+      <tr>
+        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:16px;">$1</td>
+      </tr>
+    </table>`
   )
 
   // Process info-label class
   content = content.replace(
     /<div class="info-label">([\s\S]*?)<\/div>/gi,
-    `<div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">$1</div>`
+    `<p style="font-size:12px; font-weight:bold; color:${brand.muted}; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.12em;">$1</p>`
   )
 
   // Process info-value class
   content = content.replace(
     /<div class="info-value">([\s\S]*?)<\/div>/gi,
-    `<div style="font-size: 15px; color: ${brand.text}; padding: 4px 0;">$1</div>`
+    `<p style="font-size:15px; color:${brand.text}; margin:0; padding:4px 0;">$1</p>`
   )
 
   // Process protected-note class
   content = content.replace(
     /<div class="protected-note">([\s\S]*?)<\/div>/gi,
-    `<div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">$1</div>`
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+      <tr>
+        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:14px; font-size:14px; color:${brand.textSubtle}; line-height:1.5;">$1</td>
+      </tr>
+    </table>`
   )
 
   // Process accent-text class (for version labels etc)
   content = content.replace(
     /<span class="accent-text">([\s\S]*?)<\/span>/gi,
-    `<span style="color: ${brand.accent}; font-weight: 600;">$1</span>`
+    `<span style="color:${brand.accent}; font-weight:600;">$1</span>`
   )
 
   // Process success-box class
   content = content.replace(
     /<div class="success-box">([\s\S]*?)<\/div>/gi,
-    `<div style="background: rgb(220 252 231); border: 1px solid rgb(134 239 172); border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: rgb(21 128 61); line-height: 1.5;">$1</div>`
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+      <tr>
+        <td bgcolor="#dcfce7" style="background-color:#dcfce7; border:1px solid #86efac; padding:14px; font-size:14px; color:#15803d; line-height:1.5;">$1</td>
+      </tr>
+    </table>`
   )
 
   // Process warning-box class
   content = content.replace(
     /<div class="warning-box">([\s\S]*?)<\/div>/gi,
-    `<div style="background: rgb(254 249 195); border: 1px solid rgb(253 224 71); border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: rgb(161 98 7); line-height: 1.5;">$1</div>`
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+      <tr>
+        <td bgcolor="#fef9c3" style="background-color:#fef9c3; border:1px solid #fde047; padding:14px; font-size:14px; color:#a16207; line-height:1.5;">$1</td>
+      </tr>
+    </table>`
   )
 
   // Process inline paragraph formatting
   content = content.replace(
     /<p style="margin: 0">/gi,
-    `<p style="margin: 0 0 16px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">`
+    `<p style="margin:0 0 16px 0; font-size:15px; color:${brand.textSubtle}; line-height:1.6;">`
   )
 
   // Convert plain newlines to breaks for basic formatting
-  content = content.replace(/\n\n/g, '</p><p style="margin: 0 0 16px 0; font-size: 15px; color: ' + brand.textSubtle + '; line-height: 1.6;">')
+  content = content.replace(/\n\n/g, '</p><p style="margin:0 0 16px 0; font-size:15px; color:' + brand.textSubtle + '; line-height:1.6;">')
 
   return content
 }
@@ -181,10 +210,21 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
 export function processTemplateContent(
   content: string,
   values: Record<string, string>,
-  brand: EmailBrandColors
+  brand: EmailBrandColors,
+  logoUrl?: string | null
 ): string {
   // Replace placeholders
   let processed = replacePlaceholders(content, values)
+  
+  // Process {{LOGO}} placeholder - replace with inline image
+  if (logoUrl) {
+    const logoHtml = `<img src="${logoUrl}" alt="Logo" height="44" style="display:inline-block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:200px; vertical-align:middle;" />`
+    processed = processed.replace(/\{\{LOGO\}\}/g, logoHtml)
+  } else {
+    // Remove {{LOGO}} placeholder if no logo is configured
+    processed = processed.replace(/\{\{LOGO\}\}/g, '')
+  }
+  
   // Process button syntax
   processed = processButtonSyntax(processed, brand)
   // Process CSS classes to inline styles
@@ -193,21 +233,21 @@ export function processTemplateContent(
 }
 
 // Inline SVG logo for emails (accent-aware, reuses app logomark)
+// Note: Some email clients strip SVGs, but this is used as fallback for default logo
 function buildEmailLogo(accentHex: string): string {
   const accent = accentHex || ACCENT_COLOR_HEX.blue
   // Reuse the same SVG used across the app; size 56 for email header balance.
   return buildLogoSvg(accent, 56)
 }
 
-export function buildBrandingLogoUrl(settings: EmailSettings): string | null {
-  if (!settings.brandingLogoPath) return null
+/**
+ * Build the branding logo URL for emails
+ * Uses PNG endpoint which serves custom logo or default logo with accent color
+ */
+export function buildBrandingLogoUrl(settings: EmailSettings): string {
   const base = settings.appDomain?.replace(/\/$/, '') || ''
-  const path = settings.brandingLogoPath.startsWith('http')
-    ? settings.brandingLogoPath
-    : settings.brandingLogoPath.startsWith('/')
-      ? settings.brandingLogoPath
-      : `/${settings.brandingLogoPath}`
-  return base ? `${base}${path}` : path
+  // PNG endpoint serves custom logo if uploaded, otherwise default logo with accent color
+  return base ? `${base}/api/branding/logo-png` : '/api/branding/logo-png'
 }
 
 export function renderEmailButton({
@@ -288,7 +328,7 @@ export interface EmailShellOptions {
   preheader?: string
   brand?: EmailBrandColors
   brandingLogoUrl?: string | null
-  emailHeaderStyle?: 'LOGO_ONLY' | 'LOGO_AND_NAME' // Default: LOGO_AND_NAME
+  emailHeaderStyle?: EmailHeaderStyle
 }
 
 export function renderEmailShell({
@@ -306,51 +346,107 @@ export function renderEmailShell({
   const safeTitle = escapeHtml(title)
   const safeSubtitle = subtitle ? escapeHtml(subtitle) : ''
   const safePreheader = preheader ? escapeHtml(preheader) : ''
-  const logo = brandingLogoUrl
-    ? `<img src="${escapeHtml(brandingLogoUrl)}" alt="${safeCompanyName} logo" height="44" style="display:block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:132px;" />`
-    : buildEmailLogo(brand.accent)
   
-  // Conditionally show company name based on emailHeaderStyle
-  const showCompanyName = emailHeaderStyle !== 'LOGO_ONLY'
+  // Logo is always available now (PNG endpoint serves custom or default with accent color)
+  const logo = brandingLogoUrl
+    ? `<img src="${escapeHtml(brandingLogoUrl)}" alt="${safeCompanyName}" height="44" width="auto" style="display:block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:132px;" />`
+    : ''
+  
+  // Determine what to show based on emailHeaderStyle
+  const showLogo = (emailHeaderStyle === 'LOGO_ONLY' || emailHeaderStyle === 'LOGO_AND_NAME') && logo
+  const showCompanyName = emailHeaderStyle === 'NAME_ONLY' || emailHeaderStyle === 'LOGO_AND_NAME'
+  const showBrandingPill = emailHeaderStyle !== 'NONE' && (showLogo || showCompanyName)
+
+  // Build the branding pill using table layout (Outlook compatible)
+  // Using a semi-transparent white overlay effect with solid fallback color
+  const pillBgColor = '#ffffff'
+  const brandingPillContent = showBrandingPill ? `
+              <!--[if mso]>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-bottom:14px;">
+                <tr>
+                  <td style="background-color:${pillBgColor}; padding:10px 14px; border-radius:8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        ${showLogo ? `<td style="padding-right:${showCompanyName ? '12' : '0'}px; vertical-align:middle;">${logo}</td>` : ''}
+                        ${showCompanyName ? `<td style="vertical-align:middle;"><span style="font-size:17px; font-weight:bold; color:${brand.accent}; line-height:1.1;">${safeCompanyName}</span></td>` : ''}
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <![endif]-->
+              <!--[if !mso]><!-->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 14px auto;">
+                <tr>
+                  <td style="background-color:rgba(255,255,255,0.15); padding:10px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.2);">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        ${showLogo ? `<td style="padding-right:${showCompanyName ? '12' : '0'}px; vertical-align:middle;">${logo}</td>` : ''}
+                        ${showCompanyName ? `<td style="vertical-align:middle;"><span style="font-size:17px; font-weight:bold; color:#ffffff; line-height:1.1;">${safeCompanyName}</span></td>` : ''}
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <!--<![endif]-->` : ''
 
   return `
 <!DOCTYPE html>
-<html>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; background-color: #f3f4f6;">
+<body style="margin:0; padding:0; background-color:#f3f4f6; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
   ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; mso-hide:all;">${safePreheader}</div>` : ''}
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f3f4f6; border-collapse: collapse;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6;">
     <tr>
-      <td align="center" style="padding: 24px 12px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width: 600px; max-width: 600px; border-collapse: separate; background: ${brand.surface}; border: 1px solid ${brand.border}; border-radius: 12px; overflow: hidden;">
+      <td align="center" style="padding:24px 12px;">
+        <!--[if mso]>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" align="center">
           <tr>
-            <td style="background: ${brand.accentGradient}; padding: 30px 24px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-              <div style="display: inline-flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; margin-bottom: 14px;">
-                ${logo}
-                ${showCompanyName ? `<div style="text-align: left;">
-                  <div style="font-size: 17px; font-weight: 750; color: #ffffff; line-height: 1.1;">${safeCompanyName}</div>
-                </div>` : ''}
-              </div>
-              <div style="font-size: 24px; font-weight: 750; color: #ffffff; margin-bottom: 8px;">${safeTitle}</div>
-              ${subtitle ? `<div style="font-size: 15px; color: rgba(255,255,255,0.95); line-height: 1.4;">${safeSubtitle}</div>` : ''}
+            <td>
+        <![endif]-->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px; background-color:${brand.surface}; border:1px solid ${brand.border};">
+          <!-- Header with accent background -->
+          <tr>
+            <td align="center" bgcolor="${brand.accent}" style="background-color:${brand.accent}; padding:30px 24px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+              ${brandingPillContent}
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="font-size:24px; font-weight:bold; color:#ffffff; padding-bottom:8px;">${safeTitle}</td>
+                </tr>
+                ${subtitle ? `<tr><td align="center" style="font-size:15px; color:#ffffff; line-height:1.4;">${safeSubtitle}</td></tr>` : ''}
+              </table>
             </td>
           </tr>
+          <!-- Body content -->
           <tr>
-            <td style="padding: 28px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: ${brand.textSubtle}; font-size: 15px; line-height: 1.6;">
+            <td style="padding:28px 24px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:${brand.textSubtle}; font-size:15px; line-height:1.6;">
               ${bodyContent}
             </td>
           </tr>
+          <!-- Footer -->
           <tr>
-            <td style="background: ${brand.surfaceAlt}; padding: 18px 24px; border-top: 1px solid ${brand.border}; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-              <div style="font-size: 12px; color: ${brand.muted}; line-height: 1.5;">
-                ${escapeHtml(footerNote || companyName)}
-              </div>
+            <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; padding:18px 24px; border-top:1px solid ${brand.border}; text-align:center; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+              <span style="font-size:12px; color:${brand.muted}; line-height:1.5;">${escapeHtml(footerNote || companyName)}</span>
             </td>
           </tr>
         </table>
+        <!--[if mso]>
+            </td>
+          </tr>
+        </table>
+        <![endif]-->
       </td>
     </tr>
   </table>
@@ -378,13 +474,23 @@ let settingsCacheTime: number = 0
 const CACHE_DURATION = 30 * 1000 // 30 seconds (reduced for testing)
 
 /**
- * Get email settings from database with caching
+ * Invalidate the email settings cache
+ * Call this when settings are updated to ensure fresh data
  */
-export async function getEmailSettings(): Promise<EmailSettings> {
+export function invalidateEmailSettingsCache(): void {
+  cachedSettings = null
+  settingsCacheTime = 0
+}
+
+/**
+ * Get email settings from database with caching
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
+ */
+export async function getEmailSettings(forceRefresh = false): Promise<EmailSettings> {
   const now = Date.now()
   
-  // Return cached settings if still valid
-  if (cachedSettings && (now - settingsCacheTime) < CACHE_DURATION) {
+  // Return cached settings if still valid and not forcing refresh
+  if (!forceRefresh && cachedSettings && (now - settingsCacheTime) < CACHE_DURATION) {
     return cachedSettings
   }
 
@@ -558,7 +664,7 @@ export async function sendNewVersionEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   // Add password protected note if applicable
   if (isPasswordProtected) {
@@ -582,7 +688,7 @@ export async function sendNewVersionEmail({
     subtitle: 'Ready for your review',
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
   })
 
@@ -647,7 +753,7 @@ export async function sendProjectApprovedEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
@@ -660,7 +766,7 @@ export async function sendProjectApprovedEmail({
     subtitle: statusMessage,
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
   })
 
@@ -725,7 +831,7 @@ export async function sendCommentNotificationEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
@@ -739,7 +845,7 @@ export async function sendCommentNotificationEmail({
     preheader: `New comment on ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
   })
 
@@ -803,7 +909,7 @@ export async function sendAdminCommentNotificationEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   const html = renderEmailShell({
     companyName,
@@ -812,7 +918,7 @@ export async function sendAdminCommentNotificationEmail({
     preheader: `New client comment: ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
   })
 
@@ -889,7 +995,7 @@ export async function sendAdminProjectApprovedEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   const html = renderEmailShell({
     companyName,
@@ -898,7 +1004,7 @@ export async function sendAdminProjectApprovedEmail({
     preheader: `${statusTitle}: ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
   })
 
@@ -984,7 +1090,7 @@ export async function sendProjectGeneralNotificationEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
@@ -998,7 +1104,7 @@ export async function sendProjectGeneralNotificationEmail({
     preheader: `Project ready: ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
   })
 
@@ -1046,7 +1152,7 @@ export async function sendPasswordEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
@@ -1060,7 +1166,7 @@ export async function sendPasswordEmail({
     preheader: `Password for ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
   })
 
@@ -1103,7 +1209,7 @@ export async function sendPasswordResetEmail({
   const subject = replacePlaceholders(template.subject, placeholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   const html = renderEmailShell({
     companyName,
@@ -1112,7 +1218,7 @@ export async function sendPasswordResetEmail({
     preheader: 'Reset your password for ViTransfer',
     brand,
     brandingLogoUrl,
-    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
     footerNote: `This is an automated security message from ${companyName}`,
   })
@@ -1146,7 +1252,7 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
       preheader: 'SMTP configuration is working',
       brand,
       brandingLogoUrl,
-      emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+      emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
       bodyContent: `
         <p style="font-size:15px; color:${brand.textSubtle}; line-height:1.6; margin:0 0 12px;">
           Your SMTP configuration is working. Details below for your records.

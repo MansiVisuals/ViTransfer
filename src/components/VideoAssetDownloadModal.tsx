@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { X, Download, FileIcon, Loader2 } from 'lucide-react'
+import { Download, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 import { formatFileSize } from '@/lib/utils'
 import { getAccessToken } from '@/lib/token-store'
 
@@ -193,27 +194,19 @@ export function VideoAssetDownloadModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div>
-            <h2 className="text-xl font-bold">Download Options</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {videoName} - {versionLabel}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Download className="w-5 h-5 text-primary" />
+            Download Options
+          </DialogTitle>
+          <DialogDescription>
+            {videoName} - {versionLabel}
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 py-4">
           {/* Quick actions */}
           <div className="space-y-3">
             <h3 className="font-medium text-sm">Quick Download</h3>
@@ -222,7 +215,7 @@ export function VideoAssetDownloadModal({
               className="w-full p-4 border-2 border-border rounded-lg hover:border-primary transition-colors text-left"
             >
               <div className="flex items-center gap-3">
-                <Download className="h-5 w-5 text-primary" />
+                <Download className="h-5 w-5 text-primary flex-shrink-0" />
                 <div>
                   <p className="font-medium">Download Video Only</p>
                   <p className="text-sm text-muted-foreground">
@@ -299,12 +292,12 @@ export function VideoAssetDownloadModal({
                 >
                   {downloading ? (
                     <>
-                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       Preparing download...
                     </>
                   ) : (
                     <>
-                      <Download className="h-5 w-5 mr-2" />
+                      <Download className="h-4 w-4 mr-2" />
                       Download {selectedAssets.size} selected as ZIP
                     </>
                   )}
@@ -320,8 +313,8 @@ export function VideoAssetDownloadModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

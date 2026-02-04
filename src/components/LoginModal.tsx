@@ -60,7 +60,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Lock className="w-5 h-5" />
+            <Lock className="w-5 h-5 text-primary" />
             Sign In to ViTransfer
           </DialogTitle>
           <DialogDescription>
@@ -102,13 +102,6 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={loading}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
             {onClose && (
               <Button
                 type="button"
@@ -119,6 +112,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
                 Cancel
               </Button>
             )}
+            <Button
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </Button>
           </div>
         </form>
 

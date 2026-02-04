@@ -297,7 +297,7 @@ export default function ClientsPage() {
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+        <div className="flex justify-between items-center gap-4 mb-4 sm:mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <Building2 className="w-7 h-7 sm:w-8 sm:h-8" />
@@ -432,9 +432,12 @@ export default function ClientsPage() {
 
       {/* Add Company Modal */}
       <Dialog open={showAddCompanyModal} onOpenChange={setShowAddCompanyModal}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Client Company</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary" />
+              Add Client Company
+            </DialogTitle>
             <DialogDescription>
               Create a new client company in your directory
             </DialogDescription>
@@ -477,9 +480,12 @@ export default function ClientsPage() {
 
       {/* Edit Company Modal */}
       <Dialog open={showEditCompanyModal} onOpenChange={setShowEditCompanyModal}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Company</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="w-5 h-5 text-primary" />
+              Edit Company
+            </DialogTitle>
             <DialogDescription>
               Update the company name
             </DialogDescription>
@@ -524,7 +530,7 @@ export default function ClientsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
+              <Building2 className="w-5 h-5 text-primary" />
               {selectedCompany?.name}
             </DialogTitle>
             <DialogDescription>
@@ -606,9 +612,12 @@ export default function ClientsPage() {
 
       {/* Add Contact Modal */}
       <Dialog open={showAddContactModal} onOpenChange={setShowAddContactModal}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Contact</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Add Contact
+            </DialogTitle>
             <DialogDescription>
               Add a new contact to {selectedCompany?.name}
             </DialogDescription>
@@ -668,9 +677,12 @@ export default function ClientsPage() {
 
       {/* Edit Contact Modal */}
       <Dialog open={showEditContactModal} onOpenChange={setShowEditContactModal}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Contact</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="w-5 h-5 text-primary" />
+              Edit Contact
+            </DialogTitle>
             <DialogDescription>
               Update contact information
             </DialogDescription>
@@ -728,9 +740,12 @@ export default function ClientsPage() {
 
       {/* Delete Confirmation Modal */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              Confirm Delete
+            </DialogTitle>
             <DialogDescription>
               {deleteTarget?.type === 'company' 
                 ? `Are you sure you want to delete "${deleteTarget?.name}"? All contacts for this company will also be deleted.`

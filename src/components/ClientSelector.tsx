@@ -199,10 +199,10 @@ export function ClientSelector({
     !companies.some(c => c.name.toLowerCase() === companySearch.toLowerCase())
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Company Selection */}
-      <div className="space-y-2" ref={companyRef}>
-        <Label htmlFor="companyName">Company/Brand Name (Optional)</Label>
+      <div className="space-y-1.5" ref={companyRef}>
+        <Label htmlFor="companyName" className="text-xs">Company/Brand (Optional)</Label>
         <div className="relative">
           <div className="relative">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -214,7 +214,7 @@ export function ClientSelector({
               onChange={(e) => handleCompanyInputChange(e.target.value)}
               onFocus={() => companySearch.length >= 1 && setShowCompanyDropdown(true)}
               disabled={disabled}
-              className="pl-9 pr-8"
+              className="h-9 pl-9 pr-8"
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
@@ -273,9 +273,9 @@ export function ClientSelector({
       </div>
 
       {/* Client Contact */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2" ref={contactRef}>
-          <Label htmlFor="recipientName">Client Name (Optional)</Label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5" ref={contactRef}>
+          <Label htmlFor="recipientName" className="text-xs">Client Name (Optional)</Label>
           <div className="relative">
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -287,7 +287,7 @@ export function ClientSelector({
                 onChange={(e) => handleContactInputChange(e.target.value)}
                 onFocus={() => contactSearch.length >= 1 && setShowContactDropdown(true)}
                 disabled={disabled}
-                className="pl-9"
+                className="h-9 pl-9"
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
@@ -324,8 +324,8 @@ export function ClientSelector({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="recipientEmail">Client Email (Optional)</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="recipientEmail" className="text-xs">Client Email (Optional)</Label>
           <Input
             id="recipientEmail"
             name="client-email-field"
@@ -334,6 +334,7 @@ export function ClientSelector({
             value={recipientEmail}
             onChange={(e) => onRecipientEmailChange(e.target.value)}
             disabled={disabled}
+            className="h-9"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
@@ -344,7 +345,7 @@ export function ClientSelector({
           />
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground -mt-1">
         Start typing to search your client directory. Selected contacts will auto-fill company and email.
       </p>
     </div>

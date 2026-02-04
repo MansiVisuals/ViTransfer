@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Mail, ChevronRight, RotateCcw, Save, Eye, Code, Copy, Check, AlertCircle, X, Braces } from 'lucide-react'
+import { Mail, ChevronRight, RotateCcw, Save, Eye, Code, Copy, Check, AlertCircle, X, Braces, Building2, Image, Type, EyeOff } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { Label } from '@/components/ui/label'
 
@@ -220,25 +220,43 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
 
   return (
     <div className="space-y-3 border p-3 sm:p-4 rounded-lg bg-muted/30">
+      {/* Email Header Branding Style - dedicated section */}
+      <div className="space-y-2 pb-3 border-b border-border">
+        <Label className="text-sm font-medium">Email Header Branding</Label>
+        <p className="text-xs text-muted-foreground">
+          Choose what to display in the email header
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+          {[
+            { value: 'LOGO_AND_NAME', label: 'Logo + Name', Icon: Building2 },
+            { value: 'LOGO_ONLY', label: 'Logo Only', Icon: Image },
+            { value: 'NAME_ONLY', label: 'Name Only', Icon: Type },
+            { value: 'NONE', label: 'None', Icon: EyeOff },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setEmailHeaderStyle(option.value)}
+              className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border text-xs transition-all ${
+                emailHeaderStyle === option.value
+                  ? 'border-primary bg-primary/10 text-primary font-medium'
+                  : 'border-border bg-card hover:border-primary/50'
+              }`}
+            >
+              <option.Icon className="w-4 h-4" />
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Email Templates Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="min-w-0">
           <Label>Email Templates</Label>
           <p className="text-xs text-muted-foreground mt-0.5">
             Customize email content and design
           </p>
-        </div>
-        {/* Minimal Email Header Style Toggle */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs text-muted-foreground hidden sm:inline">Header:</span>
-          <button
-            type="button"
-            onClick={() => setEmailHeaderStyle(emailHeaderStyle === 'LOGO_ONLY' ? 'LOGO_AND_NAME' : 'LOGO_ONLY')}
-            className="flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-card text-xs hover:border-primary/50 transition-colors"
-            title={emailHeaderStyle === 'LOGO_ONLY' ? 'Logo only' : 'Logo + Company name'}
-          >
-            <Mail className="w-3 h-3" />
-            <span>{emailHeaderStyle === 'LOGO_ONLY' ? 'Logo' : 'Logo + Name'}</span>
-          </button>
         </div>
       </div>
       

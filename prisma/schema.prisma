@@ -267,7 +267,7 @@ model Settings {
   // Company Branding
   companyName String? @default("Studio") // Displayed in feedback/comments
   brandingLogoPath String? // Path to uploaded custom SVG logo
-  emailHeaderStyle String @default("LOGO_AND_NAME") // LOGO_ONLY or LOGO_AND_NAME
+  emailHeaderStyle String @default("LOGO_AND_NAME") // NONE, LOGO_ONLY, NAME_ONLY, LOGO_AND_NAME
 
   // SMTP Email Configuration
   smtpServer      String?

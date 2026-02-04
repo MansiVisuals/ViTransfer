@@ -215,8 +215,9 @@ export default function GlobalSettingsPage() {
       }
       
       // Security validation (isSafeSvg)
-      const trimmed = text.trim()
-      if (!/^<svg[\s>]/i.test(trimmed)) {
+      // Strip XML declaration if present before checking for <svg
+      const stripped = text.trim().replace(/^<\?xml[^?]*\?>\s*/i, '')
+      if (!/^<svg[\s>]/i.test(stripped)) {
         setLogoError('Invalid or unsafe SVG content')
         return
       }
@@ -579,7 +580,7 @@ export default function GlobalSettingsPage() {
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
         <div className="max-w-4xl mx-auto">
         <div className="mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex justify-between items-center gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                 <SettingsIcon className="w-7 h-7 sm:w-8 sm:h-8" />

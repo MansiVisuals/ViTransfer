@@ -4,6 +4,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { isSmtpConfigured } from '@/lib/email'
+import { getFilePath } from '@/lib/storage'
+import fs from 'fs/promises'
 export const runtime = 'nodejs'
 
 
@@ -136,10 +138,10 @@ export async function PATCH(request: NextRequest) {
 
     // SECURITY: Validate email header style
     if (emailHeaderStyle !== undefined) {
-      const validStyles = ['LOGO_ONLY', 'LOGO_AND_NAME']
+      const validStyles = ['NONE', 'LOGO_ONLY', 'NAME_ONLY', 'LOGO_AND_NAME']
       if (!validStyles.includes(emailHeaderStyle)) {
         return NextResponse.json(
-          { error: 'Invalid email header style. Must be LOGO_ONLY or LOGO_AND_NAME.' },
+          { error: 'Invalid email header style. Must be NONE, LOGO_ONLY, NAME_ONLY, or LOGO_AND_NAME.' },
           { status: 400 }
         )
       }
@@ -310,6 +312,19 @@ export async function PATCH(request: NextRequest) {
         adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
       },
     })
+
+    // If accent color changed, invalidate cached default logo PNGs
+    if (accentColor !== undefined) {
+      const defaultCachePrefix = 'branding/default-logo-'
+      const validColors = ['blue', 'purple', 'green', 'orange', 'red', 'pink', 'teal', 'amber', 'stone', 'gold']
+      for (const color of validColors) {
+        try {
+          await fs.unlink(getFilePath(`${defaultCachePrefix}${color}.png`))
+        } catch {
+          // Ignore if file doesn't exist
+        }
+      }
+    }
 
     // Decrypt sensitive fields before sending to admin
     const decryptedSettings = {

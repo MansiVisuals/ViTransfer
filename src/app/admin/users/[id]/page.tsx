@@ -375,7 +375,7 @@ export default function EditUserPage() {
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="w-5 h-5" />
+              <KeyRound className="w-5 h-5 text-primary" />
               Change Password
             </DialogTitle>
           </DialogHeader>
@@ -499,7 +499,7 @@ export default function EditUserPage() {
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Fingerprint className="w-5 h-5" />
+              <Fingerprint className="w-5 h-5 text-primary" />
               Manage Passkeys
             </DialogTitle>
             {currentUser && (

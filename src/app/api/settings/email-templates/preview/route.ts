@@ -14,6 +14,7 @@ import {
   escapeHtml,
   getEmailSettings,
   buildBrandingLogoUrl,
+  type EmailHeaderStyle,
 } from '@/lib/email'
 
 export const runtime = 'nodejs'
@@ -66,12 +67,15 @@ export async function POST(request: NextRequest) {
     const templateType = type as EmailTemplateType
 
     // Get email settings for branding
-    const settings = await getEmailSettings()
+    // Force refresh settings for preview to ensure we get latest accent color and logo
+    const settings = await getEmailSettings(true)
     const companyName = settings.companyName || 'Your Company'
     const appDomain = settings.appDomain || 'https://example.com'
     const brand = getEmailBrand(settings.accentColor)
     const emailHeaderStyle = settings.emailHeaderStyle || 'LOGO_AND_NAME'
-    const brandingLogoUrl = buildBrandingLogoUrl(settings)
+    // Add cache-busting timestamp for preview (browser caches aggressively)
+    const baseLogoUrl = buildBrandingLogoUrl(settings)
+    const brandingLogoUrl = `${baseLogoUrl}?ts=${Date.now()}`
 
     // Generate sample values for placeholders
     const sampleValues = generateSampleValues(templateType, companyName, appDomain)
@@ -79,6 +83,14 @@ export async function POST(request: NextRequest) {
     // Replace placeholders in subject and body
     const processedSubject = replacePlaceholders(subject, sampleValues)
     let processedBody = replacePlaceholders(bodyContent, sampleValues)
+
+    // Process {{LOGO}} placeholder
+    if (brandingLogoUrl) {
+      const logoHtml = `<img src="${escapeHtml(brandingLogoUrl)}" alt="Logo" height="44" style="display:inline-block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:200px; vertical-align:middle;" />`
+      processedBody = processedBody.replace(/\{\{LOGO\}\}/g, logoHtml)
+    } else {
+      processedBody = processedBody.replace(/\{\{LOGO\}\}/g, '')
+    }
 
     // Process button syntax: {{BUTTON:Label:URL}}
     processedBody = processButtonSyntax(processedBody, brand)
@@ -94,13 +106,19 @@ export async function POST(request: NextRequest) {
       bodyContent: processedBody,
       brand,
       brandingLogoUrl,
-      emailHeaderStyle: emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+      emailHeaderStyle: emailHeaderStyle as EmailHeaderStyle,
     })
 
     return NextResponse.json({
       success: true,
       subject: processedSubject,
       html,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
     })
   } catch (error) {
     console.error('[API] Failed to generate email preview:', error)

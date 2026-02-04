@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { X, Copy, FileIcon, Loader2 } from 'lucide-react'
+import { Copy, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { formatFileSize } from '@/lib/utils'
 import { apiFetch, apiPost } from '@/lib/api-client'
@@ -145,23 +146,19 @@ export function AssetCopyMoveModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div>
-            <h2 className="text-xl font-bold">Copy Assets to Another Version</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {currentVideoName} - {currentVersionLabel}
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Copy className="w-5 h-5 text-primary" />
+            Copy Assets to Another Version
+          </DialogTitle>
+          <DialogDescription>
+            {currentVideoName} - {currentVersionLabel}
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -236,7 +233,7 @@ export function AssetCopyMoveModal({
 
               {/* Success message */}
               {success && (
-                <div className="p-3 bg-primary/10 border border-primary rounded-md text-primary text-sm">
+                <div className="p-3 bg-success-visible border border-success-visible rounded-md text-success text-sm">
                   {success}
                 </div>
               )}
@@ -255,20 +252,20 @@ export function AssetCopyMoveModal({
               >
                 {copying ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Copying assets...
                   </>
                 ) : (
                   <>
-                    <Copy className="h-5 w-5 mr-2" />
-                    Copy {selectedAssets.size} asset(s) to selected version
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy {selectedAssets.size} asset(s)
                   </>
                 )}
               </Button>
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

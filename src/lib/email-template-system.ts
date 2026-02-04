@@ -34,6 +34,7 @@ export const COMMON_PLACEHOLDERS: PlaceholderDefinition[] = [
   { key: '{{COMPANY_NAME}}', description: 'Your company name from settings', example: 'Acme Studios' },
   { key: '{{RECIPIENT_NAME}}', description: 'Name of the email recipient', example: 'John Doe' },
   { key: '{{APP_DOMAIN}}', description: 'Your application domain URL', example: 'https://review.acme.com' },
+  { key: '{{LOGO}}', description: 'Your company logo image (can be placed anywhere in the email body)', example: '' },
 ]
 
 // Template-specific placeholder definitions

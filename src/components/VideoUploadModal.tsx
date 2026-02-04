@@ -414,7 +414,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
       <DialogContent className="sm:max-w-lg overflow-hidden" onPointerDownOutside={(e) => hasActiveUploads && e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
+            <Upload className="w-5 h-5 text-primary" />
             Upload Videos
           </DialogTitle>
         </DialogHeader>

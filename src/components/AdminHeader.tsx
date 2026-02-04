@@ -101,7 +101,7 @@ export default function AdminHeader() {
               <DialogContent className="max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <CircleHelp className="w-5 h-5" />
+                    <CircleHelp className="w-5 h-5 text-primary" />
                     About ViTransfer
                   </DialogTitle>
                 </DialogHeader>

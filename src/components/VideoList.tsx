@@ -328,7 +328,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   const renderExpandedVersion = (video: Video, isLatest: boolean) => (
     <div key={video.id} className="border rounded-lg p-2 sm:p-3 space-y-2">
       {/* Top row: Approved badge + Version label + Action buttons */}
-      <div className="flex justify-between items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {editingId === video.id ? (
             <InlineEdit
@@ -364,15 +364,15 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
             </>
           )}
         </div>
-        {/* Action icons - right side on all screen sizes */}
+        {/* Action icons - wrap on mobile */}
         {editingId !== video.id && (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0 flex-wrap">
             {/* Collapse button for non-latest versions */}
             {videos.length > 1 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-8 w-8"
                 onClick={() => toggleVersion(video.id)}
                 title="Collapse version"
               >
@@ -400,10 +400,10 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 size="icon"
                 onClick={() => handleToggleApproval(video.id, (video as any).approved || false)}
                 disabled={approvingId === video.id}
-                className={(video as any).approved
+                className={`h-8 w-8 ${(video as any).approved
                   ? "text-warning hover:text-warning hover:bg-warning-visible"
                   : "text-success hover:text-success hover:bg-success-visible"
-                }
+                }`}
                 title={(video as any).approved ? "Unapprove video" : "Approve video"}
               >
                 {(video as any).approved ? (
@@ -417,8 +417,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
               <Button
                 variant="ghost"
                 size="icon"
+                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 onClick={() => setUploadingAssetsFor(uploadingAssetsFor === video.id ? null : video.id)}
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 title="Upload Assets"
               >
                 <Upload className="w-4 h-4" />
@@ -428,9 +428,9 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
               <Button
                 variant="ghost"
                 size="icon"
+                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
                 onClick={() => handleDownloadVideo(video.id)}
                 disabled={downloadingId === video.id}
-                className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
                 title="Download Video"
               >
                 <Download className="w-4 h-4" />
@@ -440,9 +440,9 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
               <Button
                 variant="ghost"
                 size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive-visible"
                 onClick={() => handleDelete(video.id)}
                 disabled={deletingId === video.id}
-                className="text-destructive hover:text-destructive hover:bg-destructive-visible"
                 title="Delete video"
               >
                 <Trash2 className="w-4 h-4" />

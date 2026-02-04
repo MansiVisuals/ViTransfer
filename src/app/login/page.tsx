@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Lock, LogIn, Fingerprint } from 'lucide-react'
-import { startAuthentication } from '@simplewebauthn/browser'
+import { startAuthentication, browserSupportsWebAuthnAutofill } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { setTokens, clearTokens } from '@/lib/token-store'
 import BrandLogo from '@/components/BrandLogo'
@@ -25,6 +25,101 @@ function LoginForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
+  const [conditionalUISupported, setConditionalUISupported] = useState(false)
+  const conditionalAbortController = useRef<AbortController | null>(null)
+
+  // Start conditional UI (passkey autofill) on mount if supported
+  useEffect(() => {
+    let mounted = true
+
+    async function startConditionalUI() {
+      try {
+        // Check if browser supports conditional UI (passkey autofill)
+        const supported = await browserSupportsWebAuthnAutofill()
+        if (!mounted) return
+        
+        setConditionalUISupported(supported)
+        
+        if (!supported) {
+          console.log('[PASSKEY] Conditional UI not supported')
+          return
+        }
+
+        // Get authentication options for conditional UI
+        const optionsRes = await fetch('/api/auth/passkey/authenticate/options', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conditional: true }),
+        })
+
+        if (!optionsRes.ok) {
+          console.log('[PASSKEY] Failed to get conditional options')
+          return
+        }
+
+        const { options, sessionId }: { options: PublicKeyCredentialRequestOptionsJSON; sessionId?: string } = await optionsRes.json()
+
+        // Create abort controller for cleanup
+        conditionalAbortController.current = new AbortController()
+
+        // Start conditional authentication (will show passkey in autofill dropdown)
+        const assertion = await startAuthentication({
+          optionsJSON: options,
+          useBrowserAutofill: true,
+        })
+
+        if (!mounted) return
+
+        // User selected a passkey from autofill - verify it
+        setPasskeyLoading(true)
+        
+        const verifyRes = await fetch('/api/auth/passkey/authenticate/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            response: assertion,
+            sessionId,
+          }),
+        })
+
+        const data = await verifyRes.json()
+
+        if (!verifyRes.ok) {
+          setError(data.error || 'PassKey authentication failed')
+          setPasskeyLoading(false)
+          return
+        }
+
+        if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
+          setTokens({
+            accessToken: data.tokens.accessToken,
+            refreshToken: data.tokens.refreshToken,
+          })
+        } else {
+          clearTokens()
+        }
+
+        // Success - redirect
+        router.push(returnUrl)
+        router.refresh()
+      } catch (err: any) {
+        if (!mounted) return
+        // Ignore abort errors (user navigated away or clicked password instead)
+        if (err.name === 'AbortError' || err.name === 'NotAllowedError') {
+          return
+        }
+        console.error('[PASSKEY] Conditional UI error:', err)
+      }
+    }
+
+    startConditionalUI()
+
+    return () => {
+      mounted = false
+      // Abort any pending conditional UI request
+      conditionalAbortController.current?.abort()
+    }
+  }, [router, returnUrl])
 
   async function handlePasskeyLogin() {
     setError('')
@@ -188,7 +283,7 @@ function LoginForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="username"
+                  autoComplete={conditionalUISupported ? "username webauthn" : "username"}
                   autoFocus
                   disabled={loading}
                 />

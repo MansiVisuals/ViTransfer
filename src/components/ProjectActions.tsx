@@ -524,7 +524,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Send className="w-5 h-5" />
+              <Send className="w-5 h-5 text-primary" />
               Send Notification
             </DialogTitle>
           </DialogHeader>

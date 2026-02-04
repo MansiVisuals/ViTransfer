@@ -8,10 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.9.0] - 2026-02-02
 
 ### Added
+- **New ViTransfer Logo**: Completely redesigned logo and branding throughout the application
+  - New logomark visible on all pages: login, admin dashboard, share pages, and emails
+  - Dynamically colored with your chosen accent color
+  - Available in both SVG (app) and PNG (email) formats for maximum compatibility
 - **Progressive Web App (PWA)**: ViTransfer can now be installed as an app on desktop and mobile devices
   - Add to home screen support for iOS and Android
   - Full-screen app experience without browser UI
-  - Offline-capable service worker
 - **Browser Push Notifications**: Real-time push notifications for admin users
   - Same event types as Apprise: Failed Login, Unauthorized OTP, Share Access, Client Comment, Video Approval
   - Multi-device support - enable notifications on multiple browsers/devices
@@ -19,17 +22,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test notification feature to verify setup
   - Zero configuration - VAPID keys auto-generated and stored encrypted in database
 - **New Settings Tab**: "Browser Push" tab in Notifications settings for managing push subscriptions
-- **Custom branding logo**: Admins can upload a single SVG (300KB, sanitized) in Branding & Appearance; stored at `/api/branding/logo`. Rendered across auth screens (admin login, share-page authentication), not-found/unsubscribe pages (64px high, auto width) and emails (44px high, auto width) with fallback to the default LogoMark.
-- **Email Header Style Option**: Choose between "Logo + Company Name" or "Logo Only" for email headers - useful when your logo already includes the company name
-- **Customizable Email Templates**: Full email template customization system in Settings
+- **Custom Branding Logo**: Upload your own SVG logo (max 300KB, sanitized) in Branding & Appearance
+  - Replaces the default ViTransfer logo across all pages and emails
+  - Rendered at 64px on app pages, 44px in emails
+- **Customizable Email Templates**: New email template customization system in Settings
   - 8 template types: New Version, Project Approved, Comment Notifications (client/admin), Password, Password Reset, etc.
   - Placeholder system with template-specific variables (e.g., `{{RECIPIENT_NAME}}`, `{{PROJECT_TITLE}}`, `{{SHARE_URL}}`)
+  - `{{LOGO}}` placeholder for inline logo placement in email body
   - Live email preview with sample data
   - Button syntax support: `{{BUTTON:Label:{{URL}}}}`
   - CSS class shortcuts for consistent styling: `info-box`, `secondary-box`, `info-label`
   - Reset to default with one click
-  - Templates stored in database with fallback to built-in defaults
-- **Client Directory**: Centralized management of client companies and contacts
+  - Full Outlook and legacy email client compatibility
+- **Email Header Style Options**: Choose between "Logo + Company Name", "Logo Only", "Name Only", or "None" for email headers
+- **Client Directory**: New centralized management of client companies and contacts
   - New "Clients" section in admin navigation
   - Add/edit/delete companies and their contacts
   - Searchable company and contact autocomplete in project creation and settings
@@ -38,15 +44,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic sync: new recipients and company names are added to directory automatically
   - "Sync Existing" button for bulk import from existing projects
   - Company/Brand name field moved to "Client Information & Notifications" section in project settings
+- **Edit User Modal**: Modal dialog for editing existing admin users
 
 ### Changed
-- **Favicon and PWA icons**: Updated to high-resolution filled camera icon design
+- **Favicon and PWA icons**: Updated to match new ViTransfer logo design
 - **Auth token storage**: Changed from sessionStorage to localStorage for PWA persistence on iOS
-- **Logo rendering**: LogoMark now uses theme CSS variables for background/slit/wedge colors; BrandLogo component prefers the custom logo when present and preserves non-square aspect ratios.
+- **Admin UI Consistency**: Standardized all admin page headers, modals, and buttons
+  - Consistent page header layout with icon, title, and action buttons
+  - All modals use same sizing, spacing, and responsive behavior
+  - Modal icons use primary accent color for visual consistency
+  - Compact buttons on mobile to prevent overflow
+- **Mobile-Optimized Modals**: Create/edit modals use dynamic viewport height for proper mobile display
 
 ### Fixed
-- **Guest thumbnails on share page**: Guests can now see video posters/thumbnails on public share pages (thumbnailPath was missing from guest video data)
-- **Approval emails show wrong video**: Admin approval emails now correctly show the specific video that was just approved instead of the first video in the approved list
+- **Guest thumbnails on share page**: Guests can now see video posters/thumbnails on public share pages
+- **Approval emails show wrong video**: Admin approval emails now correctly show the specific video that was just approved
 
 ## [0.8.9] - 2026-02-01
 

@@ -213,14 +213,17 @@ export default function AdminPage() {
   function renderNewProjectModal() {
     return (
       <Dialog open={showNewProjectModal} onOpenChange={setShowNewProjectModal}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[calc(100dvh-3rem)] sm:max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderKanban className="w-5 h-5 text-primary" />
+              Create New Project
+            </DialogTitle>
             <DialogDescription>
               Set up a new video project for your client
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
             {formError && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />

@@ -186,7 +186,10 @@ export default function ProjectInfo({
       <Dialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog}>
         <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Keyboard Shortcuts</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Keyboard className="w-5 h-5 text-primary" />
+              Keyboard Shortcuts
+            </DialogTitle>
             <DialogDescription className="text-muted-foreground">
               Video playback controls
             </DialogDescription>
@@ -254,7 +257,10 @@ export default function ProjectInfo({
               </DialogTrigger>
               <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Video Information</DialogTitle>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Info className="w-5 h-5 text-primary" />
+                    Video Information
+                  </DialogTitle>
                   <DialogDescription className="text-muted-foreground">
                     Project details and original file specifications
                   </DialogDescription>
@@ -350,7 +356,10 @@ export default function ProjectInfo({
       <Dialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
         <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Approve Video</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-success" />
+              Approve Video
+            </DialogTitle>
             <DialogDescription className="text-muted-foreground">
               Confirm approval for this video version
             </DialogDescription>

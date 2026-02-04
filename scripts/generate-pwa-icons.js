@@ -27,7 +27,7 @@ if (!fs.existsSync(iconsDir)) {
   fs.mkdirSync(iconsDir, { recursive: true })
 }
 
-// Generate SVG icons (can be converted to PNG with a tool like sharp or inkscape)
+// Generate SVG icons (resolution-independent, smaller file size)
 const sizes = [192, 512]
 
 sizes.forEach((size) => {
@@ -37,9 +37,4 @@ sizes.forEach((size) => {
   console.log(`Generated ${filename}`)
 })
 
-// Also create a simple favicon.ico placeholder (actual favicon.ico should be created with proper tooling)
-console.log('\\nSVG icons generated in public/icons/')
-console.log('To convert to PNG, use a tool like:')
-console.log('  - Inkscape: inkscape -w 192 -h 192 icon-192.svg -o icon-192.png')
-console.log('  - ImageMagick: convert icon-192.svg icon-192.png')
-console.log('  - Online tool: https://cloudconvert.com/svg-to-png')
+console.log('\nDone! Icons generated in public/icons/')

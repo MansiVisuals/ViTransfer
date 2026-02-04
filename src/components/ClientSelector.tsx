@@ -208,7 +208,7 @@ export function ClientSelector({
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               id="companyName"
-              name="companyName"
+              name="company-search-field"
               placeholder="e.g., XYZ Corporation"
               value={companySearch}
               onChange={(e) => handleCompanyInputChange(e.target.value)}
@@ -216,6 +216,12 @@ export function ClientSelector({
               disabled={disabled}
               className="pl-9 pr-8"
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore
             />
             {selectedCompanyId && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -275,7 +281,7 @@ export function ClientSelector({
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="recipientName"
-                name="recipientName"
+                name="contact-search-field"
                 placeholder="e.g., John Doe"
                 value={contactSearch}
                 onChange={(e) => handleContactInputChange(e.target.value)}
@@ -283,6 +289,12 @@ export function ClientSelector({
                 disabled={disabled}
                 className="pl-9"
                 autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
             
@@ -316,12 +328,19 @@ export function ClientSelector({
           <Label htmlFor="recipientEmail">Client Email (Optional)</Label>
           <Input
             id="recipientEmail"
-            name="recipientEmail"
+            name="client-email-field"
             type="email"
             placeholder="e.g., client@example.com"
             value={recipientEmail}
             onChange={(e) => onRecipientEmailChange(e.target.value)}
             disabled={disabled}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-form-type="other"
+            data-lpignore="true"
+            data-1p-ignore
           />
         </div>
       </div>

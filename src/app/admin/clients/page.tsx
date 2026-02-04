@@ -356,6 +356,13 @@ export default function ClientsPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  data-form-type="other"
+                  data-lpignore="true"
+                  data-1p-ignore
                 />
               </div>
             </div>
@@ -452,6 +459,13 @@ export default function ClientsPage() {
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCompany()}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
           </div>
@@ -489,6 +503,13 @@ export default function ClientsPage() {
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleEditCompany()}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
           </div>
@@ -611,6 +632,13 @@ export default function ClientsPage() {
                 placeholder="e.g., John Doe"
                 value={newContactName}
                 onChange={(e) => setNewContactName(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
             <div className="space-y-2">
@@ -622,6 +650,13 @@ export default function ClientsPage() {
                 value={newContactEmail}
                 onChange={(e) => setNewContactEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddContact()}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
           </div>
@@ -658,6 +693,13 @@ export default function ClientsPage() {
                 id="editContactName"
                 value={newContactName}
                 onChange={(e) => setNewContactName(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
             <div className="space-y-2">
@@ -668,6 +710,13 @@ export default function ClientsPage() {
                 value={newContactEmail}
                 onChange={(e) => setNewContactEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleEditContact()}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
           </div>

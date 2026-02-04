@@ -147,6 +147,13 @@ export function ClientDirectoryQuickAdd({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
                 autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore
               />
             </div>
           </div>

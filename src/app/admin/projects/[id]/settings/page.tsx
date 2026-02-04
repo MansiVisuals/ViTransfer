@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,9 +11,12 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { ReprocessModal } from '@/components/ReprocessModal'
-import { RecipientManager } from '@/components/RecipientManager'
+import { RecipientManager, RecipientManagerRef } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
+import { ClientSelector } from '@/components/ClientSelector'
+import { CompanyNameInput } from '@/components/CompanyNameInput'
+import { ClientDirectoryQuickAdd } from '@/components/ClientDirectoryQuickAdd'
 import { apiFetch } from '@/lib/api-client'
 import { sanitizeSlug } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
@@ -77,6 +80,7 @@ interface Project {
   slug: string
   description: string | null
   companyName: string | null
+  clientCompanyId: string | null
   enableRevisions: boolean
   maxRevisions: number
   restrictCommentsToLatestVersion: boolean
@@ -114,6 +118,7 @@ export default function ProjectSettingsPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [companyName, setCompanyName] = useState('')
+  const [clientCompanyId, setClientCompanyId] = useState<string | null>(null)
   const [enableRevisions, setEnableRevisions] = useState(false)
   const [maxRevisions, setMaxRevisions] = useState<number | ''>('')
   const [restrictCommentsToLatestVersion, setRestrictCommentsToLatestVersion] = useState(false)
@@ -142,6 +147,9 @@ export default function ProjectSettingsPage() {
   const [smtpConfigured, setSmtpConfigured] = useState(true)
   const [recipients, setRecipients] = useState<any[]>([])
   const hasRecipientWithEmail = recipients?.some((r: any) => r.email && r.email.trim() !== '') || false
+
+  // Ref for RecipientManager to add recipients from directory
+  const recipientManagerRef = useRef<RecipientManagerRef>(null)
 
   // Collapsible section state (all collapsed by default)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
@@ -198,6 +206,7 @@ export default function ProjectSettingsPage() {
         setTitle(data.title)
         setDescription(data.description || '')
         setCompanyName(data.companyName || '')
+        setClientCompanyId(data.clientCompanyId || null)
         setEnableRevisions(data.enableRevisions)
         setMaxRevisions(data.maxRevisions)
         setRestrictCommentsToLatestVersion(data.restrictCommentsToLatestVersion)
@@ -299,6 +308,7 @@ export default function ProjectSettingsPage() {
         slug: sanitizedSlug,
         description: description || null,
         companyName: companyName || null,
+        clientCompanyId: clientCompanyId || null,
         enableRevisions,
         maxRevisions: enableRevisions ? finalMaxRevisions : 0,
         restrictCommentsToLatestVersion,
@@ -501,18 +511,6 @@ export default function ProjectSettingsPage() {
                     Optional description to help identify and organize this project
                   </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="companyName">Company/Brand Name</Label>
-                  <Input
-                    id="companyName"
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g., XYZ Corporation"
-                    maxLength={100}
-                  />
-                </div>
               </div>
 
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
@@ -636,16 +634,52 @@ export default function ProjectSettingsPage() {
 	          <CollapsibleSection
 	            className="border-border"
 	            title="Client Information & Notifications"
-	            description="Manage client recipients and notification settings"
+	            description="Manage client company, recipients and notification settings"
 	            open={showClientInfo}
 	            onOpenChange={setShowClientInfo}
 	            contentClassName="space-y-6 border-t pt-4"
 	          >
-	              <RecipientManager
-	                projectId={projectId}
-	                onError={setError}
-	                onRecipientsChange={setRecipients}
-              />
+              {/* Company/Brand Selection */}
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company/Brand Name</Label>
+                  <CompanyNameInput
+                    value={companyName}
+                    selectedId={clientCompanyId}
+                    onChange={(name, id) => {
+                      setCompanyName(name)
+                      setClientCompanyId(id)
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Start typing to search your client directory or enter a custom company name
+                  </p>
+                </div>
+              </div>
+
+              {/* Recipients with Directory Quick Add */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Recipients</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Add people who should receive notifications and can access this project
+                    </p>
+                  </div>
+                  <ClientDirectoryQuickAdd
+                    companyId={clientCompanyId}
+                    onAddRecipient={(name, email) => {
+                      recipientManagerRef.current?.addRecipientFromDirectory(name, email)
+                    }}
+                  />
+                </div>
+                <RecipientManager
+                  ref={recipientManagerRef}
+                  projectId={projectId}
+                  onError={setError}
+                  onRecipientsChange={setRecipients}
+                />
+              </div>
 
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <ScheduleSelector

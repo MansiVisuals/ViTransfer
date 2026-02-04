@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -21,7 +21,12 @@ interface RecipientManagerProps {
   onRecipientsChange?: (recipients: Recipient[]) => void
 }
 
-export function RecipientManager({ projectId, onError, onRecipientsChange }: RecipientManagerProps) {
+export interface RecipientManagerRef {
+  addRecipientFromDirectory: (name: string, email: string | null) => Promise<void>
+}
+
+export const RecipientManager = forwardRef<RecipientManagerRef, RecipientManagerProps>(
+  function RecipientManager({ projectId, onError, onRecipientsChange }, ref) {
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -51,6 +56,25 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
   useEffect(() => {
     loadRecipients()
   }, [loadRecipients])
+
+  // Expose method to add recipient from directory (used by ClientDirectoryQuickAdd)
+  const addRecipientFromDirectory = useCallback(async (name: string, email: string | null) => {
+    try {
+      await apiPost(`/api/projects/${projectId}/recipients`, {
+        email: email || null,
+        name: name || null,
+        isPrimary: recipients.length === 0,
+      })
+      await loadRecipients()
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to add recipient')
+    }
+  }, [projectId, recipients.length, loadRecipients, onError])
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    addRecipientFromDirectory
+  }), [addRecipientFromDirectory])
 
   const addRecipient = async () => {
     if (!newEmail && !newName) {
@@ -349,4 +373,4 @@ export function RecipientManager({ projectId, onError, onRecipientsChange }: Rec
       )}
     </div>
   )
-}
+})

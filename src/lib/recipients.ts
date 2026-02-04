@@ -1,4 +1,5 @@
 import { prisma } from './db'
+import { syncRecipientToDirectory } from './client-directory-sync'
 
 export interface Recipient {
   id?: string
@@ -94,6 +95,11 @@ export async function addRecipient(
     }
   })
 
+  // Auto-sync to client directory (fire and forget to not block the response)
+  syncRecipientToDirectory(projectId, name, email).catch(err => {
+    console.error('Failed to sync recipient to client directory:', err)
+  })
+
   return {
     id: recipient.id,
     email: recipient.email,
@@ -133,6 +139,13 @@ export async function updateRecipient(
     where: { id: recipientId },
     data
   })
+
+  // Auto-sync to client directory if name or email changed (fire and forget)
+  if (data.name !== undefined || data.email !== undefined) {
+    syncRecipientToDirectory(recipient.projectId, recipient.name, recipient.email).catch(err => {
+      console.error('Failed to sync recipient to client directory:', err)
+    })
+  }
 
   return {
     id: recipient.id,

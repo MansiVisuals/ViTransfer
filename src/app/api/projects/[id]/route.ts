@@ -8,6 +8,7 @@ import { invalidateProjectSessions, invalidateShareTokensByProject } from '@/lib
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { updateProjectSchema } from '@/lib/validation'
+import { syncCompanyToDirectory } from '@/lib/client-directory-sync'
 export const runtime = 'nodejs'
 
 export async function GET(
@@ -180,6 +181,11 @@ export async function PATCH(
         )
       }
       updateData.companyName = validatedBody.companyName || null
+    }
+
+    // Handle client directory link
+    if (validatedBody.clientCompanyId !== undefined) {
+      updateData.clientCompanyId = validatedBody.clientCompanyId || null
     }
 
     // Handle status update (for approval)
@@ -419,6 +425,13 @@ export async function PATCH(
         // Don't fail the request if session invalidation fails - security change is more important
       }
 
+    }
+
+    // Auto-sync company name to client directory (fire and forget)
+    if (validatedBody.companyName && updateData.companyName) {
+      syncCompanyToDirectory(id, updateData.companyName).catch(err => {
+        console.error('Failed to sync company to client directory:', err)
+      })
     }
 
     return NextResponse.json(project)

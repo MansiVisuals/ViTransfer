@@ -29,6 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CSS class shortcuts for consistent styling: `info-box`, `secondary-box`, `info-label`
   - Reset to default with one click
   - Templates stored in database with fallback to built-in defaults
+- **Client Directory**: Centralized management of client companies and contacts
+  - New "Clients" section in admin navigation
+  - Add/edit/delete companies and their contacts
+  - Searchable company and contact autocomplete in project creation and settings
+  - "Add from Directory" quick-add button in project recipient management
+  - Auto-fill company name and email when selecting a contact
+  - Automatic sync: new recipients and company names are added to directory automatically
+  - "Sync Existing" button for bulk import from existing projects
+  - Company/Brand name field moved to "Client Information & Notifications" section in project settings
 
 ### Changed
 - **Favicon and PWA icons**: Updated to high-resolution filled camera icon design

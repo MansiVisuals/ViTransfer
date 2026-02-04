@@ -81,6 +81,10 @@ model Project {
   createdBy   User   @relation(fields: [createdById], references: [id])
   createdById String
 
+  // Client directory link (optional)
+  clientCompanyId String?
+  clientCompany   ClientCompany? @relation(fields: [clientCompanyId], references: [id], onDelete: SetNull)
+
   videos            Video[]
   comments          Comment[]
   securityEvents    SecurityEvent[]
@@ -88,6 +92,8 @@ model Project {
   recipients        ProjectRecipient[] // Multiple email recipients
   notificationQueue NotificationQueue[] // Pending notifications
   sharePageAccesses SharePageAccess[] // Share page authentication tracking
+
+  @@index([clientCompanyId])
 }
 
 enum ProjectStatus {
@@ -563,4 +569,29 @@ model EmailTemplate {
   updatedAt DateTime @updatedAt
 
   @@index([type, enabled])
+}
+
+// Client Directory - Companies/Organizations
+model ClientCompany {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts ClientContact[]
+  projects Project[]
+}
+
+// Client Directory - Individual Contacts
+model ClientContact {
+  id        String   @id @default(cuid())
+  companyId String
+  company   ClientCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([email])
 }

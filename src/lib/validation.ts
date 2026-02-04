@@ -210,6 +210,7 @@ export const createProjectSchema = z.object({
       message: 'Company name cannot contain line breaks'
     })
     .optional(),
+  clientCompanyId: z.string().cuid().optional().nullable(), // Optional link to client directory
   recipientEmail: emailSchema.optional().or(z.literal('')), // Optional recipient email (will create ProjectRecipient if provided)
   recipientName: safeStringSchema(0, 255).optional(), // Optional recipient name
   sharePassword: z.string()
@@ -243,6 +244,7 @@ export const updateProjectSchema = z.object({
     })
     .nullable()
     .optional(),
+  clientCompanyId: z.string().cuid().optional().nullable(), // Optional link to client directory
   status: z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED']).optional(),
 
   // Revision settings

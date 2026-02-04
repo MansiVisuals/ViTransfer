@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
 import { apiPost, apiFetch } from '@/lib/api-client'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
+import { ClientSelector } from '@/components/ClientSelector'
 
 // Client-safe password generation using Web Crypto API
 function generateSecurePassword(): string {
@@ -55,6 +56,11 @@ export default function NewProjectPage() {
   // Authentication mode
   const [authMode, setAuthMode] = useState<'PASSWORD' | 'OTP' | 'BOTH'>('PASSWORD')
   const [smtpConfigured, setSmtpConfigured] = useState(false)
+  
+  // Client info
+  const [companyName, setCompanyName] = useState('')
+  const [clientCompanyId, setClientCompanyId] = useState<string | null>(null)
+  const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
 
   // Generate password on mount
@@ -104,9 +110,10 @@ export default function NewProjectPage() {
     const data = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
-      companyName: formData.get('companyName') as string,
-      recipientName: formData.get('recipientName') as string,
-      recipientEmail: formData.get('recipientEmail') as string,
+      companyName: companyName || null,
+      clientCompanyId: clientCompanyId,
+      recipientName: recipientName || null,
+      recipientEmail: recipientEmail || null,
       sharePassword: (authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected ? sharePassword : '',
       authMode: passwordProtected ? authMode : 'NONE',
       isShareOnly: isShareOnlyValue,
@@ -157,39 +164,19 @@ export default function NewProjectPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Company/Brand Name (Optional)</Label>
-                <Input
-                  id="companyName"
-                  name="companyName"
-                  placeholder="e.g., XYZ Corporation"
-                  maxLength={100}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="recipientName">Client Name (Optional)</Label>
-                    <Input id="recipientName" name="recipientName" placeholder="e.g., Client Name" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="recipientEmail">Client Email (Optional)</Label>
-                    <Input
-                      id="recipientEmail"
-                      name="recipientEmail"
-                      type="email"
-                      placeholder="e.g., client@example.com"
-                      value={recipientEmail}
-                      onChange={(e) => setRecipientEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Add client name and email if you want to send notifications. You can add more recipients later in project settings.
-                </p>
-              </div>
+              {/* Client Selection with Directory Search */}
+              <ClientSelector
+                companyName={companyName}
+                onCompanyChange={(name, id) => {
+                  setCompanyName(name)
+                  setClientCompanyId(id)
+                }}
+                recipientName={recipientName}
+                onRecipientNameChange={setRecipientName}
+                recipientEmail={recipientEmail}
+                onRecipientEmailChange={setRecipientEmail}
+                disabled={loading}
+              />
 
               {/* Authentication Section */}
               <div className="space-y-4 border rounded-lg p-4 bg-primary-visible border-2 border-primary-visible">

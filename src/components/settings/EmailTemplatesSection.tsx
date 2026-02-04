@@ -245,7 +245,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
       {/* Preview Modal - z-[60] to appear above Editor modal */}
       {showPreview && previewHtml && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6">
-          <div className="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] bg-background rounded-lg shadow-xl overflow-hidden flex flex-col">
+          <div className="relative w-full max-w-4xl max-h-[85vh] sm:max-h-[90vh] bg-background rounded-lg shadow-xl overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border bg-muted/50">
               <div className="min-w-0 flex-1">
@@ -262,11 +262,22 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
                 <X className="w-5 h-5" />
               </button>
             </div>
-            {/* Modal Body */}
-            <div className="flex-1 overflow-hidden">
+            {/* Modal Body - iframe scales to fit width, vertical scroll only */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-100">
               <iframe
-                srcDoc={previewHtml}
-                className="w-full h-[60vh] sm:h-[70vh] bg-white"
+                srcDoc={previewHtml.replace(
+                  '</head>',
+                  `<style>
+                    body { margin: 0 !important; padding: 8px !important; min-width: 0 !important; }
+                    table[width="600"], table[style*="max-width: 600px"] { 
+                      max-width: 100% !important; 
+                      width: 100% !important; 
+                    }
+                    img { max-width: 100% !important; height: auto !important; }
+                    td { word-break: break-word !important; }
+                  </style></head>`
+                )}
+                className="w-full h-[55vh] sm:h-[70vh] border-0"
                 title="Email preview"
                 sandbox="allow-same-origin"
               />
@@ -278,7 +289,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
       {/* Placeholders Modal - z-[60] to appear above Editor modal */}
       {showPlaceholders && selectedTemplate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6">
-          <div className="relative w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] bg-background rounded-lg shadow-xl overflow-hidden flex flex-col">
+          <div className="relative w-full max-w-2xl max-h-[80vh] sm:max-h-[90vh] bg-background rounded-lg shadow-xl overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border bg-muted/50">
               <div className="min-w-0 flex-1">

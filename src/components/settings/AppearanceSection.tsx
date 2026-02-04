@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { Monitor, Moon, Sun, Check, Upload, Trash2, Image as ImageIcon } from 'lucide-react'
 import { useRef } from 'react'
+import { EmailTemplatesEditor } from '@/components/settings/EmailTemplatesSection'
 
 // Accent color presets with HSL values for light and dark modes
 export const ACCENT_COLORS = {
@@ -34,6 +35,8 @@ interface AppearanceSectionProps {
   onRemoveLogo: () => Promise<void>
   logoUploading: boolean
   logoError?: string | null
+  emailHeaderStyle: string
+  setEmailHeaderStyle: (value: string) => void
   show: boolean
   setShow: (value: boolean) => void
 }
@@ -52,6 +55,8 @@ export function AppearanceSection({
   onRemoveLogo,
   logoUploading,
   logoError,
+  emailHeaderStyle,
+  setEmailHeaderStyle,
   show,
   setShow
 }: AppearanceSectionProps) {
@@ -220,6 +225,12 @@ export function AppearanceSection({
           Choose an accent color for buttons, links, and highlights throughout the application.
         </p>
       </div>
+
+      {/* Email Templates */}
+      <EmailTemplatesEditor 
+        emailHeaderStyle={emailHeaderStyle}
+        setEmailHeaderStyle={setEmailHeaderStyle}
+      />
     </CollapsibleSection>
   )
 }

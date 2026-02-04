@@ -261,6 +261,7 @@ model Settings {
   // Company Branding
   companyName String? @default("Studio") // Displayed in feedback/comments
   brandingLogoPath String? // Path to uploaded custom SVG logo
+  emailHeaderStyle String @default("LOGO_AND_NAME") // LOGO_ONLY or LOGO_AND_NAME
 
   // SMTP Email Configuration
   smtpServer      String?
@@ -542,4 +543,24 @@ model PushSubscription {
   lastUsedAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model EmailTemplate {
+  id          String  @id @default(cuid())
+  type        String  @unique // NEW_VERSION, PROJECT_APPROVED, COMMENT_NOTIFICATION, etc.
+  name        String // Human-readable name for the template
+  description String? // Description of when this template is used
+
+  // Template content
+  subject     String // Email subject line (supports placeholders)
+  bodyContent String // HTML body content (supports placeholders)
+
+  // Status flags
+  isCustom Boolean @default(true) // false = system default, true = user customized
+  enabled  Boolean @default(true) // Allow disabling specific templates
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, enabled])
 }

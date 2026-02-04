@@ -16,6 +16,7 @@ interface Settings {
   accentColor: string | null
   companyName: string | null
   brandingLogoPath: string | null
+  emailHeaderStyle: string | null
   smtpServer: string | null
   smtpPort: number | null
   smtpUsername: string | null
@@ -86,6 +87,7 @@ export default function GlobalSettingsPage() {
   const [brandingLogoPreview, setBrandingLogoPreview] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoError, setLogoError] = useState('')
+  const [emailHeaderStyle, setEmailHeaderStyle] = useState('LOGO_AND_NAME')
 
   // Form state for global settings
   const [companyName, setCompanyName] = useState('')
@@ -143,6 +145,7 @@ export default function GlobalSettingsPage() {
     setCompanyName(data.companyName || '')
     setBrandingLogoPath(data.brandingLogoPath || null)
     setBrandingLogoPreview(data.brandingLogoPath ? `/api/branding/logo?ts=${Date.now()}` : null)
+    setEmailHeaderStyle(data.emailHeaderStyle || 'LOGO_AND_NAME')
     setSmtpServer(data.smtpServer || '')
     setSmtpPort(data.smtpPort?.toString() || '587')
     setSmtpUsername(data.smtpUsername || '')
@@ -383,6 +386,7 @@ export default function GlobalSettingsPage() {
         accentColor: accentColor || 'blue',
         companyName: companyName || null,
         brandingLogoPath: brandingLogoPath || null,
+        emailHeaderStyle: emailHeaderStyle || 'LOGO_AND_NAME',
         smtpServer: smtpServer || null,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : 587,
         smtpUsername: smtpUsername || null,
@@ -557,6 +561,8 @@ export default function GlobalSettingsPage() {
             onRemoveLogo={handleLogoRemove}
             logoUploading={logoUploading}
             logoError={logoError}
+            emailHeaderStyle={emailHeaderStyle}
+            setEmailHeaderStyle={setEmailHeaderStyle}
             show={showBrandingAppearance}
             setShow={setShowBrandingAppearance}
           />

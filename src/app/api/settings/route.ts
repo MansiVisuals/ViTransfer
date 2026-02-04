@@ -109,6 +109,7 @@ export async function PATCH(request: NextRequest) {
       adminNotificationTime,
       adminNotificationDay,
       defaultUsePreviewForApprovedPlayback,
+      emailHeaderStyle,
     } = body
 
     // SECURITY: Validate theme setting
@@ -128,6 +129,17 @@ export async function PATCH(request: NextRequest) {
       if (!validColors.includes(accentColor)) {
         return NextResponse.json(
           { error: 'Invalid accent color.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // SECURITY: Validate email header style
+    if (emailHeaderStyle !== undefined) {
+      const validStyles = ['LOGO_ONLY', 'LOGO_AND_NAME']
+      if (!validStyles.includes(emailHeaderStyle)) {
+        return NextResponse.json(
+          { error: 'Invalid email header style. Must be LOGO_ONLY or LOGO_AND_NAME.' },
           { status: 400 }
         )
       }
@@ -248,6 +260,7 @@ export async function PATCH(request: NextRequest) {
       accentColor,
       companyName,
       brandingLogoPath,
+      emailHeaderStyle,
       smtpServer,
       smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
       smtpUsername,
@@ -280,6 +293,7 @@ export async function PATCH(request: NextRequest) {
         accentColor: accentColor || 'blue',
         companyName,
         brandingLogoPath: brandingLogoPath || null,
+        emailHeaderStyle: emailHeaderStyle || 'LOGO_AND_NAME',
         smtpServer,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
         smtpUsername,

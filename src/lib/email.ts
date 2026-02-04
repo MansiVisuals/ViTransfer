@@ -2,6 +2,11 @@ import nodemailer from 'nodemailer'
 import { prisma } from './db'
 import { decrypt } from './encryption'
 import { buildLogoSvg } from './brand'
+import {
+  getEmailTemplate,
+  replacePlaceholders,
+  type EmailTemplateType,
+} from './email-template-system'
 
 // Accent color presets (must match AppearanceSection.tsx)
 const ACCENT_COLOR_HEX: Record<string, string> = {
@@ -93,6 +98,100 @@ export function getEmailBrand(accentColor?: string | null): EmailBrandColors {
   }
 }
 
+/**
+ * Process button syntax in template content
+ * Converts {{BUTTON:Label:URL}} to styled HTML buttons
+ */
+export function processButtonSyntax(content: string, brand: EmailBrandColors): string {
+  return content.replace(/\{\{BUTTON:([^:}]+):([^}]+)\}\}/g, (_, label, url) => {
+    return `<div style="margin: 20px 0; text-align: center;">
+      <a href="${url}" style="display: inline-block; background: ${brand.accent}; color: #ffffff; font-weight: 600; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px;">${label}</a>
+    </div>`
+  })
+}
+
+/**
+ * Process email template classes to inline styles
+ * Converts class="info-box" etc to styled inline HTML
+ */
+export function processEmailClasses(content: string, brand: EmailBrandColors): string {
+  // Process info-box class
+  content = content.replace(
+    /<div class="info-box">([\s\S]*?)<\/div>/gi,
+    `<div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">$1</div>`
+  )
+
+  // Process secondary-box class (neutral background)
+  content = content.replace(
+    /<div class="secondary-box">([\s\S]*?)<\/div>/gi,
+    `<div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">$1</div>`
+  )
+
+  // Process info-label class
+  content = content.replace(
+    /<div class="info-label">([\s\S]*?)<\/div>/gi,
+    `<div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">$1</div>`
+  )
+
+  // Process info-value class
+  content = content.replace(
+    /<div class="info-value">([\s\S]*?)<\/div>/gi,
+    `<div style="font-size: 15px; color: ${brand.text}; padding: 4px 0;">$1</div>`
+  )
+
+  // Process protected-note class
+  content = content.replace(
+    /<div class="protected-note">([\s\S]*?)<\/div>/gi,
+    `<div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">$1</div>`
+  )
+
+  // Process accent-text class (for version labels etc)
+  content = content.replace(
+    /<span class="accent-text">([\s\S]*?)<\/span>/gi,
+    `<span style="color: ${brand.accent}; font-weight: 600;">$1</span>`
+  )
+
+  // Process success-box class
+  content = content.replace(
+    /<div class="success-box">([\s\S]*?)<\/div>/gi,
+    `<div style="background: rgb(220 252 231); border: 1px solid rgb(134 239 172); border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: rgb(21 128 61); line-height: 1.5;">$1</div>`
+  )
+
+  // Process warning-box class
+  content = content.replace(
+    /<div class="warning-box">([\s\S]*?)<\/div>/gi,
+    `<div style="background: rgb(254 249 195); border: 1px solid rgb(253 224 71); border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: rgb(161 98 7); line-height: 1.5;">$1</div>`
+  )
+
+  // Process inline paragraph formatting
+  content = content.replace(
+    /<p style="margin: 0">/gi,
+    `<p style="margin: 0 0 16px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">`
+  )
+
+  // Convert plain newlines to breaks for basic formatting
+  content = content.replace(/\n\n/g, '</p><p style="margin: 0 0 16px 0; font-size: 15px; color: ' + brand.textSubtle + '; line-height: 1.6;">')
+
+  return content
+}
+
+/**
+ * Process custom template content with placeholder values and styling
+ */
+export function processTemplateContent(
+  content: string,
+  values: Record<string, string>,
+  brand: EmailBrandColors
+): string {
+  // Replace placeholders
+  let processed = replacePlaceholders(content, values)
+  // Process button syntax
+  processed = processButtonSyntax(processed, brand)
+  // Process CSS classes to inline styles
+  processed = processEmailClasses(processed, brand)
+  return processed
+}
+
 // Inline SVG logo for emails (accent-aware, reuses app logomark)
 function buildEmailLogo(accentHex: string): string {
   const accent = accentHex || ACCENT_COLOR_HEX.blue
@@ -100,7 +199,7 @@ function buildEmailLogo(accentHex: string): string {
   return buildLogoSvg(accent, 56)
 }
 
-function buildBrandingLogoUrl(settings: EmailSettings): string | null {
+export function buildBrandingLogoUrl(settings: EmailSettings): string | null {
   if (!settings.brandingLogoPath) return null
   const base = settings.appDomain?.replace(/\/$/, '') || ''
   const path = settings.brandingLogoPath.startsWith('http')
@@ -189,6 +288,7 @@ export interface EmailShellOptions {
   preheader?: string
   brand?: EmailBrandColors
   brandingLogoUrl?: string | null
+  emailHeaderStyle?: 'LOGO_ONLY' | 'LOGO_AND_NAME' // Default: LOGO_AND_NAME
 }
 
 export function renderEmailShell({
@@ -200,6 +300,7 @@ export function renderEmailShell({
   preheader,
   brand = EMAIL_BRAND,
   brandingLogoUrl,
+  emailHeaderStyle = 'LOGO_AND_NAME',
 }: EmailShellOptions) {
   const safeCompanyName = escapeHtml(companyName)
   const safeTitle = escapeHtml(title)
@@ -208,6 +309,9 @@ export function renderEmailShell({
   const logo = brandingLogoUrl
     ? `<img src="${escapeHtml(brandingLogoUrl)}" alt="${safeCompanyName} logo" height="44" style="display:block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:132px;" />`
     : buildEmailLogo(brand.accent)
+  
+  // Conditionally show company name based on emailHeaderStyle
+  const showCompanyName = emailHeaderStyle !== 'LOGO_ONLY'
 
   return `
 <!DOCTYPE html>
@@ -226,9 +330,9 @@ export function renderEmailShell({
             <td style="background: ${brand.accentGradient}; padding: 30px 24px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
               <div style="display: inline-flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; margin-bottom: 14px;">
                 ${logo}
-                <div style="text-align: left;">
+                ${showCompanyName ? `<div style="text-align: left;">
                   <div style="font-size: 17px; font-weight: 750; color: #ffffff; line-height: 1.1;">${safeCompanyName}</div>
-                </div>
+                </div>` : ''}
               </div>
               <div style="font-size: 24px; font-weight: 750; color: #ffffff; margin-bottom: 8px;">${safeTitle}</div>
               ${subtitle ? `<div style="font-size: 15px; color: rgba(255,255,255,0.95); line-height: 1.4;">${safeSubtitle}</div>` : ''}
@@ -266,6 +370,7 @@ interface EmailSettings {
   companyName: string | null
   accentColor: string | null
   brandingLogoPath: string | null
+  emailHeaderStyle: string
 }
 
 let cachedSettings: EmailSettings | null = null
@@ -286,24 +391,22 @@ export async function getEmailSettings(): Promise<EmailSettings> {
   // Fetch fresh settings
   const settings = await prisma.settings.findUnique({
     where: { id: 'default' },
-    select: {
-      smtpServer: true,
-      smtpPort: true,
-      smtpUsername: true,
-      smtpPassword: true,
-      smtpFromAddress: true,
-      smtpSecure: true,
-      appDomain: true,
-      companyName: true,
-      accentColor: true,
-      brandingLogoPath: true,
-    }
   })
 
   // Decrypt the password if it exists
+  // Note: emailHeaderStyle is cast to handle pre-migration state
   cachedSettings = settings ? {
-    ...settings,
+    smtpServer: settings.smtpServer,
+    smtpPort: settings.smtpPort,
+    smtpUsername: settings.smtpUsername,
     smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
+    smtpFromAddress: settings.smtpFromAddress,
+    smtpSecure: settings.smtpSecure,
+    appDomain: settings.appDomain,
+    companyName: settings.companyName,
+    accentColor: settings.accentColor,
+    brandingLogoPath: settings.brandingLogoPath,
+    emailHeaderStyle: (settings as { emailHeaderStyle?: string }).emailHeaderStyle || 'LOGO_AND_NAME',
   } : {
     smtpServer: null,
     smtpPort: null,
@@ -315,6 +418,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
     companyName: null,
     accentColor: null,
     brandingLogoPath: null,
+    emailHeaderStyle: 'LOGO_AND_NAME',
   }
   settingsCacheTime = now
 
@@ -435,7 +539,42 @@ export async function sendNewVersionEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  const subject = `New Version Available: ${projectTitle}`
+  // Get custom template or use default
+  const template = await getEmailTemplate('NEW_VERSION')
+  
+  // Build placeholder values (use both CLIENT_NAME and RECIPIENT_NAME for flexibility)
+  const placeholderValues: Record<string, string> = {
+    '{{CLIENT_NAME}}': clientName,
+    '{{RECIPIENT_NAME}}': clientName,
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{VIDEO_NAME}}': videoName,
+    '{{VERSION_LABEL}}': versionLabel,
+    '{{SHARE_URL}}': shareUrl,
+    '{{COMPANY_NAME}}': companyName,
+    '{{PASSWORD_NOTICE}}': '', // Will be handled separately
+  }
+
+  // Process subject line (replace placeholders)
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
+  // Add password protected note if applicable
+  if (isPasswordProtected) {
+    bodyContent += `
+      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px;">
+        <div style="font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
+          <strong>Protected project:</strong> Use the password sent separately to access this project.
+        </div>
+      </div>
+    `
+  }
+
+  // Add unsubscribe section if applicable
+  if (unsubscribeUrl) {
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+  }
 
   const html = renderEmailShell({
     companyName,
@@ -443,42 +582,8 @@ export async function sendNewVersionEmail({
     subtitle: 'Ready for your review',
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
-        Hi <strong>${escapeHtml(clientName)}</strong>,
-      </p>
-
-      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">
-        A new version of your project is ready for review. Please take a moment to watch it and let us know what you think.
-      </p>
-
-      <div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Project details</div>
-        <div style="font-size: 15px; color: ${brand.text}; padding: 4px 0;">
-          <strong>${escapeHtml(projectTitle)}</strong>
-        </div>
-        <div style="font-size: 14px; color: ${brand.textSubtle}; padding: 4px 0;">
-          ${escapeHtml(videoName)} <span style="color: ${brand.accent}; font-weight: 600;">${escapeHtml(versionLabel)}</span>
-        </div>
-      </div>
-
-      ${isPasswordProtected ? `
-        <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px;">
-          <div style="font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
-            <strong>Protected project:</strong> Use the password sent separately to access this project.
-          </div>
-        </div>
-      ` : ''}
-
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View Project', brand })}
-      </div>
-
-      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${brand.muted}; line-height: 1.5;">
-        Questions or feedback? Simply reply to this email and we'll get back to you.
-      </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
   })
 
   return sendEmail({
@@ -513,9 +618,8 @@ export async function sendProjectApprovedEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  const subject = isComplete
-    ? `${projectTitle} - Project Approved and Ready for Download`
-    : `${projectTitle} - Video Approved`
+  // Get custom template or use default
+  const template = await getEmailTemplate('PROJECT_APPROVED')
 
   const statusTitle = isComplete ? 'Project Approved' : 'Video Approved'
   const statusMessage = isComplete
@@ -524,9 +628,31 @@ export async function sendProjectApprovedEmail({
 
   const videoName = approvedVideos[0]?.name || 'Your video'
 
-  const bodyText = isComplete
+  const approvalMessage = isComplete
     ? `Great news! Your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.`
     : `Great news! <strong>${escapeHtml(videoName)}</strong> from your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.`
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{CLIENT_NAME}}': clientName,
+    '{{RECIPIENT_NAME}}': clientName,
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{VIDEO_NAME}}': videoName,
+    '{{SHARE_URL}}': shareUrl,
+    '{{COMPANY_NAME}}': companyName,
+    '{{APPROVAL_MESSAGE}}': approvalMessage,
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
+  // Add unsubscribe section if applicable
+  if (unsubscribeUrl) {
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+  }
 
   const html = renderEmailShell({
     companyName,
@@ -534,24 +660,8 @@ export async function sendProjectApprovedEmail({
     subtitle: statusMessage,
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
-        Hi <strong>${escapeHtml(clientName)}</strong>,
-      </p>
-
-      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">
-        ${bodyText}
-      </p>
-
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'Open Project', brand })}
-      </div>
-
-      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${brand.muted}; line-height: 1.5;">
-        Questions or need changes? Simply reply to this email and we'll be happy to help.
-      </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
   })
 
   return sendEmail({
@@ -592,9 +702,35 @@ export async function sendCommentNotificationEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  const subject = `New Comment: ${projectTitle}`
+  // Get custom template or use default
+  const template = await getEmailTemplate('COMMENT_NOTIFICATION')
 
   const timecodeText = timecode ? `at ${timecode}` : ''
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{CLIENT_NAME}}': clientName,
+    '{{RECIPIENT_NAME}}': clientName,
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{VIDEO_NAME}}': videoName,
+    '{{VERSION_LABEL}}': versionLabel,
+    '{{AUTHOR_NAME}}': authorName,
+    '{{COMMENT_CONTENT}}': escapeHtml(commentContent),
+    '{{TIMECODE}}': timecodeText,
+    '{{SHARE_URL}}': shareUrl,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
+  // Add unsubscribe section if applicable
+  if (unsubscribeUrl) {
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+  }
 
   const html = renderEmailShell({
     companyName,
@@ -603,39 +739,8 @@ export async function sendCommentNotificationEmail({
     preheader: `New comment on ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.text}; line-height: 1.5;">
-        Hi <strong>${escapeHtml(clientName)}</strong>,
-      </p>
-
-      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6;">
-        We've reviewed your video and left some feedback for you.
-      </p>
-
-      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
-        <div style="font-size: 15px; color: ${brand.text}; margin-bottom: 8px;">
-          <strong>${escapeHtml(projectTitle)}</strong>
-        </div>
-        <div style="font-size: 14px; color: ${brand.muted};">
-          ${escapeHtml(videoName)} <span style="color: ${brand.muted};">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: ${brand.muted};">• ${timecodeText}</span>` : ''}
-        </div>
-      </div>
-
-      <div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 13px; font-weight: 700; color: ${brand.text}; margin-bottom: 8px;">${escapeHtml(authorName)}</div>
-        <div style="font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
-      </div>
-
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View and Reply', brand })}
-      </div>
-
-      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${brand.muted}; line-height: 1.5;">
-        Questions? Simply reply to this email.
-      </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
   })
 
   return sendEmail({
@@ -674,9 +779,31 @@ export async function sendAdminCommentNotificationEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  const subject = `Client Feedback: ${projectTitle}`
+  // Get custom template or use default
+  const template = await getEmailTemplate('ADMIN_COMMENT_NOTIFICATION')
 
   const timecodeText = timecode ? `at ${timecode}` : ''
+  const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{CLIENT_NAME}}': clientName,
+    '{{RECIPIENT_NAME}}': 'Admin',
+    '{{CLIENT_EMAIL}}': clientEmail || '',
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{VIDEO_NAME}}': videoName,
+    '{{VERSION_LABEL}}': versionLabel,
+    '{{COMMENT_CONTENT}}': escapeHtml(commentContent),
+    '{{TIMECODE}}': timecodeText,
+    '{{ADMIN_URL}}': adminUrl,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
 
   const html = renderEmailShell({
     companyName,
@@ -685,38 +812,8 @@ export async function sendAdminCommentNotificationEmail({
     preheader: `New client comment: ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Client</div>
-        <div style="font-size: 16px; color: ${brand.text}; margin-bottom: 4px;">
-          <strong>${escapeHtml(clientName)}</strong>
-        </div>
-        ${clientEmail ? `
-          <div style="font-size: 14px; color: ${brand.muted};">
-            ${escapeHtml(clientEmail)}
-          </div>
-        ` : ''}
-      </div>
-
-      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
-        <div style="font-size: 15px; color: ${brand.text}; margin-bottom: 8px;">
-          <strong>${escapeHtml(projectTitle)}</strong>
-        </div>
-        <div style="font-size: 14px; color: ${brand.muted};">
-          ${escapeHtml(videoName)} <span style="color: ${brand.muted};">${escapeHtml(versionLabel)}</span>${timecodeText ? ` <span style="color: ${brand.muted};">• ${timecodeText}</span>` : ''}
-        </div>
-      </div>
-
-      <div style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.12em;">Comment</div>
-        <div style="font-size: 15px; color: ${brand.textSubtle}; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(commentContent)}</div>
-      </div>
-
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View in Admin Panel', brand })}
-      </div>
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
   })
 
   // Send to all admin emails
@@ -765,18 +862,34 @@ export async function sendAdminProjectApprovedEmail({
     throw new Error('App domain not configured. Please configure domain in Settings to enable email notifications.')
   }
 
+  // Get custom template or use default
+  const template = await getEmailTemplate('ADMIN_PROJECT_APPROVED')
+
   // Determine subject and title based on approval/unapproval and complete/partial
   const action = isApproval ? 'Approved' : 'Unapproved'
-  const subject = isComplete
-    ? `Client ${action} Project: ${projectTitle}`
-    : `Client ${action} Video: ${projectTitle} - ${approvedVideos[0]?.name || 'Video'}`
-
   const statusTitle = isComplete ? `Project ${action}` : `Video ${action}`
   const statusMessage = isComplete
     ? `The complete project has been ${isApproval ? 'approved' : 'unapproved'} by the client`
     : `${approvedVideos[0]?.name || 'A video'} has been ${isApproval ? 'approved' : 'unapproved'} by the client`
 
   const videoName = approvedVideos[0]?.name || 'A video'
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{CLIENT_NAME}}': clientName,
+    '{{RECIPIENT_NAME}}': 'Admin',
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{VIDEO_NAME}}': videoName,
+    '{{APPROVAL_STATUS}}': action,
+    '{{ADMIN_URL}}': `${appDomain}/admin`,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
 
   const html = renderEmailShell({
     companyName,
@@ -785,27 +898,8 @@ export async function sendAdminProjectApprovedEmail({
     preheader: `${statusTitle}: ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: ${brand.muted}; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.12em;">Project</div>
-        <div style="font-size: 16px; color: ${brand.text}; margin-bottom: 4px;">
-          <strong>${escapeHtml(projectTitle)}</strong>
-        </div>
-        ${!isComplete ? `
-          <div style="font-size: 14px; color: ${brand.textSubtle}; margin-top: 8px;">
-            <span style="color: ${brand.accent}; font-weight: 600;">${isApproval ? 'Approved' : 'Unapproved'}:</span> ${escapeHtml(videoName)}
-          </div>
-        ` : `
-          <div style="font-size: 14px; color: ${brand.textSubtle}; margin-top: 8px;">
-            Client: ${escapeHtml(clientName)}
-          </div>
-        `}
-      </div>
-
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: `${appDomain}/admin`, label: 'View in Admin Panel', brand })}
-      </div>
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
   })
 
   // Send to all admin emails
@@ -853,13 +947,49 @@ export async function sendProjectGeneralNotificationEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  const subject = `Project Ready for Review: ${escapeHtml(projectTitle)}`
+  // Get custom template or use default
+  const template = await getEmailTemplate('PROJECT_GENERAL')
+
+  // Build video list HTML
+  const videoListHtml = readyVideos.length > 0 ? `
+    <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:20px; margin-bottom:24px;">
+      <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">Ready to view</div>
+      ${readyVideos.map(v => `
+        <div style="font-size:15px; color:${brand.textSubtle}; padding:6px 0;">
+          • ${escapeHtml(v.name)} <span style="color:${brand.accent}; font-weight:600;">${escapeHtml(v.versionLabel)}</span>
+        </div>
+      `).join('')}
+    </div>
+  ` : ''
 
   const passwordNotice = isPasswordProtected
     ? `<div style="border:1px solid ${brand.accentSoftBorder}; border-radius:10px; padding:12px 14px; font-size:14px; color:${brand.textSubtle}; margin:0 0 14px; background:${brand.accentSoftBg};">
         Protected project. Use the password sent separately to open the link.
       </div>`
     : ''
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{CLIENT_NAME}}': clientName,
+    '{{RECIPIENT_NAME}}': clientName,
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{PROJECT_DESCRIPTION}}': projectDescription || '',
+    '{{SHARE_URL}}': shareUrl,
+    '{{COMPANY_NAME}}': companyName,
+    '{{VIDEO_LIST}}': videoListHtml,
+    '{{PASSWORD_NOTICE}}': passwordNotice,
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
+  // Add unsubscribe section if applicable
+  if (unsubscribeUrl) {
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+  }
 
   const html = renderEmailShell({
     companyName,
@@ -868,38 +998,8 @@ export async function sendProjectGeneralNotificationEmail({
     preheader: `Project ready: ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <p style="margin:0 0 20px; font-size:16px; color:${brand.text};">
-        Hi <strong>${escapeHtml(clientName)}</strong>,
-      </p>
-      <p style="margin:0 0 24px; font-size:15px; color:${brand.textSubtle};">
-        Your project is ready for review. Click below to view and leave feedback.
-      </p>
-      ${projectDescription ? `
-        <div style="background:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:10px; padding:20px; margin-bottom:20px;">
-          <div style="font-size:12px; font-weight:700; color:${brand.accent}; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.12em;">Project overview</div>
-          <div style="font-size:15px; color:${brand.textSubtle}; line-height:1.6;">${escapeHtml(projectDescription)}</div>
-        </div>
-      ` : ''}
-      ${readyVideos.length > 0 ? `
-        <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:20px; margin-bottom:24px;">
-          <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">Ready to view</div>
-          ${readyVideos.map(v => `
-            <div style="font-size:15px; color:${brand.textSubtle}; padding:6px 0;">
-              • ${escapeHtml(v.name)} <span style="color:${brand.accent}; font-weight:600;">${escapeHtml(v.versionLabel)}</span>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-      ${passwordNotice}
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: shareUrl, label: 'View Project', brand })}
-      </div>
-      <p style="margin:24px 0 0; font-size:14px; color:${brand.muted}; text-align:center;">
-        Questions? Reply to this email.
-      </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
   })
 
   return sendEmail({
@@ -930,7 +1030,28 @@ export async function sendPasswordEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  const subject = `Access Password: ${escapeHtml(projectTitle)}`
+  // Get custom template or use default
+  const template = await getEmailTemplate('PASSWORD')
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{CLIENT_NAME}}': clientName,
+    '{{RECIPIENT_NAME}}': clientName,
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{PASSWORD}}': password,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
+  // Add unsubscribe section if applicable
+  if (unsubscribeUrl) {
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+  }
 
   const html = renderEmailShell({
     companyName,
@@ -939,31 +1060,8 @@ export async function sendPasswordEmail({
     preheader: `Password for ${projectTitle}`,
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <p style="margin:0 0 16px; font-size:15px; color:${brand.text}; line-height:1.6;">
-        Hi <strong>${escapeHtml(clientName)}</strong>,
-      </p>
-      <p style="margin:0 0 16px; font-size:15px; color:${brand.textSubtle}; line-height:1.6;">
-        Use this password to open your protected project link. We send it separately for security.
-      </p>
-      <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:14px 16px; margin-bottom:12px; border-radius:10px;">
-        <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${brand.muted}; margin-bottom:6px; font-weight:700;">Project</div>
-        <div style="font-size:16px; font-weight:700; color:${brand.text};">${escapeHtml(projectTitle)}</div>
-      </div>
-      <div style="background:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; padding:16px; margin:6px 0 16px; border-radius:12px; text-align:center;">
-        <div style="font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:${brand.accent}; font-weight:800; margin-bottom:10px;">Password</div>
-        <div style="display:inline-block; padding:10px 14px; border-radius:10px; border:1px dashed ${brand.accent}; font-family:'SFMono-Regular', Menlo, Consolas, monospace; font-size:18px; color:${brand.text}; letter-spacing:1px; word-break:break-all; background:#ffffff;">
-          ${escapeHtml(password)}
-        </div>
-      </div>
-      <p style="font-size:13px; color:${brand.textSubtle}; padding:0; margin:0 0 10px;">
-        Keep this password confidential. For security, do not forward this email.
-      </p>
-      <p style="font-size:13px; color:${brand.muted}; margin:0; text-align:center;">
-        Pair this password with the review link we sent in the previous email.
-      </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
   })
 
   return sendEmail({
@@ -990,7 +1088,22 @@ export async function sendPasswordResetEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  const subject = `Reset Your Password - ${companyName}`
+  // Get custom template or use default
+  const template = await getEmailTemplate('PASSWORD_RESET')
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{RECIPIENT_NAME}}': adminName,
+    '{{RESET_URL}}': resetUrl,
+    '{{COMPANY_NAME}}': companyName,
+    '{{EXPIRY_TIME}}': '30 minutes',
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
 
   const html = renderEmailShell({
     companyName,
@@ -999,30 +1112,8 @@ export async function sendPasswordResetEmail({
     preheader: 'Reset your password for ViTransfer',
     brand,
     brandingLogoUrl,
-    bodyContent: `
-      <p style="margin:0 0 16px; font-size:15px; color:${brand.text}; line-height:1.6;">
-        Hi <strong>${escapeHtml(adminName)}</strong>,
-      </p>
-      <p style="margin:0 0 20px; font-size:15px; color:${brand.textSubtle}; line-height:1.6;">
-        We received a request to reset your password. Click the button below to create a new password.
-      </p>
-      <div style="margin:24px 0;">
-        ${renderEmailButton({ href: resetUrl, label: 'Reset Password', brand })}
-      </div>
-      <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:14px 16px; margin:20px 0; border-radius:10px;">
-        <p style="margin:0 0 8px; font-size:13px; color:${brand.textSubtle}; line-height:1.5;">
-          <strong style="color:${brand.text};">Security Notice:</strong>
-        </p>
-        <ul style="margin:0; padding-left:20px; font-size:13px; color:${brand.textSubtle}; line-height:1.6;">
-          <li>This link expires in <strong>30 minutes</strong></li>
-          <li>Can only be used once</li>
-          <li>All sessions will be logged out after reset</li>
-        </ul>
-      </div>
-      <p style="margin:20px 0 0; font-size:13px; color:${brand.muted}; line-height:1.6; text-align:center;">
-        If you didn't request this, you can safely ignore this email. Your password will not be changed.
-      </p>
-    `,
+    emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
+    bodyContent,
     footerNote: `This is an automated security message from ${companyName}`,
   })
 
@@ -1055,6 +1146,7 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
       preheader: 'SMTP configuration is working',
       brand,
       brandingLogoUrl,
+      emailHeaderStyle: settings.emailHeaderStyle as 'LOGO_ONLY' | 'LOGO_AND_NAME',
       bodyContent: `
         <p style="font-size:15px; color:${brand.textSubtle}; line-height:1.6; margin:0 0 12px;">
           Your SMTP configuration is working. Details below for your records.

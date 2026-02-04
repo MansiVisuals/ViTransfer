@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Zero configuration - VAPID keys auto-generated and stored encrypted in database
 - **New Settings Tab**: "Browser Push" tab in Notifications settings for managing push subscriptions
 - **Custom branding logo**: Admins can upload a single SVG (300KB, sanitized) in Branding & Appearance; stored at `/api/branding/logo`. Rendered across auth screens (admin login, share-page authentication), not-found/unsubscribe pages (64px high, auto width) and emails (44px high, auto width) with fallback to the default LogoMark.
+- **Email Header Style Option**: Choose between "Logo + Company Name" or "Logo Only" for email headers - useful when your logo already includes the company name
+- **Customizable Email Templates**: Full email template customization system in Settings
+  - 8 template types: New Version, Project Approved, Comment Notifications (client/admin), Password, Password Reset, etc.
+  - Placeholder system with template-specific variables (e.g., `{{RECIPIENT_NAME}}`, `{{PROJECT_TITLE}}`, `{{SHARE_URL}}`)
+  - Live email preview with sample data
+  - Button syntax support: `{{BUTTON:Label:{{URL}}}}`
+  - CSS class shortcuts for consistent styling: `info-box`, `secondary-box`, `info-label`
+  - Reset to default with one click
+  - Templates stored in database with fallback to built-in defaults
 
 ### Changed
 - **Favicon and PWA icons**: Updated to high-resolution filled camera icon design

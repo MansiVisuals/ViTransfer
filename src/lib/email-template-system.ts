@@ -188,6 +188,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
   <div class="info-label">Deliverables</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span></div>
 </div>
@@ -218,6 +219,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
   <div class="info-label">Deliverables</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
 </div>

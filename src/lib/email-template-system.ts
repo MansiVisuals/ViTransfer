@@ -131,6 +131,12 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
     category: 'client',
   },
   {
+    type: 'ADMIN_COMMENT_NOTIFICATION',
+    name: 'Comment Notification (to Admin)',
+    description: 'Sent to admins when a client leaves feedback',
+    category: 'admin',
+  },
+  {
     type: 'ADMIN_PROJECT_APPROVED',
     name: 'Approval Notification (to Admin)',
     description: 'Sent to admins when a client approves a project or video',
@@ -180,16 +186,10 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 
 <div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project details</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
-    {{PROJECT_TITLE}}
-  </div>
-  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
-    Deliverables
-  </div>
-  <div style="font-size: 14px; line-height: 1.8;">
-    {{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span>
-  </div>
+  <div class="info-label">Project</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">Deliverables</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span></div>
 </div>
 
 {{PASSWORD_NOTICE}}
@@ -198,8 +198,8 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {{BUTTON:View Project:{{SHARE_URL}}}}
 </div>
 
-<p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5;">
-  Questions or feedback? Simply reply to this email.
+<p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
+  Questions? Simply reply to this email.
 </p>`,
   },
   {
@@ -216,24 +216,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 
 <div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project details</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
-    {{PROJECT_TITLE}}
-  </div>
-  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
-    Deliverables
-  </div>
-  <div style="font-size: 14px; line-height: 1.8;">
-    {{VIDEO_NAME}}
-  </div>
+  <div class="info-label">Project</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">Deliverables</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
 </div>
 
 <div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:Open Project:{{SHARE_URL}}}}
+  {{BUTTON:Download Files:{{SHARE_URL}}}}
 </div>
 
-<p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5;">
-  Questions or need changes? Simply reply to this email.
+<p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
+  Questions? Simply reply to this email.
 </p>`,
   },
   {
@@ -250,20 +244,14 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 
 <div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project details</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
-    {{PROJECT_TITLE}}
-  </div>
-  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
-    Deliverables
-  </div>
-  <div style="font-size: 14px; line-height: 1.8;">
-    {{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}
-  </div>
+  <div class="info-label">Project</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">Deliverables</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}</div>
 </div>
 
 <div class="info-box">
-  <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">{{AUTHOR_NAME}}</div>
+  <div class="info-label">Comment from {{AUTHOR_NAME}}</div>
   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
 </div>
 
@@ -271,7 +259,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {{BUTTON:View and Reply:{{SHARE_URL}}}}
 </div>
 
-<p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5;">
+<p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
   Questions? Simply reply to this email.
 </p>`,
   },
@@ -280,23 +268,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     name: 'Comment Notification (to Admin)',
     description: 'Sent to admins when a client leaves feedback',
     subject: 'Client Feedback: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 4px 0; font-size: 16px;">
-  <strong>{{CLIENT_NAME}}</strong>
+    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  <strong>{{CLIENT_NAME}}</strong> left feedback on a project.
 </p>
-<p style="margin: 0 0 20px 0; font-size: 14px;">{{CLIENT_EMAIL}}</p>
 
-  <div class="secondary-box" style="text-align: center;">
-    <div class="info-label">Project details</div>
-    <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
-      {{PROJECT_TITLE}}
-    </div>
-    <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
-      Deliverables
-    </div>
-    <div style="font-size: 14px; line-height: 1.8;">
-      {{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}
-    </div>
-  </div>
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">Client</div>
+  <div style="font-size: 14px; margin-bottom: 12px;">{{CLIENT_NAME}}<br><span style="opacity: 0.7;">{{CLIENT_EMAIL}}</span></div>
+  <div class="info-label">Project</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">Deliverables</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}</div>
+</div>
 
 <div class="info-box">
   <div class="info-label">Comment</div>
@@ -313,20 +296,14 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     description: 'Sent to admins when a client approves a project or video',
     subject: '{{CLIENT_NAME}} {{APPROVAL_STATUS}}: {{PROJECT_TITLE}}',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  <strong>{{CLIENT_NAME}}</strong> has approved the following:
+  <strong>{{CLIENT_NAME}}</strong> has approved the following deliverables.
 </p>
 
 <div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project details</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
-    {{PROJECT_TITLE}}
-  </div>
-  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
-    Deliverables
-  </div>
-  <div style="font-size: 14px; line-height: 1.8;">
-    {{VIDEO_NAME}}
-  </div>
+  <div class="info-label">Project</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">Deliverables</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
 </div>
 
 <div style="margin: 28px 0; text-align: center;">
@@ -347,19 +324,11 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 
 <div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Ready to view</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
-    {{PROJECT_TITLE}}
-  </div>
-  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">
-    {{PROJECT_DESCRIPTION}}
-  </div>
-  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
-    Deliverables
-  </div>
-  <div style="font-size: 14px; line-height: 1.8;">
-    {{VIDEO_LIST}}
-  </div>
+  <div class="info-label">Project</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">{{PROJECT_TITLE}}</div>
+  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
+  <div class="info-label">Deliverables</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_LIST}}</div>
 </div>
 
 {{PASSWORD_NOTICE}}
@@ -369,7 +338,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </div>
 
 <p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
-  Questions? Reply to this email.
+  Questions? Simply reply to this email.
 </p>`,
   },
   {
@@ -377,7 +346,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     name: 'Project Password',
     description: 'Sends the access password in a separate email for security',
     subject: 'Access Password: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6;">
+    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
 </p>
 
@@ -386,18 +355,12 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 
 <div class="info-box" style="text-align: center;">
-  <div class="info-label" style="font-weight: 800; margin-bottom: 10px;">Password</div>
-  <div style="display: inline-block; padding: 10px 14px; border-radius: 10px; border: 1px dashed currentColor; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 18px; letter-spacing: 1px; word-break: break-all; background: #ffffff;">
-    {{PASSWORD}}
-  </div>
+  <div class="info-label">Password</div>
+  <div style="display: inline-block; padding: 12px 18px; border-radius: 10px; border: 1px dashed currentColor; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 18px; letter-spacing: 1px; word-break: break-all; background: #ffffff;">{{PASSWORD}}</div>
 </div>
 
-<p style="font-size: 13px; padding: 0; margin: 16px 0 10px;">
-  Keep this password confidential. For security, do not forward this email.
-</p>
-
-<p style="font-size: 13px; margin: 0; text-align: center;">
-  Pair this password with the review link we sent in the previous email.
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  Keep this password confidential. Pair it with the review link we sent separately.
 </p>`,
   },
   {
@@ -405,31 +368,29 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     name: 'Admin Password Reset',
     description: 'Sent to admins when they request a password reset',
     subject: 'Reset Your Password - {{COMPANY_NAME}}',
-    bodyContent: `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6;">
+    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
 </p>
 
 <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  We received a request to reset your password. Click the button below to create a new password.
+  We received a request to reset your password. Click the button below to create a new one.
 </p>
 
-<div style="margin: 24px 0; text-align: center;">
+<div style="margin: 28px 0; text-align: center;">
   {{BUTTON:Reset Password:{{RESET_URL}}}}
 </div>
 
 <div class="secondary-box">
-  <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.5;">
-    <strong>Security Notice:</strong>
-  </p>
-  <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+  <div class="info-label">Security Notice</div>
+  <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
     <li>This link expires in <strong>{{EXPIRY_TIME}}</strong></li>
     <li>Can only be used once</li>
     <li>All sessions will be logged out after reset</li>
   </ul>
 </div>
 
-<p style="margin: 20px 0 0 0; font-size: 13px; line-height: 1.6; text-align: center;">
-  If you didn't request this, you can safely ignore this email. Your password will not be changed.
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  If you didn't request this, you can safely ignore this email.
 </p>`,
   },
 ]

@@ -131,12 +131,6 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
     category: 'client',
   },
   {
-    type: 'ADMIN_COMMENT_NOTIFICATION',
-    name: 'Comment Notification (to Admin)',
-    description: 'Sent to admins when a client leaves feedback',
-    category: 'admin',
-  },
-  {
     type: 'ADMIN_PROJECT_APPROVED',
     name: 'Approval Notification (to Admin)',
     description: 'Sent to admins when a client approves a project or video',
@@ -185,13 +179,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   A new version is ready for your review.
 </p>
 
-<p style="margin: 0 0 4px 0; font-size: 15px;">
-  <strong>{{PROJECT_TITLE}}</strong>
-</p>
-<p style="margin: 0 0 4px 0; font-size: 13px; opacity: 0.7;">Deliverables</p>
-<p style="margin: 0 0 24px 0; font-size: 14px;">
-  {{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span>
-</p>
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">Project details</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
+    {{PROJECT_TITLE}}
+  </div>
+  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+    Deliverables
+  </div>
+  <div style="font-size: 14px; line-height: 1.8;">
+    {{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span>
+  </div>
+</div>
 
 {{PASSWORD_NOTICE}}
 
@@ -216,13 +215,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {{APPROVAL_MESSAGE}}
 </p>
 
-<p style="margin: 0 0 4px 0; font-size: 15px;">
-  <strong>{{PROJECT_TITLE}}</strong>
-</p>
-<p style="margin: 0 0 4px 0; font-size: 13px; opacity: 0.7;">Deliverables</p>
-<p style="margin: 0 0 24px 0; font-size: 14px;">
-  {{VIDEO_NAME}}
-</p>
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">Project details</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
+    {{PROJECT_TITLE}}
+  </div>
+  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+    Deliverables
+  </div>
+  <div style="font-size: 14px; line-height: 1.8;">
+    {{VIDEO_NAME}}
+  </div>
+</div>
 
 <div style="margin: 28px 0; text-align: center;">
   {{BUTTON:Open Project:{{SHARE_URL}}}}
@@ -245,13 +249,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   We've reviewed the video and left some feedback for you.
 </p>
 
-<p style="margin: 0 0 4px 0; font-size: 15px;">
-  <strong>{{PROJECT_TITLE}}</strong>
-</p>
-<p style="margin: 0 0 4px 0; font-size: 13px; opacity: 0.7;">Deliverables</p>
-<p style="margin: 0 0 20px 0; font-size: 14px;">
-  {{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}
-</p>
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">Project details</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
+    {{PROJECT_TITLE}}
+  </div>
+  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+    Deliverables
+  </div>
+  <div style="font-size: 14px; line-height: 1.8;">
+    {{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}
+  </div>
+</div>
 
 <div class="info-box">
   <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">{{AUTHOR_NAME}}</div>
@@ -276,13 +285,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 <p style="margin: 0 0 20px 0; font-size: 14px;">{{CLIENT_EMAIL}}</p>
 
-<p style="margin: 0 0 4px 0; font-size: 15px;">
-  <strong>{{PROJECT_TITLE}}</strong>
-</p>
-<p style="margin: 0 0 4px 0; font-size: 13px; opacity: 0.7;">Deliverables</p>
-<p style="margin: 0 0 20px 0; font-size: 14px;">
-  {{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}
-</p>
+  <div class="secondary-box" style="text-align: center;">
+    <div class="info-label">Project details</div>
+    <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
+      {{PROJECT_TITLE}}
+    </div>
+    <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+      Deliverables
+    </div>
+    <div style="font-size: 14px; line-height: 1.8;">
+      {{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}
+    </div>
+  </div>
 
 <div class="info-box">
   <div class="info-label">Comment</div>
@@ -302,13 +316,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   <strong>{{CLIENT_NAME}}</strong> has approved the following:
 </p>
 
-<p style="margin: 0 0 4px 0; font-size: 16px;">
-  <strong>{{PROJECT_TITLE}}</strong>
-</p>
-<p style="margin: 0 0 4px 0; font-size: 13px; opacity: 0.7;">Deliverables</p>
-<p style="margin: 0 0 24px 0; font-size: 14px;">
-  {{VIDEO_NAME}}
-</p>
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">Project details</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
+    {{PROJECT_TITLE}}
+  </div>
+  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+    Deliverables
+  </div>
+  <div style="font-size: 14px; line-height: 1.8;">
+    {{VIDEO_NAME}}
+  </div>
+</div>
 
 <div style="margin: 28px 0; text-align: center;">
   {{BUTTON:View in Admin Panel:{{ADMIN_URL}}}}
@@ -327,13 +346,20 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   The deliverables are ready for your review.
 </p>
 
-<p style="margin: 0 0 4px 0; font-size: 15px;">
-  <strong>{{PROJECT_TITLE}}</strong>
-</p>
-<p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6;">{{PROJECT_DESCRIPTION}}</p>
-<p style="margin: 0 0 4px 0; font-size: 13px; opacity: 0.7;">Deliverables</p>
-<div style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.8;">
-  {{VIDEO_LIST}}
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">Ready to view</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">
+    {{PROJECT_TITLE}}
+  </div>
+  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">
+    {{PROJECT_DESCRIPTION}}
+  </div>
+  <div style="font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+    Deliverables
+  </div>
+  <div style="font-size: 14px; line-height: 1.8;">
+    {{VIDEO_LIST}}
+  </div>
 </div>
 
 {{PASSWORD_NOTICE}}

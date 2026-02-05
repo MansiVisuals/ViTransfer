@@ -204,22 +204,25 @@ export const loginSchema = z.object({
 
 export const createProjectSchema = z.object({
   title: safeStringSchema(1, 255),
-  description: safeStringSchema(0, 5000).optional(),
+  description: safeStringSchema(0, 5000).optional().nullable(),
   companyName: safeStringSchema(0, 100)
     .refine(val => !val || !/[\r\n]/.test(val), {
       message: 'Company name cannot contain line breaks'
     })
-    .optional(),
-  clientCompanyId: z.string().cuid().optional().nullable(), // Optional link to client directory
-  recipientEmail: emailSchema.optional().or(z.literal('')), // Optional recipient email (will create ProjectRecipient if provided)
-  recipientName: safeStringSchema(0, 255).optional(), // Optional recipient name
-  sharePassword: z.string()
-    .min(8, 'Share password must be at least 8 characters')
-    .max(255, 'Share password must not exceed 255 characters')
-    .regex(/[A-Za-z]/, 'Share password must contain at least one letter')
-    .regex(/[0-9]/, 'Share password must contain at least one number')
     .optional()
-    .or(z.literal('')),
+    .nullable(),
+  clientCompanyId: z.string().cuid().optional().nullable(), // Optional link to client directory
+  recipientEmail: emailSchema.optional().nullable().or(z.literal('')), // Optional recipient email (will create ProjectRecipient if provided)
+  recipientName: safeStringSchema(0, 255).optional().nullable(), // Optional recipient name
+  sharePassword: z.union([
+    z.literal(''), // Allow empty string for non-password auth modes
+    z.null(), // Allow null
+    z.string()
+      .min(8, 'Share password must be at least 8 characters')
+      .max(255, 'Share password must not exceed 255 characters')
+      .regex(/[A-Za-z]/, 'Share password must contain at least one letter')
+      .regex(/[0-9]/, 'Share password must contain at least one number')
+  ]).optional(),
   authMode: z.enum(['PASSWORD', 'OTP', 'BOTH', 'NONE']).optional(),
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),

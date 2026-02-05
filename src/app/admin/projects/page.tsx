@@ -179,27 +179,44 @@ export default function AdminPage() {
       return
     }
 
+    // Client-side validation for password modes
+    const needsPasswordForMode = passwordProtected && (authMode === 'PASSWORD' || authMode === 'BOTH')
+    if (needsPasswordForMode && !sharePassword.trim()) {
+      setFormError('Password is required for password authentication mode')
+      return
+    }
+
     setCreating(true)
     setFormError('')
 
     try {
-      const data = {
+      const data: Record<string, unknown> = {
         title: projectTitle,
-        description: projectDescription || null,
-        companyName: companyName || null,
-        clientCompanyId: clientCompanyId,
-        recipientName: recipientName || null,
-        recipientEmail: recipientEmail || null,
-        sharePassword: (authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected ? sharePassword : '',
         authMode: passwordProtected ? authMode : 'NONE',
         isShareOnly: isShareOnly,
+      }
+      
+      // Only include optional fields if they have values
+      if (projectDescription) data.description = projectDescription
+      if (companyName) data.companyName = companyName
+      if (clientCompanyId) data.clientCompanyId = clientCompanyId
+      if (recipientName) data.recipientName = recipientName
+      if (recipientEmail) data.recipientEmail = recipientEmail
+      
+      // Only include password for password-based auth modes
+      if ((authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected && sharePassword) {
+        data.sharePassword = sharePassword
       }
 
       const project = await apiPost('/api/projects', data)
       setShowNewProjectModal(false)
       router.push(`/admin/projects/${project.id}`)
     } catch (error) {
-      setFormError('Failed to create project')
+      if (error instanceof Error) {
+        setFormError(error.message || 'Failed to create project')
+      } else {
+        setFormError('Failed to create project')
+      }
     } finally {
       setCreating(false)
     }

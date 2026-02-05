@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,12 +11,11 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { ReprocessModal } from '@/components/ReprocessModal'
-import { RecipientManager, RecipientManagerRef } from '@/components/RecipientManager'
+import { RecipientManager } from '@/components/RecipientManager'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { ClientSelector } from '@/components/ClientSelector'
 import { CompanyNameInput } from '@/components/CompanyNameInput'
-import { ClientDirectoryQuickAdd } from '@/components/ClientDirectoryQuickAdd'
 import { apiFetch } from '@/lib/api-client'
 import { sanitizeSlug } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
@@ -147,9 +146,6 @@ export default function ProjectSettingsPage() {
   const [smtpConfigured, setSmtpConfigured] = useState(true)
   const [recipients, setRecipients] = useState<any[]>([])
   const hasRecipientWithEmail = recipients?.some((r: any) => r.email && r.email.trim() !== '') || false
-
-  // Ref for RecipientManager to add recipients from directory
-  const recipientManagerRef = useRef<RecipientManagerRef>(null)
 
   // Collapsible section state (all collapsed by default)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
@@ -657,25 +653,11 @@ export default function ProjectSettingsPage() {
                 </div>
               </div>
 
-              {/* Recipients with Directory Quick Add */}
+              {/* Recipients */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base">Recipients</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Add people who should receive notifications and can access this project
-                    </p>
-                  </div>
-                  <ClientDirectoryQuickAdd
-                    companyId={clientCompanyId}
-                    onAddRecipient={(name, email) => {
-                      recipientManagerRef.current?.addRecipientFromDirectory(name, email)
-                    }}
-                  />
-                </div>
                 <RecipientManager
-                  ref={recipientManagerRef}
                   projectId={projectId}
+                  companyId={clientCompanyId}
                   onError={setError}
                   onRecipientsChange={setRecipients}
                 />

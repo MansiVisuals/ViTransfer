@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { Mail, Edit, Trash2, Plus, Star, Check, Bell, BellOff } from 'lucide-react'
+import { Mail, Edit, Trash2, Plus, Star, Check, Bell, BellOff, User } from 'lucide-react'
 import { apiFetch, apiPost, apiPatch, apiDelete } from '@/lib/api-client'
 
 interface Recipient {
@@ -15,18 +15,20 @@ interface Recipient {
   receiveNotifications: boolean
 }
 
+interface CompanyContact {
+  id: string
+  name: string
+  email: string | null
+}
+
 interface RecipientManagerProps {
   projectId: string
+  companyId: string | null
   onError: (message: string) => void
   onRecipientsChange?: (recipients: Recipient[]) => void
 }
 
-export interface RecipientManagerRef {
-  addRecipientFromDirectory: (name: string, email: string | null) => Promise<void>
-}
-
-export const RecipientManager = forwardRef<RecipientManagerRef, RecipientManagerProps>(
-  function RecipientManager({ projectId, onError, onRecipientsChange }, ref) {
+export function RecipientManager({ projectId, companyId, onError, onRecipientsChange }: RecipientManagerProps) {
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -57,24 +59,54 @@ export const RecipientManager = forwardRef<RecipientManagerRef, RecipientManager
     loadRecipients()
   }, [loadRecipients])
 
-  // Expose method to add recipient from directory (used by ClientDirectoryQuickAdd)
-  const addRecipientFromDirectory = useCallback(async (name: string, email: string | null) => {
-    try {
-      await apiPost(`/api/projects/${projectId}/recipients`, {
-        email: email || null,
-        name: name || null,
-        isPrimary: recipients.length === 0,
-      })
-      await loadRecipients()
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to add recipient')
-    }
-  }, [projectId, recipients.length, loadRecipients, onError])
+  // Load company contacts for autocomplete
+  const [companyContacts, setCompanyContacts] = useState<CompanyContact[]>([])
+  const [showContactDropdown, setShowContactDropdown] = useState(false)
+  const nameInputRef = useRef<HTMLDivElement>(null)
 
-  // Expose methods via ref
-  useImperativeHandle(ref, () => ({
-    addRecipientFromDirectory
-  }), [addRecipientFromDirectory])
+  useEffect(() => {
+    async function loadCompanyContacts() {
+      if (!companyId) {
+        setCompanyContacts([])
+        return
+      }
+
+      try {
+        const response = await apiFetch(`/api/clients/${companyId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setCompanyContacts(data.company?.contacts || [])
+        }
+      } catch {
+        // Silently fail - autocomplete just won't work
+      }
+    }
+
+    loadCompanyContacts()
+  }, [companyId])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (nameInputRef.current && !nameInputRef.current.contains(event.target as Node)) {
+        setShowContactDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Filter contacts based on current input
+  const filteredContacts = companyContacts.filter(contact =>
+    contact.name.toLowerCase().includes(newName.toLowerCase())
+  )
+
+  function handleSelectContact(contact: CompanyContact) {
+    setNewName(contact.name)
+    setNewEmail(contact.email || '')
+    setShowContactDropdown(false)
+  }
 
   const addRecipient = async () => {
     if (!newEmail && !newName) {
@@ -325,14 +357,57 @@ export const RecipientManager = forwardRef<RecipientManagerRef, RecipientManager
             <div className="p-4 border-2 border-dashed rounded-lg space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="newRecipientName">Client Name</Label>
-                <Input
-                  id="newRecipientName"
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="John Doe or Company Name"
-                  autoFocus
-                />
+                <div className="relative" ref={nameInputRef}>
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    id="newRecipientName"
+                    type="text"
+                    value={newName}
+                    onChange={(e) => {
+                      setNewName(e.target.value)
+                      if (companyContacts.length > 0) {
+                        setShowContactDropdown(true)
+                      }
+                    }}
+                    onFocus={() => {
+                      if (companyContacts.length > 0) {
+                        setShowContactDropdown(true)
+                      }
+                    }}
+                    placeholder={companyId ? "Start typing to search contacts..." : "John Doe"}
+                    className="pl-9"
+                    autoFocus
+                    autoComplete="off"
+                  />
+                  
+                  {/* Contact autocomplete dropdown */}
+                  {showContactDropdown && filteredContacts.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {filteredContacts.map((contact) => (
+                        <button
+                          key={contact.id}
+                          type="button"
+                          className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-3"
+                          onClick={() => handleSelectContact(contact)}
+                        >
+                          <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{contact.name}</p>
+                            {contact.email && (
+                              <p className="text-xs text-muted-foreground truncate">{contact.email}</p>
+                            )}
+                          </div>
+                          <Plus className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {companyId && companyContacts.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Type to search {companyContacts.length} contact{companyContacts.length !== 1 ? 's' : ''} from this company
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="newRecipientEmail">Client Email</Label>
@@ -373,4 +448,4 @@ export const RecipientManager = forwardRef<RecipientManagerRef, RecipientManager
       )}
     </div>
   )
-})
+}

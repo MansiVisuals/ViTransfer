@@ -15,7 +15,7 @@ interface NotificationContext {
 }
 
 interface ApprovalNotificationContext {
-  project: { id: string; title: string; slug: string; clientNotificationSchedule: string }
+  project: { id: string; title: string; slug: string; clientNotificationSchedule: string; watermarkEnabled?: boolean }
   video?: { id: string; name: string; versionLabel?: string | null }
   approvedVideos?: Array<{ id: string; name: string }>
   approved: boolean // true = approved, false = unapproved
@@ -246,6 +246,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
         unsubscribeUrl = undefined
       }
 
+      // Check if this recipient is the one who approved
+      const isApprover = authorEmail && recipient.email?.toLowerCase() === authorEmail.toLowerCase()
+
       return sendProjectApprovedEmail({
         clientEmail: recipient.email!,
         clientName: recipient.name || 'Client',
@@ -254,6 +257,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
         shareUrl,
         isComplete: true, // Only send when complete
         unsubscribeUrl,
+        approverName: authorName || undefined,
+        isApprover: isApprover || false,
+        watermarkEnabled: project.watermarkEnabled ?? true,
       }).then(result => {
         if (result.success) {
           console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)

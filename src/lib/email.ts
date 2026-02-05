@@ -122,14 +122,59 @@ export function processButtonSyntax(content: string, brand: EmailBrandColors): s
  * Process email template classes to inline styles
  * Converts class="info-box" etc to styled inline HTML
  * Uses table-based layouts for Outlook compatibility
+ * 
+ * IMPORTANT: Process inner elements first (info-label, info-value, spans),
+ * then convert those divs to other tags, then process outer container boxes.
  */
 export function processEmailClasses(content: string, brand: EmailBrandColors): string {
-  // Process info-box class - use table for Outlook compatibility
+  // STEP 1: Process inner inline elements first (these don't contain other elements)
+  
+  // Process accent-text class (for version labels etc)
+  content = content.replace(
+    /<span class="accent-text">([\s\S]*?)<\/span>/gi,
+    `<span style="color:${brand.accent}; font-weight:600;">$1</span>`
+  )
+
+  // STEP 2: Process inner div elements that don't contain other divs
+  // Convert info-label divs to <p> tags so they don't interfere with outer box matching
+  
+  // Handle info-label with additional inline styles - merge them
+  content = content.replace(
+    /<div class="info-label" style="([^"]*)">([\s\S]*?)<\/div>/gi,
+    `<p style="font-size:12px; font-weight:bold; color:${brand.muted}; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.12em; $1">$2</p>`
+  )
+  
+  // Handle info-label without additional styles
+  content = content.replace(
+    /<div class="info-label">([\s\S]*?)<\/div>/gi,
+    `<p style="font-size:12px; font-weight:bold; color:${brand.muted}; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.12em;">$1</p>`
+  )
+
+  // Process info-value class - convert to <p> tag
+  content = content.replace(
+    /<div class="info-value">([\s\S]*?)<\/div>/gi,
+    `<p style="font-size:15px; color:${brand.text}; margin:0; padding:4px 0;">$1</p>`
+  )
+
+  // STEP 3: Now process container boxes (info-box, secondary-box, etc.)
+  // These can now be matched correctly since inner divs with classes are converted to <p> tags
+  
+  // Process info-box with additional inline styles (e.g., style="text-align: center;")
+  content = content.replace(
+    /<div class="info-box" style="([^"]*)">([\s\S]*?)<\/div>/gi,
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
+      <tr>
+        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:8px; padding:16px; $1">$2</td>
+      </tr>
+    </table>`
+  )
+
+  // Process info-box class without additional styles
   content = content.replace(
     /<div class="info-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; padding:16px;">$1</td>
+        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:8px; padding:16px;">$1</td>
       </tr>
     </table>`
   )
@@ -139,21 +184,9 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="secondary-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:16px;">$1</td>
+        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:8px; padding:16px;">$1</td>
       </tr>
     </table>`
-  )
-
-  // Process info-label class
-  content = content.replace(
-    /<div class="info-label">([\s\S]*?)<\/div>/gi,
-    `<p style="font-size:12px; font-weight:bold; color:${brand.muted}; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.12em;">$1</p>`
-  )
-
-  // Process info-value class
-  content = content.replace(
-    /<div class="info-value">([\s\S]*?)<\/div>/gi,
-    `<p style="font-size:15px; color:${brand.text}; margin:0; padding:4px 0;">$1</p>`
   )
 
   // Process protected-note class
@@ -161,15 +194,9 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="protected-note">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; padding:14px; font-size:14px; color:${brand.textSubtle}; line-height:1.5;">$1</td>
+        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:8px; padding:14px; font-size:14px; color:${brand.textSubtle}; line-height:1.5;">$1</td>
       </tr>
     </table>`
-  )
-
-  // Process accent-text class (for version labels etc)
-  content = content.replace(
-    /<span class="accent-text">([\s\S]*?)<\/span>/gi,
-    `<span style="color:${brand.accent}; font-weight:600;">$1</span>`
   )
 
   // Process success-box class
@@ -177,7 +204,7 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="success-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="#dcfce7" style="background-color:#dcfce7; border:1px solid #86efac; padding:14px; font-size:14px; color:#15803d; line-height:1.5;">$1</td>
+        <td bgcolor="#dcfce7" style="background-color:#dcfce7; border:1px solid #86efac; border-radius:8px; padding:14px; font-size:14px; color:#15803d; line-height:1.5;">$1</td>
       </tr>
     </table>`
   )
@@ -187,12 +214,12 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="warning-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="#fef9c3" style="background-color:#fef9c3; border:1px solid #fde047; padding:14px; font-size:14px; color:#a16207; line-height:1.5;">$1</td>
+        <td bgcolor="#fef9c3" style="background-color:#fef9c3; border:1px solid #fde047; border-radius:8px; padding:14px; font-size:14px; color:#a16207; line-height:1.5;">$1</td>
       </tr>
     </table>`
   )
 
-  // Process inline paragraph formatting
+  // STEP 4: Process inline paragraph formatting
   content = content.replace(
     /<p style="margin: 0">/gi,
     `<p style="margin:0 0 16px 0; font-size:15px; color:${brand.textSubtle}; line-height:1.6;">`
@@ -710,6 +737,9 @@ export async function sendProjectApprovedEmail({
   approvedVideos = [],
   isComplete = true,
   unsubscribeUrl,
+  approverName,
+  isApprover = false,
+  watermarkEnabled = true,
 }: {
   clientEmail: string
   clientName: string
@@ -718,6 +748,9 @@ export async function sendProjectApprovedEmail({
   approvedVideos?: Array<{ name: string; id: string }>
   isComplete?: boolean
   unsubscribeUrl?: string
+  approverName?: string
+  isApprover?: boolean
+  watermarkEnabled?: boolean
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
@@ -730,13 +763,40 @@ export async function sendProjectApprovedEmail({
   const statusTitle = isComplete ? 'Project Approved' : 'Video Approved'
   const statusMessage = isComplete
     ? 'All videos are approved and ready to deliver'
-    : `${approvedVideos[0]?.name || 'Your video'} has been approved`
+    : `${approvedVideos[0]?.name || 'The video'} has been approved`
 
-  const videoName = approvedVideos[0]?.name || 'Your video'
+  const videoName = approvedVideos[0]?.name || 'The video'
 
-  const approvalMessage = isComplete
-    ? `Great news! Your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.`
-    : `Great news! <strong>${escapeHtml(videoName)}</strong> from your project <strong>${escapeHtml(projectTitle)}</strong> has been approved. You can now download the final version without watermarks.`
+  // Build dynamic approval message based on context
+  let approvalMessage: string
+  if (isComplete) {
+    // Full project approval
+    if (approverName && !isApprover) {
+      // Someone else from the company approved
+      approvalMessage = `<strong>${escapeHtml(approverName)}</strong> has approved all deliverables.`
+    } else {
+      // Recipient approved or unknown approver
+      approvalMessage = `All deliverables have been approved.`
+    }
+    // Add download note based on watermark setting
+    if (watermarkEnabled) {
+      approvalMessage += ` You can now download the final version without watermarks.`
+    } else {
+      approvalMessage += ` The final files are now ready for download.`
+    }
+  } else {
+    // Single video approval
+    if (approverName && !isApprover) {
+      approvalMessage = `<strong>${escapeHtml(approverName)}</strong> has approved this deliverable.`
+    } else {
+      approvalMessage = `This deliverable has been approved.`
+    }
+    if (watermarkEnabled) {
+      approvalMessage += ` You can now download the final version without watermarks.`
+    } else {
+      approvalMessage += ` The final file is now ready for download.`
+    }
+  }
 
   // Build placeholder values
   const placeholderValues: Record<string, string> = {
@@ -973,10 +1033,10 @@ export async function sendAdminProjectApprovedEmail({
 
   // Determine subject and title based on approval/unapproval and complete/partial
   const action = isApproval ? 'Approved' : 'Unapproved'
-  const statusTitle = isComplete ? `Project ${action}` : `Video ${action}`
+  const statusTitle = isComplete ? `All Deliverables ${action}` : `Video ${action}`
   const statusMessage = isComplete
-    ? `The complete project has been ${isApproval ? 'approved' : 'unapproved'} by the client`
-    : `${approvedVideos[0]?.name || 'A video'} has been ${isApproval ? 'approved' : 'unapproved'} by the client`
+    ? `${clientName} has ${isApproval ? 'approved' : 'unapproved'} all deliverables for this project`
+    : `${clientName} has ${isApproval ? 'approved' : 'unapproved'} ${approvedVideos[0]?.name || 'a video'}`
 
   const videoName = approvedVideos[0]?.name || 'A video'
 
@@ -1099,9 +1159,9 @@ export async function sendProjectGeneralNotificationEmail({
 
   const html = renderEmailShell({
     companyName,
-    title: 'Project Ready for Review',
+    title: 'Ready for Review',
     subtitle: projectTitle,
-    preheader: `Project ready: ${projectTitle}`,
+    preheader: `Ready for review: ${projectTitle}`,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,

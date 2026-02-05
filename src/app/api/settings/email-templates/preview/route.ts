@@ -157,7 +157,7 @@ function generateSampleValues(
       PROJECT_TITLE: 'Summer Campaign 2026',
       VIDEO_NAME: 'Main Commercial',
       SHARE_URL: `${appDomain}/share/abc123`,
-      APPROVAL_MESSAGE: `Great news! Your project <strong>Summer Campaign 2026</strong> has been approved. You can now download the final version without watermarks.`,
+      APPROVAL_MESSAGE: `<strong>Jane Doe</strong> has approved all deliverables for <strong>Summer Campaign 2026</strong>. The final files are now ready for download.`,
     },
     COMMENT_NOTIFICATION: {
       ...base,
@@ -225,7 +225,7 @@ function getEmailTitle(type: EmailTemplateType): string {
     COMMENT_NOTIFICATION: 'New Comment',
     ADMIN_COMMENT_NOTIFICATION: 'New Client Feedback',
     ADMIN_PROJECT_APPROVED: 'Client Approved',
-    PROJECT_GENERAL: 'Project Ready for Review',
+    PROJECT_GENERAL: 'Ready for Review',
     PASSWORD: 'Project Password',
     PASSWORD_RESET: 'Password Reset',
   }
@@ -236,7 +236,7 @@ function getEmailTitle(type: EmailTemplateType): string {
  * Get email subtitle based on template type and values
  */
 function getEmailSubtitle(type: EmailTemplateType, values: Record<string, string>): string {
-  const projectTitle = values.PROJECT_TITLE || 'Your Project'
+  const projectTitle = values.PROJECT_TITLE || 'Sample Project'
 
   const subtitles: Record<EmailTemplateType, string> = {
     NEW_VERSION: 'Ready for your review',
@@ -270,11 +270,39 @@ function processButtonSyntax(content: string, brand: ReturnType<typeof getEmailB
 
 /**
  * Process CSS class shortcuts into inline styles for email compatibility
+ * Process inner elements first, then outer containers
  */
 function processEmailClasses(content: string, brand: ReturnType<typeof getEmailBrand>): string {
   let processed = content
 
-  // Replace info-box class
+  // STEP 1: Process inner elements first
+  
+  // Replace accent-text class
+  processed = processed.replace(
+    /class="accent-text"/g,
+    `style="color: ${brand.accent}; font-weight: 600;"`
+  )
+
+  // Replace info-label class (handles both with and without additional inline styles)
+  // With additional inline styles - merge them
+  processed = processed.replace(
+    /class="info-label" style="([^"]*)"/g,
+    `style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em; $1"`
+  )
+  // Without additional inline styles
+  processed = processed.replace(
+    /class="info-label"/g,
+    `style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;"`
+  )
+
+  // STEP 2: Process outer container boxes
+  
+  // Replace info-box class (with additional inline styles)
+  processed = processed.replace(
+    /class="info-box" style="([^"]*)"/g,
+    `style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px; $1"`
+  )
+  // Without additional inline styles
   processed = processed.replace(
     /class="info-box"/g,
     `style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;"`
@@ -286,16 +314,10 @@ function processEmailClasses(content: string, brand: ReturnType<typeof getEmailB
     `style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;"`
   )
 
-  // Replace info-label class
+  // Replace protected-note class
   processed = processed.replace(
-    /class="info-label"/g,
-    `style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;"`
-  )
-
-  // Replace accent-text class
-  processed = processed.replace(
-    /class="accent-text"/g,
-    `style="color: ${brand.accent}; font-weight: 600;"`
+    /class="protected-note"/g,
+    `style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: ${brand.textSubtle};"`
   )
 
   return processed

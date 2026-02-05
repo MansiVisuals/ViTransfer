@@ -71,7 +71,7 @@ export function AppearanceSection({
     <CollapsibleSection
       className="border-border"
       title="Branding & Appearance"
-      description="Configure company identity, domain, theme and accent colors"
+      description="Configure company identity, domain, theme, accent colors, and email templates"
       open={show}
       onOpenChange={setShow}
       contentClassName="space-y-4 border-t pt-4"

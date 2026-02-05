@@ -125,7 +125,7 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
         Hi <strong>${escapeHtml(greeting)}</strong>,
       </p>
       <p style="margin:0 0 24px; font-size:15px; color:${brand.textSubtle};">
-        Here's what happened on your project:
+        Here's an update on <strong>${escapeHtml(data.projectTitle)}</strong>:
       </p>
       ${itemsHtml}
       <div style="margin: 28px 0; text-align: center;">

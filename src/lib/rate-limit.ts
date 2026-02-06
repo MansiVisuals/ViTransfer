@@ -399,9 +399,9 @@ export async function getRateLimitedEntries(): Promise<Array<{
  * Clear a specific rate limit entry by key
  *
  * @param key - Redis key to clear
- * @returns Success boolean
+ * @returns Number of keys deleted (0 if key not found, 1 if deleted)
  */
-export async function clearRateLimitByKey(key: string): Promise<boolean> {
+export async function clearRateLimitByKey(key: string): Promise<number> {
   try {
     const redis = getRedis()
 
@@ -409,10 +409,49 @@ export async function clearRateLimitByKey(key: string): Promise<boolean> {
       await redis.connect()
     }
 
-    await redis.del(key)
-    return true
+    const deleted = await redis.del(key)
+    if (deleted === 0) {
+      console.warn(`Rate limit key not found in Redis: ${key}`)
+    }
+    return deleted
   } catch (error) {
     console.error('Clear rate limit by key error:', error)
-    return false
+    return -1
+  }
+}
+
+/**
+ * Clear ALL active rate limit lockouts
+ *
+ * Nuclear option for admins when individual clearing doesn't work
+ * (e.g., multiple keys for same user via email + IP hashing)
+ *
+ * @returns Number of entries cleared
+ */
+export async function clearAllRateLimits(): Promise<number> {
+  try {
+    const redis = getRedis()
+
+    if (redis.status !== 'ready') {
+      await redis.connect()
+    }
+
+    let clearedCount = 0
+    let cursor = '0'
+
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'ratelimit:*', 'COUNT', 100)
+      cursor = nextCursor
+
+      for (const key of keys) {
+        await redis.del(key)
+        clearedCount++
+      }
+    } while (cursor !== '0')
+
+    return clearedCount
+  } catch (error) {
+    console.error('Clear all rate limits error:', error)
+    throw new Error('Failed to clear all rate limits')
   }
 }

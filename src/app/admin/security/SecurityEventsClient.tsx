@@ -180,6 +180,24 @@ export default function SecurityEventsClient() {
     }
   }
 
+  const handleClearAllRateLimits = async () => {
+    if (!confirm('Clear ALL rate limits? This will unblock every locked out user and IP address.')) {
+      return
+    }
+
+    try {
+      const data = await apiDelete('/api/security/rate-limits', {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clearAll: true })
+      })
+
+      alert(data.message)
+      loadRateLimits()
+    } catch (error) {
+      alert('Failed to clear all rate limits')
+    }
+  }
+
   // Update pagination limit when screen size changes
   useEffect(() => {
     setPagination(p => ({ ...p, limit: dynamicLimit, page: 1 }))
@@ -605,7 +623,12 @@ export default function SecurityEventsClient() {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {rateLimits.length > 0 && (
+              <Button variant="destructive" size="sm" onClick={handleClearAllRateLimits} className="sm:mr-auto">
+                Clear All Rate Limits
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setShowRateLimitsModal(false)}>
               Close
             </Button>

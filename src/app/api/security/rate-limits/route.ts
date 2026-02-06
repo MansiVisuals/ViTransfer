@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
-import { getRateLimitedEntries, clearRateLimitByKey } from '@/lib/rate-limit'
+import { getRateLimitedEntries, clearRateLimitByKey, clearAllRateLimits } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -47,7 +47,17 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { key } = body
+    const { key, clearAll } = body
+
+    // Clear ALL rate limits (nuclear option)
+    if (clearAll === true) {
+      const cleared = await clearAllRateLimits()
+      return NextResponse.json({
+        success: true,
+        message: `Cleared ${cleared} rate limit ${cleared === 1 ? 'entry' : 'entries'}`,
+        cleared,
+      })
+    }
 
     if (!key || typeof key !== 'string') {
       return NextResponse.json(
@@ -56,18 +66,27 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const success = await clearRateLimitByKey(key)
+    const deleted = await clearRateLimitByKey(key)
 
-    if (!success) {
+    if (deleted === -1) {
       return NextResponse.json(
-        { error: 'Failed to clear rate limit entry' },
+        { error: 'Failed to clear rate limit entry (Redis error)' },
         { status: 500 }
       )
+    }
+
+    if (deleted === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'Rate limit key was already expired or not found',
+        deleted: 0,
+      })
     }
 
     return NextResponse.json({
       success: true,
       message: 'Rate limit entry cleared successfully',
+      deleted,
     })
   } catch (error) {
     console.error('Error clearing rate limit:', error)

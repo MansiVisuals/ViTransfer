@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API] Project creation error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create project' },
+      { error: 'Failed to create project' },
       { status: 500 }
     )
   }

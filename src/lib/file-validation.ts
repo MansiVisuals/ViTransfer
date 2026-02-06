@@ -25,8 +25,9 @@ export const ALLOWED_ASSET_TYPES = {
     mimeTypes: ['image/jpeg', 'image/png']
   },
   image: {
-    extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'],
-    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml']
+    // SVG intentionally excluded - can contain embedded JavaScript/XSS payloads
+    extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'],
+    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff']
   },
   audio: {
     extensions: ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma'],

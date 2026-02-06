@@ -17,41 +17,10 @@ import { SharePasswordRequirements } from '@/components/SharePasswordRequirement
 import { ClientSelector } from '@/components/ClientSelector'
 import { CompanyNameInput } from '@/components/CompanyNameInput'
 import { apiFetch } from '@/lib/api-client'
-import { sanitizeSlug } from '@/lib/password-utils'
+import { sanitizeSlug, generateSecurePassword } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
 import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
-
-// Client-safe password generation using Web Crypto API
-function generateSecurePassword(): string {
-  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'
-  const numbers = '23456789'
-  const special = '!@#$%'
-  const all = letters + numbers + special
-
-  const getRandomInt = (max: number) => {
-    const array = new Uint32Array(1)
-    crypto.getRandomValues(array)
-    return array[0] % max
-  }
-
-  let password = ''
-  password += letters.charAt(getRandomInt(letters.length))
-  password += numbers.charAt(getRandomInt(numbers.length))
-
-  for (let i = 2; i < 12; i++) {
-    password += all.charAt(getRandomInt(all.length))
-  }
-
-  // Fisher-Yates shuffle
-  const chars = password.split('')
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = getRandomInt(i + 1)
-    ;[chars[i], chars[j]] = [chars[j], chars[i]]
-  }
-
-  return chars.join('')
-}
 
 // Client-safe slug generation using Web Crypto API
 function generateRandomSlug(): string {

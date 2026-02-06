@@ -19,7 +19,7 @@ const nextConfig = {
         key: 'Content-Security-Policy',
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: https://storage.ko-fi.com",
+          "script-src 'self' 'unsafe-inline' https: https://storage.ko-fi.com",
           "style-src 'self' 'unsafe-inline' https:",
           "img-src * data: blob: https://storage.ko-fi.com",
           "font-src * data:",

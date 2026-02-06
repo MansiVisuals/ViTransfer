@@ -12,6 +12,11 @@ export async function apiFetch(
   try {
     const response = await fetch(input, requestInit)
 
+    // Reset redirect flag on successful responses so future 401s are handled
+    if (response.ok) {
+      isRedirecting = false
+    }
+
     if (response.status === 401) {
       const refreshed = await attemptRefresh()
       if (refreshed) {

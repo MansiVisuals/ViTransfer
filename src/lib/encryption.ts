@@ -247,33 +247,3 @@ export function validatePassword(password: string): {
   }
 }
 
-/**
- * Generate a cryptographically secure random password
- * @param length Password length (default: 16)
- * @returns Random password
- */
-export function generatePassword(length: number = 16): string {
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
-  const crypto = getCrypto()
-  let password = ''
-
-  // Ensure at least one of each required character type using crypto.randomInt
-  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[crypto.randomInt(26)]
-  password += 'abcdefghijklmnopqrstuvwxyz'[crypto.randomInt(26)]
-  password += '0123456789'[crypto.randomInt(10)]
-  password += '!@#$%^&*'[crypto.randomInt(8)]
-
-  // Fill the rest with cryptographically secure randomness
-  for (let i = password.length; i < length; i++) {
-    password += charset[crypto.randomInt(charset.length)]
-  }
-
-  // Shuffle the password using Fisher-Yates algorithm with crypto.randomInt
-  const chars = password.split('')
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1)
-    ;[chars[i], chars[j]] = [chars[j], chars[i]]
-  }
-
-  return chars.join('')
-}

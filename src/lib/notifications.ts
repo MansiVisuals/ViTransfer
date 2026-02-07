@@ -10,7 +10,7 @@ import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from './unsubs
 interface NotificationContext {
   comment: Comment
   project: { id: string; title: string; slug: string }
-  video: { name: string; versionLabel: string } | null
+  video: { name: string; versionLabel: string; fps?: number | null } | null
   isReply: boolean
 }
 
@@ -86,6 +86,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
         authorName: comment.authorName || 'Admin',
         commentContent: comment.content,
         timecode: comment.timecode,
+        fps: video?.fps,
         commentId: comment.id,
         shareUrl,
         unsubscribeUrl,
@@ -121,6 +122,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
       versionLabel,
       commentContent: comment.content,
       timecode: comment.timecode,
+      fps: video?.fps,
       commentId: comment.id,
       shareUrl,
     })
@@ -172,6 +174,7 @@ export async function queueNotification(context: NotificationContext) {
         videoId: comment.videoId,
         videoName: video?.name || 'Unknown Video',
         videoLabel: video?.versionLabel,
+        fps: video?.fps || null,
         authorName: comment.authorName || (comment.isInternal ? 'Admin' : 'Client'),
         authorEmail: comment.authorEmail,
         content: comment.content,

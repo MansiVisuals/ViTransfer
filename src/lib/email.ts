@@ -323,13 +323,14 @@ export function renderUnsubscribeSection(unsubscribeUrl: string, brand = EMAIL_B
 /**
  * Build a deep-link URL to a specific comment/timecode on the share page
  */
-export function buildTimecodeDeepLink(shareUrl: string, opts: { videoName?: string; commentId?: string; timecode?: string | null }): string | null {
+export function buildTimecodeDeepLink(shareUrl: string, opts: { videoName?: string; commentId?: string; timecode?: string | null; fps?: number | null }): string | null {
   if (!opts.timecode) return null
   try {
     const url = new URL(shareUrl)
     if (opts.videoName) url.searchParams.set('video', opts.videoName)
     if (opts.commentId) url.searchParams.set('comment', opts.commentId)
-    const seconds = Math.round(timecodeToSeconds(opts.timecode))
+    const fps = typeof opts.fps === 'number' && isFinite(opts.fps) && opts.fps > 0 ? opts.fps : 24
+    const seconds = parseFloat(timecodeToSeconds(opts.timecode, fps).toFixed(2))
     url.searchParams.set('t', String(seconds))
     return url.toString()
   } catch {
@@ -341,14 +342,15 @@ export function buildTimecodeDeepLink(shareUrl: string, opts: { videoName?: stri
  * Build a deep-link URL for admin to the admin share page
  * Wraps through /login?returnUrl= for auth redirect
  */
-export function buildAdminTimecodeDeepLink(appDomain: string, projectId: string, opts: { videoName?: string; commentId?: string; timecode?: string | null }): string | null {
+export function buildAdminTimecodeDeepLink(appDomain: string, projectId: string, opts: { videoName?: string; commentId?: string; timecode?: string | null; fps?: number | null }): string | null {
   if (!opts.timecode || !appDomain) return null
   try {
     let path = `/admin/projects/${projectId}/share`
     const params = new URLSearchParams()
     if (opts.videoName) params.set('video', opts.videoName)
     if (opts.commentId) params.set('comment', opts.commentId)
-    const seconds = Math.round(timecodeToSeconds(opts.timecode))
+    const fps = typeof opts.fps === 'number' && isFinite(opts.fps) && opts.fps > 0 ? opts.fps : 24
+    const seconds = parseFloat(timecodeToSeconds(opts.timecode, fps).toFixed(2))
     params.set('t', String(seconds))
     path += `?${params.toString()}`
     return `${appDomain}/login?returnUrl=${encodeURIComponent(path)}`
@@ -899,6 +901,7 @@ export async function sendCommentNotificationEmail({
   authorName,
   commentContent,
   timecode,
+  fps,
   commentId,
   shareUrl,
   unsubscribeUrl,
@@ -911,6 +914,7 @@ export async function sendCommentNotificationEmail({
   authorName: string
   commentContent: string
   timecode?: string | null
+  fps?: number | null
   commentId?: string
   shareUrl: string
   unsubscribeUrl?: string
@@ -923,7 +927,7 @@ export async function sendCommentNotificationEmail({
   // Get custom template or use default
   const template = await getEmailTemplate('COMMENT_NOTIFICATION')
 
-  const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode })
+  const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode, fps })
   const timecodeText = renderTimecodePill(timecode, tcLink, brand)
 
   // Build placeholder values
@@ -982,6 +986,7 @@ export async function sendAdminCommentNotificationEmail({
   versionLabel,
   commentContent,
   timecode,
+  fps,
   commentId,
   shareUrl,
 }: {
@@ -994,6 +999,7 @@ export async function sendAdminCommentNotificationEmail({
   versionLabel: string
   commentContent: string
   timecode?: string | null
+  fps?: number | null
   commentId?: string
   shareUrl: string
 }) {
@@ -1007,8 +1013,8 @@ export async function sendAdminCommentNotificationEmail({
 
   // Admin deep-links go to admin share page, not public share page
   const tcLink = projectId && settings.appDomain
-    ? buildAdminTimecodeDeepLink(settings.appDomain, projectId, { videoName, commentId, timecode })
-    : buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode })
+    ? buildAdminTimecodeDeepLink(settings.appDomain, projectId, { videoName, commentId, timecode, fps })
+    : buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode, fps })
   const timecodeText = renderTimecodePill(timecode, tcLink, brand)
   const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
 

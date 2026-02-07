@@ -21,7 +21,7 @@ export default function AdminSharePage() {
   const id = params?.id as string
 
   // Parse URL parameters for video seeking (same as public share page)
-  const urlTimestamp = searchParams?.get('t') ? parseInt(searchParams.get('t')!, 10) : null
+  const urlTimestamp = searchParams?.get('t') ? parseFloat(searchParams.get('t')!) : null
   const urlVideoName = searchParams?.get('video') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
   const urlFocusCommentId = searchParams?.get('comment') || null

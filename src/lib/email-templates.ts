@@ -14,6 +14,7 @@ interface NotificationData {
   authorEmail?: string
   content?: string
   timecode?: string | null
+  fps?: number | null
   commentId?: string
   isReply?: boolean
   approved?: boolean
@@ -99,7 +100,7 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
     }
 
     const isReply = n.isReply && n.parentComment
-    const tcLink = buildTimecodeDeepLink(data.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
+    const tcLink = buildTimecodeDeepLink(data.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode, fps: n.fps })
     const tcPill = renderTimecodePill(n.timecode, tcLink, brand)
     return `
       <div style="padding:10px 0;">
@@ -158,8 +159,8 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
   const projectsHtml = data.projects.map((project) => {
     const items = project.notifications.map((n, index) => {
       const tcLink = data.appDomain && project.projectId
-        ? buildAdminTimecodeDeepLink(data.appDomain, project.projectId, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
-        : buildTimecodeDeepLink(project.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
+        ? buildAdminTimecodeDeepLink(data.appDomain, project.projectId, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode, fps: n.fps })
+        : buildTimecodeDeepLink(project.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode, fps: n.fps })
       const tcPill = renderTimecodePill(n.timecode, tcLink, brand)
       return `
       <div style="padding:10px 0;${index > 0 ? ` border-top:1px solid ${brand.border}; margin-top:8px;` : ''}">

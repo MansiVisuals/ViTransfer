@@ -220,7 +220,7 @@ export async function handleCommentNotifications(params: {
 
         try {
           const fps = typeof video?.fps === 'number' && isFinite(video.fps) && video.fps > 0 ? video.fps : 24
-          const seconds = Math.floor(timecodeToSeconds(String(comment?.timecode || ''), fps))
+          const seconds = parseFloat(timecodeToSeconds(String(comment?.timecode || ''), fps).toFixed(2))
           if (isFinite(seconds) && seconds >= 0) params.set('t', String(seconds))
         } catch {
           // Ignore invalid timecode

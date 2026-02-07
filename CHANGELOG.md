@@ -5,60 +5,47 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-02-05
+## [0.9.0] - 2026-02-07
 
 ### Added
-- **New ViTransfer Logo**: Completely redesigned logo and branding throughout the application
-  - New logomark visible on all pages which showed the old logo before. 
-  - Dynamically colored with your chosen accent color
-  - Available in both SVG (app) and PNG (email) formats for maximum compatibility
 - **Progressive Web App (PWA)**: ViTransfer can now be installed as an app on desktop and mobile devices
   - Add to home screen support for iOS and Android
   - Full-screen app experience without browser UI
 - **Browser Push Notifications**: Real-time push notifications for admin users
-  - Same event types as Apprise: Failed Login, Unauthorized OTP, Share Access, Client Comment, Video Approval
-  - Multi-device support - enable notifications on multiple browsers/devices
-  - Per-device notification preferences
-  - Test notification feature to verify setup
-  - Zero configuration - VAPID keys auto-generated and stored encrypted in database
-  - "Browser Push" tab in Notifications settings for managing push subscriptions
-- **Custom Branding Logo**: Upload your own SVG logo (max 300KB, sanitized) in Branding & Appearance
-  - Replaces the default ViTransfer logo across all pages and emails
-  - Rendered at 64px on app pages, 44px in emails
-- **Customizable Email Templates**: New email template customization system in Settings
-  - 8 template types: New Version, Project Approved, Comment Notifications (client/admin), Password, Password Reset, etc.
-  - Placeholder system with template-specific variables (e.g., `{{RECIPIENT_NAME}}`, `{{PROJECT_TITLE}}`, `{{SHARE_URL}}`)
-  - `{{LOGO}}` placeholder for inline logo placement in email body
-  - Live email preview with sample data
-  - Button syntax support: `{{BUTTON:Label:{{URL}}}}`
-  - CSS class shortcuts for consistent styling: `info-box`, `secondary-box`, `info-label`
-  - Reset to default with one click
-- **Email Header Style Options**: Choose between "Logo + Company Name", "Logo Only", "Name Only", or "None" for email headers
-- **Client Directory**: New centralized management of client companies and contacts
+  - Unified event types shared with Apprise: Share Access, Admin Access, Client Comment, Video Approval, Security Alert
+  - Multi-device support with per-device preferences
+  - Test notification to verify setup
+  - Zero configuration required
+- **Client Directory**: Centralized management of client companies and contacts
   - New "Clients" section in admin navigation
-  - Add/edit/delete companies and their contacts
-  - Searchable company and contact autocomplete in project creation and settings
-  - "Add from Directory" quick-add button in project recipient management
-  - Auto-fill company name and email when selecting a contact
-  - Automatic sync: new recipients and company names are added to directory automatically
+  - Searchable company and contact autocomplete when creating projects or adding recipients
+  - Automatic sync: new recipients and company names are added to the directory automatically
   - "Sync Existing" button for bulk import from existing projects
-  - Company/Brand name field moved to "Client Information & Notifications" section in project settings
+- **Customizable Email Templates**: Full email template customization in Settings
+  - 8 template types covering all notification emails
+  - Placeholder system with template-specific variables
+  - Logo placeholder for inline logo placement
+  - Live email preview with sample data
+  - Button syntax support and CSS class shortcuts for styling
+  - Reset to default with one click
+- **Email Header Style Options**: Choose between "Logo + Company Name", "Logo Only", "Name Only", or "None"
+- **Custom Branding Logo**: Upload your own logo in Branding & Appearance, shown across all pages and emails
+- **Clickable Timecode Pills in Emails**: Comment notification emails now include timecode badges that link directly to the exact moment in the video
+- **Project Description in Emails**: Project descriptions are now included in email notifications
 
 ### Changed
-- **Favicon and PWA icons**: Updated to match new ViTransfer logo design
-- **Auth token storage**: Changed from sessionStorage to localStorage for PWA persistence
-- **Admin UI Consistency**: Standardized all admin page headers, modals, and buttons
-  - Consistent page header layout with icon, title, and action buttons
-  - All modals use same sizing, spacing, and responsive behavior
-  - Modal icons use primary accent color for visual consistency
-  - Compact buttons on mobile to prevent overflow
-  - Converted user management to show as modal instead of a dedicated page.
-  - Converted Create New Project to show as modal instead of a dedicated page.
-- **Mobile-Optimized Modals**: Create/edit modals use dynamic viewport height for proper mobile display
+- **New ViTransfer Logo**: Redesigned logo and branding, dynamically colored with your chosen accent color
+- **"Videos" renamed to "Deliverables"**: Updated terminology across the share page and emails
+- **Admin UI Overhaul**: Standardized all admin page headers, modals, and buttons for a consistent experience
+  - User management and project creation now open as modals instead of separate pages
+  - Mobile-optimized modals with proper viewport handling
+- **Notification Schedule Flush**: Changing a notification schedule now immediately sends all pending queued notifications so nothing is lost
 
 ### Fixed
-- **Guest thumbnails on share page**: Guests can now see video posters/thumbnails on public share pages
-- **Approval emails show wrong video**: Admin approval emails now correctly show the specific video that was just approved
+- Guest thumbnails now display correctly on public share pages
+- Approval emails now show the correct video name
+- Email timecodes now match the exact frame position shown on the share page
+- Rate limit clearing now properly unblocks users
 
 ## [0.8.9] - 2026-02-01
 

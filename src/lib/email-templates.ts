@@ -3,7 +3,7 @@
  * Clean, minimal, and easy to scan
  */
 
-import { escapeHtml, renderEmailButton, renderEmailShell, renderUnsubscribeSection, getEmailBrand, buildTimecodeDeepLink, renderTimecodePill } from './email'
+import { escapeHtml, renderEmailButton, renderEmailShell, renderUnsubscribeSection, getEmailBrand, buildTimecodeDeepLink, buildAdminTimecodeDeepLink, renderTimecodePill } from './email'
 import { formatTimecodeDisplay } from './timecode'
 
 interface NotificationData {
@@ -40,9 +40,11 @@ interface NotificationSummaryData {
 interface AdminSummaryData {
   companyName?: string
   accentColor?: string
+  appDomain?: string
   adminName: string
   period: string
   projects: Array<{
+    projectId: string
     projectTitle: string
     shareUrl: string
     notifications: NotificationData[]
@@ -102,9 +104,9 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
     return `
       <div style="padding:10px 0;">
         <div style="font-size:13px; color:${brand.muted}; margin-bottom:6px;">
-          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${tcPill ? ` &nbsp;${tcPill}` : ''}
+          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}
         </div>
-        <div style="font-size:14px; font-weight:700; color:${brand.text}; margin-bottom:4px;">${escapeHtml(n.authorName)}</div>
+        <div style="font-size:14px; font-weight:700; color:${brand.text}; margin-bottom:4px;">${escapeHtml(n.authorName)}${tcPill ? ` &nbsp;${tcPill}` : ''}</div>
         ${isReply ? `<div style="font-size:12px; color:${brand.muted}; margin-bottom:8px;">Replying to ${escapeHtml(n.parentComment!.authorName)} — "${escapeHtml(n.parentComment!.content.substring(0, 60))}${n.parentComment!.content.length > 60 ? '...' : ''}"</div>` : ''}
         <div style="font-size:14px; color:${brand.textSubtle}; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
       </div>
@@ -155,16 +157,19 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
 
   const projectsHtml = data.projects.map((project) => {
     const items = project.notifications.map((n, index) => {
-      const tcLink = buildTimecodeDeepLink(project.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
+      const tcLink = data.appDomain && project.projectId
+        ? buildAdminTimecodeDeepLink(data.appDomain, project.projectId, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
+        : buildTimecodeDeepLink(project.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
       const tcPill = renderTimecodePill(n.timecode, tcLink, brand)
       return `
       <div style="padding:10px 0;${index > 0 ? ` border-top:1px solid ${brand.border}; margin-top:8px;` : ''}">
         <div style="font-size:13px; color:${brand.muted}; margin-bottom:6px;">
-          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${tcPill ? ` &nbsp;${tcPill}` : ''}
+          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}
         </div>
         <div style="margin-bottom:4px;">
           <span style="font-size:14px; font-weight:700; color:${brand.text};">${escapeHtml(n.authorName)}</span>
           ${n.authorEmail ? `<span style="font-size:12px; color:${brand.muted}; margin-left:6px;">${escapeHtml(n.authorEmail)}</span>` : ''}
+          ${tcPill ? ` &nbsp;${tcPill}` : ''}
         </div>
         <div style="font-size:14px; color:${brand.textSubtle}; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
       </div>

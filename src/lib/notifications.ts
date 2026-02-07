@@ -116,6 +116,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
       clientName: comment.authorName || 'Client',
       clientEmail: comment.authorEmail,
       projectTitle: project.title,
+      projectId: project.id,
       videoName,
       versionLabel,
       commentContent: comment.content,

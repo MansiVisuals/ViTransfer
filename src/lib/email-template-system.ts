@@ -240,13 +240,12 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
 </p>
 
-<p style="margin: 0 0 12px 0; font-size: 15px; line-height: 1.6;">
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
   There's a new comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}.
 </p>
-<div style="margin: 0 0 20px 0;">{{TIMECODE}}</div>
 
 <div class="info-box">
-  <div class="info-label">{{AUTHOR_NAME}}</div>
+  <div class="info-label">{{AUTHOR_NAME}} &nbsp;{{TIMECODE}}</div>
   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
 </div>
 
@@ -263,13 +262,12 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     name: 'Comment Notification (to Admin)',
     description: 'Sent to admins when a client leaves a comment',
     subject: 'New Comment from {{CLIENT_NAME}}: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 12px 0; font-size: 15px; line-height: 1.6;">
+    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
   <strong>{{CLIENT_NAME}}</strong> left a comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}.
 </p>
-<div style="margin: 0 0 20px 0;">{{TIMECODE}}</div>
 
 <div class="info-box">
-  <div class="info-label">{{CLIENT_NAME}}</div>
+  <div class="info-label">{{CLIENT_NAME}} &nbsp;{{TIMECODE}}</div>
   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
 </div>
 

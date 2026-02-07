@@ -112,6 +112,7 @@ export async function processAdminNotifications() {
       const projectId = notification.projectId
       if (!projectGroups[projectId]) {
         projectGroups[projectId] = {
+          projectId,
           projectTitle: notification.project.title,
           shareUrl: await generateShareUrl(notification.project.slug),
           notifications: []
@@ -158,6 +159,7 @@ export async function processAdminNotifications() {
           const html = generateAdminSummaryEmail({
             companyName,
             accentColor: emailSettings.accentColor || undefined,
+            appDomain: emailSettings.appDomain || undefined,
             adminName: admin.name || '',
             period,
             projects

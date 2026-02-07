@@ -15,6 +15,7 @@ import {
   buildBrandingLogoUrl,
   processButtonSyntax,
   processEmailClasses,
+  renderTimecodePill,
   type EmailHeaderStyle,
 } from '@/lib/email'
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     const brandingLogoUrl = `${baseLogoUrl}?ts=${Date.now()}`
 
     // Generate sample values for placeholders
-    const sampleValues = generateSampleValues(templateType, companyName, appDomain)
+    const sampleValues = generateSampleValues(templateType, companyName, appDomain, brand)
 
     // Replace placeholders in subject and body
     const processedSubject = replacePlaceholders(subject, sampleValues)
@@ -136,13 +137,18 @@ export async function POST(request: NextRequest) {
 function generateSampleValues(
   type: EmailTemplateType,
   companyName: string,
-  appDomain: string
+  appDomain: string,
+  brand: ReturnType<typeof getEmailBrand>
 ): Record<string, string> {
   const base = {
     COMPANY_NAME: companyName,
     RECIPIENT_NAME: 'Jane Doe',
     APP_DOMAIN: appDomain,
   }
+
+  // Generate sample timecode pills with deep-links
+  const sampleTcPill1 = renderTimecodePill('00:00:45:12', `${appDomain}/share/abc123?video=Main+Commercial&t=45`, brand)
+  const sampleTcPill2 = renderTimecodePill('00:01:28:00', `${appDomain}/share/abc123?video=Main+Commercial&t=88`, brand)
 
   const typeValues: Record<EmailTemplateType, Record<string, string>> = {
     NEW_VERSION: {
@@ -167,7 +173,7 @@ function generateSampleValues(
       VERSION_LABEL: 'v1',
       AUTHOR_NAME: 'John Smith',
       COMMENT_CONTENT: 'Great work on the intro! The pacing feels just right. One small note - could we try a slightly warmer color grade in the sunset scene around 0:45?',
-      TIMECODE: 'at 00:00:45:12',
+      TIMECODE: sampleTcPill1,
       SHARE_URL: `${appDomain}/share/abc123`,
     },
     ADMIN_COMMENT_NOTIFICATION: {
@@ -178,7 +184,7 @@ function generateSampleValues(
       VIDEO_NAME: 'Main Commercial',
       VERSION_LABEL: 'v1',
       COMMENT_CONTENT: 'This looks fantastic! Love the energy in the opening sequence. Just one minor revision - can we extend the logo hold at the end by 0.5 seconds?',
-      TIMECODE: 'at 00:01:28:00',
+      TIMECODE: sampleTcPill2,
       ADMIN_URL: `${appDomain}/admin`,
     },
     ADMIN_PROJECT_APPROVED: {

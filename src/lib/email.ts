@@ -329,9 +329,29 @@ export function buildTimecodeDeepLink(shareUrl: string, opts: { videoName?: stri
     const url = new URL(shareUrl)
     if (opts.videoName) url.searchParams.set('video', opts.videoName)
     if (opts.commentId) url.searchParams.set('comment', opts.commentId)
-    const seconds = Math.floor(timecodeToSeconds(opts.timecode))
+    const seconds = Math.round(timecodeToSeconds(opts.timecode))
     url.searchParams.set('t', String(seconds))
     return url.toString()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Build a deep-link URL for admin to the admin share page
+ * Wraps through /login?returnUrl= for auth redirect
+ */
+export function buildAdminTimecodeDeepLink(appDomain: string, projectId: string, opts: { videoName?: string; commentId?: string; timecode?: string | null }): string | null {
+  if (!opts.timecode || !appDomain) return null
+  try {
+    let path = `/admin/projects/${projectId}/share`
+    const params = new URLSearchParams()
+    if (opts.videoName) params.set('video', opts.videoName)
+    if (opts.commentId) params.set('comment', opts.commentId)
+    const seconds = Math.round(timecodeToSeconds(opts.timecode))
+    params.set('t', String(seconds))
+    path += `?${params.toString()}`
+    return `${appDomain}/login?returnUrl=${encodeURIComponent(path)}`
   } catch {
     return null
   }
@@ -957,6 +977,7 @@ export async function sendAdminCommentNotificationEmail({
   clientName,
   clientEmail,
   projectTitle,
+  projectId,
   videoName,
   versionLabel,
   commentContent,
@@ -968,6 +989,7 @@ export async function sendAdminCommentNotificationEmail({
   clientName: string
   clientEmail?: string | null
   projectTitle: string
+  projectId?: string
   videoName: string
   versionLabel: string
   commentContent: string
@@ -983,7 +1005,10 @@ export async function sendAdminCommentNotificationEmail({
   // Get custom template or use default
   const template = await getEmailTemplate('ADMIN_COMMENT_NOTIFICATION')
 
-  const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode })
+  // Admin deep-links go to admin share page, not public share page
+  const tcLink = projectId && settings.appDomain
+    ? buildAdminTimecodeDeepLink(settings.appDomain, projectId, { videoName, commentId, timecode })
+    : buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode })
   const timecodeText = renderTimecodePill(timecode, tcLink, brand)
   const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
 

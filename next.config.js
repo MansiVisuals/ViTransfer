@@ -14,17 +14,33 @@ const nextConfig = {
     // Check if HTTPS is enabled (via environment variable)
     const isHttpsEnabled = process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1';
     const tusEndpoint = process.env.NEXT_PUBLIC_TUS_ENDPOINT
+    const tusOrigin = (() => {
+      if (!tusEndpoint) return ''
+      try {
+        return new URL(tusEndpoint).origin
+      } catch {
+        return ''
+      }
+    })()
+    const connectSrcValues = [
+      "'self'",
+      'blob:',
+      tusOrigin,
+      'https://ko-fi.com',
+      'https://storage.ko-fi.com',
+    ].filter(Boolean)
     const cspDirectives = [
       {
         key: 'Content-Security-Policy',
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' https: https://storage.ko-fi.com",
+          "script-src 'self' 'unsafe-inline'",
+          "script-src-attr 'none'",
           "style-src 'self' 'unsafe-inline' https:",
-          "img-src * data: blob: https://storage.ko-fi.com",
-          "font-src * data:",
-          `connect-src 'self' blob: ${tusEndpoint || ''} https: https://ko-fi.com https://storage.ko-fi.com`,
-          "media-src * blob:",
+          "img-src 'self' data: blob: https://storage.ko-fi.com https://*.ko-fi.com",
+          "font-src 'self' data: https:",
+          `connect-src ${connectSrcValues.join(' ')}`,
+          "media-src 'self' blob:",
           "object-src 'none'",
           "base-uri 'self'",
           "form-action 'self'",

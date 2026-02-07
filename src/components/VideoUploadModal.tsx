@@ -10,6 +10,7 @@ import { cn, formatFileSize } from '@/lib/utils'
 import * as tus from 'tus-js-client'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
+import { getTusUploadErrorMessage } from '@/lib/tus-error'
 import {
   ensureFreshUploadOnContextChange,
   clearFileContext,
@@ -305,14 +306,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
         },
 
         onError: async (error) => {
-          let errorMessage = 'Upload failed'
-          if (error.message) {
-            errorMessage = error.message
-          }
-
-          if (error.message?.includes('NetworkError') || error.message?.includes('Failed to fetch')) {
-            errorMessage = 'Network error. Please check your connection.'
-          }
+          let errorMessage = getTusUploadErrorMessage(error)
 
           const statusCode = (error as any)?.originalResponse?.getStatus?.()
 

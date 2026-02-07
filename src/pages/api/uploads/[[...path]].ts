@@ -9,6 +9,7 @@ import { Readable } from 'stream'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
+const ABSOLUTE_MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024 * 1024 // 100 GB hard safety cap
 
 if (!fs.existsSync(TUS_UPLOAD_DIR)) {
   fs.mkdirSync(TUS_UPLOAD_DIR, { recursive: true })
@@ -20,7 +21,7 @@ const tusServer: Server = new Server({
     directory: TUS_UPLOAD_DIR,
   }),
 
-  maxSize: Infinity,
+  maxSize: ABSOLUTE_MAX_UPLOAD_SIZE_BYTES,
   respectForwardedHeaders: true,
   relativeLocation: true,
 
@@ -52,6 +53,36 @@ const tusServer: Server = new Server({
         throw {
           status_code: 400,
           body: 'Missing required metadata: videoId or assetId'
+        }
+      }
+
+      // Enforce configurable max upload size from Global Settings
+      const appSettings = await prisma.settings.findUnique({
+        where: { id: 'default' },
+        select: { maxUploadSizeGB: true },
+      })
+      const maxUploadSizeGB = appSettings?.maxUploadSizeGB ?? 1
+      const maxUploadSizeBytes = maxUploadSizeGB * 1024 * 1024 * 1024
+      const requestedSize = Number(upload.size || 0)
+
+      if (!Number.isFinite(requestedSize) || requestedSize <= 0) {
+        throw {
+          status_code: 400,
+          body: 'Invalid upload size metadata'
+        }
+      }
+
+      if (requestedSize > maxUploadSizeBytes) {
+        throw {
+          status_code: 413,
+          body: `Upload exceeds maximum allowed size of ${maxUploadSizeGB} GB`
+        }
+      }
+
+      if (requestedSize > ABSOLUTE_MAX_UPLOAD_SIZE_BYTES) {
+        throw {
+          status_code: 413,
+          body: 'Upload exceeds maximum allowed size'
         }
       }
 
@@ -376,7 +407,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('[UPLOAD] Pages Router Error:', error)
     res.status(500).json({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
 }

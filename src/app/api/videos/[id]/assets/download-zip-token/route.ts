@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { getRedis } from '@/lib/redis'
+import { getClientIpAddress } from '@/lib/utils'
 import crypto from 'crypto'
 import { z } from 'zod'
 
@@ -102,11 +103,19 @@ export async function POST(
     // Store token in Redis with asset IDs and metadata (15 minute TTL)
     const redis = getRedis()
     const sessionId = accessCheck.shareTokenSessionId || (accessCheck.isAdmin ? `admin:${Date.now()}` : `guest:${Date.now()}`)
+    const ipAddress = getClientIpAddress(request)
+    const userAgentHash = crypto
+      .createHash('sha256')
+      .update(request.headers.get('user-agent') || 'unknown')
+      .digest('hex')
+
     const tokenData = {
       videoId,
       projectId: project.id,
       assetIds,
       sessionId,
+      ipAddress,
+      userAgentHash,
       createdAt: Date.now(),
     }
 

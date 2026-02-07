@@ -10,6 +10,7 @@ import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
+import { getTusUploadErrorMessage } from '@/lib/tus-error'
 import {
   ensureFreshUploadOnContextChange,
   clearFileContext,
@@ -266,28 +267,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
 
         // Error callback
         onError: async (error) => {
-
-          // Extract meaningful error message
-          let errorMessage = 'Upload failed'
-          if (error.message) {
-            errorMessage = error.message
-          }
-
-          // Check if it's a network error
-          if (error.message?.includes('NetworkError') || error.message?.includes('Failed to fetch')) {
-            errorMessage = 'Network error. Please check your connection and try again.'
-          }
-
-          // Check if it's a server error
-          if (error.message?.includes('413')) {
-            errorMessage = 'File is too large. Please choose a smaller file.'
-          } else if (error.message?.includes('401') || error.message?.includes('403')) {
-            errorMessage = 'Authentication failed. Please log in again.'
-          } else if (error.message?.includes('404')) {
-            errorMessage = 'Upload endpoint not found. Check server logs for configuration issues.'
-          } else if (error.message?.includes('500')) {
-            errorMessage = 'Server error. Check server logs for details.'
-          }
+          let errorMessage = getTusUploadErrorMessage(error)
 
           const statusCode = (error as any)?.originalResponse?.getStatus?.()
 

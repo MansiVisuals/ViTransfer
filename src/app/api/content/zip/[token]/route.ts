@@ -7,9 +7,35 @@ import { getClientIpAddress } from '@/lib/utils'
 import { logSecurityEvent, trackVideoAccess } from '@/lib/video-access'
 import archiver from 'archiver'
 import { Readable } from 'stream'
+import crypto from 'crypto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+async function consumeTokenAtomically(
+  redis: ReturnType<typeof getRedis>,
+  tokenKey: string,
+  expectedValue: string
+): Promise<boolean> {
+  const result = await redis.eval(
+    `
+      local current = redis.call('GET', KEYS[1])
+      if not current then
+        return 0
+      end
+      if current ~= ARGV[1] then
+        return -1
+      end
+      redis.call('DEL', KEYS[1])
+      return 1
+    `,
+    1,
+    tokenKey,
+    expectedValue
+  )
+
+  return Number(result) === 1
+}
 
 /**
  * Stream ZIP file directly to browser - NO memory loading
@@ -40,7 +66,7 @@ export async function GET(
       return rateLimitResult
     }
 
-    // Verify token
+    // Verify token (single-use token consumed atomically after validation)
     const redis = getRedis()
     const tokenKey = `zip_download:${token}`
     const rawTokenData = await redis.get(tokenKey)
@@ -52,7 +78,28 @@ export async function GET(
     }
 
     const tokenData = JSON.parse(rawTokenData)
-    const { videoId, projectId, assetIds, sessionId } = tokenData
+    const { videoId, projectId, assetIds, sessionId, ipAddress, userAgentHash } = tokenData
+
+    // Bind token usage to the requester fingerprint that generated it
+    const requestIp = getClientIpAddress(request)
+    const requestUaHash = crypto
+      .createHash('sha256')
+      .update(request.headers.get('user-agent') || 'unknown')
+      .digest('hex')
+
+    if (ipAddress !== requestIp || userAgentHash !== requestUaHash) {
+      await logSecurityEvent({
+        type: 'TOKEN_SESSION_MISMATCH',
+        severity: 'WARNING',
+        projectId,
+        videoId,
+        sessionId,
+        ipAddress: requestIp,
+        details: { reason: 'zip-token-fingerprint-mismatch' },
+        wasBlocked: true,
+      })
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Get video with project
     const video = await prisma.video.findUnique({
@@ -76,6 +123,13 @@ export async function GET(
       return NextResponse.json({ error: 'No valid assets found' }, { status: 404 })
     }
 
+    // Atomically consume token after all authorization checks pass.
+    // This prevents invalid requesters from burning the token and avoids replay races.
+    const consumed = await consumeTokenAtomically(redis, tokenKey, rawTokenData)
+    if (!consumed) {
+      return NextResponse.json({ error: 'Invalid or expired download link' }, { status: 403 })
+    }
+
     // Track download analytics (sessionId check handles admin filtering automatically)
     if (sessionId) {
       await trackVideoAccess({
@@ -94,25 +148,29 @@ export async function GET(
       zlib: { level: 6 }, // Compression level (0-9)
     })
 
-    // Handle archive errors
     archive.on('error', (err) => {
       console.error('ZIP archive error:', err)
-      throw err
     })
 
     // Add files to archive
+    let appendedCount = 0
     for (const asset of assets) {
       try {
         const fileStream = await downloadFile(asset.storagePath)
         archive.append(fileStream, { name: asset.fileName })
+        appendedCount += 1
       } catch (error) {
         console.error(`Error adding file ${asset.fileName} to archive:`, error)
         // Continue with other files instead of failing completely
       }
     }
 
+    if (appendedCount === 0) {
+      return NextResponse.json({ error: 'No downloadable assets available' }, { status: 404 })
+    }
+
     // Finalize archive (must be called before streaming)
-    archive.finalize()
+    void archive.finalize()
 
     // Convert Node.js readable stream to Web ReadableStream
     const readableStream = Readable.toWeb(archive as any) as ReadableStream

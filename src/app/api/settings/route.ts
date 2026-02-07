@@ -106,6 +106,7 @@ export async function PATCH(request: NextRequest) {
       defaultPreviewResolution,
       defaultWatermarkEnabled,
       defaultWatermarkText,
+      maxUploadSizeGB,
       defaultTimestampDisplay,
       autoApproveProject,
       adminNotificationSchedule,
@@ -224,6 +225,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (maxUploadSizeGB !== undefined && maxUploadSizeGB !== null) {
+      const parsed = Number(maxUploadSizeGB)
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+        return NextResponse.json(
+          { error: 'Max upload size must be an integer between 1 and 100 GB.' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Handle SMTP password update - only update if actually changed
     let passwordUpdate: string | null | undefined
     if (smtpPassword !== undefined) {
@@ -273,6 +284,7 @@ export async function PATCH(request: NextRequest) {
       defaultPreviewResolution,
       defaultWatermarkEnabled,
       defaultWatermarkText,
+      maxUploadSizeGB: maxUploadSizeGB !== undefined && maxUploadSizeGB !== null ? Number(maxUploadSizeGB) : undefined,
       defaultTimestampDisplay,
       autoApproveProject,
       adminNotificationSchedule,
@@ -316,6 +328,7 @@ export async function PATCH(request: NextRequest) {
         appDomain,
         defaultPreviewResolution,
         defaultWatermarkText,
+        maxUploadSizeGB: maxUploadSizeGB !== undefined && maxUploadSizeGB !== null ? Number(maxUploadSizeGB) : 1,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject,
         adminNotificationSchedule: adminNotificationSchedule || 'IMMEDIATE',

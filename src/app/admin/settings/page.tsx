@@ -27,6 +27,7 @@ interface Settings {
   defaultPreviewResolution: string | null
   defaultWatermarkEnabled: boolean | null
   defaultWatermarkText: string | null
+  maxUploadSizeGB: number | null
   defaultTimestampDisplay: string | null
   autoApproveProject: boolean | null
   defaultUsePreviewForApprovedPlayback: boolean | null
@@ -104,6 +105,7 @@ export default function GlobalSettingsPage() {
   const [defaultPreviewResolution, setDefaultPreviewResolution] = useState('720p')
   const [defaultWatermarkEnabled, setDefaultWatermarkEnabled] = useState(true)
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
+  const [maxUploadSizeGB, setMaxUploadSizeGB] = useState('1')
   const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
   const [defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback] = useState(false)
@@ -161,6 +163,7 @@ export default function GlobalSettingsPage() {
     setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
     setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
     setDefaultWatermarkText(data.defaultWatermarkText || '')
+    setMaxUploadSizeGB(data.maxUploadSizeGB?.toString() || '1')
     setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
     setAutoApproveProject(data.autoApproveProject ?? true)
     setDefaultUsePreviewForApprovedPlayback(data.defaultUsePreviewForApprovedPlayback ?? false)
@@ -461,6 +464,7 @@ export default function GlobalSettingsPage() {
         defaultPreviewResolution: defaultPreviewResolution || '720p',
         defaultWatermarkEnabled: defaultWatermarkEnabled,
         defaultWatermarkText: defaultWatermarkText || null,
+        maxUploadSizeGB: parseInt(maxUploadSizeGB, 10) || 1,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject: autoApproveProject,
         defaultUsePreviewForApprovedPlayback: defaultUsePreviewForApprovedPlayback,
@@ -693,6 +697,8 @@ export default function GlobalSettingsPage() {
             setShareTokenTtlSeconds={setShareTokenTtlSeconds}
             passwordAttempts={passwordAttempts}
             setPasswordAttempts={setPasswordAttempts}
+            maxUploadSizeGB={maxUploadSizeGB}
+            setMaxUploadSizeGB={setMaxUploadSizeGB}
             sessionTimeoutValue={sessionTimeoutValue}
             setSessionTimeoutValue={setSessionTimeoutValue}
             sessionTimeoutUnit={sessionTimeoutUnit}

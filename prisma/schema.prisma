@@ -284,6 +284,7 @@ model Settings {
   defaultPreviewResolution String? @default("720p")
   defaultWatermarkEnabled  Boolean @default(true)
   defaultWatermarkText     String?
+  maxUploadSizeGB          Int      @default(1) // Maximum upload size (GB) for TUS uploads (1-100)
 
   // Default Comment Timestamp Display
   // TIMECODE = HH:MM:SS:FF (or DF), AUTO = MM:SS or HH:MM:SS based on video length

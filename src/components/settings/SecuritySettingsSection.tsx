@@ -32,6 +32,8 @@ interface SecuritySettingsSectionProps {
   setShareTokenTtlSeconds: (value: string) => void
   passwordAttempts: string
   setPasswordAttempts: (value: string) => void
+  maxUploadSizeGB: string
+  setMaxUploadSizeGB: (value: string) => void
   sessionTimeoutValue: string
   setSessionTimeoutValue: (value: string) => void
   sessionTimeoutUnit: string
@@ -80,6 +82,8 @@ export function SecuritySettingsSection({
   setShareTokenTtlSeconds,
   passwordAttempts,
   setPasswordAttempts,
+  maxUploadSizeGB,
+  setMaxUploadSizeGB,
   sessionTimeoutValue,
   setSessionTimeoutValue,
   sessionTimeoutUnit,
@@ -339,6 +343,27 @@ export function SecuritySettingsSection({
                 />
                 <p className="text-xs text-muted-foreground">
                   Maximum authentication attempts (password or OTP) before lockout
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+            <Label className="text-base">Upload Security</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="maxUploadSizeGB">Max Upload Size (GB)</Label>
+                <Input
+                  id="maxUploadSizeGB"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={maxUploadSizeGB}
+                  onChange={(e) => setMaxUploadSizeGB(e.target.value)}
+                  placeholder="1"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum size per upload via TUS (1-100 GB)
                 </p>
               </div>
             </div>

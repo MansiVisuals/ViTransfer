@@ -5,6 +5,21 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-02-07
+
+### Added
+- Configurable maximum upload size in Global Settings (default: 1 GB).
+
+### Changed
+- Updated Advanced Security Settings layout for clearer organization.
+- Improved download/session security behavior.
+- Tightened default security headers.
+
+### Fixed
+- Improved upload and download reliability.
+- Improved upload error messages shown in the UI.
+- Reduced exposure of internal server error details.
+
 ## [0.9.0] - 2026-02-07
 
 ### Added

@@ -488,38 +488,35 @@ export async function invalidateBlocklistCache(): Promise<void> {
 
 export async function revokeProjectVideoTokens(projectId: string): Promise<void> {
   const redis = getRedis()
-
-  const stream = redis.scanStream({
-    match: 'video_access:*',
-    count: 100
-  })
-
+  const stream = redis.scanStream({ match: 'video_access:*', count: 100 })
   const keysToDelete: string[] = []
 
-  stream.on('data', async (keys: string[]) => {
+  for await (const keys of stream) {
     for (const key of keys) {
       const data = await redis.get(key)
-      if (data) {
-        try {
-          const tokenData: VideoAccessToken = JSON.parse(data)
-          if (tokenData.projectId === projectId) {
-            keysToDelete.push(key)
-          }
-        } catch (error) {
-          console.error('[SECURITY] Corrupted token data during revocation, will delete', {
-            key,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          })
+      if (!data) continue
+
+      try {
+        const tokenData: VideoAccessToken = JSON.parse(data)
+        if (tokenData.projectId === projectId) {
           keysToDelete.push(key)
         }
+      } catch (error) {
+        console.error('[SECURITY] Corrupted token data during revocation, will delete', {
+          key,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+        keysToDelete.push(key)
       }
     }
-  })
+  }
 
-  stream.on('end', async () => {
-    if (keysToDelete.length > 0) {
-      await redis.del(...keysToDelete)
-    }
-    await redis.incr(TOKEN_REV_VERSION_KEY)
-  })
+  if (keysToDelete.length > 0) {
+    const pipeline = redis.pipeline()
+    keysToDelete.forEach((key) => pipeline.del(key))
+    await pipeline.exec()
+  }
+
+  // Bump token version so in-memory verification cache is invalidated across requests
+  await redis.incr(TOKEN_REV_VERSION_KEY)
 }

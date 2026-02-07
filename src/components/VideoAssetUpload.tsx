@@ -10,6 +10,7 @@ import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
+import { getTusUploadErrorMessage } from '@/lib/tus-error'
 import { ALLOWED_ASSET_EXTENSIONS, ALL_ALLOWED_EXTENSIONS, validateAssetExtension, detectAssetCategory } from '@/lib/asset-validation'
 
 interface VideoAssetUploadProps {
@@ -135,21 +136,7 @@ export function VideoAssetUpload({ videoId, onUploadComplete }: VideoAssetUpload
         },
 
         onError: async (error) => {
-          let errorMessage = 'Upload failed'
-
-          if (error.message?.includes('NetworkError') || error.message?.includes('Failed to fetch')) {
-            errorMessage = 'Network error. Please check your connection and try again.'
-          } else if (error.message?.includes('413')) {
-            errorMessage = 'File is too large. Please choose a smaller file.'
-          } else if (error.message?.includes('401') || error.message?.includes('403')) {
-            errorMessage = 'Authentication failed. Please log in again.'
-          } else if (error.message?.includes('404')) {
-            errorMessage = 'Upload endpoint not found. Check server logs.'
-          } else if (error.message?.includes('500')) {
-            errorMessage = 'Server error. Check server logs for details.'
-          } else if (error.message) {
-            errorMessage = error.message
-          }
+          const errorMessage = getTusUploadErrorMessage(error)
 
           // Clean up asset record on error
           if (assetIdRef.current) {

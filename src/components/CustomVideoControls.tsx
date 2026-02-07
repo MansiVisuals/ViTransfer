@@ -293,7 +293,7 @@ interface MarkerData {
 }
 
 export default function CustomVideoControls({
-  videoRef,
+  videoRef: _videoRef,
   videoDuration,
   currentTime,
   isPlaying,
@@ -309,7 +309,7 @@ export default function CustomVideoControls({
   comments = [],
   videoFps = 24,
   videoId = '',
-  isAdmin = false,
+  isAdmin: _isAdmin = false,
   timestampDisplayMode = 'TIMECODE',
   onMarkerClick,
 }: CustomVideoControlsProps) {

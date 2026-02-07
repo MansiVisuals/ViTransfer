@@ -120,8 +120,6 @@ export function VideoAssetUploadQueue({
     }
   }
 
-  const hasActiveUploads = stats.uploading > 0 || stats.queued > 0 || stats.paused > 0
-
   return (
     <div className="space-y-4">
       {/* File selection area */}

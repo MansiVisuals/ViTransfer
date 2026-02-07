@@ -32,7 +32,6 @@ if (!skipValidation && !process.env.ENCRYPTION_KEY) {
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'DEV_ONLY_INSECURE_KEY_32BYTES!'
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 16
-const AUTH_TAG_LENGTH = 16
 
 /**
  * Validate that encryption key is configured properly (runtime check)
@@ -246,4 +245,3 @@ export function validatePassword(password: string): {
     strength,
   }
 }
-

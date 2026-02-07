@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useRef, useEffect, useState, useMemo } from 'react'
-import { CheckCircle2, ChevronLeft, ChevronRight, Film, Layers, Grid3X3, ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Film, Layers, Grid3X3, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle'

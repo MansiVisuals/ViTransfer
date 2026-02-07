@@ -20,8 +20,7 @@ import {
   getSecurityEventDescription,
   getSecurityEventCategory,
   formatIpAddress,
-  formatSessionId,
-  type SecurityEventType
+  formatSessionId
 } from '@/lib/security-events'
 
 interface SecurityEvent {

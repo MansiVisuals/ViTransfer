@@ -7,7 +7,6 @@ import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-acces
 import { rateLimit } from '@/lib/rate-limit'
 import { trackSharePageAccess } from '@/lib/share-access-tracking'
 import { getRedis } from '@/lib/redis'
-import crypto from 'crypto'
 export const runtime = 'nodejs'
 
 

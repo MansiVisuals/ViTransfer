@@ -173,7 +173,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           onRefresh?.()
           router.refresh()
         })
-        .catch((error) => {
+        .catch(() => {
           alert('Failed to approve project')
         })
         .finally(() => {
@@ -204,7 +204,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
         onRefresh?.()
         router.refresh()
       })
-      .catch((error) => {
+      .catch(() => {
         alert('Failed to unapprove project')
       })
       .finally(() => {
@@ -248,7 +248,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
         router.push('/admin/projects')
         router.refresh()
       })
-      .catch((error) => {
+      .catch(() => {
         alert('Failed to delete project')
         setIsDeleting(false)
       })

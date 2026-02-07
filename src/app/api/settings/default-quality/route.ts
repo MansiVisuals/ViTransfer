@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 export const runtime = 'nodejs'
 
@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
  * a non-sensitive preference setting (720p or 1080p default).
  * No private data is exposed.
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },

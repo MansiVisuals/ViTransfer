@@ -291,7 +291,7 @@ export async function clearRateLimit(
  * @param ipAddress - IP address to unblock
  * @returns Number of rate limit entries cleared
  */
-export async function unblockIpAddress(ipAddress: string): Promise<number> {
+export async function unblockIpAddress(_ipAddress: string): Promise<number> {
   try {
     const redis = getRedis()
 

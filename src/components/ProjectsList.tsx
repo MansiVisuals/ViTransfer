@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Plus, ArrowUpDown, Video, MessageSquare, ChevronRight } from 'lucide-react'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 import FilterDropdown from '@/components/FilterDropdown'
-import { cn, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 
 const STATUS_OPTIONS = [
   { value: 'IN_REVIEW', label: 'In Review' },

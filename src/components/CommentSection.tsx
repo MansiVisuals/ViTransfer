@@ -45,7 +45,7 @@ interface CommentSectionProps {
 
 export default function CommentSection({
   projectId,
-  projectSlug,
+  projectSlug: _projectSlug,
   comments: initialComments,
   focusCommentId = null,
   clientName,
@@ -54,7 +54,7 @@ export default function CommentSection({
   restrictToLatestVersion = false,
   videos = [],
   isAdminView = false,
-  smtpConfigured = false,
+  smtpConfigured: _smtpConfigured = false,
   isPasswordProtected = false,
   adminUser = null,
   recipients = [],

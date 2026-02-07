@@ -7,7 +7,6 @@ import { getRedis } from './redis'
 const OTP_LENGTH = 6
 const OTP_EXPIRY_MINUTES = 10
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
-const ACCOUNT_LOCKOUT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
 
 // NOTE: OTP_MAX_ATTEMPTS and MAX_OTP_REQUESTS now use global SecuritySettings.passwordAttempts
 // This ensures consistent lockout behavior across password and OTP authentication

@@ -33,7 +33,7 @@ export function useCommentManagement({
   isPasswordProtected,
   adminUser = null,
   recipients,
-  clientName,
+  clientName: _clientName,
   restrictToLatestVersion,
   shareToken = null,
   useAdminAuth = false,

@@ -265,8 +265,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Video not found' }, { status: 404 })
     }
 
-    const projectId = video.projectId
-
     // Delete all associated files from storage
     try {
       // Delete asset files only if no other assets point to the same storage path

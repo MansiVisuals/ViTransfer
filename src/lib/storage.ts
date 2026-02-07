@@ -63,7 +63,7 @@ export async function uploadFile(
   filePath: string,
   stream: Readable | Buffer,
   size: number,
-  contentType: string = 'application/octet-stream'
+  _contentType: string = 'application/octet-stream'
 ): Promise<void> {
   const fullPath = validatePath(filePath)
   const dir = path.dirname(fullPath)

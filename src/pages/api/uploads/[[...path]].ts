@@ -126,7 +126,7 @@ const tusServer: Server = new Server({
     }
   },
 
-  async onUploadFinish(req, upload) {
+  async onUploadFinish(_req, upload) {
     const tusFilePath = path.join(TUS_UPLOAD_DIR, upload.id)
     const videoId = upload.metadata?.videoId as string
     const assetId = upload.metadata?.assetId as string

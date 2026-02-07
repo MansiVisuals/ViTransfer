@@ -1,4 +1,4 @@
-import { Queue, Worker, Job } from 'bullmq'
+import { Queue } from 'bullmq'
 import { getRedisForQueue } from './redis'
 
 // Lazy initialization to prevent connections during build time
@@ -150,13 +150,13 @@ export function getCleanPreviewQueue(): Queue<CleanPreviewJob> {
 
 // Export for backward compatibility, but use getter in new code
 export const videoQueue = new Proxy({} as Queue<VideoProcessingJob>, {
-  get(target, prop) {
+  get(_target, prop) {
     return getVideoQueue()[prop as keyof Queue<VideoProcessingJob>]
   }
 })
 
 export const assetQueue = new Proxy({} as Queue<AssetProcessingJob>, {
-  get(target, prop) {
+  get(_target, prop) {
     return getAssetQueue()[prop as keyof Queue<AssetProcessingJob>]
   }
 })

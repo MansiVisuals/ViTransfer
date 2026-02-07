@@ -98,7 +98,7 @@ export async function syncRecipientToDirectory(
  * Called when project companyName is updated
  */
 export async function syncCompanyToDirectory(
-  projectId: string,
+  _projectId: string,
   companyName: string | null
 ): Promise<string | null> {
   if (!companyName?.trim()) return null

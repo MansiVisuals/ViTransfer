@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Workflow, MessageSquare, Layers, Upload, Gift } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 export default function IntegrationsPage() {
   const [showPreorderModal, setShowPreorderModal] = useState(false)

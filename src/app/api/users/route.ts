@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { email, username, password, name, role } = body
+    const { email, username, password, name } = body
 
     // Validation
     if (!email || !password) {

@@ -4,7 +4,6 @@ import { QueuedUpload } from '@/hooks/useAssetUploadQueue'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
 import {
-  FileIcon,
   FileImage,
   FileVideo,
   FileMusic,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest, getShareContext } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import type { Project, Video } from '@prisma/client'
 
 /**
  * Verify project access using dual authentication pattern
@@ -20,7 +19,7 @@ import type { Project, Video } from '@prisma/client'
 export async function verifyProjectAccess(
   request: NextRequest,
   projectId: string,
-  sharePassword: string | null,
+  _sharePassword: string | null,
   authMode: string = 'PASSWORD'
 ): Promise<{
   authorized: boolean

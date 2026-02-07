@@ -5,8 +5,6 @@ import {
   getAllTemplates,
   getPlaceholdersForType,
   TEMPLATE_METADATA,
-  EMAIL_TEMPLATE_TYPES,
-  type EmailTemplateType,
 } from '@/lib/email-template-system'
 
 export const runtime = 'nodejs'

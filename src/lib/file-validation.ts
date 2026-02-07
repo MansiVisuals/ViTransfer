@@ -158,7 +158,7 @@ export function isSuspiciousFilename(filename: string): boolean {
 export function validateUploadedFile(
   filename: string,
   mimeType: string,
-  size: number
+  _size: number
 ): { valid: boolean; error?: string; sanitizedFilename?: string } {
   // Sanitize filename first
   const sanitizedFilename = sanitizeFilename(filename)
@@ -284,4 +284,3 @@ export function validateAssetFile(
     error: `Unsupported file type: ${ext}. Please upload images, audio, documents, or project files.`
   }
 }
-

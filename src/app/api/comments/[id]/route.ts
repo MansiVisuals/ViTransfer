@@ -7,7 +7,6 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { sanitizeCommentHtml } from '@/lib/security/html-sanitization'
 import { cancelCommentNotification } from '@/lib/comment-helpers'
-import { getRedis } from '@/lib/redis'
 export const runtime = 'nodejs'
 
 
@@ -227,8 +226,6 @@ export async function DELETE(
         { status: 404 }
       )
     }
-
-    const projectId = existingComment.projectId
 
     // Cancel any pending notifications for this comment
     await cancelCommentNotification(id)

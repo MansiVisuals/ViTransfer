@@ -4,7 +4,6 @@
  */
 
 import { escapeHtml, renderEmailButton, renderEmailShell, renderUnsubscribeSection, getEmailBrand, buildTimecodeDeepLink, buildAdminTimecodeDeepLink, renderTimecodePill } from './email'
-import { formatTimecodeDisplay } from './timecode'
 
 interface NotificationData {
   type: 'CLIENT_COMMENT' | 'ADMIN_REPLY' | 'VIDEO_APPROVED' | 'VIDEO_UNAPPROVED' | 'PROJECT_APPROVED'
@@ -51,12 +50,6 @@ interface AdminSummaryData {
     notifications: NotificationData[]
   }>
 }
-
-function formatTimecodeForEmail(timecode?: string | null): string {
-  if (!timecode) return ''
-  return formatTimecodeDisplay(timecode)
-}
-
 
 /**
  * Client notification summary

@@ -90,7 +90,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       }
     }
 
-    const updated = await prisma.notificationDestination.update({
+    await prisma.notificationDestination.update({
       where: { id },
       data: {
         name: parsed.name,

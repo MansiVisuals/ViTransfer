@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Video } from '@prisma/client'
 import { formatDuration, formatFileSize } from '@/lib/utils'
-import { Progress } from './ui/progress'
 import { Button } from './ui/button'
 import { ReprocessModal } from './ReprocessModal'
 import { InlineEdit } from './InlineEdit'
@@ -74,7 +73,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         // Refresh in background
         onRefresh?.()
       })
-      .catch((error) => {
+      .catch(() => {
         // Restore video on error
         setVideos(initialVideos)
         alert('Failed to delete video')
@@ -109,7 +108,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         // Refresh in background
         onRefresh?.()
       })
-      .catch((error) => {
+      .catch(() => {
         // Revert optimistic update on error
         setVideos(prev => prev.map(v =>
           v.id === videoId ? { ...v, approved: currentlyApproved } as Video : v

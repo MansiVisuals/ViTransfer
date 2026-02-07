@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Building2, User, ChevronDown, X, Plus, Check, Mail } from 'lucide-react'
+import { Building2, User, Plus, Check } from 'lucide-react'
 import { apiFetch, apiPost } from '@/lib/api-client'
 
 interface ClientContact {

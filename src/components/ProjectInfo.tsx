@@ -43,7 +43,7 @@ interface ProjectInfoProps {
 
 export default function ProjectInfo({
   selectedVideo,
-  displayLabel,
+  displayLabel: _displayLabel,
   isVideoApproved,
   projectId,
   projectTitle,
@@ -68,7 +68,7 @@ export default function ProjectInfo({
   const [loading, setLoading] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [hasAssets, setHasAssets] = useState(false)
-  const [checkingAssets, setCheckingAssets] = useState(false)
+  const [_checkingAssets, setCheckingAssets] = useState(false)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
 
   const buildAuthHeaders = (shareTokenOverride?: string | null) => {

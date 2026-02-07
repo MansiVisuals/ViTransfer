@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import {
-  getPlaceholdersForType,
   replacePlaceholders,
   EMAIL_TEMPLATE_TYPES,
   type EmailTemplateType,
@@ -258,4 +257,3 @@ function getEmailSubtitle(type: EmailTemplateType, values: Record<string, string
   }
   return subtitles[type] || ''
 }
-

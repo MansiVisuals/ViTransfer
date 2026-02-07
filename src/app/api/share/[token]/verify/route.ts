@@ -4,7 +4,7 @@ import { decrypt } from '@/lib/encryption'
 import crypto from 'crypto'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
-import { getMaxAuthAttempts, getRateLimitSettings } from '@/lib/settings'
+import { getMaxAuthAttempts } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
 import { signShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
@@ -57,7 +57,6 @@ export async function POST(
 ) {
   try {
     const { token } = await params
-    const { sessionRateLimit } = await getRateLimitSettings()
     const redis = getRedis()
     const rateLimitKey = getIdentifier(request, token)
 

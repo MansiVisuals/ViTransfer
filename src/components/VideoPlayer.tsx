@@ -48,7 +48,7 @@ interface VideoPlayerProps {
 export default function VideoPlayer({
   videos,
   projectId,
-  projectStatus,
+  projectStatus: _projectStatus,
   defaultQuality = '720p',
   onApprove,
   projectTitle,
@@ -130,7 +130,6 @@ export default function VideoPlayer({
 
   // Safety check: ensure selectedVideo exists before accessing properties
   const isVideoApproved = selectedVideo ? (selectedVideo as any).approved === true : false
-  const isProjectApproved = projectStatus === 'APPROVED' || projectStatus === 'SHARE_ONLY'
 
   // Load video URL with optimization
   useEffect(() => {
@@ -235,7 +234,7 @@ export default function VideoPlayer({
   // Handle seek to timestamp requests from comments
   useEffect(() => {
     const handleSeekToTime = (e: CustomEvent) => {
-      const { timestamp, videoId, videoVersion } = e.detail
+      const { timestamp, videoId } = e.detail
 
       // If videoId is specified and different from current, try to switch to it
       if (videoId && videoId !== selectedVideo.id) {

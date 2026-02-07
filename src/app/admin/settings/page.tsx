@@ -71,8 +71,8 @@ interface BlockedDomain {
 export default function GlobalSettingsPage() {
   const router = useRouter()
 
-  const [settings, setSettings] = useState<Settings | null>(null)
-  const [securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null)
+  const [_settings, setSettings] = useState<Settings | null>(null)
+  const [_securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')

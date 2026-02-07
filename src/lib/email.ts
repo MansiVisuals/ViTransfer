@@ -1,12 +1,10 @@
 import nodemailer from 'nodemailer'
 import { prisma } from './db'
 import { decrypt } from './encryption'
-import { buildLogoSvg } from './brand'
 import { formatTimecodeDisplay, timecodeToSeconds } from './timecode'
 import {
   getEmailTemplate,
   replacePlaceholders,
-  type EmailTemplateType,
 } from './email-template-system'
 
 // Email header style options for branding
@@ -256,14 +254,6 @@ export function processTemplateContent(
   // Process CSS classes to inline styles
   processed = processEmailClasses(processed, brand)
   return processed
-}
-
-// Inline SVG logo for emails (accent-aware, reuses app logomark)
-// Note: Some email clients strip SVGs, but this is used as fallback for default logo
-function buildEmailLogo(accentHex: string): string {
-  const accent = accentHex || ACCENT_COLOR_HEX.blue
-  // Reuse the same SVG used across the app; size 56 for email header balance.
-  return buildLogoSvg(accent, 56)
 }
 
 /**

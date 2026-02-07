@@ -12,11 +12,6 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { apiPatch } from '@/lib/api-client'
 
-interface VideoGroup {
-  name: string
-  videos: any[]
-}
-
 interface AdminVideoManagerProps {
   projectId: string
   videos: any[]
@@ -37,8 +32,8 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
   projectId,
   videos,
   projectStatus,
-  restrictToLatestVersion = false,
-  companyName = 'Studio',
+  restrictToLatestVersion: _restrictToLatestVersion = false,
+  companyName: _companyName = 'Studio',
   onRefresh,
   sortMode = 'alphabetical',
   maxRevisions,
@@ -56,7 +51,6 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
     return acc
   }, {})
 
-  const hasVideos = videos.length > 0
   // Only allow one video expanded at a time - default collapsed
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
@@ -119,7 +113,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
         onRefresh?.()
         router.refresh()
       })
-      .catch((error) => {
+      .catch(() => {
         alert('Failed to update video name')
       })
       .finally(() => {

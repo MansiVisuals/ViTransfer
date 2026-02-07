@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
-  const admin = authResult
 
   // Rate limiting: Max 50 video uploads per hour
   const rateLimitResult = await rateLimit(request, {

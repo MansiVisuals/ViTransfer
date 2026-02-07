@@ -15,8 +15,6 @@ export interface AuthUser {
   role: string
 }
 
-type TokenKind = 'admin_access' | 'admin_refresh' | 'share'
-
 interface AdminAccessPayload extends jwt.JwtPayload {
   type: 'admin_access'
   userId: string

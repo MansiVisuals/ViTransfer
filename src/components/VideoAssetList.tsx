@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-  FileIcon,
   FileImage,
   FileVideo,
   FilePlay,
@@ -97,7 +96,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
           onAssetDeleted()
         }
       })
-      .catch((err) => {
+      .catch(() => {
         // Restore on error
         setAssets(previousAssets)
         alert('Failed to delete asset')
@@ -181,7 +180,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     document.body.removeChild(link)
   }
 
-  const handleDownload = async (assetId: string, fileName: string) => {
+  const handleDownload = async (assetId: string, _fileName: string) => {
     // Generate download token in background without blocking UI
     apiFetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, {
       method: 'POST'
@@ -195,7 +194,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
       .then(({ url }) => {
         triggerDownload(url)
       })
-      .catch((err) => {
+      .catch(() => {
         alert('Failed to download asset')
       })
   }
@@ -229,7 +228,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
           onAssetDeleted()
         }
       })
-      .catch((err) => {
+      .catch(() => {
         alert(`Failed to ${action} thumbnail`)
       })
       .finally(() => {

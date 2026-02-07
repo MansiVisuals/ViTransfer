@@ -118,7 +118,7 @@ export function AssetCopyMoveModal({
       assetIds: Array.from(selectedAssets),
       targetVideoId,
     })
-      .then((response) => {
+      .then(() => {
         setSuccess(`Successfully copied ${selectedAssets.size} asset(s) to the selected version`)
         setSelectedAssets(new Set())
 

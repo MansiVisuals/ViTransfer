@@ -46,8 +46,6 @@ export function timecodeToSeconds(timecode: string, fps: number = 24): number {
   if (useDropFrame) {
     // Drop-frame calculation: compensate for dropped frame numbers
     const dropFrames = Math.round(fps * 0.066666) // 2 frames for 29.97, 4 frames for 59.94
-    const framesPerMinute = Math.round(fps) * 60
-    const framesPer10Minutes = framesPerMinute * 10
 
     const totalMinutes = hours * 60 + minutes
     const droppedFrames = dropFrames * (totalMinutes - Math.floor(totalMinutes / 10))
@@ -147,7 +145,7 @@ export function isValidTimecode(timecode: string): boolean {
   // Normalize semicolon to colon for parsing
   const normalized = timecode.replace(';', ':')
   const parts = normalized.split(':').map(Number)
-  const [hours, minutes, seconds, frames] = parts
+  const [_hours, minutes, seconds, frames] = parts
 
   // Validate ranges
   if (minutes >= 60 || seconds >= 60) {

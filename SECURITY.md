@@ -64,38 +64,6 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 - **Video access** audit trail
 - **Security events dashboard** for admins
 
-## Vulnerability Assessment
-
-### Docker Scout Scan Results (As of 2026-01-18)
-
-**Scan Summary:**
-- **Base Image**: node:24.13.0-alpine3.23
-- **Vulnerabilities**: 0 Critical | 3 High | 3 Medium | 1 Low
-
-**Known Vulnerabilities (Awaiting Upstream Fixes):**
-
-| CVE ID | Severity | Package | Type | Status |
-|--------|----------|---------|------|--------|
-| CVE-2026-23745 | High | tar@7.5.1 | npm | Path Traversal - awaiting npm fix |
-| CVE-2025-64756 | High | glob@10.x/11.x | npm | OS Command Injection - awaiting npm fix |
-| CVE-2025-64118 | Medium | tar@7.5.1 | npm | Race Condition - awaiting npm fix |
-| CVE-2026-22184 | Medium | zlib@1.3.1-r2 | apk | Awaiting Alpine fix |
-| CVE-2025-60876 | Medium | busybox@1.37.0-r30 | apk | Awaiting Alpine fix |
-| GHSA-73rr-hh4g-fpgx | Low | diff | npm | ReDoS - low severity |
-
-### Risk Assessment
-
-**npm packages (tar, glob, diff):**
-- These are bundled with npm itself in the Node.js base image
-- Not directly used by ViTransfer application code
-- Awaiting upstream fixes from the npm team
-- Risk is limited to npm operations during build time
-
-**Alpine packages (zlib, busybox):**
-- Core Alpine system packages awaiting upstream fixes
-- Standard packages present in all Alpine-based containers
-- Image uses `apk upgrade` to pull latest available patches
-
 ## Security Hardening
 
 ### Container Security

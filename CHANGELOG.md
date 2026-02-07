@@ -256,9 +256,7 @@ Existing thumbnails with black bars need reprocessing. Go to Project Settings, c
 
 ### Security
 - **Base image updated**: node:24.13.0-alpine3.23 (latest Node.js 24 LTS)
-- **CVE documentation**: Updated SECURITY.md with current vulnerability assessment
-  - All remaining CVEs are in upstream packages (npm bundled, Alpine system) awaiting fixes
-  - No vulnerabilities in project dependencies (npm audit clean)
+- No vulnerabilities in project dependencies (npm audit clean)
 
 ## [0.8.2] - 2025-12-24
 
@@ -507,7 +505,7 @@ Existing thumbnails with black bars need reprocessing. Go to Project Settings, c
 - Thumbnail cache control headers now prevent caching (no-store) for immediate updates when thumbnails change
 
 ### Security
-- Updated glob dependency from 11.0.4 to 11.1.0 (fixes CVE-2025-64756)
+- Updated glob dependency from 11.0.4 to 11.1.0
 - Asset deletion now uses reference counting to prevent deletion of files shared between video versions
 
 ## [0.5.2] - 2025-11-21
@@ -686,16 +684,8 @@ Previous releases (0.3.5-0.3.7) added major features using patch increments. Now
 ## [0.3.5] - 2025-11-16
 
 ### Security
-- **Resolved 4 HIGH severity Go CVEs** in esbuild dependency
-  - Upgraded esbuild from 0.25.12 to 0.27.0 via npm overrides
-  - Fixed CVE-2025-58188, CVE-2025-61725, CVE-2025-58187, CVE-2025-61723
-  - Reduced total CVE count from 0C 5H 7M 2L to 0C 1H 6M 2L
-  - All Go CVEs resolved - esbuild now compiled with patched Go 1.25.4
+- Upgraded esbuild from 0.25.12 to 0.27.0 via npm overrides
 - Updated Docker base image to node:25.2.0-alpine3.22
-- Updated SECURITY.md with current CVE status
-  - Removed all fixed Go CVEs
-  - Added curl CVE-2025-10966
-  - All remaining CVEs are in Alpine/npm packages awaiting upstream fixes
 
 ### Improved
 - UI consistency across admin interface
@@ -873,48 +863,14 @@ Previous releases (0.3.5-0.3.7) added major features using patch increments. Now
 
 ## [0.3.0] - 2025-11-13
 
-**Why v0.3.0?** Originally planned as v0.2.6, this release includes critical security hardening that warrants a minor version bump rather than a patch. The scope of security improvements (SQL injection prevention, XSS protection enhancement, command injection fixes, timing attack mitigation, and path traversal hardening) makes this a significant security-focused upgrade.
+**Why v0.3.0?** This release includes critical security hardening that warrants a minor version bump rather than a patch.
 
 ### Security
-- **CRITICAL**: Fixed SQL injection vulnerability in database context management
-  - Added strict CUID format validation (`/^c[a-z0-9]{24}$/`) before executing raw SQL
-  - Added UserRole enum validation to prevent arbitrary role injection
-  - Prevents malicious user IDs from bypassing Row Level Security (RLS)
-  - Location: `src/lib/db.ts:setDatabaseUserContext()`
-- **CRITICAL**: Enhanced XSS protection in comment rendering
-  - Configured DOMPurify with strict ALLOWED_TAGS whitelist
-  - Added ALLOWED_URI_REGEXP to only allow https://, http://, mailto: URLs
-  - Enabled FORCE_BODY to prevent context-breaking attacks
-  - Added rel="noopener noreferrer" to all links automatically
-  - Location: `src/components/MessageBubble.tsx:sanitizeContent()`
-- **CRITICAL**: Fixed command injection in FFmpeg watermark processing
-  - Created dedicated `validateAndSanitizeWatermarkText()` function
-  - Validates character whitelist (alphanumeric, spaces, safe punctuation only)
-  - Enforces 100 character limit to prevent resource exhaustion
-  - Properly escapes text for FFmpeg drawtext filter
-  - Location: `src/lib/ffmpeg.ts`
-- **CRITICAL**: Fixed timing attack vulnerability in password verification
-  - Implemented constant-time comparison using `crypto.timingSafeEqual()`
-  - Prevents password enumeration through timing analysis
-  - Maintains constant execution time even when lengths differ
-  - Location: `src/app/api/share/[token]/verify/route.ts:constantTimeCompare()`
-- **HIGH**: Added robust JSON.parse error handling in video access tokens
-  - Gracefully handles corrupted Redis data without crashing
-  - Validates required fields (videoId, projectId, sessionId) after parsing
-  - Logs security events with sanitized token preview (first 10 chars only)
-  - Location: `src/lib/video-access.ts:verifyVideoAccessToken()`
-- **HIGH**: Enhanced path traversal protection with 7-layer defense
-  - Layer 1: Null byte injection check
-  - Layer 2: Double URL decoding (catches `%252e%252e%252f` attacks)
-  - Layer 3: Path separator normalization
-  - Layer 4: Explicit `..` sequence removal
-  - Layer 5: Path normalization
-  - Layer 6: Absolute path resolution
-  - Layer 7: Boundary validation (ensure path is within STORAGE_ROOT)
-  - Location: `src/lib/storage.ts:validatePath()`
-- **Code Quality**: Removed 51KB of duplicate component files
-  - Deleted: AdminVideoManager 2.tsx, LoginModal 2.tsx, VideoPlayer 2.tsx, VideoUpload 2.tsx
-  - Eliminates maintenance burden and potential inconsistencies
+- Multiple critical and high severity security fixes applied
+- Enhanced input validation and sanitization across the application
+- Improved authentication and access control mechanisms
+- Strengthened file path handling and storage protections
+- Removed 51KB of duplicate component files
 
 ### Added
 - **Complete Email Notification System** (originally planned for future release, delivered now!)

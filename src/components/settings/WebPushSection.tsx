@@ -57,21 +57,24 @@ export function WebPushSection({ active }: { active: boolean }) {
       const data = await response.json()
       setSubscriptions(data.subscriptions || [])
 
-      // Check if current device is subscribed
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        const registration = await navigator.serviceWorker.ready
-        const subscription = await registration.pushManager.getSubscription()
-        if (subscription) {
-          const currentEndpoint = new URL(subscription.endpoint).origin
-          const found = data.subscriptions?.find(
-            (s: PushSubscription) => s.endpoint === currentEndpoint
-          )
-          setCurrentDeviceSubscribed(!!found)
-          setCurrentSubscriptionId(found?.id || null)
+      // Check if current device is subscribed using localStorage ID
+      const storedId = localStorage.getItem('vitransfer_push_subscription_id')
+      if (storedId) {
+        const found = data.subscriptions?.find(
+          (s: PushSubscription) => s.id === storedId
+        )
+        if (found) {
+          setCurrentDeviceSubscribed(true)
+          setCurrentSubscriptionId(storedId)
         } else {
+          // Stored ID no longer exists on server (subscription was removed)
+          localStorage.removeItem('vitransfer_push_subscription_id')
           setCurrentDeviceSubscribed(false)
           setCurrentSubscriptionId(null)
         }
+      } else {
+        setCurrentDeviceSubscribed(false)
+        setCurrentSubscriptionId(null)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load subscriptions')
@@ -80,10 +83,37 @@ export function WebPushSection({ active }: { active: boolean }) {
     }
   }, [])
 
-  // Check notification permission
+  // Check notification permission and listen for changes
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+
+    // Initial check
+    setPermissionState(Notification.permission)
+
+    // Listen for permission changes via Permissions API (works in most browsers)
+    let permissionStatus: PermissionStatus | null = null
+    const handlePermissionChange = () => {
       setPermissionState(Notification.permission)
+    }
+
+    navigator.permissions?.query({ name: 'notifications' }).then((status) => {
+      permissionStatus = status
+      status.addEventListener('change', handlePermissionChange)
+    }).catch(() => {
+      // Permissions API not supported, fall back to visibilitychange only
+    })
+
+    // Also re-check when PWA comes back to foreground (covers macOS system settings changes)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setPermissionState(Notification.permission)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      permissionStatus?.removeEventListener('change', handlePermissionChange)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
@@ -134,8 +164,12 @@ export function WebPushSection({ active }: { active: boolean }) {
         },
       })
 
+      const subId = data.subscriptionId || null
+      if (subId) {
+        localStorage.setItem('vitransfer_push_subscription_id', subId)
+      }
       setCurrentDeviceSubscribed(true)
-      setCurrentSubscriptionId(data.subscriptionId || null)
+      setCurrentSubscriptionId(subId)
       setSuccess('Push notifications enabled for this device')
       await loadSubscriptions()
     } catch (err) {
@@ -164,6 +198,7 @@ export function WebPushSection({ active }: { active: boolean }) {
         })
       }
 
+      localStorage.removeItem('vitransfer_push_subscription_id')
       setCurrentDeviceSubscribed(false)
       setCurrentSubscriptionId(null)
       setSuccess('Push notifications disabled for this device')
@@ -180,6 +215,7 @@ export function WebPushSection({ active }: { active: boolean }) {
       // apiPost returns parsed JSON directly, throws on error
       await apiPost('/api/push/unsubscribe', { subscriptionId })
       if (subscriptionId === currentSubscriptionId) {
+        localStorage.removeItem('vitransfer_push_subscription_id')
         setCurrentDeviceSubscribed(false)
         setCurrentSubscriptionId(null)
       }

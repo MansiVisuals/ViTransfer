@@ -4,6 +4,7 @@ import { deleteFile, deleteDirectory } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { isSmtpConfigured } from '@/lib/email'
+import { flushPendingClientNotifications } from '@/lib/notifications'
 import { invalidateProjectSessions, invalidateShareTokensByProject } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeComment } from '@/lib/comment-sanitization'
@@ -382,7 +383,13 @@ export async function PATCH(
     }
 
     // Handle client notification schedule
+    let previousClientSchedule: string | null = null
     if (validatedBody.clientNotificationSchedule !== undefined) {
+      const current = await prisma.project.findUnique({
+        where: { id },
+        select: { clientNotificationSchedule: true }
+      })
+      previousClientSchedule = current?.clientNotificationSchedule || null
       updateData.clientNotificationSchedule = validatedBody.clientNotificationSchedule
     }
     if (validatedBody.clientNotificationTime !== undefined) {
@@ -397,6 +404,13 @@ export async function PATCH(
       where: { id },
       data: updateData,
     })
+
+    // Flush pending client notifications when schedule changes
+    if (previousClientSchedule !== null && validatedBody.clientNotificationSchedule !== previousClientSchedule) {
+      console.log(`[PROJECT] Client notification schedule changed for "${project.title}": ${previousClientSchedule} → ${validatedBody.clientNotificationSchedule}`)
+      // Fire-and-forget: don't block the response
+      void flushPendingClientNotifications(id)
+    }
 
     // SECURITY: After password, authMode, guestMode, or guestLatestOnly is updated in DB, invalidate ALL sessions for this project
     // This prevents clients from using old authentication/authorization even though security rules changed

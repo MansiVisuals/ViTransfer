@@ -1,11 +1,13 @@
 import { Comment } from '@prisma/client'
 import { prisma } from './db'
-import { sendCommentNotificationEmail, sendAdminCommentNotificationEmail, sendProjectApprovedEmail, sendAdminProjectApprovedEmail } from './email'
+import { sendCommentNotificationEmail, sendAdminCommentNotificationEmail, sendProjectApprovedEmail, sendAdminProjectApprovedEmail, getEmailSettings, sendEmail } from './email'
+import { generateNotificationSummaryEmail, generateAdminSummaryEmail } from './email-templates'
 import { getProjectRecipients } from './recipients'
 import { generateShareUrl } from './url'
 import { getRedis } from './redis'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from './unsubscribe'
+import { normalizeNotificationDataTimecode } from '@/worker/notification-helpers'
 
 interface NotificationContext {
   comment: Comment
@@ -328,4 +330,248 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
       url: adminShareUrl || undefined,
     },
   }).catch(() => {})
+}
+
+/**
+ * Flush all pending admin notifications immediately as a summary email.
+ * Called when admin notification schedule changes so queued items are not lost.
+ */
+export async function flushPendingAdminNotifications(): Promise<void> {
+  try {
+    const pendingNotifications = await prisma.notificationQueue.findMany({
+      where: {
+        sentToAdmins: false,
+        adminFailed: false,
+      },
+      include: {
+        project: {
+          select: { id: true, title: true, slug: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    })
+
+    if (pendingNotifications.length === 0) {
+      console.log('[FLUSH-ADMIN] No pending notifications to flush')
+      return
+    }
+
+    // Filter out cancelled notifications
+    const redis = getRedis()
+    const validNotifications = []
+    const cancelledIds: string[] = []
+
+    for (const notification of pendingNotifications) {
+      const commentId = (notification.data as any).commentId
+      if (commentId) {
+        const data = await redis.get(`comment_notification:${commentId}`)
+        if (!data) {
+          cancelledIds.push(notification.id)
+          continue
+        }
+      }
+      validNotifications.push(notification)
+    }
+
+    if (cancelledIds.length > 0) {
+      await prisma.notificationQueue.deleteMany({
+        where: { id: { in: cancelledIds } }
+      })
+    }
+
+    if (validNotifications.length === 0) {
+      console.log('[FLUSH-ADMIN] All pending notifications were cancelled')
+      return
+    }
+
+    // Group by project
+    const projectGroups: Record<string, any> = {}
+    for (const notification of validNotifications) {
+      const projectId = notification.projectId
+      if (!projectGroups[projectId]) {
+        projectGroups[projectId] = {
+          projectId,
+          projectTitle: notification.project.title,
+          shareUrl: await generateShareUrl(notification.project.slug),
+          notifications: []
+        }
+      }
+      projectGroups[projectId].notifications.push(
+        normalizeNotificationDataTimecode(notification.data)
+      )
+    }
+
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { email: true, name: true }
+    })
+
+    if (admins.length === 0) {
+      console.log('[FLUSH-ADMIN] No admins found')
+      return
+    }
+
+    const emailSettings = await getEmailSettings()
+    const companyName = emailSettings.companyName || 'ViTransfer'
+    const projects = Object.values(projectGroups)
+
+    console.log(`[FLUSH-ADMIN] Sending ${validNotifications.length} queued notification(s) to ${admins.length} admin(s)`)
+
+    for (const admin of admins) {
+      const html = generateAdminSummaryEmail({
+        companyName,
+        accentColor: emailSettings.accentColor || undefined,
+        appDomain: emailSettings.appDomain || undefined,
+        adminName: admin.name || '',
+        period: 'before schedule change',
+        projects
+      })
+
+      await sendEmail({
+        to: admin.email,
+        subject: `Project activity summary (${validNotifications.length} updates)`,
+        html,
+      })
+    }
+
+    // Mark as sent
+    const ids = validNotifications.map(n => n.id)
+    const now = new Date()
+    await prisma.notificationQueue.updateMany({
+      where: { id: { in: ids } },
+      data: { sentToAdmins: true, adminSentAt: now }
+    })
+
+    await prisma.settings.update({
+      where: { id: 'default' },
+      data: { lastAdminNotificationSent: now }
+    })
+
+    console.log(`[FLUSH-ADMIN] Flushed ${validNotifications.length} notification(s)`)
+  } catch (error) {
+    console.error('[FLUSH-ADMIN] Error flushing notifications:', error)
+  }
+}
+
+/**
+ * Flush all pending client notifications for a project immediately as a summary email.
+ * Called when a project's client notification schedule changes so queued items are not lost.
+ */
+export async function flushPendingClientNotifications(projectId: string): Promise<void> {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        notificationQueue: {
+          where: {
+            sentToClients: false,
+            clientFailed: false,
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    })
+
+    if (!project || project.notificationQueue.length === 0) {
+      console.log(`[FLUSH-CLIENT] No pending notifications for project ${projectId}`)
+      return
+    }
+
+    // Filter out cancelled notifications
+    const redis = getRedis()
+    const validNotifications = []
+    const cancelledIds: string[] = []
+
+    for (const notification of project.notificationQueue) {
+      const commentId = (notification.data as any).commentId
+      if (commentId) {
+        const data = await redis.get(`comment_notification:${commentId}`)
+        if (!data) {
+          cancelledIds.push(notification.id)
+          continue
+        }
+      }
+      validNotifications.push(notification)
+    }
+
+    if (cancelledIds.length > 0) {
+      await prisma.notificationQueue.deleteMany({
+        where: { id: { in: cancelledIds } }
+      })
+    }
+
+    if (validNotifications.length === 0) {
+      console.log(`[FLUSH-CLIENT] All pending notifications were cancelled for project ${projectId}`)
+      return
+    }
+
+    const allRecipients = await getProjectRecipients(projectId)
+    const recipients = allRecipients.filter(r => r.receiveNotifications && r.email)
+
+    if (recipients.length === 0) {
+      console.log(`[FLUSH-CLIENT] No recipients with notifications enabled for project ${projectId}`)
+      return
+    }
+
+    const emailSettings = await getEmailSettings()
+    const companyName = emailSettings.companyName || 'ViTransfer'
+    const shareUrl = await generateShareUrl(project.slug)
+    const notifications = validNotifications.map(n =>
+      normalizeNotificationDataTimecode(n.data as any)
+    )
+
+    console.log(`[FLUSH-CLIENT] Sending ${validNotifications.length} queued notification(s) to ${recipients.length} recipient(s) for "${project.title}"`)
+
+    for (const recipient of recipients) {
+      let unsubscribeUrl: string | undefined
+      try {
+        const token = generateRecipientUnsubscribeToken({
+          recipientId: recipient.id!,
+          projectId: project.id,
+          recipientEmail: recipient.email!,
+        })
+        unsubscribeUrl = buildUnsubscribeUrl(new URL(shareUrl).origin, token)
+      } catch {
+        unsubscribeUrl = undefined
+      }
+
+      const html = generateNotificationSummaryEmail({
+        companyName,
+        accentColor: emailSettings.accentColor || undefined,
+        projectTitle: project.title,
+        shareUrl,
+        recipientName: recipient.name || recipient.email!,
+        recipientEmail: recipient.email!,
+        period: 'before schedule change',
+        notifications,
+        unsubscribeUrl,
+      })
+
+      await sendEmail({
+        to: recipient.email!,
+        subject: `Updates on ${project.title}`,
+        html,
+      })
+    }
+
+    // Mark as sent
+    const ids = validNotifications.map(n => n.id)
+    const now = new Date()
+    await prisma.notificationQueue.updateMany({
+      where: { id: { in: ids } },
+      data: { sentToClients: true, clientSentAt: now }
+    })
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { lastClientNotificationSent: now }
+    })
+
+    console.log(`[FLUSH-CLIENT] Flushed ${validNotifications.length} notification(s) for "${project.title}"`)
+  } catch (error) {
+    console.error('[FLUSH-CLIENT] Error flushing notifications:', error)
+  }
 }

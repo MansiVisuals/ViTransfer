@@ -5,6 +5,7 @@ import { encrypt, decrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { isSmtpConfigured } from '@/lib/email'
 import { getFilePath } from '@/lib/storage'
+import { flushPendingAdminNotifications } from '@/lib/notifications'
 import fs from 'fs/promises'
 export const runtime = 'nodejs'
 
@@ -285,6 +286,16 @@ export async function PATCH(request: NextRequest) {
       updateData.smtpPassword = passwordUpdate
     }
 
+    // Check if admin notification schedule is changing (to flush pending notifications)
+    let previousAdminSchedule: string | null = null
+    if (adminNotificationSchedule !== undefined) {
+      const current = await prisma.settings.findUnique({
+        where: { id: 'default' },
+        select: { adminNotificationSchedule: true }
+      })
+      previousAdminSchedule = current?.adminNotificationSchedule || null
+    }
+
     // Update or create the settings
     const settings = await prisma.settings.upsert({
       where: { id: 'default' },
@@ -324,6 +335,13 @@ export async function PATCH(request: NextRequest) {
           // Ignore if file doesn't exist
         }
       }
+    }
+
+    // Flush pending admin notifications when schedule changes
+    if (previousAdminSchedule !== null && adminNotificationSchedule !== previousAdminSchedule) {
+      console.log(`[SETTINGS] Admin notification schedule changed: ${previousAdminSchedule} → ${adminNotificationSchedule}`)
+      // Fire-and-forget: don't block the response
+      void flushPendingAdminNotifications()
     }
 
     // Decrypt sensitive fields before sending to admin

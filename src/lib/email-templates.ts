@@ -3,7 +3,7 @@
  * Clean, minimal, and easy to scan
  */
 
-import { escapeHtml, renderEmailButton, renderEmailShell, renderUnsubscribeSection, getEmailBrand } from './email'
+import { escapeHtml, renderEmailButton, renderEmailShell, renderUnsubscribeSection, getEmailBrand, buildTimecodeDeepLink, renderTimecodePill } from './email'
 import { formatTimecodeDisplay } from './timecode'
 
 interface NotificationData {
@@ -14,6 +14,7 @@ interface NotificationData {
   authorEmail?: string
   content?: string
   timecode?: string | null
+  commentId?: string
   isReply?: boolean
   approved?: boolean
   approvedVideos?: Array<{ id: string; name: string }>
@@ -53,6 +54,7 @@ function formatTimecodeForEmail(timecode?: string | null): string {
   return formatTimecodeDisplay(timecode)
 }
 
+
 /**
  * Client notification summary
  */
@@ -79,7 +81,7 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
       return `
         <div style="padding:10px 0;">
           <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${brand.muted}; margin-bottom:6px; font-weight:700;">Project approved</div>
-          <div style="font-size:14px; color:${brand.text};">All videos are ready for download.</div>
+          <div style="font-size:14px; color:${brand.text};">All deliverables are ready for download.</div>
         </div>
       `
     }
@@ -95,10 +97,12 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
     }
 
     const isReply = n.isReply && n.parentComment
+    const tcLink = buildTimecodeDeepLink(data.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
+    const tcPill = renderTimecodePill(n.timecode, tcLink, brand)
     return `
       <div style="padding:10px 0;">
         <div style="font-size:13px; color:${brand.muted}; margin-bottom:6px;">
-          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timecode ? ` • ${formatTimecodeForEmail(n.timecode)}` : ''}
+          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${tcPill ? ` &nbsp;${tcPill}` : ''}
         </div>
         <div style="font-size:14px; font-weight:700; color:${brand.text}; margin-bottom:4px;">${escapeHtml(n.authorName)}</div>
         ${isReply ? `<div style="font-size:12px; color:${brand.muted}; margin-bottom:8px;">Replying to ${escapeHtml(n.parentComment!.authorName)} — "${escapeHtml(n.parentComment!.content.substring(0, 60))}${n.parentComment!.content.length > 60 ? '...' : ''}"</div>` : ''}
@@ -150,10 +154,13 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
   const projectCount = data.projects.length
 
   const projectsHtml = data.projects.map((project) => {
-    const items = project.notifications.map((n, index) => `
+    const items = project.notifications.map((n, index) => {
+      const tcLink = buildTimecodeDeepLink(project.shareUrl, { videoName: n.videoName, commentId: n.commentId, timecode: n.timecode })
+      const tcPill = renderTimecodePill(n.timecode, tcLink, brand)
+      return `
       <div style="padding:10px 0;${index > 0 ? ` border-top:1px solid ${brand.border}; margin-top:8px;` : ''}">
         <div style="font-size:13px; color:${brand.muted}; margin-bottom:6px;">
-          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${n.timecode ? ` • ${formatTimecodeForEmail(n.timecode)}` : ''}
+          ${escapeHtml(n.videoName)}${n.videoLabel ? ` ${escapeHtml(n.videoLabel)}` : ''}${tcPill ? ` &nbsp;${tcPill}` : ''}
         </div>
         <div style="margin-bottom:4px;">
           <span style="font-size:14px; font-weight:700; color:${brand.text};">${escapeHtml(n.authorName)}</span>
@@ -161,7 +168,7 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
         </div>
         <div style="font-size:14px; color:${brand.textSubtle}; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
       </div>
-    `).join('')
+    `}).join('')
 
     return `
       <div style="border:1px solid ${brand.border}; border-radius:10px; padding:16px; margin-bottom:16px; background:${brand.surfaceAlt};">

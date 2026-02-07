@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer'
 import { prisma } from './db'
 import { decrypt } from './encryption'
 import { buildLogoSvg } from './brand'
+import { formatTimecodeDisplay, timecodeToSeconds } from './timecode'
 import {
   getEmailTemplate,
   replacePlaceholders,
@@ -317,6 +318,37 @@ export function renderUnsubscribeSection(unsubscribeUrl: string, brand = EMAIL_B
       </p>
     </div>
   `.trim()
+}
+
+/**
+ * Build a deep-link URL to a specific comment/timecode on the share page
+ */
+export function buildTimecodeDeepLink(shareUrl: string, opts: { videoName?: string; commentId?: string; timecode?: string | null }): string | null {
+  if (!opts.timecode) return null
+  try {
+    const url = new URL(shareUrl)
+    if (opts.videoName) url.searchParams.set('video', opts.videoName)
+    if (opts.commentId) url.searchParams.set('comment', opts.commentId)
+    const seconds = Math.floor(timecodeToSeconds(opts.timecode))
+    url.searchParams.set('t', String(seconds))
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Render a timecode as a styled pill badge, optionally linked
+ */
+export function renderTimecodePill(timecode: string | null | undefined, href: string | null, brand: EmailBrandColors): string {
+  if (!timecode) return ''
+  const display = formatTimecodeDisplay(timecode)
+  if (!display) return ''
+  const pillStyle = `display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; font-family:'SFMono-Regular',Menlo,Consolas,monospace; background:${brand.surfaceAlt}; color:${brand.accent}; border:1px solid ${brand.border}; text-decoration:none; letter-spacing:0.3px;`
+  if (href) {
+    return `<a href="${escapeHtml(href)}" style="${pillStyle}">${escapeHtml(display)}</a>`
+  }
+  return `<span style="${pillStyle}">${escapeHtml(display)}</span>`
 }
 
 /**
@@ -758,12 +790,12 @@ export async function sendProjectApprovedEmail({
   // Get custom template or use default
   const template = await getEmailTemplate('PROJECT_APPROVED')
 
-  const statusTitle = isComplete ? 'Project Approved' : 'Video Approved'
+  const statusTitle = isComplete ? 'Project Approved' : 'Deliverable Approved'
   const statusMessage = isComplete
-    ? 'All videos are approved and ready to deliver'
-    : `${approvedVideos[0]?.name || 'The video'} has been approved`
+    ? 'All deliverables are approved and ready to deliver'
+    : `${approvedVideos[0]?.name || 'The deliverable'} has been approved`
 
-  const videoName = approvedVideos[0]?.name || 'The video'
+  const videoName = approvedVideos[0]?.name || 'The deliverable'
 
   // Build dynamic approval message based on context
   let approvalMessage: string
@@ -847,6 +879,7 @@ export async function sendCommentNotificationEmail({
   authorName,
   commentContent,
   timecode,
+  commentId,
   shareUrl,
   unsubscribeUrl,
 }: {
@@ -858,6 +891,7 @@ export async function sendCommentNotificationEmail({
   authorName: string
   commentContent: string
   timecode?: string | null
+  commentId?: string
   shareUrl: string
   unsubscribeUrl?: string
 }) {
@@ -869,7 +903,8 @@ export async function sendCommentNotificationEmail({
   // Get custom template or use default
   const template = await getEmailTemplate('COMMENT_NOTIFICATION')
 
-  const timecodeText = timecode ? `at ${timecode}` : ''
+  const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode })
+  const timecodeText = renderTimecodePill(timecode, tcLink, brand)
 
   // Build placeholder values
   const placeholderValues: Record<string, string> = {
@@ -926,6 +961,7 @@ export async function sendAdminCommentNotificationEmail({
   versionLabel,
   commentContent,
   timecode,
+  commentId,
   shareUrl,
 }: {
   adminEmails: string[]
@@ -936,6 +972,7 @@ export async function sendAdminCommentNotificationEmail({
   versionLabel: string
   commentContent: string
   timecode?: string | null
+  commentId?: string
   shareUrl: string
 }) {
   const settings = await getEmailSettings()
@@ -946,7 +983,8 @@ export async function sendAdminCommentNotificationEmail({
   // Get custom template or use default
   const template = await getEmailTemplate('ADMIN_COMMENT_NOTIFICATION')
 
-  const timecodeText = timecode ? `at ${timecode}` : ''
+  const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode })
+  const timecodeText = renderTimecodePill(timecode, tcLink, brand)
   const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
 
   // Build placeholder values
@@ -1031,12 +1069,12 @@ export async function sendAdminProjectApprovedEmail({
 
   // Determine subject and title based on approval/unapproval and complete/partial
   const action = isApproval ? 'Approved' : 'Unapproved'
-  const statusTitle = isComplete ? `All Deliverables ${action}` : `Video ${action}`
+  const statusTitle = isComplete ? `All Deliverables ${action}` : `Deliverable ${action}`
   const statusMessage = isComplete
     ? `${clientName} has ${isApproval ? 'approved' : 'unapproved'} all deliverables for this project`
-    : `${clientName} has ${isApproval ? 'approved' : 'unapproved'} ${approvedVideos[0]?.name || 'a video'}`
+    : `${clientName} has ${isApproval ? 'approved' : 'unapproved'} ${approvedVideos[0]?.name || 'a deliverable'}`
 
-  const videoName = approvedVideos[0]?.name || 'A video'
+  const videoName = approvedVideos[0]?.name || 'A deliverable'
 
   // Build placeholder values
   const placeholderValues: Record<string, string> = {
@@ -1086,7 +1124,7 @@ export async function sendAdminProjectApprovedEmail({
 }
 
 /**
- * Email template: General project notification (entire project with all ready videos)
+ * Email template: General project notification (entire project with all ready deliverables)
  */
 export async function sendProjectGeneralNotificationEmail({
   clientEmail,

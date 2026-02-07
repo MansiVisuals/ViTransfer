@@ -42,7 +42,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
   NEW_VERSION: [
     ...COMMON_PLACEHOLDERS,
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
-    { key: '{{VIDEO_NAME}}', description: 'Name of the video', example: 'Main Video' },
+    { key: '{{VIDEO_NAME}}', description: 'Name of the deliverable', example: 'Main Video' },
     { key: '{{VERSION_LABEL}}', description: 'Version label (e.g., v1, v2)', example: 'v2' },
     { key: '{{SHARE_URL}}', description: 'Link to view the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{PASSWORD_NOTICE}}', description: 'Password protection notice (shown only if protected)', example: '' },
@@ -50,18 +50,18 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
   PROJECT_APPROVED: [
     ...COMMON_PLACEHOLDERS,
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
-    { key: '{{VIDEO_NAME}}', description: 'Name of the approved video', example: 'Main Video' },
+    { key: '{{VIDEO_NAME}}', description: 'Name of the approved deliverable', example: 'Main Video' },
     { key: '{{SHARE_URL}}', description: 'Link to view/download the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{APPROVAL_MESSAGE}}', description: 'Dynamic approval message (includes who approved and download info)', example: 'All deliverables for Summer Campaign 2026 have been approved. The final files are now ready for download.' },
   ],
   COMMENT_NOTIFICATION: [
     ...COMMON_PLACEHOLDERS,
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
-    { key: '{{VIDEO_NAME}}', description: 'Name of the video', example: 'Main Video' },
+    { key: '{{VIDEO_NAME}}', description: 'Name of the deliverable', example: 'Main Video' },
     { key: '{{VERSION_LABEL}}', description: 'Version label', example: 'v1' },
     { key: '{{AUTHOR_NAME}}', description: 'Name of comment author', example: 'Jane Smith' },
     { key: '{{COMMENT_CONTENT}}', description: 'The comment text', example: 'Great work on the intro!' },
-    { key: '{{TIMECODE}}', description: 'Timestamp of the comment (if any)', example: 'at 00:01:23:15' },
+    { key: '{{TIMECODE}}', description: 'Clickable timecode pill linking to the comment (if any)', example: '00:01:23:15' },
     { key: '{{SHARE_URL}}', description: 'Link to view and reply', example: 'https://review.acme.com/share/abc123' },
   ],
   ADMIN_COMMENT_NOTIFICATION: [
@@ -69,17 +69,17 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{CLIENT_NAME}}', description: 'Name of the client who commented', example: 'John Doe' },
     { key: '{{CLIENT_EMAIL}}', description: 'Email of the client (if available)', example: 'john@example.com' },
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
-    { key: '{{VIDEO_NAME}}', description: 'Name of the video', example: 'Main Video' },
+    { key: '{{VIDEO_NAME}}', description: 'Name of the deliverable', example: 'Main Video' },
     { key: '{{VERSION_LABEL}}', description: 'Version label', example: 'v1' },
     { key: '{{COMMENT_CONTENT}}', description: 'The comment text', example: 'Could we adjust the color grading?' },
-    { key: '{{TIMECODE}}', description: 'Timestamp of the comment (if any)', example: 'at 00:01:23:15' },
+    { key: '{{TIMECODE}}', description: 'Clickable timecode pill linking to the comment (if any)', example: '00:01:23:15' },
     { key: '{{ADMIN_URL}}', description: 'Link to admin panel', example: 'https://review.acme.com/admin' },
   ],
   ADMIN_PROJECT_APPROVED: [
     ...COMMON_PLACEHOLDERS,
     { key: '{{CLIENT_NAME}}', description: 'Name of the client who approved', example: 'John Doe' },
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
-    { key: '{{VIDEO_NAME}}', description: 'Name of approved video (for partial approvals)', example: 'Main Video' },
+    { key: '{{VIDEO_NAME}}', description: 'Name of approved deliverable (for partial approvals)', example: 'Main Video' },
     { key: '{{APPROVAL_STATUS}}', description: 'Approval status (capitalized, for subject lines)', example: 'Approved' },
     { key: '{{APPROVAL_ACTION}}', description: 'Approval action (lowercase, for body text)', example: 'approved' },
     { key: '{{ADMIN_URL}}', description: 'Link to admin panel', example: 'https://review.acme.com/admin' },
@@ -89,7 +89,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
     { key: '{{PROJECT_DESCRIPTION}}', description: 'Project description (if any)', example: 'Final deliverables for the summer campaign.' },
     { key: '{{SHARE_URL}}', description: 'Link to view the project', example: 'https://review.acme.com/share/abc123' },
-    { key: '{{VIDEO_LIST}}', description: 'HTML list of ready videos', example: '' },
+    { key: '{{VIDEO_LIST}}', description: 'HTML list of ready deliverables', example: '' },
     { key: '{{PASSWORD_NOTICE}}', description: 'Password protection notice (shown only if protected)', example: '' },
   ],
   PASSWORD: [
@@ -116,13 +116,13 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
   {
     type: 'NEW_VERSION',
     name: 'New Version Notification',
-    description: 'Sent to clients when a new video version is uploaded',
+    description: 'Sent to clients when a new version is uploaded',
     category: 'client',
   },
   {
     type: 'PROJECT_APPROVED',
-    name: 'Project/Video Approved',
-    description: 'Sent to clients when a project or video is approved',
+    name: 'Project/Deliverable Approved',
+    description: 'Sent to clients when a project or deliverable is approved',
     category: 'client',
   },
   {
@@ -140,7 +140,7 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
   {
     type: 'ADMIN_PROJECT_APPROVED',
     name: 'Approval Notification (to Admin)',
-    description: 'Sent to admins when a client approves a project or video',
+    description: 'Sent to admins when a client approves a project or deliverable',
     category: 'admin',
   },
   {
@@ -176,7 +176,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {
     type: 'NEW_VERSION',
     name: 'New Version Notification',
-    description: 'Sent to clients when a new video version is uploaded',
+    description: 'Sent to clients when a new version is uploaded',
     subject: 'New Version Available: {{PROJECT_TITLE}}',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
@@ -189,7 +189,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Video</div>
+  <div class="info-label">Deliverable</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span></div>
 </div>
 
@@ -205,8 +205,8 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   },
   {
     type: 'PROJECT_APPROVED',
-    name: 'Project/Video Approved',
-    description: 'Sent to clients when a project or video is approved',
+    name: 'Project/Deliverable Approved',
+    description: 'Sent to clients when a project or deliverable is approved',
     subject: '{{PROJECT_TITLE}} - Approved and Ready for Download',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
@@ -219,7 +219,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Video</div>
+  <div class="info-label">Deliverable</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
 </div>
 
@@ -240,9 +240,10 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
 </p>
 
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  There's a new comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}. {{TIMECODE}}
+<p style="margin: 0 0 12px 0; font-size: 15px; line-height: 1.6;">
+  There's a new comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}.
 </p>
+<div style="margin: 0 0 20px 0;">{{TIMECODE}}</div>
 
 <div class="info-box">
   <div class="info-label">{{AUTHOR_NAME}}</div>
@@ -262,9 +263,10 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     name: 'Comment Notification (to Admin)',
     description: 'Sent to admins when a client leaves a comment',
     subject: 'New Comment from {{CLIENT_NAME}}: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  <strong>{{CLIENT_NAME}}</strong> left a comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}. {{TIMECODE}}
+    bodyContent: `<p style="margin: 0 0 12px 0; font-size: 15px; line-height: 1.6;">
+  <strong>{{CLIENT_NAME}}</strong> left a comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}.
 </p>
+<div style="margin: 0 0 20px 0;">{{TIMECODE}}</div>
 
 <div class="info-box">
   <div class="info-label">{{CLIENT_NAME}}</div>
@@ -278,7 +280,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {
     type: 'ADMIN_PROJECT_APPROVED',
     name: 'Approval Notification (to Admin)',
-    description: 'Sent to admins when a client approves a project or video',
+    description: 'Sent to admins when a client approves a project or deliverable',
     subject: '{{CLIENT_NAME}} {{APPROVAL_STATUS}}: {{PROJECT_TITLE}}',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
   <strong>{{CLIENT_NAME}}</strong> has {{APPROVAL_ACTION}} {{VIDEO_NAME}} in {{PROJECT_TITLE}}.
@@ -287,7 +289,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Video</div>
+  <div class="info-label">Deliverable</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
 </div>
 
@@ -312,7 +314,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
   <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
-  <div class="info-label">Videos</div>
+  <div class="info-label">Deliverables</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_LIST}}</div>
 </div>
 

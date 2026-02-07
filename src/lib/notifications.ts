@@ -86,6 +86,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
         authorName: comment.authorName || 'Admin',
         commentContent: comment.content,
         timecode: comment.timecode,
+        commentId: comment.id,
         shareUrl,
         unsubscribeUrl,
       }).then(result => {
@@ -119,6 +120,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
       versionLabel,
       commentContent: comment.content,
       timecode: comment.timecode,
+      commentId: comment.id,
       shareUrl,
     })
 

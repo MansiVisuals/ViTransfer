@@ -340,7 +340,7 @@ model NotificationSubscription {
   destinationId String
   destination   NotificationDestination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
 
-  eventType String // FAILED_LOGIN, UNAUTHORIZED_OTP, SHARE_ACCESS, CLIENT_COMMENT, VIDEO_APPROVAL
+  eventType String // SHARE_ACCESS, ADMIN_ACCESS, CLIENT_COMMENT, VIDEO_APPROVAL, SECURITY_ALERT
   enabled   Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -543,7 +543,7 @@ model PushSubscription {
   deviceName String?
 
   // Event subscriptions (default: all events)
-  subscribedEvents String[] @default(["FAILED_LOGIN", "UNAUTHORIZED_OTP", "SHARE_ACCESS", "CLIENT_COMMENT", "VIDEO_APPROVAL"])
+  subscribedEvents String[] @default(["SHARE_ACCESS", "ADMIN_ACCESS", "CLIENT_COMMENT", "VIDEO_APPROVAL", "SECURITY_ALERT"])
 
   createdAt  DateTime @default(now())
   lastUsedAt DateTime @default(now())

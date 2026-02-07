@@ -9,6 +9,7 @@ import { getRedis } from '@/lib/redis'
 import { signShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
 import { trackSharePageAccess } from '@/lib/share-access-tracking'
+import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import jwt from 'jsonwebtoken'
 export const runtime = 'nodejs'
 
@@ -105,6 +106,7 @@ export async function POST(
       where: { slug: token },
       select: {
         id: true,
+        title: true,
         sharePassword: true,
       },
     })
@@ -192,6 +194,19 @@ export async function POST(
           },
           wasBlocked: true,
         })
+
+        void enqueueExternalNotification({
+          eventType: 'SECURITY_ALERT',
+          title: 'Security Alert',
+          body: `Share password locked out on ${project.title} after too many failed attempts`,
+          notifyType: 'failure',
+          pushData: {
+            projectTitle: project.title,
+            projectId: project.id,
+            title: 'Security Alert',
+            body: `Share password locked out on ${project.title} after too many failed attempts`,
+          },
+        }).catch(() => {})
 
         return NextResponse.json(
           { error: 'Too many failed password attempts. Please try again later.', retryAfter },

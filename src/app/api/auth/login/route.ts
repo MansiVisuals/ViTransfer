@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       // FAILED LOGIN: Increment rate limit counter FOR THIS SPECIFIC USERNAME/EMAIL
       // This prevents attackers from bypassing via browser rotation
-      await incrementRateLimit(request, 'login', email)
+      const { lockedOut } = await incrementRateLimit(request, 'login', email)
 
       const ipAddress = getClientIpAddress(request)
       await logSecurityEvent({
@@ -101,42 +101,59 @@ export async function POST(request: NextRequest) {
         wasBlocked: false,
       })
 
-      void enqueueExternalNotification({
-        eventType: 'FAILED_LOGIN',
-        title: 'Failed Admin Login Attempts',
-        body: await (async () => {
-          const baseUrl = await getAppUrl(request).catch(() => '')
-          const fallbackLink = baseUrl ? `${baseUrl}/login` : null
-          const referer = request.headers.get('referer') || ''
-          const link = (() => {
-            if (!baseUrl || !referer) return fallbackLink
-            try {
-              const ref = new URL(referer)
-              if (ref.origin !== baseUrl) return fallbackLink
-              if (ref.pathname !== '/login') return fallbackLink
-              // Preserve actual returnUrl from the real login page, if present.
-              const returnUrl = ref.searchParams.get('returnUrl')
-              if (!returnUrl) return fallbackLink
-              return `${baseUrl}/login?returnUrl=${encodeURIComponent(returnUrl)}`
-            } catch {
-              return fallbackLink
-            }
-          })()
+      if (lockedOut) {
+        // Lockout just triggered — send SECURITY_ALERT (not ADMIN_ACCESS)
+        void enqueueExternalNotification({
+          eventType: 'SECURITY_ALERT',
+          title: 'Security Alert',
+          body: `Admin login locked out for ${email} after too many failed attempts`,
+          notifyType: 'failure',
+          pushData: {
+            email,
+            ip: ipAddress,
+            title: 'Security Alert',
+            body: `Admin login locked out for ${email} after too many failed attempts`,
+          },
+        }).catch(() => {})
+      } else {
+        // Normal failed attempt — send ADMIN_ACCESS warning
+        void enqueueExternalNotification({
+          eventType: 'ADMIN_ACCESS',
+          title: 'Failed Login Attempt',
+          body: await (async () => {
+            const baseUrl = await getAppUrl(request).catch(() => '')
+            const fallbackLink = baseUrl ? `${baseUrl}/login` : null
+            const referer = request.headers.get('referer') || ''
+            const link = (() => {
+              if (!baseUrl || !referer) return fallbackLink
+              try {
+                const ref = new URL(referer)
+                if (ref.origin !== baseUrl) return fallbackLink
+                if (ref.pathname !== '/login') return fallbackLink
+                const returnUrl = ref.searchParams.get('returnUrl')
+                if (!returnUrl) return fallbackLink
+                return `${baseUrl}/login?returnUrl=${encodeURIComponent(returnUrl)}`
+              } catch {
+                return fallbackLink
+              }
+            })()
 
-          return [
-            `Email: ${email}`,
-            'Method: Password',
-            link ? `Link: ${link}` : null,
-          ]
-            .filter(Boolean)
-            .join('\n')
-        })(),
-        notifyType: 'warning',
-        pushData: {
-          email,
-          ip: ipAddress,
-        },
-      }).catch(() => {})
+            return [
+              `Someone tried to log in with ${email} via password`,
+              link ? `Link: ${link}` : null,
+            ]
+              .filter(Boolean)
+              .join('\n')
+          })(),
+          notifyType: 'warning',
+          pushData: {
+            email,
+            ip: ipAddress,
+            title: 'Failed Login Attempt',
+            body: `Someone tried to log in with ${email} via password`,
+          },
+        }).catch(() => {})
+      }
 
       return NextResponse.json(
         { error: 'Invalid username/email or password' },
@@ -193,6 +210,19 @@ export async function POST(request: NextRequest) {
       },
       wasBlocked: false,
     })
+
+    void enqueueExternalNotification({
+      eventType: 'ADMIN_ACCESS',
+      title: 'Admin Login',
+      body: `${user.name || user.email} logged in via password`,
+      notifyType: 'info',
+      pushData: {
+        email: user.email,
+        ip: ipAddress,
+        title: 'Admin Login',
+        body: `${user.name || user.email} logged in via password`,
+      },
+    }).catch(() => {})
 
     // Return user data (without password)
     return NextResponse.json({

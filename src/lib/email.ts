@@ -108,13 +108,11 @@ export function getEmailBrand(accentColor?: string | null): EmailBrandColors {
  */
 export function processButtonSyntax(content: string, brand: EmailBrandColors): string {
   return content.replace(/\{\{BUTTON:([^:}]+):([^}]+)\}\}/g, (_, label, url) => {
-    return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:20px auto;">
-      <tr>
-        <td bgcolor="${brand.accent}" style="background-color:${brand.accent}; padding:14px 32px;">
-          <a href="${url}" style="color:#ffffff; font-weight:600; font-size:15px; text-decoration:none; display:inline-block;">${label}</a>
-        </td>
-      </tr>
-    </table>`
+    return renderEmailButton({
+      href: url.trim(),
+      label: label.trim(),
+      brand,
+    })
   })
 }
 
@@ -164,7 +162,7 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="info-box" style="([^"]*)">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:8px; padding:16px; $1">$2</td>
+        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:10px; padding:16px; $1">$2</td>
       </tr>
     </table>`
   )
@@ -174,7 +172,7 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="info-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:8px; padding:16px;">$1</td>
+        <td bgcolor="${brand.accentSoftBg}" style="background-color:${brand.accentSoftBg}; border:1px solid ${brand.accentSoftBorder}; border-radius:10px; padding:16px;">$1</td>
       </tr>
     </table>`
   )
@@ -184,7 +182,7 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="secondary-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:8px; padding:16px;">$1</td>
+        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:16px;">$1</td>
       </tr>
     </table>`
   )
@@ -194,7 +192,7 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="protected-note">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:8px; padding:14px; font-size:14px; color:${brand.textSubtle}; line-height:1.5;">$1</td>
+        <td bgcolor="${brand.surfaceAlt}" style="background-color:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:14px; font-size:14px; color:${brand.textSubtle}; line-height:1.5;">$1</td>
       </tr>
     </table>`
   )
@@ -204,7 +202,7 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="success-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="#dcfce7" style="background-color:#dcfce7; border:1px solid #86efac; border-radius:8px; padding:14px; font-size:14px; color:#15803d; line-height:1.5;">$1</td>
+        <td bgcolor="#dcfce7" style="background-color:#dcfce7; border:1px solid #86efac; border-radius:10px; padding:14px; font-size:14px; color:#15803d; line-height:1.5;">$1</td>
       </tr>
     </table>`
   )
@@ -214,7 +212,7 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     /<div class="warning-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
       <tr>
-        <td bgcolor="#fef9c3" style="background-color:#fef9c3; border:1px solid #fde047; border-radius:8px; padding:14px; font-size:14px; color:#a16207; line-height:1.5;">$1</td>
+        <td bgcolor="#fef9c3" style="background-color:#fef9c3; border:1px solid #fde047; border-radius:10px; padding:14px; font-size:14px; color:#a16207; line-height:1.5;">$1</td>
       </tr>
     </table>`
   )
@@ -696,7 +694,7 @@ export async function sendNewVersionEmail({
   // Add password protected note if applicable
   if (isPasswordProtected) {
     bodyContent += `
-      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px;">
+      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px 16px; margin-bottom: 24px;">
         <div style="font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
           <strong>Protected project:</strong> Use the password sent separately to access this project.
         </div>
@@ -901,8 +899,8 @@ export async function sendCommentNotificationEmail({
   const html = renderEmailShell({
     companyName,
     title: 'New Comment',
-    subtitle: `New feedback on ${projectTitle}`,
-    preheader: `New comment on ${projectTitle}`,
+    subtitle: `${videoName} in ${projectTitle}`,
+    preheader: `New comment on ${videoName} in ${projectTitle}`,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
@@ -973,9 +971,9 @@ export async function sendAdminCommentNotificationEmail({
 
   const html = renderEmailShell({
     companyName,
-    title: 'New Client Feedback',
-    subtitle: `New comment on ${projectTitle}`,
-    preheader: `New client comment: ${projectTitle}`,
+    title: 'New Comment',
+    subtitle: `${clientName} on ${videoName} in ${projectTitle}`,
+    preheader: `New comment from ${clientName} on ${projectTitle}`,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
@@ -1047,6 +1045,7 @@ export async function sendAdminProjectApprovedEmail({
     '{{PROJECT_TITLE}}': projectTitle,
     '{{VIDEO_NAME}}': videoName,
     '{{APPROVAL_STATUS}}': action,
+    '{{APPROVAL_ACTION}}': isApproval ? 'approved' : 'unapproved',
     '{{ADMIN_URL}}': `${appDomain}/admin`,
     '{{COMPANY_NAME}}': companyName,
   }
@@ -1118,7 +1117,7 @@ export async function sendProjectGeneralNotificationEmail({
 
   // Build video list HTML
   const videoListHtml = readyVideos.length > 0 ? `
-    <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:20px; margin-bottom:24px;">
+    <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:16px; margin-bottom:24px;">
       <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">Ready to view</div>
       ${readyVideos.map(v => `
         <div style="font-size:15px; color:${brand.textSubtle}; padding:6px 0;">
@@ -1129,8 +1128,8 @@ export async function sendProjectGeneralNotificationEmail({
   ` : ''
 
   const passwordNotice = isPasswordProtected
-    ? `<div style="border:1px solid ${brand.accentSoftBorder}; border-radius:10px; padding:12px 14px; font-size:14px; color:${brand.textSubtle}; margin:0 0 14px; background:${brand.accentSoftBg};">
-        Protected project. Use the password sent separately to open the link.
+    ? `<div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:14px 16px; font-size:14px; color:${brand.textSubtle}; margin:0 0 24px;">
+        <strong>Protected project:</strong> Use the password sent separately to access this project.
       </div>`
     : ''
 

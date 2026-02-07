@@ -247,12 +247,11 @@ export async function handleCommentNotifications(params: {
 
       await enqueueExternalNotification({
         eventType: 'CLIENT_COMMENT',
-        title: 'Client Comments',
+        title: `New Comment on ${project.title}`,
         body: [
-          `Project: ${project.title}`,
+          `From: ${clientDisplay}`,
           video?.name ? `Video: ${video.name}${videoLabel}` : null,
           timecode ? `Timecode: ${timecode}` : null,
-          `Client: ${clientDisplay}`,
           commentPreview ? `Comment: ${commentPreview}` : null,
           adminShareUrl ? `Go to comment: ${adminShareUrl}` : null,
         ]
@@ -266,6 +265,7 @@ export async function handleCommentNotifications(params: {
           authorName,
           content: rawContent,
           email: authorEmail || undefined,
+          url: adminShareUrl || undefined,
         },
       }).catch(() => {})
     }

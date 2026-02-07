@@ -74,36 +74,54 @@ export async function POST(request: NextRequest) {
 
     if (!result.success || !result.user) {
       // FAILED LOGIN: Increment rate limit counter
-      await incrementRateLimit(request, 'login', rateLimitKey)
+      const { lockedOut } = await incrementRateLimit(request, 'login', rateLimitKey)
 
-      void enqueueExternalNotification({
-        eventType: 'FAILED_LOGIN',
-        title: 'Failed Admin Login Attempts',
-        body: await (async () => {
-          const baseUrl = await getAppUrl(request).catch(() => '')
-          const fallbackLink = baseUrl ? `${baseUrl}/login` : null
-          const referer = request.headers.get('referer') || ''
-          const link = (() => {
-            if (!baseUrl || !referer) return fallbackLink
-            try {
-              const ref = new URL(referer)
-              if (ref.origin !== baseUrl) return fallbackLink
-              if (ref.pathname !== '/login') return fallbackLink
-              const returnUrl = ref.searchParams.get('returnUrl')
-              if (!returnUrl) return fallbackLink
-              return `${baseUrl}/login?returnUrl=${encodeURIComponent(returnUrl)}`
-            } catch {
-              return fallbackLink
-            }
-          })()
+      if (lockedOut) {
+        // Lockout just triggered — send SECURITY_ALERT (not ADMIN_ACCESS)
+        void enqueueExternalNotification({
+          eventType: 'SECURITY_ALERT',
+          title: 'Security Alert',
+          body: 'Admin login locked out after too many failed attempts',
+          notifyType: 'failure',
+          pushData: {
+            ip: ipAddress,
+            title: 'Security Alert',
+            body: 'Admin login locked out after too many failed attempts',
+          },
+        }).catch(() => {})
+      } else {
+        // Normal failed attempt — send ADMIN_ACCESS warning
+        void enqueueExternalNotification({
+          eventType: 'ADMIN_ACCESS',
+          title: 'Failed Login Attempt',
+          body: await (async () => {
+            const baseUrl = await getAppUrl(request).catch(() => '')
+            const fallbackLink = baseUrl ? `${baseUrl}/login` : null
+            const referer = request.headers.get('referer') || ''
+            const link = (() => {
+              if (!baseUrl || !referer) return fallbackLink
+              try {
+                const ref = new URL(referer)
+                if (ref.origin !== baseUrl) return fallbackLink
+                if (ref.pathname !== '/login') return fallbackLink
+                const returnUrl = ref.searchParams.get('returnUrl')
+                if (!returnUrl) return fallbackLink
+                return `${baseUrl}/login?returnUrl=${encodeURIComponent(returnUrl)}`
+              } catch {
+                return fallbackLink
+              }
+            })()
 
-          return ['Method: Passkey', link ? `Link: ${link}` : null].filter(Boolean).join('\n')
-        })(),
-        notifyType: 'warning',
-        pushData: {
-          ip: ipAddress,
-        },
-      }).catch(() => {})
+            return ['Someone tried to log in via passkey', link ? `Link: ${link}` : null].filter(Boolean).join('\n')
+          })(),
+          notifyType: 'warning',
+          pushData: {
+            ip: ipAddress,
+            title: 'Failed Login Attempt',
+            body: 'Someone tried to log in via passkey',
+          },
+        }).catch(() => {})
+      }
 
       return NextResponse.json(
         { success: false, error: result.error || 'Authentication failed' },
@@ -116,6 +134,19 @@ export async function POST(request: NextRequest) {
 
     const fingerprint = crypto.createHash('sha256').update(request.headers.get('user-agent') || 'unknown').digest('base64url')
     const tokens = await issueAdminTokens(result.user, fingerprint)
+
+    void enqueueExternalNotification({
+      eventType: 'ADMIN_ACCESS',
+      title: 'Admin Login',
+      body: `${result.user.name || result.user.email} logged in via passkey`,
+      notifyType: 'info',
+      pushData: {
+        email: result.user.email,
+        ip: ipAddress,
+        title: 'Admin Login',
+        body: `${result.user.name || result.user.email} logged in via passkey`,
+      },
+    }).catch(() => {})
 
     // Return user data (without password)
     return NextResponse.json({

@@ -303,13 +303,11 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
 
   void enqueueExternalNotification({
     eventType: 'VIDEO_APPROVAL',
-    title: 'Video Approvals',
+    title: `${authorName || 'Client'} ${approved ? 'Approved' : 'Unapproved'}: ${project.title}`,
     body: [
+      `${authorName || 'A client'}${authorEmail ? ` (${authorEmail})` : ''} ${approved ? 'approved' : 'unapproved'} ${videoNames}`,
       `Project: ${project.title}`,
-      `Action: ${approved ? 'approved' : 'unapproved'}`,
-      authorName ? `Client: ${authorName}${authorEmail ? ` <${authorEmail}>` : ''}` : null,
-      `Video(s): ${videoNames}`,
-      isComplete ? 'Project: Complete approval' : null,
+      isComplete ? 'All videos are now approved' : null,
       adminShareUrl ? `Link: ${adminShareUrl}` : shareUrl ? `Link: ${shareUrl}` : null,
     ]
       .filter(Boolean)
@@ -321,6 +319,7 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
       videoName: videoNames,
       authorName: authorName || undefined,
       email: authorEmail || undefined,
+      url: adminShareUrl || undefined,
     },
   }).catch(() => {})
 }

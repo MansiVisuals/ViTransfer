@@ -8,6 +8,7 @@ import { getRedis } from '@/lib/redis'
 import { signShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
 import { trackSharePageAccess } from '@/lib/share-access-tracking'
+import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 export const runtime = 'nodejs'
@@ -120,6 +121,7 @@ export async function POST(
       where: { slug: token },
       select: {
         id: true,
+        title: true,
         authMode: true,
       },
     })
@@ -199,6 +201,23 @@ export async function POST(
         },
         wasBlocked: count >= MAX_FAILED_ATTEMPTS,
       })
+
+      // Lockout just triggered — send SECURITY_ALERT
+      if (count >= MAX_FAILED_ATTEMPTS) {
+        void enqueueExternalNotification({
+          eventType: 'SECURITY_ALERT',
+          title: 'Security Alert',
+          body: `OTP verification locked out on ${project.title} for ${email}`,
+          notifyType: 'failure',
+          pushData: {
+            projectTitle: project.title,
+            projectId: project.id,
+            email,
+            title: 'Security Alert',
+            body: `OTP verification locked out on ${project.title} for ${email}`,
+          },
+        }).catch(() => {})
+      }
 
       // SECURITY: Return same generic error as non-recipient to prevent enumeration
       // Don't reveal specific details like attempts remaining

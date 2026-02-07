@@ -32,11 +32,11 @@ interface ExternalNotificationsSectionProps {
 }
 
 const EVENT_LABELS: Record<NotificationEventType, string> = {
-  FAILED_LOGIN: 'Failed Admin Login Attempts',
-  UNAUTHORIZED_OTP: 'Unauthorized OTP Requests',
-  SHARE_ACCESS: 'Successful Share Page Access',
-  CLIENT_COMMENT: 'Client Comments',
+  SHARE_ACCESS: 'Share Page Access',
+  ADMIN_ACCESS: 'Admin Login',
+  CLIENT_COMMENT: 'New Comments',
   VIDEO_APPROVAL: 'Video Approvals',
+  SECURITY_ALERT: 'Security Alerts',
 }
 
 function createDefaultSubscriptions(): Record<NotificationEventType, boolean> {

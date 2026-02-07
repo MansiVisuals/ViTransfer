@@ -1,9 +1,9 @@
 export const NOTIFICATION_EVENT_TYPES = [
-  'FAILED_LOGIN',
-  'UNAUTHORIZED_OTP',
   'SHARE_ACCESS',
+  'ADMIN_ACCESS',
   'CLIENT_COMMENT',
   'VIDEO_APPROVAL',
+  'SECURITY_ALERT',
 ] as const
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number]

@@ -9,11 +9,12 @@ import {
 } from '@/lib/email-template-system'
 import {
   renderEmailShell,
-  renderEmailButton,
   getEmailBrand,
   escapeHtml,
   getEmailSettings,
   buildBrandingLogoUrl,
+  processButtonSyntax,
+  processEmailClasses,
   type EmailHeaderStyle,
 } from '@/lib/email'
 
@@ -186,6 +187,7 @@ function generateSampleValues(
       PROJECT_TITLE: 'Summer Campaign 2026',
       VIDEO_NAME: 'Main Commercial',
       APPROVAL_STATUS: 'Approved',
+      APPROVAL_ACTION: 'approved',
       ADMIN_URL: `${appDomain}/admin`,
     },
     PROJECT_GENERAL: {
@@ -223,7 +225,7 @@ function getEmailTitle(type: EmailTemplateType): string {
     NEW_VERSION: 'New Version Available',
     PROJECT_APPROVED: 'Project Approved',
     COMMENT_NOTIFICATION: 'New Comment',
-    ADMIN_COMMENT_NOTIFICATION: 'New Client Feedback',
+    ADMIN_COMMENT_NOTIFICATION: 'New Comment',
     ADMIN_PROJECT_APPROVED: 'Client Approved',
     PROJECT_GENERAL: 'Ready for Review',
     PASSWORD: 'Project Password',
@@ -241,8 +243,8 @@ function getEmailSubtitle(type: EmailTemplateType, values: Record<string, string
   const subtitles: Record<EmailTemplateType, string> = {
     NEW_VERSION: 'Ready for your review',
     PROJECT_APPROVED: 'Ready for download',
-    COMMENT_NOTIFICATION: `New feedback on ${projectTitle}`,
-    ADMIN_COMMENT_NOTIFICATION: `New comment on ${projectTitle}`,
+    COMMENT_NOTIFICATION: `Main Commercial in ${projectTitle}`,
+    ADMIN_COMMENT_NOTIFICATION: `Jane Doe on Main Commercial in ${projectTitle}`,
     ADMIN_PROJECT_APPROVED: `${projectTitle}`,
     PROJECT_GENERAL: projectTitle,
     PASSWORD: projectTitle,
@@ -251,74 +253,3 @@ function getEmailSubtitle(type: EmailTemplateType, values: Record<string, string
   return subtitles[type] || ''
 }
 
-/**
- * Process button syntax {{BUTTON:Label:URL}} into actual HTML buttons
- */
-function processButtonSyntax(content: string, brand: ReturnType<typeof getEmailBrand>): string {
-  // Match {{BUTTON:Label:URL}} pattern
-  const buttonRegex = /\{\{BUTTON:([^:}]+):([^}]+)\}\}/g
-
-  return content.replace(buttonRegex, (_match, label, url) => {
-    // The URL might contain placeholders that were already replaced
-    return renderEmailButton({
-      href: url.trim(),
-      label: label.trim(),
-      brand,
-    })
-  })
-}
-
-/**
- * Process CSS class shortcuts into inline styles for email compatibility
- * Process inner elements first, then outer containers
- */
-function processEmailClasses(content: string, brand: ReturnType<typeof getEmailBrand>): string {
-  let processed = content
-
-  // STEP 1: Process inner elements first
-  
-  // Replace accent-text class
-  processed = processed.replace(
-    /class="accent-text"/g,
-    `style="color: ${brand.accent}; font-weight: 600;"`
-  )
-
-  // Replace info-label class (handles both with and without additional inline styles)
-  // With additional inline styles - merge them
-  processed = processed.replace(
-    /class="info-label" style="([^"]*)"/g,
-    `style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em; $1"`
-  )
-  // Without additional inline styles
-  processed = processed.replace(
-    /class="info-label"/g,
-    `style="font-size: 12px; font-weight: 700; color: ${brand.accent}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.12em;"`
-  )
-
-  // STEP 2: Process outer container boxes
-  
-  // Replace info-box class (with additional inline styles)
-  processed = processed.replace(
-    /class="info-box" style="([^"]*)"/g,
-    `style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px; $1"`
-  )
-  // Without additional inline styles
-  processed = processed.replace(
-    /class="info-box"/g,
-    `style="background: ${brand.accentSoftBg}; border: 1px solid ${brand.accentSoftBorder}; border-radius: 10px; padding: 16px; margin-bottom: 24px;"`
-  )
-
-  // Replace secondary-box class
-  processed = processed.replace(
-    /class="secondary-box"/g,
-    `style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 16px; margin-bottom: 24px;"`
-  )
-
-  // Replace protected-note class
-  processed = processed.replace(
-    /class="protected-note"/g,
-    `style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 14px; color: ${brand.textSubtle};"`
-  )
-
-  return processed
-}

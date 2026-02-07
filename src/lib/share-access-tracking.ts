@@ -50,15 +50,14 @@ export async function trackSharePageAccess(params: {
 
   void enqueueExternalNotification({
     eventType: 'SHARE_ACCESS',
-    title: 'Successful Share Page Access',
+    title: `Share Link Opened: ${project?.title || 'Unknown Project'}`,
     body: await (async () => {
       const shareUrl = project?.slug ? await generateShareUrl(project.slug, request).catch(() => '') : ''
       const baseUrl = await getAppUrl(request).catch(() => '')
 
       return [
-        project?.title ? `Project: ${project.title}` : null,
+        `${email || 'Someone'} opened ${project?.title || 'a project'}`,
         `Method: ${accessMethod}`,
-        email ? `Client: ${email}` : null,
         shareUrl ? `Link: ${shareUrl}` : baseUrl ? `Link: ${baseUrl}` : null,
       ]
         .filter(Boolean)

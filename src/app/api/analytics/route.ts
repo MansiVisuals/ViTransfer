@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         sharePageAccesses: {
           select: {
             accessMethod: true,
-            sessionId: true,
+            ipAddress: true,
           },
         },
         analytics: {
@@ -56,9 +56,10 @@ export async function GET(request: NextRequest) {
       const totalDownloads = project.analytics.length
       const displayName = project.companyName || project.recipients[0]?.name || project.recipients[0]?.email || 'Client'
 
-      // Calculate unique sessions (unique users who accessed the share page)
-      const uniqueSessions = new Set(
-        project.sharePageAccesses.map(a => a.sessionId)
+      // Calculate unique visitors by IP address
+      // (sessionId changes on every re-authentication, so IP is the stable identifier)
+      const uniqueVisitors = new Set(
+        project.sharePageAccesses.map(a => a.ipAddress).filter(Boolean)
       ).size
 
       // Count by access method
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         status: project.status,
         videoCount: project.videos.length,
         totalVisits: project.sharePageAccesses.length,
-        uniqueVisits: uniqueSessions,
+        uniqueVisits: uniqueVisitors,
         accessByMethod,
         totalDownloads,
         updatedAt: project.updatedAt,

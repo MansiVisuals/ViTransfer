@@ -13,6 +13,9 @@ interface ExtendedNotificationJob extends ExternalNotificationJob {
     ip?: string
     email?: string
     projectId?: string
+    url?: string
+    title?: string
+    body?: string
   }
 }
 
@@ -54,11 +57,17 @@ export async function enqueueExternalNotification(job: ExtendedNotificationJob):
         content: pushData.content,
         ip: pushData.ip,
         email: pushData.email,
+        title: pushData.title,
+        body: pushData.body,
       })
 
-      // Add project ID to payload data for click handling
-      if (pushData.projectId) {
-        payload.data = { ...payload.data, projectId: pushData.projectId }
+      // Add project ID and URL to payload data for click handling
+      if (pushData.projectId || pushData.url) {
+        payload.data = {
+          ...payload.data,
+          ...(pushData.projectId && { projectId: pushData.projectId }),
+          ...(pushData.url && { url: pushData.url }),
+        }
       }
 
       await sendPushNotifications(eventType, payload)

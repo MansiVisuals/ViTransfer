@@ -224,7 +224,7 @@ export async function incrementRateLimit(
   request: NextRequest,
   type: 'login' = 'login',
   customKey?: string
-): Promise<void> {
+): Promise<{ lockedOut: boolean }> {
   try {
     const identifier = getIdentifier(request, type, customKey)
     const now = Date.now()
@@ -244,7 +244,7 @@ export async function incrementRateLimit(
         { count: 1, firstAttempt: now, lastAttempt: now },
         windowMs
       )
-      return
+      return { lockedOut: false }
     }
 
     const newCount = entry.count + 1
@@ -256,13 +256,17 @@ export async function incrementRateLimit(
 
     if (newCount >= maxAttempts) {
       updatedEntry.lockoutUntil = now + windowMs
+      await setRateLimitEntry(identifier, updatedEntry, windowMs)
+      return { lockedOut: true }
     }
 
     await setRateLimitEntry(identifier, updatedEntry, windowMs)
+    return { lockedOut: false }
   } catch (error) {
     console.error('Rate limit increment error:', error)
     // Continue on error - we don't want to block legitimate operations
     // But log the error for monitoring
+    return { lockedOut: false }
   }
 }
 

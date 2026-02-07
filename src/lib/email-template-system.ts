@@ -80,7 +80,8 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{CLIENT_NAME}}', description: 'Name of the client who approved', example: 'John Doe' },
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
     { key: '{{VIDEO_NAME}}', description: 'Name of approved video (for partial approvals)', example: 'Main Video' },
-    { key: '{{APPROVAL_STATUS}}', description: 'Full project or single video approval', example: 'Approved' },
+    { key: '{{APPROVAL_STATUS}}', description: 'Approval status (capitalized, for subject lines)', example: 'Approved' },
+    { key: '{{APPROVAL_ACTION}}', description: 'Approval action (lowercase, for body text)', example: 'approved' },
     { key: '{{ADMIN_URL}}', description: 'Link to admin panel', example: 'https://review.acme.com/admin' },
   ],
   PROJECT_GENERAL: [
@@ -121,19 +122,19 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
   {
     type: 'PROJECT_APPROVED',
     name: 'Project/Video Approved',
-    description: 'Sent to clients when their project or video is approved',
+    description: 'Sent to clients when a project or video is approved',
     category: 'client',
   },
   {
     type: 'COMMENT_NOTIFICATION',
     name: 'Comment Notification (to Client)',
-    description: 'Sent to clients when admin leaves feedback on their video',
+    description: 'Sent to clients when admin leaves a comment on a project',
     category: 'client',
   },
   {
     type: 'ADMIN_COMMENT_NOTIFICATION',
     name: 'Comment Notification (to Admin)',
-    description: 'Sent to admins when a client leaves feedback',
+    description: 'Sent to admins when a client leaves a comment',
     category: 'admin',
   },
   {
@@ -182,14 +183,13 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 
 <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  A new version is ready for your review.
+  A new version of {{VIDEO_NAME}} (<span class="accent-text">{{VERSION_LABEL}}</span>) is ready for your review in {{PROJECT_TITLE}}.
 </p>
 
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
-  <div class="info-label">Deliverables</div>
+  <div class="info-label">Video</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span></div>
 </div>
 
@@ -199,14 +199,14 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {{BUTTON:View Project:{{SHARE_URL}}}}
 </div>
 
-<p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   Questions? Simply reply to this email.
 </p>`,
   },
   {
     type: 'PROJECT_APPROVED',
     name: 'Project/Video Approved',
-    description: 'Sent to clients when their project or video is approved',
+    description: 'Sent to clients when a project or video is approved',
     subject: '{{PROJECT_TITLE}} - Approved and Ready for Download',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
@@ -219,8 +219,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
-  <div class="info-label">Deliverables</div>
+  <div class="info-label">Video</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
 </div>
 
@@ -228,63 +227,47 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {{BUTTON:Download Files:{{SHARE_URL}}}}
 </div>
 
-<p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   Questions? Simply reply to this email.
 </p>`,
   },
   {
     type: 'COMMENT_NOTIFICATION',
     name: 'Comment Notification (to Client)',
-    description: 'Sent to clients when admin leaves feedback on their video',
-    subject: 'New Comment: {{PROJECT_TITLE}}',
+    description: 'Sent to clients when admin leaves a comment on a project',
+    subject: 'New Comment on {{PROJECT_TITLE}}',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
   Hi <strong>{{RECIPIENT_NAME}}</strong>,
 </p>
 
 <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  We've reviewed the video and left some feedback for you.
+  There's a new comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}. {{TIMECODE}}
 </p>
 
-<div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Deliverables</div>
-  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}</div>
-</div>
-
 <div class="info-box">
-  <div class="info-label">Comment from {{AUTHOR_NAME}}</div>
+  <div class="info-label">{{AUTHOR_NAME}}</div>
   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
 </div>
 
 <div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:View and Reply:{{SHARE_URL}}}}
+  {{BUTTON:View Project:{{SHARE_URL}}}}
 </div>
 
-<p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   Questions? Simply reply to this email.
 </p>`,
   },
   {
     type: 'ADMIN_COMMENT_NOTIFICATION',
     name: 'Comment Notification (to Admin)',
-    description: 'Sent to admins when a client leaves feedback',
-    subject: 'Client Feedback: {{PROJECT_TITLE}}',
+    description: 'Sent to admins when a client leaves a comment',
+    subject: 'New Comment from {{CLIENT_NAME}}: {{PROJECT_TITLE}}',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  <strong>{{CLIENT_NAME}}</strong> left feedback on a project.
+  <strong>{{CLIENT_NAME}}</strong> left a comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}. {{TIMECODE}}
 </p>
 
-<div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Client</div>
-  <div style="font-size: 14px; margin-bottom: 12px;">{{CLIENT_NAME}}<br><span style="opacity: 0.7;">{{CLIENT_EMAIL}}</span></div>
-  <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Deliverables</div>
-  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} {{VERSION_LABEL}} {{TIMECODE}}</div>
-</div>
-
 <div class="info-box">
-  <div class="info-label">Comment</div>
+  <div class="info-label">{{CLIENT_NAME}}</div>
   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
 </div>
 
@@ -298,13 +281,13 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     description: 'Sent to admins when a client approves a project or video',
     subject: '{{CLIENT_NAME}} {{APPROVAL_STATUS}}: {{PROJECT_TITLE}}',
     bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  <strong>{{CLIENT_NAME}}</strong> has approved the following deliverables.
+  <strong>{{CLIENT_NAME}}</strong> has {{APPROVAL_ACTION}} {{VIDEO_NAME}} in {{PROJECT_TITLE}}.
 </p>
 
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
   <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Deliverables</div>
+  <div class="info-label">Video</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
 </div>
 
@@ -322,14 +305,14 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 </p>
 
 <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  The deliverables are ready for your review.
+  {{PROJECT_TITLE}} is ready for your review.
 </p>
 
 <div class="secondary-box" style="text-align: center;">
   <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">{{PROJECT_TITLE}}</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
   <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
-  <div class="info-label">Deliverables</div>
+  <div class="info-label">Videos</div>
   <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_LIST}}</div>
 </div>
 
@@ -339,7 +322,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {{BUTTON:View Project:{{SHARE_URL}}}}
 </div>
 
-<p style="margin: 24px 0 0 0; font-size: 14px; text-align: center; line-height: 1.5;">
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   Questions? Simply reply to this email.
 </p>`,
   },

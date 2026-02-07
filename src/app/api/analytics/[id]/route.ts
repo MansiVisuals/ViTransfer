@@ -115,7 +115,8 @@ export async function GET(
     })
 
     // Calculate share page access stats
-    const uniqueSessions = new Set(project.sharePageAccesses.map(a => a.sessionId)).size
+    // Use IP address for unique visitor count (sessionId changes on every re-authentication)
+    const uniqueVisitors = new Set(project.sharePageAccesses.map(a => a.ipAddress).filter(Boolean)).size
 
     const accessByMethod = {
       OTP: project.sharePageAccesses.filter(a => a.accessMethod === 'OTP').length,
@@ -181,7 +182,7 @@ export async function GET(
       },
       stats: {
         totalVisits: project.sharePageAccesses.length,
-        uniqueVisits: uniqueSessions,
+        uniqueVisits: uniqueVisitors,
         accessByMethod,
         totalDownloads,
         videoCount: project.videos.length,

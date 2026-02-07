@@ -73,32 +73,29 @@ self.addEventListener('notificationclick', (event) => {
 
   event.notification.close()
 
-  // Determine URL based on notification type
+  // Determine URL based on notification data
   const data = event.notification.data || {}
   let url = '/admin'
 
-  switch (data.type) {
-    case 'CLIENT_COMMENT':
-      if (data.projectId) {
-        url = `/admin/projects/${data.projectId}`
-      }
-      break
-    case 'VIDEO_APPROVAL':
-      if (data.projectId) {
-        url = `/admin/projects/${data.projectId}`
-      }
-      break
-    case 'SHARE_ACCESS':
-      if (data.projectId) {
-        url = `/admin/projects/${data.projectId}`
-      }
-      break
-    case 'FAILED_LOGIN':
-    case 'UNAUTHORIZED_OTP':
-      url = '/admin/security'
-      break
-    default:
-      url = '/admin'
+  if (data.url) {
+    // Use the deep link URL if provided (e.g. direct to comment, video, etc.)
+    url = data.url
+  } else {
+    switch (data.type) {
+      case 'CLIENT_COMMENT':
+      case 'VIDEO_APPROVAL':
+      case 'SHARE_ACCESS':
+        if (data.projectId) {
+          url = `/admin/projects/${data.projectId}`
+        }
+        break
+      case 'ADMIN_ACCESS':
+      case 'SECURITY_ALERT':
+        url = '/admin/security'
+        break
+      default:
+        url = '/admin'
+    }
   }
 
   // Handle action button clicks

@@ -20,11 +20,11 @@ interface PushSubscription {
 }
 
 const EVENT_LABELS: Record<NotificationEventType, string> = {
-  FAILED_LOGIN: 'Failed Login',
-  UNAUTHORIZED_OTP: 'Unauthorized OTP',
-  SHARE_ACCESS: 'Share Access',
-  CLIENT_COMMENT: 'Client Comment',
-  VIDEO_APPROVAL: 'Video Approval',
+  SHARE_ACCESS: 'Share Page Access',
+  ADMIN_ACCESS: 'Admin Login',
+  CLIENT_COMMENT: 'New Comments',
+  VIDEO_APPROVAL: 'Video Approvals',
+  SECURITY_ALERT: 'Security Alerts',
 }
 
 export function WebPushSection({ active }: { active: boolean }) {

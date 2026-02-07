@@ -143,15 +143,14 @@ export async function POST(
       })
 
       void enqueueExternalNotification({
-        eventType: 'UNAUTHORIZED_OTP',
-        title: 'Unauthorized OTP Requests',
+        eventType: 'SHARE_ACCESS',
+        title: `Unauthorized Access Attempt: ${project.title}`,
         body: await (async () => {
           const baseUrl = await getAppUrl(request).catch(() => '')
           const link = baseUrl ? `${baseUrl}/share/${token}` : null
 
           return [
-            `Project: ${project.title}`,
-            `Email: ${email}`,
+            `${email} requested access (not a registered recipient)`,
             'Method: OTP',
             link ? `Link: ${link}` : null,
           ]
@@ -163,6 +162,8 @@ export async function POST(
           projectTitle: project.title,
           projectId: project.id,
           email,
+          title: `Unauthorized Access Attempt: ${project.title}`,
+          body: `${email} requested access (not a registered recipient)`,
         },
       }).catch(() => {})
 

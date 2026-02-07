@@ -297,6 +297,9 @@ export function createNotificationPayload(
     content?: string
     ip?: string
     email?: string
+    title?: string
+    body?: string
+    notifyType?: string
   }
 ): PushNotificationPayload {
   const basePayload = {
@@ -307,39 +310,39 @@ export function createNotificationPayload(
   }
 
   switch (eventType) {
-    case 'FAILED_LOGIN':
+    case 'ADMIN_ACCESS':
       return {
         ...basePayload,
-        title: 'Failed Login Attempt',
-        body: `Failed login from IP: ${data.ip || 'Unknown'}`,
-      }
-
-    case 'UNAUTHORIZED_OTP':
-      return {
-        ...basePayload,
-        title: 'Unauthorized OTP Request',
-        body: `OTP request for ${data.email || 'unknown email'} on "${data.projectTitle || 'Unknown project'}"`,
+        title: data.title || 'Admin Login',
+        body: data.body || `${data.email || 'Someone'} logged in`,
       }
 
     case 'SHARE_ACCESS':
       return {
         ...basePayload,
-        title: 'Project Accessed',
-        body: `"${data.projectTitle || 'Unknown project'}" was accessed${data.email ? ` by ${data.email}` : ''}`,
+        title: data.title || 'Share Link Opened',
+        body: data.body || `${data.email || 'Someone'} opened ${data.projectTitle || 'a project'}`,
       }
 
     case 'CLIENT_COMMENT':
       return {
         ...basePayload,
-        title: 'New Client Comment',
-        body: `${data.authorName || 'A client'} commented on "${data.videoName || data.projectTitle || 'Unknown'}"${data.content ? `: "${data.content.slice(0, 50)}${data.content.length > 50 ? '...' : ''}"` : ''}`,
+        title: 'New Comment',
+        body: `${data.authorName || 'Someone'} on ${data.videoName || data.projectTitle || 'a video'}${data.content ? `: "${data.content.slice(0, 50)}${data.content.length > 50 ? '...' : ''}"` : ''}`,
       }
 
     case 'VIDEO_APPROVAL':
       return {
         ...basePayload,
         title: 'Video Approved',
-        body: `"${data.videoName || 'A video'}" in "${data.projectTitle || 'Unknown project'}" was approved`,
+        body: `${data.authorName || 'A client'} approved ${data.videoName || 'a video'} in ${data.projectTitle || 'a project'}`,
+      }
+
+    case 'SECURITY_ALERT':
+      return {
+        ...basePayload,
+        title: data.title || 'Security Alert',
+        body: data.body || 'A security event occurred',
       }
 
     default:

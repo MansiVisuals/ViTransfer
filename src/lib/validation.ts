@@ -84,11 +84,11 @@ export const urlSchema = z
 export const notificationProviderSchema = z.enum(['GOTIFY', 'NTFY', 'PUSHOVER', 'TELEGRAM'])
 
 export const notificationEventTypeSchema = z.enum([
-  'FAILED_LOGIN',
-  'UNAUTHORIZED_OTP',
   'SHARE_ACCESS',
+  'ADMIN_ACCESS',
   'CLIENT_COMMENT',
   'VIDEO_APPROVAL',
+  'SECURITY_ALERT',
   'TEST',
 ])
 

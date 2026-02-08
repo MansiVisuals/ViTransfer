@@ -31,19 +31,24 @@
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "Dashboard",
-      "url": "/admin",
-      "description": "Go to the admin dashboard"
-    },
-    {
       "name": "Projects",
       "url": "/admin/projects",
       "description": "View all projects"
     },
     {
+      "name": "Clients",
+      "url": "/admin/clients",
+      "description": "Manage clients"
+    },
+    {
       "name": "Settings",
       "url": "/admin/settings",
       "description": "Open settings"
+    },
+    {
+      "name": "Users",
+      "url": "/admin/users",
+      "description": "Manage users"
     }
   ]
 }

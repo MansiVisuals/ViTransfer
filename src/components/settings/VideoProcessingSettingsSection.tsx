@@ -17,6 +17,8 @@ interface VideoProcessingSettingsSectionProps {
   setAutoApproveProject: (value: boolean) => void
   defaultUsePreviewForApprovedPlayback: boolean
   setDefaultUsePreviewForApprovedPlayback: (value: boolean) => void
+  defaultAllowClientAssetUpload: boolean
+  setDefaultAllowClientAssetUpload: (value: boolean) => void
   show: boolean
   setShow: (value: boolean) => void
 }
@@ -34,6 +36,8 @@ export function VideoProcessingSettingsSection({
   setAutoApproveProject,
   defaultUsePreviewForApprovedPlayback,
   setDefaultUsePreviewForApprovedPlayback,
+  defaultAllowClientAssetUpload,
+  setDefaultAllowClientAssetUpload,
   show,
   setShow,
 }: VideoProcessingSettingsSectionProps) {
@@ -127,6 +131,23 @@ export function VideoProcessingSettingsSection({
             When enabled with watermarks, a clean preview without watermarks will be generated when videos are approved.
           </p>
         )}
+      </div>
+
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5 flex-1">
+            <Label htmlFor="defaultAllowClientAssetUpload">Allow Client File Attachments</Label>
+            <p className="text-xs text-muted-foreground">
+              Allow clients to attach files (images, documents, audio) to their comments.
+              New projects will use this as default. Can be overridden per project.
+            </p>
+          </div>
+          <Switch
+            id="defaultAllowClientAssetUpload"
+            checked={defaultAllowClientAssetUpload}
+            onCheckedChange={setDefaultAllowClientAssetUpload}
+          />
+        </div>
       </div>
 
       <div className="space-y-4 border p-4 rounded-lg bg-muted/30">

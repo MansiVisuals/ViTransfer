@@ -31,6 +31,7 @@ interface Settings {
   defaultTimestampDisplay: string | null
   autoApproveProject: boolean | null
   defaultUsePreviewForApprovedPlayback: boolean | null
+  defaultAllowClientAssetUpload: boolean | null
   adminNotificationSchedule: string | null
   adminNotificationTime: string | null
   adminNotificationDay: number | null
@@ -109,6 +110,7 @@ export default function GlobalSettingsPage() {
   const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
   const [defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback] = useState(false)
+  const [defaultAllowClientAssetUpload, setDefaultAllowClientAssetUpload] = useState(false)
 
   // Form state for admin notification settings
   const [adminNotificationSchedule, setAdminNotificationSchedule] = useState('HOURLY')
@@ -167,6 +169,7 @@ export default function GlobalSettingsPage() {
     setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
     setAutoApproveProject(data.autoApproveProject ?? true)
     setDefaultUsePreviewForApprovedPlayback(data.defaultUsePreviewForApprovedPlayback ?? false)
+    setDefaultAllowClientAssetUpload(data.defaultAllowClientAssetUpload ?? false)
     setTestEmailAddress(data.smtpFromAddress || '')
     setAdminNotificationSchedule(data.adminNotificationSchedule || 'HOURLY')
     setAdminNotificationTime(data.adminNotificationTime || '09:00')
@@ -468,6 +471,7 @@ export default function GlobalSettingsPage() {
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject: autoApproveProject,
         defaultUsePreviewForApprovedPlayback: defaultUsePreviewForApprovedPlayback,
+        defaultAllowClientAssetUpload: defaultAllowClientAssetUpload,
         adminNotificationSchedule: adminNotificationSchedule,
         adminNotificationTime: (adminNotificationSchedule === 'DAILY' || adminNotificationSchedule === 'WEEKLY') ? adminNotificationTime : null,
         adminNotificationDay: adminNotificationSchedule === 'WEEKLY' ? adminNotificationDay : null,
@@ -676,6 +680,8 @@ export default function GlobalSettingsPage() {
             setAutoApproveProject={setAutoApproveProject}
             defaultUsePreviewForApprovedPlayback={defaultUsePreviewForApprovedPlayback}
             setDefaultUsePreviewForApprovedPlayback={setDefaultUsePreviewForApprovedPlayback}
+            defaultAllowClientAssetUpload={defaultAllowClientAssetUpload}
+            setDefaultAllowClientAssetUpload={setDefaultAllowClientAssetUpload}
             show={showVideoProcessing}
             setShow={setShowVideoProcessing}
           />

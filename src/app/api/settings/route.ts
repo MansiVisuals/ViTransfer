@@ -113,6 +113,7 @@ export async function PATCH(request: NextRequest) {
       adminNotificationTime,
       adminNotificationDay,
       defaultUsePreviewForApprovedPlayback,
+      defaultAllowClientAssetUpload,
       emailHeaderStyle,
     } = body
 
@@ -291,6 +292,7 @@ export async function PATCH(request: NextRequest) {
       adminNotificationTime,
       adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
       defaultUsePreviewForApprovedPlayback,
+      defaultAllowClientAssetUpload,
     }
 
     // Only update password if it's not the placeholder

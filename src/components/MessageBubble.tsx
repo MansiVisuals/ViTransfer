@@ -4,6 +4,7 @@ import { Comment } from '@prisma/client'
 import { Clock, Trash2 } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
+import CommentAttachments from './CommentAttachments'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -21,6 +22,7 @@ interface MessageBubbleProps {
   replies?: Comment[]
   onDeleteReply?: (replyId: string) => void
   timestampLabel?: string | null
+  shareToken?: string | null
 }
 
 /**
@@ -51,6 +53,7 @@ export default function MessageBubble({
   replies,
   onDeleteReply,
   timestampLabel,
+  shareToken,
 }: MessageBubbleProps) {
   // Get effective author name for color generation
   // For internal comments without authorName, fall back to user.name or user.email
@@ -107,6 +110,14 @@ export default function MessageBubble({
                 dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.content) }}
               />
             </div>
+
+            {(comment as any).assets && (comment as any).assets.length > 0 && (
+              <CommentAttachments
+                assets={(comment as any).assets}
+                videoId={comment.videoId}
+                shareToken={shareToken}
+              />
+            )}
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -170,6 +181,13 @@ export default function MessageBubble({
                     className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed [&>p]:m-0"
                     dangerouslySetInnerHTML={{ __html: sanitizeContent(reply.content) }}
                   />
+                  {(reply as any).assets && (reply as any).assets.length > 0 && (
+                    <CommentAttachments
+                      assets={(reply as any).assets}
+                      videoId={reply.videoId}
+                      shareToken={shareToken}
+                    />
+                  )}
                 </div>
               </div>
             )

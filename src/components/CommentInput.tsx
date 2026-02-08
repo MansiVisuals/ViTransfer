@@ -5,9 +5,10 @@ import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Clock, Send, X, Keyboard } from 'lucide-react'
+import { Clock, Send, X, Keyboard, Paperclip } from 'lucide-react'
 import { formatCommentTimestamp, secondsToTimecode } from '@/lib/timecode'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
+import CommentAttachmentButton from './CommentAttachmentButton'
 
 interface CommentInputProps {
   newComment: string
@@ -41,6 +42,14 @@ interface CommentInputProps {
   restrictionMessage?: string
   commentsDisabled: boolean
 
+  // Attachments
+  allowClientAssetUpload?: boolean
+  selectedVideoId?: string | null
+  pendingAttachments?: Array<{ assetId: string; fileName: string; fileSize: string; fileType: string; category: string }>
+  onAttachmentAdded?: (attachment: { assetId: string; fileName: string; fileSize: string; fileType: string; category: string }) => void
+  onRemoveAttachment?: (assetId: string) => void
+  shareToken?: string | null
+
   // Optional shortcuts UI (share pages)
   showShortcutsButton?: boolean
   onShowShortcuts?: () => void
@@ -69,6 +78,12 @@ export default function CommentInput({
   currentVideoRestricted,
   restrictionMessage,
   commentsDisabled,
+  allowClientAssetUpload = false,
+  selectedVideoId: selectedVideoIdProp = null,
+  pendingAttachments = [],
+  onAttachmentAdded,
+  onRemoveAttachment,
+  shareToken = null,
   showShortcutsButton = false,
   onShowShortcuts,
 }: CommentInputProps) {
@@ -227,6 +242,30 @@ export default function CommentInput({
       {/* Message Input */}
       {!currentVideoRestricted && (
         <>
+          {/* Pending attachment chips */}
+          {pendingAttachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {pendingAttachments.map((att) => (
+                <span
+                  key={att.assetId}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted/40 border border-border/50 rounded-md text-xs text-foreground"
+                >
+                  <Paperclip className="w-3 h-3 text-muted-foreground" />
+                  <span className="truncate max-w-[120px]">{att.fileName}</span>
+                  {onRemoveAttachment && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveAttachment(att.assetId)}
+                      className="text-muted-foreground hover:text-foreground ml-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Textarea
               placeholder="Type your message..."
@@ -236,6 +275,14 @@ export default function CommentInput({
               className="resize-none"
               rows={2}
             />
+            {allowClientAssetUpload && selectedVideoIdProp && onAttachmentAdded && (
+              <CommentAttachmentButton
+                videoId={selectedVideoIdProp}
+                shareToken={shareToken}
+                onAttachmentAdded={onAttachmentAdded}
+                disabled={loading}
+              />
+            )}
             <Button
               onClick={onSubmit}
               variant="default"

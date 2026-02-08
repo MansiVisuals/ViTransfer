@@ -74,18 +74,24 @@ export async function POST(request: NextRequest) {
   try {
     await initStorage()
     await uploadFile(STORAGE_PATH, buffer, buffer.byteLength, 'image/svg+xml')
-    
+
     // Clear all cached PNGs so the new logo is used everywhere
     await clearAllLogoPngCaches()
 
-    await prisma.settings.upsert({
-      where: { id: 'default' },
-      update: { brandingLogoPath: '/api/branding/logo' },
-      create: {
-        id: 'default',
-        brandingLogoPath: '/api/branding/logo',
-      },
-    })
+    try {
+      await prisma.settings.upsert({
+        where: { id: 'default' },
+        update: { brandingLogoPath: '/api/branding/logo' },
+        create: {
+          id: 'default',
+          brandingLogoPath: '/api/branding/logo',
+        },
+      })
+    } catch (dbError) {
+      // DB upsert failed — remove orphaned file from disk
+      await deleteFile(STORAGE_PATH).catch(() => {})
+      throw dbError
+    }
 
     return NextResponse.json({ path: '/api/branding/logo' })
   } catch (error) {

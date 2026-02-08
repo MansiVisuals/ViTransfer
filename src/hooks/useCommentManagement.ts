@@ -10,6 +10,14 @@ type CommentWithReplies = Comment & {
   replies?: Comment[]
 }
 
+interface PendingAttachment {
+  assetId: string
+  fileName: string
+  fileSize: string
+  fileType: string
+  category: string
+}
+
 interface UseCommentManagementProps {
   projectId: string
   initialComments: CommentWithReplies[]
@@ -49,6 +57,7 @@ export function useCommentManagement({
   const [loading, setLoading] = useState(false)
   const [hasAutoFilledTimestamp, setHasAutoFilledTimestamp] = useState(false)
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null)
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
 
   // Author name management
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
@@ -333,6 +342,8 @@ export function useCommentManagement({
     // Keep selectedVideoId so user can post multiple comments
     setHasAutoFilledTimestamp(false)
     setReplyingToCommentId(null)
+    const commentAssetIds = pendingAttachments.map(a => a.assetId)
+    setPendingAttachments([])
 
     try {
       // Convert timestamp to timecode for API
@@ -363,6 +374,11 @@ export function useCommentManagement({
       // Only include parentId if replying (not null)
       if (commentParentId) {
         requestBody.parentId = commentParentId
+      }
+
+      // Include asset IDs if any attachments were added
+      if (commentAssetIds.length > 0) {
+        requestBody.assetIds = commentAssetIds
       }
 
       // Submit comment in background without blocking UI
@@ -521,6 +537,14 @@ export function useCommentManagement({
     }
   }
 
+  const handleAttachmentAdded = (attachment: PendingAttachment) => {
+    setPendingAttachments(prev => [...prev, attachment])
+  }
+
+  const handleRemoveAttachment = (assetId: string) => {
+    setPendingAttachments(prev => prev.filter(a => a.assetId !== assetId))
+  }
+
   // Get FPS of currently selected video
   const selectedVideo = videos.find(v => v.id === selectedVideoId)
   const selectedVideoFps = selectedVideo?.fps || 24
@@ -538,6 +562,7 @@ export function useCommentManagement({
     selectedRecipientId,
     namedRecipients,
     isOtpAuthenticated: !!authenticatedEmail,
+    pendingAttachments,
     handleCommentChange,
     handleSubmitComment,
     handleReply,
@@ -546,5 +571,7 @@ export function useCommentManagement({
     handleDeleteComment,
     setAuthorName: handleAuthorNameChange,
     handleNameSourceChange,
+    handleAttachmentAdded,
+    handleRemoveAttachment,
   }
 }

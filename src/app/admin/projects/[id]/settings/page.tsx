@@ -62,6 +62,7 @@ interface Project {
   watermarkEnabled: boolean
   watermarkText: string | null
   allowAssetDownload: boolean
+  allowClientAssetUpload: boolean
   clientCanApprove: boolean
   usePreviewForApprovedPlayback: boolean
   clientNotificationSchedule: string
@@ -102,6 +103,7 @@ export default function ProjectSettingsPage() {
   const [watermarkText, setWatermarkText] = useState('')
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
   const [allowAssetDownload, setAllowAssetDownload] = useState(true)
+  const [allowClientAssetUpload, setAllowClientAssetUpload] = useState(false)
   const [clientCanApprove, setClientCanApprove] = useState(true)
   const [usePreviewForApprovedPlayback, setUsePreviewForApprovedPlayback] = useState(false)
 
@@ -181,6 +183,7 @@ export default function ProjectSettingsPage() {
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
         setAllowAssetDownload(data.allowAssetDownload ?? true)
+        setAllowClientAssetUpload(data.allowClientAssetUpload ?? false)
         setClientCanApprove(data.clientCanApprove ?? true)
         setUsePreviewForApprovedPlayback(data.usePreviewForApprovedPlayback ?? false)
         setAuthMode(data.authMode || 'PASSWORD')
@@ -282,6 +285,7 @@ export default function ProjectSettingsPage() {
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
         allowAssetDownload,
+        allowClientAssetUpload,
         clientCanApprove,
         usePreviewForApprovedPlayback,
         sharePassword: sharePassword || null,
@@ -680,6 +684,20 @@ export default function ProjectSettingsPage() {
                     id="allowAssetDownload"
                     checked={allowAssetDownload}
                     onCheckedChange={setAllowAssetDownload}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="allowClientAssetUpload">Allow Client File Attachments</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow clients to attach files (images, documents, audio) to their comments
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowClientAssetUpload"
+                    checked={allowClientAssetUpload}
+                    onCheckedChange={setAllowClientAssetUpload}
                   />
                 </div>
               </div>

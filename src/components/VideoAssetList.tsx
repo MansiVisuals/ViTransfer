@@ -29,6 +29,7 @@ interface VideoAsset {
   fileSize: string
   fileType: string
   category: string | null
+  uploadedBy: string | null
   createdAt: string
 }
 
@@ -317,10 +318,15 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
               {getAssetIcon(asset)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{asset.fileName}</p>
-                <div className="flex gap-3 text-xs text-muted-foreground">
+                <div className="flex gap-3 text-xs text-muted-foreground items-center">
                   <span>{formatFileSizeBigInt(asset.fileSize)}</span>
                   <span>•</span>
                   <span>{getCategoryLabel(asset.category)}</span>
+                  {asset.uploadedBy === 'client' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
+                      Client Upload
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">

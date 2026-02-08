@@ -20,14 +20,14 @@ export const FILE_LIMITS = {
 
 // Allowed asset types by category
 export const ALLOWED_ASSET_TYPES = {
-  thumbnail: {
-    extensions: ['.jpg', '.jpeg', '.png'],
-    mimeTypes: ['image/jpeg', 'image/png']
-  },
   image: {
     // SVG intentionally excluded - can contain embedded JavaScript/XSS payloads
     extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'],
     mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff']
+  },
+  thumbnail: {
+    extensions: ['.jpg', '.jpeg', '.png'],
+    mimeTypes: ['image/jpeg', 'image/png']
   },
   audio: {
     extensions: ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma'],

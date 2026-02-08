@@ -267,6 +267,9 @@ export const updateProjectSchema = z.object({
   // Download settings
   allowAssetDownload: z.boolean().optional(),
 
+  // Client asset upload
+  allowClientAssetUpload: z.boolean().optional(),
+
   // Approval settings
   clientCanApprove: z.boolean().optional(),
 
@@ -324,7 +327,8 @@ export const createCommentSchema = z.object({
   authorEmail: emailSchema.optional().nullable(),
   recipientId: cuidSchema.optional().nullable(),
   parentId: cuidSchema.optional(),
-  isInternal: z.boolean().optional()
+  isInternal: z.boolean().optional(),
+  assetIds: z.array(z.string()).max(5).optional(),
 })
 
 export const updateCommentSchema = z.object({

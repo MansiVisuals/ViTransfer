@@ -31,8 +31,11 @@ export async function POST(
     }
 
     const project = asset.video.project
+    const isClientAsset = asset.uploadedBy === 'client'
 
     // Verify user has access to this project
+    // Client-uploaded comment attachments only need 'comment' permission (view-level access)
+    // Admin/regular assets need 'download' permission
     const accessCheck = await verifyProjectAccess(
       request,
       project.id,
@@ -40,7 +43,7 @@ export async function POST(
       project.authMode,
       {
         allowGuest: false,
-        requiredPermission: 'download',
+        requiredPermission: isClientAsset ? 'comment' : 'download',
       }
     )
 
@@ -48,8 +51,9 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Check download permissions for non-admins
-    if (!accessCheck.isAdmin) {
+    // Check download permissions for non-admins (non-client assets only)
+    // Client-uploaded comment attachments bypass approval/download checks
+    if (!accessCheck.isAdmin && !isClientAsset) {
       if (!project.allowAssetDownload) {
         return NextResponse.json(
           { error: 'Asset downloads are not allowed for this project' },

@@ -365,6 +365,17 @@ export async function cancelCommentNotification(commentId: string): Promise<void
  * Returns top-level comments with nested replies
  */
 export async function fetchProjectComments(projectId: string) {
+  const assetSelect = {
+    select: {
+      id: true,
+      fileName: true,
+      fileSize: true,
+      fileType: true,
+      category: true,
+      createdAt: true,
+    },
+  }
+
   return prisma.comment.findMany({
     where: {
       projectId,
@@ -379,6 +390,7 @@ export async function fetchProjectComments(projectId: string) {
           email: true,
         }
       },
+      assets: assetSelect,
       replies: {
         include: {
           user: {
@@ -388,7 +400,8 @@ export async function fetchProjectComments(projectId: string) {
               username: true,
               email: true,
             }
-          }
+          },
+          assets: assetSelect,
         },
         orderBy: { createdAt: 'asc' }
       }

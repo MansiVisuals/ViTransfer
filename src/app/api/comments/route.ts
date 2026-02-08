@@ -91,6 +91,17 @@ export async function GET(request: NextRequest) {
     // Priority: companyName → primary recipient → 'Client'
     const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
+    const assetSelect = {
+      select: {
+        id: true,
+        fileName: true,
+        fileSize: true,
+        fileType: true,
+        category: true,
+        createdAt: true,
+      },
+    }
+
     // Fetch all comments for the project
     const allComments = await prisma.comment.findMany({
       where: {
@@ -106,6 +117,7 @@ export async function GET(request: NextRequest) {
             email: true,
           }
         },
+        assets: assetSelect,
         replies: {
           include: {
             user: {
@@ -115,7 +127,8 @@ export async function GET(request: NextRequest) {
                 username: true,
                 email: true,
               }
-            }
+            },
+            assets: assetSelect,
           },
           orderBy: { createdAt: 'asc' }
         }
@@ -175,7 +188,8 @@ export async function POST(request: NextRequest) {
       authorEmail,
       recipientId,
       parentId,
-      isInternal
+      isInternal,
+      assetIds,
     } = validation.data
 
     // Get authentication context (single call for both admin and share token)
@@ -300,6 +314,26 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Link client assets to comment
+    if (assetIds && assetIds.length > 0) {
+      // Validate each asset exists, belongs to correct video, is client-uploaded, and unlinked
+      const assets = await prisma.videoAsset.findMany({
+        where: {
+          id: { in: assetIds },
+          videoId,
+          uploadedBy: 'client',
+          commentId: null,
+        },
+      })
+
+      if (assets.length > 0) {
+        await prisma.videoAsset.updateMany({
+          where: { id: { in: assets.map(a => a.id) } },
+          data: { commentId: comment.id },
+        })
+      }
+    }
 
     // Handle notifications asynchronously
     await handleCommentNotifications({

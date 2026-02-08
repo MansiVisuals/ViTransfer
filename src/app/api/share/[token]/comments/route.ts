@@ -77,6 +77,17 @@ export async function GET(
       return NextResponse.json([])
     }
 
+    const assetSelect = {
+      select: {
+        id: true,
+        fileName: true,
+        fileSize: true,
+        fileType: true,
+        category: true,
+        createdAt: true,
+      },
+    }
+
     // Fetch comments with nested replies
     const comments = await prisma.comment.findMany({
       where: {
@@ -92,6 +103,7 @@ export async function GET(
             email: true,
           }
         },
+        assets: assetSelect,
         replies: {
           include: {
             user: {
@@ -101,7 +113,8 @@ export async function GET(
                 username: true,
                 email: true,
               }
-            }
+            },
+            assets: assetSelect,
           },
           orderBy: { createdAt: 'asc' }
         }

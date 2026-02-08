@@ -268,6 +268,10 @@ export async function PATCH(
       updateData.allowAssetDownload = validatedBody.allowAssetDownload
     }
 
+    if (validatedBody.allowClientAssetUpload !== undefined) {
+      updateData.allowClientAssetUpload = validatedBody.allowClientAssetUpload
+    }
+
     if (validatedBody.clientCanApprove !== undefined) {
       updateData.clientCanApprove = validatedBody.clientCanApprove
     }

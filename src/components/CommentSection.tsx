@@ -38,6 +38,7 @@ interface CommentSectionProps {
   mobileCollapsible?: boolean
   initialMobileCollapsed?: boolean
   authenticatedEmail?: string | null
+  allowClientAssetUpload?: boolean
   onToggleVisibility?: () => void
   showToggleButton?: boolean
   onMobileExpandedChange?: (expanded: boolean) => void
@@ -64,6 +65,7 @@ export default function CommentSection({
   mobileCollapsible = false,
   initialMobileCollapsed = true,
   authenticatedEmail = null,
+  allowClientAssetUpload = false,
   onToggleVisibility,
   showToggleButton = false,
   onMobileExpandedChange,
@@ -82,6 +84,7 @@ export default function CommentSection({
     selectedRecipientId,
     namedRecipients,
     isOtpAuthenticated,
+    pendingAttachments,
     handleCommentChange,
     handleSubmitComment,
     handleReply,
@@ -90,6 +93,8 @@ export default function CommentSection({
     handleDeleteComment,
     setAuthorName,
     handleNameSourceChange,
+    handleAttachmentAdded,
+    handleRemoveAttachment,
   } = useCommentManagement({
     projectId,
     initialComments,
@@ -386,6 +391,12 @@ export default function CommentSection({
               currentVideoRestricted={currentVideoRestricted}
               restrictionMessage={restrictionMessage}
               commentsDisabled={commentsDisabled}
+              allowClientAssetUpload={allowClientAssetUpload}
+              selectedVideoId={selectedVideoId}
+              pendingAttachments={pendingAttachments}
+              onAttachmentAdded={handleAttachmentAdded}
+              onRemoveAttachment={handleRemoveAttachment}
+              shareToken={shareToken}
               showShortcutsButton={showShortcutsButton}
               onShowShortcuts={handleOpenShortcuts}
             />
@@ -463,6 +474,7 @@ export default function CommentSection({
                       replies={replies}
                       onDeleteReply={isAdminView ? handleDeleteComment : undefined}
                       timestampLabel={timestampLabel}
+                      shareToken={shareToken}
                     />
                   </div>
                 )
@@ -498,6 +510,12 @@ export default function CommentSection({
           currentVideoRestricted={currentVideoRestricted}
           restrictionMessage={restrictionMessage}
           commentsDisabled={commentsDisabled}
+          allowClientAssetUpload={allowClientAssetUpload}
+          selectedVideoId={selectedVideoId}
+          pendingAttachments={pendingAttachments}
+          onAttachmentAdded={handleAttachmentAdded}
+          onRemoveAttachment={handleRemoveAttachment}
+          shareToken={shareToken}
           showShortcutsButton={showShortcutsButton}
           onShowShortcuts={handleOpenShortcuts}
         />

@@ -219,8 +219,8 @@ export async function GET(
         return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
       }
 
-      // Check permissions (skip for admins)
-      if (!isAdminRequest) {
+      // Check permissions (skip for admins and client-uploaded comment attachments)
+      if (!isAdminRequest && asset.uploadedBy !== 'client') {
         if (!video.project.allowAssetDownload) {
           return NextResponse.json({ error: 'Asset downloads not allowed' }, { status: 403 })
         }

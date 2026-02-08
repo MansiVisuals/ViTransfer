@@ -65,8 +65,9 @@ model Project {
   watermarkText     String? // Custom watermark text (null = use default format)
 
   // Client share page settings
-  allowAssetDownload Boolean @default(true) // Allow clients to download video assets when project is approved
-  clientCanApprove   Boolean @default(true) // Allow clients to approve videos (false = admin only)
+  allowAssetDownload     Boolean @default(true) // Allow clients to download video assets when project is approved
+  allowClientAssetUpload Boolean @default(false) // Allow clients to upload file attachments on comments
+  clientCanApprove       Boolean @default(true) // Allow clients to approve videos (false = admin only)
 
   // Approved playback settings
   usePreviewForApprovedPlayback Boolean @default(false) // Use browser-compatible preview instead of original after approval
@@ -183,11 +184,16 @@ model VideoAsset {
   uploadedBy     String? // User ID or "client" for client uploads
   uploadedByName String? // Display name of uploader
 
+  // Comment attachment (optional link to comment)
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([videoId])
   @@index([videoId, category])
+  @@index([commentId])
 }
 
 enum VideoStatus {
@@ -219,8 +225,9 @@ model Comment {
   parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies  Comment[] @relation("CommentReplies")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  video   Video        @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  assets  VideoAsset[]
 
   @@index([projectId])
   @@index([videoId])
@@ -292,6 +299,9 @@ model Settings {
 
   // Default Approved Playback Setting
   defaultUsePreviewForApprovedPlayback Boolean @default(false)
+
+  // Default Client Asset Upload Setting
+  defaultAllowClientAssetUpload Boolean @default(false)
 
   // Project Behavior
   autoApproveProject Boolean @default(true) // Auto-approve project when all videos approved

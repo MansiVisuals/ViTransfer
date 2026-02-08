@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
         hideFeedback: true,
         guestMode: true,
         allowAssetDownload: true,
+        allowClientAssetUpload: true,
         previewResolution: true,
         companyName: true,
         maxRevisions: true,
@@ -158,6 +159,7 @@ export async function POST(request: NextRequest) {
         defaultWatermarkText: true,
         defaultTimestampDisplay: true,
         defaultUsePreviewForApprovedPlayback: true,
+        defaultAllowClientAssetUpload: true,
       },
     })
 
@@ -189,6 +191,7 @@ export async function POST(request: NextRequest) {
           watermarkText: settings?.defaultWatermarkText || null,
           timestampDisplay: settings?.defaultTimestampDisplay || 'TIMECODE',
           usePreviewForApprovedPlayback: settings?.defaultUsePreviewForApprovedPlayback ?? false,
+          allowClientAssetUpload: settings?.defaultAllowClientAssetUpload ?? false,
           createdById: admin.id,
         },
       })

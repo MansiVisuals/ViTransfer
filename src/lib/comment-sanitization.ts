@@ -87,6 +87,18 @@ export function sanitizeComment(
     sanitized.authorName = comment.isInternal ? 'Admin' : 'Client'
   }
 
+  // Pass through assets (safe subset already selected by Prisma query)
+  if (comment.assets && Array.isArray(comment.assets)) {
+    sanitized.assets = comment.assets.map((asset: any) => ({
+      id: asset.id,
+      fileName: asset.fileName,
+      fileSize: typeof asset.fileSize === 'bigint' ? asset.fileSize.toString() : String(asset.fileSize),
+      fileType: asset.fileType,
+      category: asset.category,
+      createdAt: asset.createdAt,
+    }))
+  }
+
   // Recursively sanitize replies
   if (comment.replies && Array.isArray(comment.replies)) {
     sanitized.replies = comment.replies.map((reply: any) =>

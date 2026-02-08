@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved upload error messages shown in the UI.
 - Reduced exposure of internal server error details.
 
+### Security
+- Enforced share-token permission scopes for privileged routes (`comment`, `download`, `approve`) and blocked guest tokens from restricted actions.
+- Added strict comment ownership validation to ensure `videoId` belongs to the provided `projectId` before comment creation.
+- Hardened password reset link generation to use configured `appDomain` instead of request `Host` headers (prevents host-header poisoning).
+
 ## [0.9.0] - 2026-02-07
 
 ### Added

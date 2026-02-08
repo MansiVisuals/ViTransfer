@@ -4,6 +4,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { generatePasswordResetToken, buildPasswordResetUrl } from '@/lib/password-reset'
 import { sendPasswordResetEmail } from '@/lib/email'
 import { logSecurityEvent } from '@/lib/video-access'
+import { getAppDomain } from '@/lib/url'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -89,8 +90,21 @@ export async function POST(request: NextRequest) {
       expiresInMinutes: 30,
     })
 
-    // Build reset URL
-    const appUrl = `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`
+    // Build reset URL from configured app domain only (prevents host-header poisoning)
+    const appUrl = await getAppDomain()
+    if (!appUrl) {
+      await logSecurityEvent({
+        type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
+        severity: 'WARNING',
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        details: {
+          userId: user.id,
+          email: user.email,
+          reason: 'App domain not configured',
+        },
+      })
+      return successResponse
+    }
     const resetUrl = buildPasswordResetUrl(appUrl, token)
 
     // Send email (only if SMTP is configured, but always return success)

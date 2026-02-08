@@ -29,7 +29,11 @@ export async function POST(
       request,
       video.project.id,
       video.project.sharePassword,
-      video.project.authMode
+      video.project.authMode,
+      {
+        allowGuest: false,
+        requiredPermission: 'download',
+      }
     )
 
     if (!accessCheck.authorized) {

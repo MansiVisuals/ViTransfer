@@ -91,19 +91,16 @@ export async function PATCH(
       request,
       existingComment.project.id,
       existingComment.project.sharePassword,
-      existingComment.project.authMode
+      existingComment.project.authMode,
+      {
+        allowGuest: false,
+        requiredPermission: 'comment',
+      }
     )
-
-    if (accessCheck.isGuest) {
-      return NextResponse.json(
-        { error: 'Comments are disabled for guest users' },
-        { status: 403 }
-      )
-    }
 
     if (!accessCheck.authorized) {
       // Don't reveal if comment exists - return generic error
-      return NextResponse.json(
+      return accessCheck.errorResponse || NextResponse.json(
         { error: 'Unable to process request' },
         { status: 400 }
       )

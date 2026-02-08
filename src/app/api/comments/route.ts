@@ -213,10 +213,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify project access using dual auth pattern
-    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode)
+    const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode, {
+      allowGuest: false,
+      requiredPermission: 'comment',
+    })
 
     if (!accessCheck.authorized) {
-      return NextResponse.json(
+      return accessCheck.errorResponse || NextResponse.json(
         { error: 'Unable to process request' },
         { status: 400 }
       )
@@ -244,17 +247,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get video version if videoId is provided but version isn't
-    let finalVideoVersion = videoVersion
-    if (videoId && !videoVersion) {
-      const video = await prisma.video.findUnique({
-        where: { id: videoId },
-        select: { version: true }
-      })
-      if (video) {
-        finalVideoVersion = video.version
-      }
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      select: { id: true, projectId: true, version: true }
+    })
+
+    if (!video || video.projectId !== projectId) {
+      return NextResponse.json(
+        { error: 'Video does not belong to this project' },
+        { status: 400 }
+      )
     }
+
+    // Keep API behavior: if version is omitted, infer from current video record.
+    const finalVideoVersion = videoVersion || video.version
 
     // Create comment in database
     const comment = await prisma.comment.create({

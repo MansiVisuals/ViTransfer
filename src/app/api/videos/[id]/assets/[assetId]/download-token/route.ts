@@ -37,7 +37,11 @@ export async function POST(
       request,
       project.id,
       project.sharePassword,
-      project.authMode
+      project.authMode,
+      {
+        allowGuest: false,
+        requiredPermission: 'download',
+      }
     )
 
     if (!accessCheck.authorized) {

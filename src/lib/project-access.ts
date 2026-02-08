@@ -20,15 +20,25 @@ export async function verifyProjectAccess(
   request: NextRequest,
   projectId: string,
   _sharePassword: string | null,
-  authMode: string = 'PASSWORD'
+  authMode: string = 'PASSWORD',
+  options?: {
+    requiredPermission?: string
+    requiredAnyPermission?: string[]
+    allowGuest?: boolean
+  }
 ): Promise<{
   authorized: boolean
   isAdmin: boolean
   isAuthenticated: boolean
   isGuest?: boolean
+  permissions?: string[]
   shareTokenSessionId?: string
   errorResponse?: NextResponse
 }> {
+  const allowGuest = options?.allowGuest ?? true
+  const requiredPermission = options?.requiredPermission
+  const requiredAnyPermission = options?.requiredAnyPermission
+
   // Check if user is admin (admins bypass password protection)
   const currentUser = await getCurrentUserFromRequest(request)
   const isAdmin = currentUser?.role === 'ADMIN'
@@ -39,6 +49,7 @@ export async function verifyProjectAccess(
       authorized: true,
       isAdmin: true,
       isAuthenticated: true,
+      permissions: ['view', 'comment', 'download', 'approve'],
       shareTokenSessionId: `admin:${currentUser.id}`,
     }
   }
@@ -49,7 +60,8 @@ export async function verifyProjectAccess(
       authorized: true,
       isAdmin: false,
       isAuthenticated: true,
-      isGuest: false
+      isGuest: false,
+      permissions: ['view', 'comment', 'download', 'approve'],
     }
   }
 
@@ -78,12 +90,60 @@ export async function verifyProjectAccess(
   }
 
   const isGuest = !!shareContext.guest
+  const permissions = Array.isArray(shareContext.permissions) ? shareContext.permissions : []
+
+  if (!allowGuest && isGuest) {
+    return {
+      authorized: false,
+      isAdmin: false,
+      isAuthenticated: true,
+      isGuest: true,
+      permissions,
+      errorResponse: NextResponse.json(
+        { error: 'Guest access is restricted for this action' },
+        { status: 403 }
+      )
+    }
+  }
+
+  if (requiredPermission && !permissions.includes(requiredPermission)) {
+    return {
+      authorized: false,
+      isAdmin: false,
+      isAuthenticated: true,
+      isGuest,
+      permissions,
+      errorResponse: NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      )
+    }
+  }
+
+  if (
+    requiredAnyPermission &&
+    requiredAnyPermission.length > 0 &&
+    !requiredAnyPermission.some(permission => permissions.includes(permission))
+  ) {
+    return {
+      authorized: false,
+      isAdmin: false,
+      isAuthenticated: true,
+      isGuest,
+      permissions,
+      errorResponse: NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      )
+    }
+  }
 
   return {
     authorized: true,
     isAdmin: false,
     isAuthenticated: true,
     isGuest,
+    permissions,
     shareTokenSessionId: shareContext.sessionId,
   }
 }

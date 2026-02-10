@@ -10,14 +10,13 @@ import { revokeAllUserTokens } from './token-revocation'
  *
  * Session Types:
  * - Admin sessions: JWT tokens (access + refresh) → blacklist:user:{userId}
- * - Client share sessions: auth_project:{sessionId} → projectId
- * - Share tokens are bearer-based; legacy browser-managed sessions removed in v0.6.0
+ * - Client share sessions: bearer JWT sessionId revocation in Redis (revoked:share_session:{sessionId})
  *
  * Invalidation Triggers:
- * 1. Session timeout changes → Invalidate ALL sessions globally
- * 2. Project password changes → Invalidate all sessions for that project
- * 3. Project auth mode changes → Invalidate all sessions for that project
- * 4. Hotlink protection changes → Invalidate ALL sessions (more restrictive)
+ * 1. Session timeout changes → Invalidate ALL share sessions globally
+ * 2. Project password changes → Invalidate all share sessions for that project
+ * 3. Project auth mode changes → Invalidate all share sessions for that project
+ * 4. Hotlink protection changes → Invalidate ALL share sessions (more restrictive)
  * 5. Password attempt changes → Clear rate limit counters
  * 6. Admin removal → Revoke all admin tokens for deleted user
  * 7. Admin password change → Revoke all admin tokens (handled in auth.ts)
@@ -26,30 +25,18 @@ import { revokeAllUserTokens } from './token-revocation'
  */
 
 /**
- * Scan and delete Redis keys matching a pattern with optional filtering
+ * Scan and delete Redis keys matching a pattern
  * @private
  */
 async function scanAndDeleteKeys(
-  pattern: string,
-  filter?: (key: string, value: string | null) => boolean
+  pattern: string
 ): Promise<number> {
   const redis = getRedis()
   const stream = redis.scanStream({ match: pattern, count: 100 })
   const keysToDelete: string[] = []
 
   for await (const keys of stream) {
-    if (filter) {
-      // Apply filter - check each key's value
-      for (const key of keys) {
-        const value = await redis.get(key)
-        if (filter(key, value)) {
-          keysToDelete.push(key)
-        }
-      }
-    } else {
-      // No filter - collect all keys
-      keysToDelete.push(...keys)
-    }
+    keysToDelete.push(...keys)
   }
 
   // Delete all collected keys in pipeline
@@ -60,56 +47,6 @@ async function scanAndDeleteKeys(
   }
 
   return keysToDelete.length
-}
-
-/**
- * Invalidate all client sessions for a specific project
- *
- * Use when:
- * - Project password changes
- * - Project is deleted
- * - Project security settings change
- *
- * @param projectId - The project ID to invalidate sessions for
- * @returns Number of sessions invalidated
- */
-export async function invalidateProjectSessions(projectId: string): Promise<number> {
-  try {
-    const invalidatedCount = await scanAndDeleteKeys(
-      'auth_project:*',
-      (_key, value) => value === projectId
-    )
-
-    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidatedCount} sessions for project ${projectId}`)
-    return invalidatedCount
-  } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating project sessions:', error)
-    throw error
-  }
-}
-
-/**
- * Invalidate ALL client sessions globally
- *
- * Use when:
- * - Session timeout duration changes
- * - Hotlink protection becomes more restrictive
- * - Global security policy changes
- *
- * WARNING: This will force all clients to re-authenticate
- *
- * @returns Number of sessions invalidated
- */
-export async function invalidateAllSessions(): Promise<number> {
-  try {
-    const invalidatedCount = await scanAndDeleteKeys('auth_project:*')
-
-    console.log(`[SESSION_INVALIDATION] Invalidated ALL ${invalidatedCount} client sessions globally`)
-    return invalidatedCount
-  } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating all sessions:', error)
-    throw error
-  }
 }
 
 /**
@@ -135,50 +72,6 @@ export async function clearAllRateLimits(): Promise<number> {
 }
 
 /**
- * Get session statistics (for monitoring/debugging)
- *
- * @returns Object with session counts
- */
-export async function getSessionStats(): Promise<{
-  totalSessions: number
-  sessionsByProject: Record<string, number>
-}> {
-  try {
-    const redis = getRedis()
-    const sessionsByProject: Record<string, number> = {}
-    let totalSessions = 0
-
-    const stream = redis.scanStream({
-      match: 'auth_project:*',
-      count: 100
-    })
-
-    for await (const keys of stream) {
-      totalSessions += keys.length
-
-      // Count sessions per project
-      for (const key of keys) {
-        const projectId = await redis.get(key)
-        if (projectId) {
-          sessionsByProject[projectId] = (sessionsByProject[projectId] || 0) + 1
-        }
-      }
-    }
-
-    return {
-      totalSessions,
-      sessionsByProject
-    }
-  } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error getting session stats:', error)
-    return {
-      totalSessions: 0,
-      sessionsByProject: {}
-    }
-  }
-}
-
-/**
  * Invalidate all share token sessions for a specific project
  * by revoking their sessionIds in Redis
  *
@@ -192,34 +85,43 @@ export async function getSessionStats(): Promise<{
  */
 export async function invalidateShareTokensByProject(projectId: string): Promise<number> {
   try {
-    const redis = getRedis()
-
-    // Get all unique session IDs for this project
     const sessions = await prisma.sharePageAccess.findMany({
       where: { projectId },
       select: { sessionId: true },
       distinct: ['sessionId']
     })
 
-    if (sessions.length === 0) {
-      return 0
-    }
-
-    // Revoke each session in Redis with TTL
-    // Use conservative TTL of 7 days to outlast any possible token
-    const ttl = 7 * 24 * 60 * 60 // 7 days in seconds
-    const pipeline = redis.pipeline()
-
-    for (const session of sessions) {
-      pipeline.setex(`revoked:share_session:${session.sessionId}`, ttl, '1')
-    }
-
-    await pipeline.exec()
-
-    console.log(`[SESSION_INVALIDATION] Invalidated ${sessions.length} share sessions for project ${projectId}`)
-    return sessions.length
+    const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
+    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} share sessions for project ${projectId}`)
+    return invalidated
   } catch (error) {
     console.error('[SESSION_INVALIDATION] Error invalidating share sessions:', error)
+    throw error
+  }
+}
+
+/**
+ * Invalidate all known share sessions globally.
+ *
+ * Use when:
+ * - Session timeout duration changes
+ * - Hotlink protection becomes more restrictive
+ * - Global security policy changes
+ *
+ * @returns Number of share sessions invalidated
+ */
+export async function invalidateAllShareSessions(): Promise<number> {
+  try {
+    const sessions = await prisma.sharePageAccess.findMany({
+      select: { sessionId: true },
+      distinct: ['sessionId']
+    })
+
+    const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
+    console.log(`[SESSION_INVALIDATION] Invalidated ALL ${invalidated} share sessions globally`)
+    return invalidated
+  } catch (error) {
+    console.error('[SESSION_INVALIDATION] Error invalidating all share sessions:', error)
     throw error
   }
 }
@@ -273,8 +175,6 @@ export async function invalidateAdminSessions(userId: string): Promise<void> {
  */
 export async function invalidateRecipientSessions(recipientId: string): Promise<number> {
   try {
-    const redis = getRedis()
-
     // Find all share page access records for this recipient
     const sessions = await prisma.sharePageAccess.findMany({
       where: {
@@ -304,22 +204,9 @@ export async function invalidateRecipientSessions(recipientId: string): Promise<
       s.email?.toLowerCase() === recipient.email?.toLowerCase()
     )
 
-    if (recipientSessions.length === 0) {
-      return 0
-    }
-
-    // Revoke each session in Redis with TTL
-    const ttl = 7 * 24 * 60 * 60 // 7 days in seconds
-    const pipeline = redis.pipeline()
-
-    for (const session of recipientSessions) {
-      pipeline.setex(`revoked:share_session:${session.sessionId}`, ttl, '1')
-    }
-
-    await pipeline.exec()
-
-    console.log(`[SESSION_INVALIDATION] Invalidated ${recipientSessions.length} sessions for recipient ${recipientId} (${recipient.email})`)
-    return recipientSessions.length
+    const invalidated = await revokeShareSessions(recipientSessions.map((session) => session.sessionId))
+    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} sessions for recipient ${recipientId} (${recipient.email})`)
+    return invalidated
   } catch (error) {
     console.error('[SESSION_INVALIDATION] Error invalidating recipient sessions:', error)
     throw error
@@ -337,8 +224,6 @@ export async function invalidateRecipientSessions(recipientId: string): Promise<
  */
 export async function invalidateSessionsByEmail(email: string): Promise<number> {
   try {
-    const redis = getRedis()
-
     const sessions = await prisma.sharePageAccess.findMany({
       where: {
         email: {
@@ -350,21 +235,9 @@ export async function invalidateSessionsByEmail(email: string): Promise<number> 
       distinct: ['sessionId']
     })
 
-    if (sessions.length === 0) {
-      return 0
-    }
-
-    const ttl = 7 * 24 * 60 * 60 // 7 days
-    const pipeline = redis.pipeline()
-
-    for (const session of sessions) {
-      pipeline.setex(`revoked:share_session:${session.sessionId}`, ttl, '1')
-    }
-
-    await pipeline.exec()
-
-    console.log(`[SESSION_INVALIDATION] Invalidated ${sessions.length} sessions for email ${email}`)
-    return sessions.length
+    const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
+    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} sessions for email ${email}`)
+    return invalidated
   } catch (error) {
     console.error('[SESSION_INVALIDATION] Error invalidating sessions by email:', error)
     throw error
@@ -384,8 +257,6 @@ export async function invalidateSessionsByEmail(email: string): Promise<number> 
  */
 export async function invalidateGuestSessions(projectId: string): Promise<number> {
   try {
-    const redis = getRedis()
-
     // Get all unique session IDs for GUEST access method
     const sessions = await prisma.sharePageAccess.findMany({
       where: {
@@ -396,25 +267,28 @@ export async function invalidateGuestSessions(projectId: string): Promise<number
       distinct: ['sessionId']
     })
 
-    if (sessions.length === 0) {
-      return 0
-    }
-
-    const ttl = 7 * 24 * 60 * 60 // 7 days
-    const pipeline = redis.pipeline()
-
-    for (const session of sessions) {
-      pipeline.setex(`revoked:share_session:${session.sessionId}`, ttl, '1')
-    }
-
-    await pipeline.exec()
-
-    console.log(`[SESSION_INVALIDATION] Invalidated ${sessions.length} guest sessions for project ${projectId}`)
-    return sessions.length
+    const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
+    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} guest sessions for project ${projectId}`)
+    return invalidated
   } catch (error) {
     console.error('[SESSION_INVALIDATION] Error invalidating guest sessions:', error)
     throw error
   }
+}
+
+async function revokeShareSessions(sessionIds: string[]): Promise<number> {
+  if (sessionIds.length === 0) return 0
+
+  const redis = getRedis()
+  const ttl = 7 * 24 * 60 * 60 // 7 days in seconds
+  const pipeline = redis.pipeline()
+
+  for (const sessionId of sessionIds) {
+    pipeline.setex(`revoked:share_session:${sessionId}`, ttl, '1')
+  }
+
+  await pipeline.exec()
+  return sessionIds.length
 }
 
 /**

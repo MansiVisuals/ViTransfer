@@ -5,7 +5,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { isSmtpConfigured } from '@/lib/email'
 import { flushPendingClientNotifications } from '@/lib/notifications'
-import { invalidateProjectSessions, invalidateShareTokensByProject } from '@/lib/session-invalidation'
+import { invalidateShareTokensByProject } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { updateProjectSchema } from '@/lib/validation'
@@ -423,9 +423,6 @@ export async function PATCH(
         // Invalidate JWT-based share sessions
         const shareSessionsInvalidated = await invalidateShareTokensByProject(id)
 
-        // Also invalidate any legacy Redis sessions
-        const legacySessionsInvalidated = await invalidateProjectSessions(id)
-
         // Log the security action
         const changes: string[] = []
         if (passwordWasChanged) changes.push('password')
@@ -435,8 +432,7 @@ export async function PATCH(
         const changeReason = changes.join(' and ') + ' changed'
 
         console.log(
-          `[SECURITY] Project ${changeReason} - invalidated ${shareSessionsInvalidated} share sessions ` +
-          `and ${legacySessionsInvalidated} legacy sessions for project ${id}`
+          `[SECURITY] Project ${changeReason} - invalidated ${shareSessionsInvalidated} share sessions for project ${id}`
         )
       } catch (error) {
         console.error('[SECURITY] Failed to invalidate project sessions after security change:', error)
@@ -526,10 +522,10 @@ export async function DELETE(
       // Continue even if directory deletion fails
     }
 
-    // SECURITY: Invalidate all sessions for this project before deletion
+    // SECURITY: Invalidate all share sessions for this project before deletion
     try {
-      const invalidatedCount = await invalidateProjectSessions(id)
-      console.log(`[SECURITY] Project deleted - invalidated ${invalidatedCount} sessions`)
+      const invalidatedCount = await invalidateShareTokensByProject(id)
+      console.log(`[SECURITY] Project deleted - invalidated ${invalidatedCount} share sessions`)
     } catch (error) {
       console.error('[SECURITY] Failed to invalidate sessions during project deletion:', error)
       // Continue with deletion even if session invalidation fails

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
-import { invalidateAllSessions, clearAllRateLimits } from '@/lib/session-invalidation'
+import { invalidateAllShareSessions, clearAllRateLimits } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 
@@ -247,26 +247,26 @@ export async function PATCH(request: NextRequest) {
     // SECURITY: Invalidate sessions when security settings change
     let invalidationLog: string[] = []
 
-    // 1. Session timeout changed → Invalidate ALL sessions globally
+    // 1. Session timeout changed → Invalidate ALL share sessions globally
     //    Reason: Existing sessions may exceed new timeout
     if (sessionTimeoutChanged) {
       try {
-        const count = await invalidateAllSessions()
-        invalidationLog.push(`Invalidated ${count} sessions (timeout changed)`)
-        console.log(`[SECURITY] Session timeout changed - invalidated ${count} client sessions`)
+        const count = await invalidateAllShareSessions()
+        invalidationLog.push(`Invalidated ${count} share sessions (timeout changed)`)
+        console.log(`[SECURITY] Session timeout changed - invalidated ${count} share sessions`)
       } catch (error) {
         console.error('[SECURITY] Failed to invalidate sessions after timeout change:', error)
         // Don't fail the request if session invalidation fails
       }
     }
 
-    // 2. Hotlink protection became more restrictive → Invalidate ALL sessions
+    // 2. Hotlink protection became more restrictive → Invalidate ALL share sessions
     //    Reason: New security policy should apply immediately
     if (hotlinkProtectionChanged) {
       try {
-        const count = await invalidateAllSessions()
-        invalidationLog.push(`Invalidated ${count} sessions (hotlink protection strengthened)`)
-        console.log(`[SECURITY] Hotlink protection strengthened - invalidated ${count} client sessions`)
+        const count = await invalidateAllShareSessions()
+        invalidationLog.push(`Invalidated ${count} share sessions (hotlink protection strengthened)`)
+        console.log(`[SECURITY] Hotlink protection strengthened - invalidated ${count} share sessions`)
       } catch (error) {
         console.error('[SECURITY] Failed to invalidate sessions after hotlink change:', error)
       }

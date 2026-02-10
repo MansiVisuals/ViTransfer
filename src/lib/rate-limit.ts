@@ -264,9 +264,9 @@ export async function incrementRateLimit(
     return { lockedOut: false }
   } catch (error) {
     console.error('Rate limit increment error:', error)
-    // Continue on error - we don't want to block legitimate operations
-    // But log the error for monitoring
-    return { lockedOut: false }
+    // Fail closed for security-sensitive flows (e.g. login/password verification).
+    // If the limiter backend is degraded, deny attempts instead of allowing brute-force gaps.
+    return { lockedOut: true }
   }
 }
 

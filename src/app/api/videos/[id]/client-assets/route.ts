@@ -236,3 +236,88 @@ export async function GET(
     )
   }
 }
+
+// DELETE /api/videos/[id]/client-assets?assetId=xxx - Delete an unlinked pending client asset
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: videoId } = await params
+
+  const rateLimitResult = await rateLimit(
+    request,
+    {
+      windowMs: 60 * 1000,
+      maxRequests: 30,
+      message: 'Too many requests. Please slow down.',
+    },
+    'client-asset-delete'
+  )
+  if (rateLimitResult) return rateLimitResult
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const assetId = searchParams.get('assetId')
+    if (!assetId) {
+      return NextResponse.json({ error: 'Asset ID is required' }, { status: 400 })
+    }
+
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      include: { project: true },
+    })
+
+    if (!video) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
+
+    const project = video.project
+
+    const accessCheck = await verifyProjectAccess(
+      request,
+      project.id,
+      project.sharePassword,
+      project.authMode,
+      {
+        requiredPermission: 'comment',
+        allowGuest: false,
+      }
+    )
+
+    if (!accessCheck.authorized) {
+      return accessCheck.errorResponse || NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    const asset = await prisma.videoAsset.findFirst({
+      where: {
+        id: assetId,
+        videoId,
+        uploadedBy: 'client',
+        commentId: null,
+      },
+      select: {
+        id: true,
+        storagePath: true,
+      },
+    })
+
+    if (!asset) {
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 })
+    }
+
+    await prisma.videoAsset.delete({ where: { id: asset.id } })
+
+    await initStorage()
+    await deleteFile(asset.storagePath).catch((error) => {
+      console.warn('[CLIENT-ASSET] Failed to delete file after record cleanup:', error)
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting client asset:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete attachment' },
+      { status: 500 }
+    )
+  }
+}

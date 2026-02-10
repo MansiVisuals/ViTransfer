@@ -85,6 +85,8 @@ export default function CommentSection({
     namedRecipients,
     isOtpAuthenticated,
     pendingAttachments,
+    attachmentError,
+    attachmentNotice,
     handleCommentChange,
     handleSubmitComment,
     handleReply,
@@ -95,6 +97,7 @@ export default function CommentSection({
     handleNameSourceChange,
     handleAttachmentAdded,
     handleRemoveAttachment,
+    handleAttachmentErrorChange,
   } = useCommentManagement({
     projectId,
     initialComments,
@@ -396,6 +399,9 @@ export default function CommentSection({
               pendingAttachments={pendingAttachments}
               onAttachmentAdded={handleAttachmentAdded}
               onRemoveAttachment={handleRemoveAttachment}
+              attachmentError={attachmentError}
+              attachmentNotice={attachmentNotice}
+              onAttachmentErrorChange={handleAttachmentErrorChange}
               shareToken={shareToken}
               showShortcutsButton={showShortcutsButton}
               onShowShortcuts={handleOpenShortcuts}
@@ -515,6 +521,9 @@ export default function CommentSection({
           pendingAttachments={pendingAttachments}
           onAttachmentAdded={handleAttachmentAdded}
           onRemoveAttachment={handleRemoveAttachment}
+          attachmentError={attachmentError}
+          attachmentNotice={attachmentNotice}
+          onAttachmentErrorChange={handleAttachmentErrorChange}
           shareToken={shareToken}
           showShortcutsButton={showShortcutsButton}
           onShowShortcuts={handleOpenShortcuts}

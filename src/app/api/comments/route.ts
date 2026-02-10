@@ -327,12 +327,17 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      if (assets.length > 0) {
-        await prisma.videoAsset.updateMany({
-          where: { id: { in: assets.map(a => a.id) } },
-          data: { commentId: comment.id },
-        })
+      if (assets.length !== assetIds.length) {
+        return NextResponse.json(
+          { error: 'One or more attachments are invalid or no longer available. Please attach the file again.' },
+          { status: 400 }
+        )
       }
+
+      await prisma.videoAsset.updateMany({
+        where: { id: { in: assets.map(a => a.id) } },
+        data: { commentId: comment.id },
+      })
     }
 
     // Handle notifications asynchronously

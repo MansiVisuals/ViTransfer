@@ -6,6 +6,7 @@ import { Button } from './ui/button'
 
 interface PendingAttachment {
   assetId: string
+  videoId: string
   fileName: string
   fileSize: string
   fileType: string
@@ -16,6 +17,7 @@ interface CommentAttachmentButtonProps {
   videoId: string
   shareToken: string | null
   onAttachmentAdded: (attachment: PendingAttachment) => void
+  onUploadError?: (message: string | null) => void
   disabled?: boolean
 }
 
@@ -23,6 +25,7 @@ export default function CommentAttachmentButton({
   videoId,
   shareToken,
   onAttachmentAdded,
+  onUploadError,
   disabled = false,
 }: CommentAttachmentButtonProps) {
   const [uploading, setUploading] = useState(false)
@@ -38,6 +41,7 @@ export default function CommentAttachmentButton({
 
     // Reset input so the same file can be selected again
     e.target.value = ''
+    onUploadError?.(null)
 
     setUploading(true)
     try {
@@ -63,13 +67,14 @@ export default function CommentAttachmentButton({
       const data = await response.json()
       onAttachmentAdded({
         assetId: data.assetId,
+        videoId,
         fileName: data.fileName,
         fileSize: data.fileSize,
         fileType: data.fileType,
         category: data.category,
       })
     } catch (error) {
-      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      onUploadError?.(error instanceof Error ? error.message : 'Upload failed')
     } finally {
       setUploading(false)
     }
@@ -81,6 +86,7 @@ export default function CommentAttachmentButton({
         ref={fileInputRef}
         type="file"
         className="hidden"
+        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.mp3,.wav,.aac,.flac,.ogg,.m4a,.wma,.mp4,.mov,.avi,.mkv,.mxf,.prores,.srt,.vtt,.ass,.ssa,.sub,.prproj,.aep,.fcp,.drp,.drt,.dra,.zip,.rar,.7z,.pdf,.doc,.docx,.txt,.rtf,.tar,.gz"
         onChange={handleFileChange}
       />
       <Button

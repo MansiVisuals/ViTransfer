@@ -45,9 +45,12 @@ interface CommentInputProps {
   // Attachments
   allowClientAssetUpload?: boolean
   selectedVideoId?: string | null
-  pendingAttachments?: Array<{ assetId: string; fileName: string; fileSize: string; fileType: string; category: string }>
-  onAttachmentAdded?: (attachment: { assetId: string; fileName: string; fileSize: string; fileType: string; category: string }) => void
+  pendingAttachments?: Array<{ assetId: string; videoId: string; fileName: string; fileSize: string; fileType: string; category: string }>
+  onAttachmentAdded?: (attachment: { assetId: string; videoId: string; fileName: string; fileSize: string; fileType: string; category: string }) => void
   onRemoveAttachment?: (assetId: string) => void
+  attachmentError?: string | null
+  attachmentNotice?: string | null
+  onAttachmentErrorChange?: (message: string | null) => void
   shareToken?: string | null
 
   // Optional shortcuts UI (share pages)
@@ -83,6 +86,9 @@ export default function CommentInput({
   pendingAttachments = [],
   onAttachmentAdded,
   onRemoveAttachment,
+  attachmentError = null,
+  attachmentNotice = null,
+  onAttachmentErrorChange,
   shareToken = null,
   showShortcutsButton = false,
   onShowShortcuts,
@@ -266,7 +272,7 @@ export default function CommentInput({
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <Textarea
               placeholder="Type your message..."
               value={newComment}
@@ -275,24 +281,32 @@ export default function CommentInput({
               className="resize-none"
               rows={2}
             />
-            {allowClientAssetUpload && selectedVideoIdProp && onAttachmentAdded && (
-              <CommentAttachmentButton
-                videoId={selectedVideoIdProp}
-                shareToken={shareToken}
-                onAttachmentAdded={onAttachmentAdded}
-                disabled={loading}
-              />
-            )}
-            <Button
-              onClick={onSubmit}
-              variant="default"
-              disabled={!canSubmit}
-              className="self-end"
-              size="icon"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center justify-end gap-2 self-end sm:self-auto">
+              {allowClientAssetUpload && selectedVideoIdProp && onAttachmentAdded && (
+                <CommentAttachmentButton
+                  videoId={selectedVideoIdProp}
+                  shareToken={shareToken}
+                  onAttachmentAdded={onAttachmentAdded}
+                  onUploadError={onAttachmentErrorChange}
+                  disabled={loading}
+                />
+              )}
+              <Button
+                onClick={onSubmit}
+                variant="default"
+                disabled={!canSubmit}
+                className="self-end"
+                size="icon"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
+          {(attachmentError || attachmentNotice) && (
+            <p className={`mt-2 text-xs ${attachmentError ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {attachmentError || attachmentNotice}
+            </p>
+          )}
 
           {isNameRequired ? (
             <p className="text-xs text-warning mt-2">

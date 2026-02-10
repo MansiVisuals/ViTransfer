@@ -40,11 +40,13 @@ export default function CommentAttachments({
   shareToken,
 }: CommentAttachmentsProps) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   if (!assets || assets.length === 0) return null
 
   const handleDownload = async (assetId: string) => {
     setDownloadingId(assetId)
+    setDownloadError(null)
     try {
       let response: Response
       if (shareToken) {
@@ -70,9 +72,9 @@ export default function CommentAttachments({
       }
 
       const { url } = await response.json()
-      window.open(url, '_blank')
+      window.location.href = url
     } catch (error) {
-      alert(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setDownloadError(error instanceof Error ? error.message : 'Download failed')
     } finally {
       setDownloadingId(null)
     }
@@ -80,6 +82,9 @@ export default function CommentAttachments({
 
   return (
     <div className="mt-2 space-y-1.5">
+      {downloadError && (
+        <p className="text-xs text-destructive">{downloadError}</p>
+      )}
       {assets.map((asset) => {
         const Icon = getCategoryIcon(asset.category, asset.fileType)
         const isDownloading = downloadingId === asset.id

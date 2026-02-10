@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Comment, Video } from '@prisma/client'
 import { useRouter } from 'next/navigation'
 import { apiPost, apiDelete } from '@/lib/api-client'
@@ -12,6 +12,7 @@ type CommentWithReplies = Comment & {
 
 interface PendingAttachment {
   assetId: string
+  videoId: string
   fileName: string
   fileSize: string
   fileType: string
@@ -58,6 +59,9 @@ export function useCommentManagement({
   const [hasAutoFilledTimestamp, setHasAutoFilledTimestamp] = useState(false)
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null)
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
+  const [attachmentError, setAttachmentError] = useState<string | null>(null)
+  const [attachmentNotice, setAttachmentNotice] = useState<string | null>(null)
+  const previousVideoIdRef = useRef<string | null>(null)
 
   // Author name management
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
@@ -153,12 +157,53 @@ export function useCommentManagement({
   const optimisticTopLevel = activeOptimisticComments.filter(oc => !oc.parentId)
   const comments = [...mergedComments, ...optimisticTopLevel]
 
+  const cleanupAttachmentAsset = useCallback(async (attachment: PendingAttachment) => {
+    try {
+      if (shareToken) {
+        await fetch(`/api/videos/${attachment.videoId}/client-assets?assetId=${attachment.assetId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${shareToken}` },
+        })
+      } else if (useAdminAuth) {
+        await apiDelete(`/api/videos/${attachment.videoId}/client-assets?assetId=${attachment.assetId}`)
+      } else {
+        await fetch(`/api/videos/${attachment.videoId}/client-assets?assetId=${attachment.assetId}`, {
+          method: 'DELETE',
+        })
+      }
+    } catch {
+      // Best-effort cleanup only. Ignore errors for now.
+    }
+  }, [shareToken, useAdminAuth])
+
   // Auto-select first video when videos list changes (admin panel without player)
   useEffect(() => {
     if (videos.length > 0 && !selectedVideoId) {
       setSelectedVideoId(videos[0].id)
     }
   }, [videos, selectedVideoId])
+
+  // Clear pending attachments when user switches to a different video context.
+  useEffect(() => {
+    const previousVideoId = previousVideoIdRef.current
+    if (
+      previousVideoId &&
+      selectedVideoId &&
+      selectedVideoId !== previousVideoId &&
+      pendingAttachments.length > 0
+    ) {
+      const staleAttachments = pendingAttachments.filter(a => a.videoId !== selectedVideoId)
+      if (staleAttachments.length > 0) {
+        setPendingAttachments(prev => prev.filter(a => a.videoId === selectedVideoId))
+        setAttachmentError(null)
+        setAttachmentNotice('Attachments were cleared because you switched videos.')
+        staleAttachments.forEach((attachment) => {
+          void cleanupAttachmentAsset(attachment)
+        })
+      }
+    }
+    previousVideoIdRef.current = selectedVideoId
+  }, [selectedVideoId, pendingAttachments, cleanupAttachmentAsset])
 
   // Sync with video player if available (share page with player)
   // Reduced from 1s to 5s to prevent UI lag during heavy interaction
@@ -248,6 +293,7 @@ export function useCommentManagement({
   // Auto-fill timestamp when user starts typing
   const handleCommentChange = (value: string) => {
     setNewComment(value)
+    setAttachmentError(null)
 
     if (value.length > 0 && !hasAutoFilledTimestamp && selectedTimestamp === null) {
       // Pause video and capture timestamp when user starts typing
@@ -291,6 +337,8 @@ export function useCommentManagement({
     }
 
     const validatedVideoId: string = selectedVideoId
+    setAttachmentError(null)
+    setAttachmentNotice(null)
 
     // Check if commenting on latest version only
     if (restrictToLatestVersion) {
@@ -342,8 +390,9 @@ export function useCommentManagement({
     // Keep selectedVideoId so user can post multiple comments
     setHasAutoFilledTimestamp(false)
     setReplyingToCommentId(null)
-    const commentAssetIds = pendingAttachments.map(a => a.assetId)
-    setPendingAttachments([])
+    const attachmentsForComment = pendingAttachments.filter(a => a.videoId === validatedVideoId)
+    const commentAssetIds = attachmentsForComment.map(a => a.assetId)
+    setPendingAttachments(prev => prev.filter(a => !commentAssetIds.includes(a.assetId)))
 
     try {
       // Convert timestamp to timecode for API
@@ -421,7 +470,12 @@ export function useCommentManagement({
           setNewComment(commentContent)
           setSelectedTimestamp(commentTimestamp)
           setSelectedVideoId(commentVideoId)
-          alert(`Failed to submit comment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          setAttachmentError(error instanceof Error ? error.message : 'Failed to submit comment')
+          setPendingAttachments(prev => {
+            const existingIds = new Set(prev.map(a => a.assetId))
+            const toRestore = attachmentsForComment.filter(a => !existingIds.has(a.assetId))
+            return toRestore.length > 0 ? [...prev, ...toRestore] : prev
+          })
         })
 
       // UI is already unblocked - loading state cleared immediately
@@ -431,7 +485,12 @@ export function useCommentManagement({
       setNewComment(commentContent)
       setSelectedTimestamp(commentTimestamp)
       setSelectedVideoId(commentVideoId)
-      alert(`Failed to submit comment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setAttachmentError(error instanceof Error ? error.message : 'Failed to submit comment')
+      setPendingAttachments(prev => {
+        const existingIds = new Set(prev.map(a => a.assetId))
+        const toRestore = attachmentsForComment.filter(a => !existingIds.has(a.assetId))
+        return toRestore.length > 0 ? [...prev, ...toRestore] : prev
+      })
     } finally {
       // Clear loading immediately so UI is not blocked
       setLoading(false)
@@ -538,11 +597,26 @@ export function useCommentManagement({
   }
 
   const handleAttachmentAdded = (attachment: PendingAttachment) => {
+    setAttachmentError(null)
+    setAttachmentNotice(null)
     setPendingAttachments(prev => [...prev, attachment])
   }
 
-  const handleRemoveAttachment = (assetId: string) => {
+  const handleRemoveAttachment = async (assetId: string) => {
+    const attachment = pendingAttachments.find(a => a.assetId === assetId)
     setPendingAttachments(prev => prev.filter(a => a.assetId !== assetId))
+    setAttachmentError(null)
+    setAttachmentNotice(null)
+    if (attachment) {
+      await cleanupAttachmentAsset(attachment)
+    }
+  }
+
+  const handleAttachmentErrorChange = (message: string | null) => {
+    setAttachmentError(message)
+    if (message) {
+      setAttachmentNotice(null)
+    }
   }
 
   // Get FPS of currently selected video
@@ -563,6 +637,8 @@ export function useCommentManagement({
     namedRecipients,
     isOtpAuthenticated: !!authenticatedEmail,
     pendingAttachments,
+    attachmentError,
+    attachmentNotice,
     handleCommentChange,
     handleSubmitComment,
     handleReply,
@@ -573,5 +649,6 @@ export function useCommentManagement({
     handleNameSourceChange,
     handleAttachmentAdded,
     handleRemoveAttachment,
+    handleAttachmentErrorChange,
   }
 }

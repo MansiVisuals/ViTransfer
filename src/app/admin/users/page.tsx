@@ -284,9 +284,9 @@ export default function UsersPage() {
     setError('')
 
     try {
-      await apiPatch(`/api/users/${editingUser.id}/password`, {
+      await apiPatch(`/api/users/${editingUser.id}`, {
         oldPassword: isOwnAccount ? passwordData.oldPassword : undefined,
-        newPassword: passwordData.password,
+        password: passwordData.password,
       })
       setShowPasswordModal(false)
     } catch (err) {

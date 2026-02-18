@@ -62,6 +62,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{AUTHOR_NAME}}', description: 'Name of comment author', example: 'Jane Smith' },
     { key: '{{COMMENT_CONTENT}}', description: 'The comment text', example: 'Great work on the intro!' },
     { key: '{{TIMECODE}}', description: 'Clickable timecode pill linking to the comment (if any)', example: '00:01:23:15' },
+    { key: '{{ATTACHMENTS}}', description: 'List of attached files (shown only if files were uploaded)', example: '' },
     { key: '{{SHARE_URL}}', description: 'Link to view and reply', example: 'https://review.acme.com/share/abc123' },
   ],
   ADMIN_COMMENT_NOTIFICATION: [
@@ -73,6 +74,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{VERSION_LABEL}}', description: 'Version label', example: 'v1' },
     { key: '{{COMMENT_CONTENT}}', description: 'The comment text', example: 'Could we adjust the color grading?' },
     { key: '{{TIMECODE}}', description: 'Clickable timecode pill linking to the comment (if any)', example: '00:01:23:15' },
+    { key: '{{ATTACHMENTS}}', description: 'List of attached files (shown only if files were uploaded)', example: '' },
     { key: '{{ADMIN_URL}}', description: 'Link to admin panel', example: 'https://review.acme.com/admin' },
   ],
   ADMIN_PROJECT_APPROVED: [
@@ -249,6 +251,8 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
 </div>
 
+{{ATTACHMENTS}}
+
 <div style="margin: 28px 0; text-align: center;">
   {{BUTTON:View Project:{{SHARE_URL}}}}
 </div>
@@ -270,6 +274,8 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   <div class="info-label">{{CLIENT_NAME}} &nbsp;{{TIMECODE}}</div>
   <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
 </div>
+
+{{ATTACHMENTS}}
 
 <div style="margin: 28px 0; text-align: center;">
   {{BUTTON:View in Admin Panel:{{ADMIN_URL}}}}

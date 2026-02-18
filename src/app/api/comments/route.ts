@@ -340,12 +340,23 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Collect attachment file names for notifications
+    let attachmentNames: string[] | undefined
+    if (assetIds && assetIds.length > 0) {
+      const linkedAssets = await prisma.videoAsset.findMany({
+        where: { commentId: comment.id },
+        select: { fileName: true },
+      })
+      attachmentNames = linkedAssets.map(a => a.fileName)
+    }
+
     // Handle notifications asynchronously
     await handleCommentNotifications({
       comment,
       projectId,
       videoId,
-      parentId
+      parentId,
+      attachmentNames,
     })
 
     // Fetch all comments for the project (to keep UI in sync)

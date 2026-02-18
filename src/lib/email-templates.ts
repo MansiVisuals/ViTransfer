@@ -22,6 +22,7 @@ interface NotificationData {
     authorName: string
     content: string
   }
+  attachmentNames?: string[]
   createdAt: string
 }
 
@@ -103,6 +104,7 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
         <div style="font-size:14px; font-weight:700; color:${brand.text}; margin-bottom:4px;">${escapeHtml(n.authorName)}${tcPill ? ` &nbsp;${tcPill}` : ''}</div>
         ${isReply ? `<div style="font-size:12px; color:${brand.muted}; margin-bottom:8px;">Replying to ${escapeHtml(n.parentComment!.authorName)} — "${escapeHtml(n.parentComment!.content.substring(0, 60))}${n.parentComment!.content.length > 60 ? '...' : ''}"</div>` : ''}
         <div style="font-size:14px; color:${brand.textSubtle}; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
+        ${n.attachmentNames && n.attachmentNames.length > 0 ? `<div style="margin-top:8px; font-size:12px; color:${brand.muted};"><span style="font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">Attachments:</span> ${n.attachmentNames.map(name => escapeHtml(name)).join(', ')}</div>` : ''}
       </div>
     `
   }).join(`<div style="height:1px; background:${brand.border}; margin:6px 0;"></div>`)
@@ -166,6 +168,7 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
           ${tcPill ? ` &nbsp;${tcPill}` : ''}
         </div>
         <div style="font-size:14px; color:${brand.textSubtle}; line-height:1.6; white-space:pre-wrap;">${escapeHtml(n.content || '')}</div>
+        ${n.attachmentNames && n.attachmentNames.length > 0 ? `<div style="margin-top:8px; font-size:12px; color:${brand.muted};"><span style="font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">Attachments:</span> ${n.attachmentNames.map(name => escapeHtml(name)).join(', ')}</div>` : ''}
       </div>
     `}).join('')
 

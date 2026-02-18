@@ -328,7 +328,7 @@ export const createCommentSchema = z.object({
   recipientId: cuidSchema.optional().nullable(),
   parentId: cuidSchema.optional(),
   isInternal: z.boolean().optional(),
-  assetIds: z.array(z.string()).max(5).optional(),
+  assetIds: z.array(z.string()).max(10).optional(),
 })
 
 export const updateCommentSchema = z.object({

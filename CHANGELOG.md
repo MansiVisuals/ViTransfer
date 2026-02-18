@@ -9,9 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Configurable maximum upload size in Global Settings (default: 1 GB).
-- Multiple file attachments can now be selected at once when adding comment attachments.
+- Multiple file attachments can now be selected at once when adding comment attachments via a dedicated upload modal with drag & drop support, file list preview, per-file progress tracking, and a hard cap of 10 files per batch.
+- Comment attachment filenames are now included in all notification channels: email notifications (immediate and summary), Apprise, and browser push notifications. A new `{{ATTACHMENTS}}` placeholder is available in comment email templates.
+- Upload modal validates file types before uploading and shows accepted formats.
+- Attachment-only comments are now supported with auto-generated message text.
 
 ### Changed
+- Increased maximum attachments per comment from 5 to 10.
+
 - Updated Advanced Security Settings layout for clearer organization.
 - Improved download/session security behavior.
 - Tightened default security headers.

@@ -97,7 +97,8 @@ export default function CommentInput({
 
   // Check if name selection is required but not provided
   const isNameRequired = showAuthorInput && namedRecipients.length > 0 && nameSource === 'none'
-  const canSubmit = !loading && newComment.trim() && !isNameRequired
+  const hasAttachments = pendingAttachments.length > 0
+  const canSubmit = !loading && (newComment.trim() || hasAttachments) && !isNameRequired
   const timestampLabel =
     selectedTimestamp !== null && selectedTimestamp !== undefined
       ? formatCommentTimestamp({

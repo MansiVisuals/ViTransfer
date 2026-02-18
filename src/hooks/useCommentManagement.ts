@@ -61,6 +61,7 @@ export function useCommentManagement({
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
   const [attachmentNotice, setAttachmentNotice] = useState<string | null>(null)
+  const attachmentUploadCountRef = useRef(0)
   const previousVideoIdRef = useRef<string | null>(null)
 
   // Author name management
@@ -315,7 +316,10 @@ export function useCommentManagement({
 
   // Submit comment
   const handleSubmitComment = async () => {
-    if (!newComment.trim()) return
+    const attachmentsForVideo = pendingAttachments.filter(a => a.videoId === selectedVideoId)
+    const hasAttachments = attachmentsForVideo.length > 0
+
+    if (!newComment.trim() && !hasAttachments) return
 
     // Prevent rapid-fire submissions
     if (loading) return
@@ -352,6 +356,13 @@ export function useCommentManagement({
 
     setLoading(true)
 
+    // Auto-fill comment text when empty but has attachments
+    let commentContent = newComment
+    if (!commentContent.trim() && hasAttachments) {
+      attachmentUploadCountRef.current += 1
+      commentContent = `Attachments uploaded #${attachmentUploadCountRef.current}`
+    }
+
     // OPTIMISTIC UPDATE
     const isInternalComment = useAdminAuth || !!adminUser
     // Convert seconds to timecode for API and storage
@@ -365,7 +376,7 @@ export function useCommentManagement({
       videoId: validatedVideoId,
       videoVersion: videos.find(v => v.id === validatedVideoId)?.version || null,
       timecode,
-      content: newComment,
+      content: commentContent,
       authorName: isInternalComment
         ? (adminUser!.name || 'Admin')
         : (isPasswordProtected ? authorName : 'Client'),
@@ -381,7 +392,6 @@ export function useCommentManagement({
     setOptimisticComments(prev => [...prev, optimisticComment])
 
     // Clear form immediately (but keep video selected for next comment)
-    const commentContent = newComment
     const commentTimestamp = selectedTimestamp
     const commentVideoId = validatedVideoId
     const commentParentId = replyingToCommentId

@@ -169,8 +169,9 @@ export async function handleCommentNotifications(params: {
   projectId: string
   videoId?: string
   parentId?: string
+  attachmentNames?: string[]
 }): Promise<void> {
-  const { comment, projectId, videoId, parentId } = params
+  const { comment, projectId, videoId, parentId, attachmentNames } = params
 
   try {
     const isAdminComment = comment.isInternal
@@ -253,6 +254,9 @@ export async function handleCommentNotifications(params: {
           video?.name ? `Video: ${video.name}${videoLabel}` : null,
           timecode ? `Timecode: ${timecode}` : null,
           commentPreview ? `Comment: ${commentPreview}` : null,
+          attachmentNames && attachmentNames.length > 0
+            ? `Attachments: ${attachmentNames.join(', ')}`
+            : null,
           adminShareUrl ? `Go to comment: ${adminShareUrl}` : null,
         ]
           .filter(Boolean)
@@ -305,7 +309,8 @@ export async function handleCommentNotifications(params: {
       comment,
       project: { id: project.id, title: project.title, slug: project.slug },
       video,
-      isReply: !!parentId
+      isReply: !!parentId,
+      attachmentNames,
     }
 
     // Handle notification based on schedule

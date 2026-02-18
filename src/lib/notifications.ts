@@ -14,6 +14,7 @@ interface NotificationContext {
   project: { id: string; title: string; slug: string }
   video: { name: string; versionLabel: string; fps?: number | null } | null
   isReply: boolean
+  attachmentNames?: string[]
 }
 
 interface ApprovalNotificationContext {
@@ -30,7 +31,7 @@ interface ApprovalNotificationContext {
  * Send immediate notification (when schedule is IMMEDIATE)
  */
 export async function sendImmediateNotification(context: NotificationContext) {
-  const { comment, project, video } = context
+  const { comment, project, video, attachmentNames } = context
 
   // Check if notification was cancelled before sending
   const redis = getRedis()
@@ -92,6 +93,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
         commentId: comment.id,
         shareUrl,
         unsubscribeUrl,
+        attachmentNames,
       }).then(result => {
         if (result.success) {
           console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
@@ -127,6 +129,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
       fps: video?.fps,
       commentId: comment.id,
       shareUrl,
+      attachmentNames,
     })
 
     if (result.success) {
@@ -141,7 +144,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
  * Queue notification for later batch sending (when schedule is not IMMEDIATE)
  */
 export async function queueNotification(context: NotificationContext) {
-  const { comment, project, video, isReply } = context
+  const { comment, project, video, isReply, attachmentNames } = context
 
   const type = comment.isInternal ? 'ADMIN_REPLY' : 'CLIENT_COMMENT'
 
@@ -184,6 +187,7 @@ export async function queueNotification(context: NotificationContext) {
         isReply,
         parentCommentId: comment.parentId,
         parentComment: parentCommentData,
+        attachmentNames: attachmentNames || [],
         createdAt: comment.createdAt.toISOString()
       }
     }

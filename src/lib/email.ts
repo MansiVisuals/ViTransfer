@@ -895,6 +895,7 @@ export async function sendCommentNotificationEmail({
   commentId,
   shareUrl,
   unsubscribeUrl,
+  attachmentNames,
 }: {
   clientEmail: string
   clientName: string
@@ -908,6 +909,7 @@ export async function sendCommentNotificationEmail({
   commentId?: string
   shareUrl: string
   unsubscribeUrl?: string
+  attachmentNames?: string[]
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
@@ -919,6 +921,11 @@ export async function sendCommentNotificationEmail({
 
   const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode, fps })
   const timecodeText = renderTimecodePill(timecode, tcLink, brand)
+
+  // Build attachments HTML
+  const attachmentsHtml = attachmentNames && attachmentNames.length > 0
+    ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">Attachments</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
+    : ''
 
   // Build placeholder values
   const placeholderValues: Record<string, string> = {
@@ -932,6 +939,7 @@ export async function sendCommentNotificationEmail({
     '{{TIMECODE}}': timecodeText,
     '{{SHARE_URL}}': shareUrl,
     '{{COMPANY_NAME}}': companyName,
+    '{{ATTACHMENTS}}': attachmentsHtml,
   }
 
   // Process subject line
@@ -979,6 +987,7 @@ export async function sendAdminCommentNotificationEmail({
   fps,
   commentId,
   shareUrl,
+  attachmentNames,
 }: {
   adminEmails: string[]
   clientName: string
@@ -992,6 +1001,7 @@ export async function sendAdminCommentNotificationEmail({
   fps?: number | null
   commentId?: string
   shareUrl: string
+  attachmentNames?: string[]
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
@@ -1008,6 +1018,11 @@ export async function sendAdminCommentNotificationEmail({
   const timecodeText = renderTimecodePill(timecode, tcLink, brand)
   const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
 
+  // Build attachments HTML
+  const attachmentsHtml = attachmentNames && attachmentNames.length > 0
+    ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">Attachments</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
+    : ''
+
   // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
@@ -1020,6 +1035,7 @@ export async function sendAdminCommentNotificationEmail({
     '{{TIMECODE}}': timecodeText,
     '{{ADMIN_URL}}': adminUrl,
     '{{COMPANY_NAME}}': companyName,
+    '{{ATTACHMENTS}}': attachmentsHtml,
   }
 
   // Process subject line

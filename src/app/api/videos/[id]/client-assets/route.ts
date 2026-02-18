@@ -3,26 +3,25 @@ import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
-import { uploadFile, initStorage, deleteFile } from '@/lib/storage'
-import { getAssetQueue } from '@/lib/queue'
+import { initStorage, deleteFile } from '@/lib/storage'
 export const runtime = 'nodejs'
 
-// POST /api/videos/[id]/client-assets - Upload a client asset (multipart)
+// POST /api/videos/[id]/client-assets - Create a client asset record (JSON)
+// The actual file upload goes through TUS at /api/uploads
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: videoId } = await params
 
-  // Rate limiting: 10 req/min
   const rateLimitResult = await rateLimit(
     request,
     {
       windowMs: 60 * 1000,
-      maxRequests: 10,
-      message: 'Too many upload requests. Please slow down.',
+      maxRequests: 60,
+      message: 'Too many requests. Please slow down.',
     },
-    'client-asset-upload'
+    'client-asset-create'
   )
   if (rateLimitResult) return rateLimitResult
 
@@ -63,14 +62,16 @@ export async function POST(
       return accessCheck.errorResponse || NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Parse FormData
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
-    const authorName = (formData.get('authorName') as string) || undefined
-    const authorEmail = (formData.get('authorEmail') as string) || undefined
+    // Parse JSON body
+    const body = await request.json()
+    const { fileName, fileSize, category: requestedCategory, authorName, authorEmail } = body
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    if (!fileName || typeof fileName !== 'string') {
+      return NextResponse.json({ error: 'fileName is required' }, { status: 400 })
+    }
+
+    if (!fileSize || typeof fileSize !== 'number' || fileSize <= 0) {
+      return NextResponse.json({ error: 'Valid fileSize is required' }, { status: 400 })
     }
 
     // Enforce global maxUploadSizeGB limit
@@ -79,17 +80,15 @@ export async function POST(
       select: { maxUploadSizeGB: true },
     })
     const maxBytes = (settings?.maxUploadSizeGB || 1) * 1024 * 1024 * 1024
-    if (file.size > maxBytes) {
+    if (fileSize > maxBytes) {
       return NextResponse.json(
         { error: `File exceeds maximum upload size of ${settings?.maxUploadSizeGB || 1} GB` },
         { status: 400 }
       )
     }
 
-    const originalFilename = file.name || 'upload.bin'
-
     // Check for suspicious filename
-    if (isSuspiciousFilename(originalFilename)) {
+    if (isSuspiciousFilename(fileName)) {
       return NextResponse.json(
         { error: 'File type not allowed' },
         { status: 400 }
@@ -97,11 +96,11 @@ export async function POST(
     }
 
     // Sanitize filename
-    const sanitizedFileName = sanitizeFilename(originalFilename)
+    const sanitizedFileName = sanitizeFilename(fileName)
 
-    // Validate asset file (same as admin uploads)
-    const mimeType = file.type || 'application/octet-stream'
-    const assetValidation = validateAssetFile(sanitizedFileName, mimeType)
+    // Validate asset file (use a generic mime type since we don't have the file yet)
+    const mimeType = 'application/octet-stream'
+    const assetValidation = validateAssetFile(sanitizedFileName, mimeType, requestedCategory)
 
     if (!assetValidation.valid) {
       return NextResponse.json(
@@ -116,56 +115,31 @@ export async function POST(
     const storagePath = `projects/${project.id}/videos/assets/${videoId}/client-${timestamp}-${finalFileName}`
     const category = assetValidation.detectedCategory || 'other'
 
-    // Store file via uploadFile (same 7-layer path traversal protection)
-    await initStorage()
-    const buffer = Buffer.from(await file.arrayBuffer())
-    await uploadFile(storagePath, buffer, file.size, mimeType)
-
-    // Create database record — clean up file on failure
-    let asset
-    try {
-      asset = await prisma.videoAsset.create({
-        data: {
-          videoId,
-          fileName: finalFileName,
-          fileSize: BigInt(file.size),
-          fileType: mimeType,
-          storagePath,
-          category,
-          uploadedBy: 'client',
-          uploadedByName: authorName || authorEmail || null,
-        },
-      })
-    } catch (dbError) {
-      // DB insert failed — remove orphaned file from disk
-      await deleteFile(storagePath).catch(() => {})
-      throw dbError
-    }
-
-    // Queue worker job for magic byte validation (same as admin uploads)
-    try {
-      const queue = getAssetQueue()
-      await queue.add('process-asset', {
-        assetId: asset.id,
+    // Create database record (file will be uploaded via TUS)
+    const asset = await prisma.videoAsset.create({
+      data: {
+        videoId,
+        fileName: finalFileName,
+        fileSize: BigInt(fileSize),
+        fileType: mimeType,
         storagePath,
-        expectedCategory: category,
-      })
-    } catch (queueError) {
-      console.error('[CLIENT-ASSET] Failed to queue asset processing:', queueError)
-      // Don't fail the upload if queue is unavailable
-    }
+        category,
+        uploadedBy: 'client',
+        uploadedByName: authorName || authorEmail || null,
+      },
+    })
 
     return NextResponse.json({
       assetId: asset.id,
       fileName: finalFileName,
-      fileSize: file.size.toString(),
+      fileSize: fileSize.toString(),
       fileType: mimeType,
       category,
     })
   } catch (error) {
-    console.error('Error uploading client asset:', error)
+    console.error('Error creating client asset record:', error)
     return NextResponse.json(
-      { error: 'Failed to upload file' },
+      { error: 'Failed to create asset record' },
       { status: 500 }
     )
   }
@@ -223,8 +197,14 @@ export async function GET(
     })
 
     const serializedAssets = assets.map(asset => ({
-      ...asset,
+      id: asset.id,
+      videoId: asset.videoId,
+      fileName: asset.fileName,
       fileSize: asset.fileSize.toString(),
+      fileType: asset.fileType,
+      category: asset.category,
+      commentId: asset.commentId,
+      createdAt: asset.createdAt,
     }))
 
     return NextResponse.json({ assets: serializedAssets })

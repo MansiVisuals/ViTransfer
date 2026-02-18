@@ -85,15 +85,35 @@ export async function GET(
       orderBy: { createdAt: 'desc' },
     })
 
-    // Convert BigInt to string for JSON serialization
-    const serializedAssets = assets.map(asset => ({
-      ...asset,
-      fileSize: asset.fileSize.toString(),
-    }))
+    // Convert BigInt to string and sanitize for non-admin users
+    const serializedAssets = assets.map(asset => {
+      const base = {
+        id: asset.id,
+        videoId: asset.videoId,
+        fileName: asset.fileName,
+        fileSize: asset.fileSize.toString(),
+        fileType: asset.fileType,
+        category: asset.category,
+        commentId: asset.commentId,
+        createdAt: asset.createdAt,
+      }
+
+      if (accessCheck.isAdmin) {
+        return {
+          ...base,
+          storagePath: asset.storagePath,
+          uploadedBy: asset.uploadedBy,
+          uploadedByName: asset.uploadedByName,
+          updatedAt: asset.updatedAt,
+        }
+      }
+
+      return base
+    })
 
     return NextResponse.json({
       assets: serializedAssets,
-      currentThumbnailPath: video.thumbnailPath
+      currentThumbnailPath: accessCheck.isAdmin ? video.thumbnailPath : undefined,
     })
   } catch (error) {
     console.error('Error fetching video assets:', error)

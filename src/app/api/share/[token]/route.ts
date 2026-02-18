@@ -133,17 +133,29 @@ export async function GET(
     }
 
     const videosSanitizedBase = project.videos.map((video: any) => ({
-      ...video,
+      id: video.id,
+      name: video.name,
+      version: video.version,
+      versionLabel: video.versionLabel,
+      originalFileName: video.originalFileName,
       originalFileSize: video.originalFileSize.toString(),
+      duration: video.duration,
+      width: video.width,
+      height: video.height,
+      fps: video.fps,
+      codec: video.codec,
+      status: video.status,
+      approved: video.approved,
+      approvedAt: video.approvedAt,
+      thumbnailPath: video.thumbnailPath,
+      createdAt: video.createdAt,
+      // Explicitly omit: projectId, originalStoragePath, preview720Path, preview1080Path,
+      // cleanPreview720Path, cleanPreview1080Path, processingError, processingProgress,
+      // uploadProgress
       streamUrl720p: '',
       streamUrl1080p: '',
       downloadUrl: null,
       thumbnailUrl: null,
-      preview720Path: undefined,
-      preview1080Path: undefined,
-      cleanPreview720Path: undefined,
-      cleanPreview1080Path: undefined,
-      originalStoragePath: undefined,
     }))
 
     const videosByName = videosSanitizedBase.reduce((acc: any, video: any) => {
@@ -182,6 +194,7 @@ export async function GET(
         select: {
           companyName: true,
           defaultPreviewResolution: true,
+          maxCommentAttachments: true,
         },
       }),
       getPrimaryRecipient(project.id)
@@ -284,6 +297,7 @@ export async function GET(
       settings: {
         companyName: globalSettings?.companyName || 'Studio',
         defaultPreviewResolution: globalSettings?.defaultPreviewResolution || '720p',
+        maxCommentAttachments: globalSettings?.maxCommentAttachments ?? 10,
       },
     }
 

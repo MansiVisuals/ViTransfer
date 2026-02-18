@@ -27,7 +27,7 @@ const tusServer: Server = new Server({
 
   async onUploadCreate(req, upload) {
     try {
-      const { parseBearerToken, verifyAdminAccessToken } = await import('@/lib/auth')
+      const { parseBearerToken, verifyAdminAccessToken, verifyShareToken } = await import('@/lib/auth')
       const bearer = parseBearerToken(req as any)
 
       if (!bearer) {
@@ -37,12 +37,84 @@ const tusServer: Server = new Server({
         }
       }
 
-      const payload = await verifyAdminAccessToken(bearer)
+      // Try admin auth first, then fall back to share token auth
+      let isAdmin = false
+      const adminPayload = await verifyAdminAccessToken(bearer)
+      if (adminPayload && adminPayload.role === 'ADMIN') {
+        isAdmin = true
+      } else {
+        // Try share token auth for client uploads
+        const sharePayload = await verifyShareToken(bearer)
+        if (!sharePayload) {
+          throw {
+            status_code: 403,
+            body: 'Access denied'
+          }
+        }
 
-      if (!payload || payload.role !== 'ADMIN') {
-        throw {
-          status_code: 403,
-          body: 'Admin access required'
+        // Share tokens can only upload assets (not videos)
+        if (!upload.metadata?.assetId) {
+          throw {
+            status_code: 403,
+            body: 'Share tokens can only upload assets'
+          }
+        }
+
+        // Verify comment permission
+        if (!sharePayload.permissions?.includes('comment')) {
+          throw {
+            status_code: 403,
+            body: 'Comment permission required'
+          }
+        }
+
+        // Guests cannot upload
+        if (sharePayload.guest) {
+          throw {
+            status_code: 403,
+            body: 'Guest access cannot upload files'
+          }
+        }
+
+        // Verify the asset belongs to the share token's project and is a client asset
+        const asset = await prisma.videoAsset.findUnique({
+          where: { id: upload.metadata.assetId as string },
+          include: { video: { select: { projectId: true } } },
+        })
+
+        if (!asset) {
+          throw {
+            status_code: 404,
+            body: 'Asset record not found'
+          }
+        }
+
+        // Prevent share tokens from uploading to admin-created asset records
+        if (asset.uploadedBy !== 'client') {
+          throw {
+            status_code: 403,
+            body: 'Access denied'
+          }
+        }
+
+        if (asset.video.projectId !== sharePayload.projectId) {
+          throw {
+            status_code: 403,
+            body: 'Asset does not belong to your project'
+          }
+        }
+
+        // Check that client asset upload is enabled for this project
+        const project = await prisma.project.findUnique({
+          where: { id: sharePayload.projectId },
+          select: { allowClientAssetUpload: true },
+        })
+
+        if (!project?.allowClientAssetUpload) {
+          throw {
+            status_code: 403,
+            body: 'File attachments are not enabled for this project'
+          }
         }
       }
 
@@ -87,6 +159,14 @@ const tusServer: Server = new Server({
       }
 
       if (videoId) {
+        // Only admins can upload videos
+        if (!isAdmin) {
+          throw {
+            status_code: 403,
+            body: 'Admin access required for video uploads'
+          }
+        }
+
         const video = await prisma.video.findUnique({
           where: { id: videoId }
         })
@@ -106,7 +186,8 @@ const tusServer: Server = new Server({
         }
       }
 
-      if (assetId) {
+      if (assetId && isAdmin) {
+        // Admin asset upload — just verify asset exists (share token path already verified above)
         const asset = await prisma.videoAsset.findUnique({
           where: { id: assetId }
         })
@@ -234,6 +315,7 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
     where: { id: assetId },
     data: {
       fileType: actualFileType,
+      fileSize: BigInt(fileSize),
     },
   })
 

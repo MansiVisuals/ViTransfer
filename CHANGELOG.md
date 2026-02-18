@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.1] - 2026-02-07
+## [0.9.1] - 2026-02-18
 
 ### Added
 - Configurable maximum upload size in Global Settings (default: 1 GB).

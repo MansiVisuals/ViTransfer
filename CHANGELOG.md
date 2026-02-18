@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Configurable maximum upload size in Global Settings (default: 1 GB).
+- Multiple file attachments can now be selected at once when adding comment attachments.
 
 ### Changed
 - Updated Advanced Security Settings layout for clearer organization.
@@ -16,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tightened default security headers.
 
 ### Fixed
+- Fixed admin password change failing with 404 by correcting API endpoint and payload key mismatch ([#36](https://github.com/MansiVisuals/ViTransfer/issues/36)) - thanks [@Talla](https://github.com/Talla)
 - Improved upload and download reliability.
 - Improved upload error messages shown in the UI.
 - Reduced exposure of internal server error details.

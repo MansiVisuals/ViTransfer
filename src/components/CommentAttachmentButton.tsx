@@ -35,44 +35,50 @@ export default function CommentAttachmentButton({
     fileInputRef.current?.click()
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const uploadFile = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
 
-    // Reset input so the same file can be selected again
+    const headers: Record<string, string> = {}
+    if (shareToken) {
+      headers['Authorization'] = `Bearer ${shareToken}`
+    }
+
+    const response = await fetch(`/api/videos/${videoId}/client-assets`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.error || `Upload failed for ${file.name}`)
+    }
+
+    const data = await response.json()
+    onAttachmentAdded({
+      assetId: data.assetId,
+      videoId,
+      fileName: data.fileName,
+      fileSize: data.fileSize,
+      fileType: data.fileType,
+      category: data.category,
+    })
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    // Reset input so the same files can be selected again
     e.target.value = ''
     onUploadError?.(null)
 
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const headers: Record<string, string> = {}
-      if (shareToken) {
-        headers['Authorization'] = `Bearer ${shareToken}`
+      for (const file of Array.from(files)) {
+        await uploadFile(file)
       }
-
-      const response = await fetch(`/api/videos/${videoId}/client-assets`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.error || 'Upload failed')
-      }
-
-      const data = await response.json()
-      onAttachmentAdded({
-        assetId: data.assetId,
-        videoId,
-        fileName: data.fileName,
-        fileSize: data.fileSize,
-        fileType: data.fileType,
-        category: data.category,
-      })
     } catch (error) {
       onUploadError?.(error instanceof Error ? error.message : 'Upload failed')
     } finally {
@@ -87,6 +93,7 @@ export default function CommentAttachmentButton({
         type="file"
         className="hidden"
         accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.mp3,.wav,.aac,.flac,.ogg,.m4a,.wma,.mp4,.mov,.avi,.mkv,.mxf,.prores,.srt,.vtt,.ass,.ssa,.sub,.prproj,.aep,.fcp,.drp,.drt,.dra,.zip,.rar,.7z,.pdf,.doc,.docx,.txt,.rtf,.tar,.gz"
+        multiple
         onChange={handleFileChange}
       />
       <Button
@@ -96,7 +103,7 @@ export default function CommentAttachmentButton({
         onClick={handleClick}
         disabled={disabled || uploading}
         className="self-end text-muted-foreground hover:text-foreground"
-        title="Attach a file"
+        title="Attach files"
       >
         {uploading ? (
           <Loader2 className="w-4 h-4 animate-spin" />

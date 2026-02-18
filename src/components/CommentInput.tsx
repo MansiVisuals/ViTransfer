@@ -52,6 +52,7 @@ interface CommentInputProps {
   attachmentNotice?: string | null
   onAttachmentErrorChange?: (message: string | null) => void
   shareToken?: string | null
+  maxCommentAttachments?: number
 
   // Optional shortcuts UI (share pages)
   showShortcutsButton?: boolean
@@ -90,6 +91,7 @@ export default function CommentInput({
   attachmentNotice = null,
   onAttachmentErrorChange,
   shareToken = null,
+  maxCommentAttachments,
   showShortcutsButton = false,
   onShowShortcuts,
 }: CommentInputProps) {
@@ -290,6 +292,7 @@ export default function CommentInput({
                   onAttachmentAdded={onAttachmentAdded}
                   onUploadError={onAttachmentErrorChange}
                   disabled={loading}
+                  maxFiles={maxCommentAttachments}
                 />
               )}
               <Button

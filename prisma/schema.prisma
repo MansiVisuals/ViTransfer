@@ -292,6 +292,7 @@ model Settings {
   defaultWatermarkEnabled  Boolean @default(true)
   defaultWatermarkText     String?
   maxUploadSizeGB          Int      @default(1) // Maximum upload size (GB) for TUS uploads (1-100)
+  maxCommentAttachments    Int      @default(10) // Maximum files per comment attachment batch (1-50)
 
   // Default Comment Timestamp Display
   // TIMECODE = HH:MM:SS:FF (or DF), AUTO = MM:SS or HH:MM:SS based on video length

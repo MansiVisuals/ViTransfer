@@ -34,6 +34,8 @@ interface SecuritySettingsSectionProps {
   setPasswordAttempts: (value: string) => void
   maxUploadSizeGB: string
   setMaxUploadSizeGB: (value: string) => void
+  maxCommentAttachments: string
+  setMaxCommentAttachments: (value: string) => void
   sessionTimeoutValue: string
   setSessionTimeoutValue: (value: string) => void
   sessionTimeoutUnit: string
@@ -84,6 +86,8 @@ export function SecuritySettingsSection({
   setPasswordAttempts,
   maxUploadSizeGB,
   setMaxUploadSizeGB,
+  maxCommentAttachments,
+  setMaxCommentAttachments,
   sessionTimeoutValue,
   setSessionTimeoutValue,
   sessionTimeoutUnit,
@@ -364,6 +368,22 @@ export function SecuritySettingsSection({
                 />
                 <p className="text-xs text-muted-foreground">
                   Maximum size per upload via TUS (1-100 GB)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxCommentAttachments">Max Attachments per Comment</Label>
+                <Input
+                  id="maxCommentAttachments"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={maxCommentAttachments}
+                  onChange={(e) => setMaxCommentAttachments(e.target.value)}
+                  placeholder="10"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum files per comment attachment batch (1-50, default: 10)
                 </p>
               </div>
             </div>

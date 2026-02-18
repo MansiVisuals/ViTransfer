@@ -28,6 +28,7 @@ interface Settings {
   defaultWatermarkEnabled: boolean | null
   defaultWatermarkText: string | null
   maxUploadSizeGB: number | null
+  maxCommentAttachments: number | null
   defaultTimestampDisplay: string | null
   autoApproveProject: boolean | null
   defaultUsePreviewForApprovedPlayback: boolean | null
@@ -107,6 +108,7 @@ export default function GlobalSettingsPage() {
   const [defaultWatermarkEnabled, setDefaultWatermarkEnabled] = useState(true)
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
   const [maxUploadSizeGB, setMaxUploadSizeGB] = useState('1')
+  const [maxCommentAttachments, setMaxCommentAttachments] = useState('10')
   const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
   const [defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback] = useState(false)
@@ -166,6 +168,7 @@ export default function GlobalSettingsPage() {
     setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
     setDefaultWatermarkText(data.defaultWatermarkText || '')
     setMaxUploadSizeGB(data.maxUploadSizeGB?.toString() || '1')
+    setMaxCommentAttachments(data.maxCommentAttachments?.toString() || '10')
     setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
     setAutoApproveProject(data.autoApproveProject ?? true)
     setDefaultUsePreviewForApprovedPlayback(data.defaultUsePreviewForApprovedPlayback ?? false)
@@ -468,6 +471,7 @@ export default function GlobalSettingsPage() {
         defaultWatermarkEnabled: defaultWatermarkEnabled,
         defaultWatermarkText: defaultWatermarkText || null,
         maxUploadSizeGB: parseInt(maxUploadSizeGB, 10) || 1,
+        maxCommentAttachments: parseInt(maxCommentAttachments, 10) || 10,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject: autoApproveProject,
         defaultUsePreviewForApprovedPlayback: defaultUsePreviewForApprovedPlayback,
@@ -705,6 +709,8 @@ export default function GlobalSettingsPage() {
             setPasswordAttempts={setPasswordAttempts}
             maxUploadSizeGB={maxUploadSizeGB}
             setMaxUploadSizeGB={setMaxUploadSizeGB}
+            maxCommentAttachments={maxCommentAttachments}
+            setMaxCommentAttachments={setMaxCommentAttachments}
             sessionTimeoutValue={sessionTimeoutValue}
             setSessionTimeoutValue={setSessionTimeoutValue}
             sessionTimeoutUnit={sessionTimeoutUnit}

@@ -328,7 +328,7 @@ export const createCommentSchema = z.object({
   recipientId: cuidSchema.optional().nullable(),
   parentId: cuidSchema.optional(),
   isInternal: z.boolean().optional(),
-  assetIds: z.array(z.string()).max(10).optional(),
+  assetIds: z.array(z.string()).max(50).optional(),
 })
 
 export const updateCommentSchema = z.object({
@@ -355,7 +355,8 @@ export const updateSettingsSchema = z.object({
   appDomain: urlSchema.optional(),
   defaultPreviewResolution: z.enum(['720p', '1080p']).optional(),
   defaultWatermarkText: safeStringSchema(0, 100).optional(),
-  maxUploadSizeGB: z.number().int().min(1).max(100).optional() // 1GB to 100GB
+  maxUploadSizeGB: z.number().int().min(1).max(100).optional(), // 1GB to 100GB
+  maxCommentAttachments: z.number().int().min(1).max(50).optional() // 1-50 files per comment batch
 })
 
 // ============================================================================

@@ -115,6 +115,7 @@ export async function PATCH(request: NextRequest) {
       defaultUsePreviewForApprovedPlayback,
       defaultAllowClientAssetUpload,
       emailHeaderStyle,
+      maxCommentAttachments,
     } = body
 
     // SECURITY: Validate theme setting
@@ -236,6 +237,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (maxCommentAttachments !== undefined && maxCommentAttachments !== null) {
+      const parsed = Number(maxCommentAttachments)
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
+        return NextResponse.json(
+          { error: 'Max comment attachments must be an integer between 1 and 50.' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Handle SMTP password update - only update if actually changed
     let passwordUpdate: string | null | undefined
     if (smtpPassword !== undefined) {
@@ -286,6 +297,7 @@ export async function PATCH(request: NextRequest) {
       defaultWatermarkEnabled,
       defaultWatermarkText,
       maxUploadSizeGB: maxUploadSizeGB !== undefined && maxUploadSizeGB !== null ? Number(maxUploadSizeGB) : undefined,
+      maxCommentAttachments: maxCommentAttachments !== undefined && maxCommentAttachments !== null ? Number(maxCommentAttachments) : undefined,
       defaultTimestampDisplay,
       autoApproveProject,
       adminNotificationSchedule,
@@ -331,6 +343,7 @@ export async function PATCH(request: NextRequest) {
         defaultPreviewResolution,
         defaultWatermarkText,
         maxUploadSizeGB: maxUploadSizeGB !== undefined && maxUploadSizeGB !== null ? Number(maxUploadSizeGB) : 1,
+        maxCommentAttachments: maxCommentAttachments !== undefined && maxCommentAttachments !== null ? Number(maxCommentAttachments) : 10,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject,
         adminNotificationSchedule: adminNotificationSchedule || 'IMMEDIATE',

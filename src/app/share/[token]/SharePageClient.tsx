@@ -956,6 +956,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   initialMobileCollapsed={true}
                   authenticatedEmail={authenticatedEmail}
                   allowClientAssetUpload={project.allowClientAssetUpload || false}
+                  maxCommentAttachments={project.settings?.maxCommentAttachments ?? 10}
                   onToggleVisibility={() => setHideComments(!hideComments)}
                   showToggleButton={false}
                 />

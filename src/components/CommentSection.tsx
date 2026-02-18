@@ -39,6 +39,7 @@ interface CommentSectionProps {
   initialMobileCollapsed?: boolean
   authenticatedEmail?: string | null
   allowClientAssetUpload?: boolean
+  maxCommentAttachments?: number
   onToggleVisibility?: () => void
   showToggleButton?: boolean
   onMobileExpandedChange?: (expanded: boolean) => void
@@ -66,6 +67,7 @@ export default function CommentSection({
   initialMobileCollapsed = true,
   authenticatedEmail = null,
   allowClientAssetUpload = false,
+  maxCommentAttachments,
   onToggleVisibility,
   showToggleButton = false,
   onMobileExpandedChange,
@@ -395,6 +397,7 @@ export default function CommentSection({
               restrictionMessage={restrictionMessage}
               commentsDisabled={commentsDisabled}
               allowClientAssetUpload={allowClientAssetUpload}
+              maxCommentAttachments={maxCommentAttachments}
               selectedVideoId={selectedVideoId}
               pendingAttachments={pendingAttachments}
               onAttachmentAdded={handleAttachmentAdded}
@@ -517,6 +520,7 @@ export default function CommentSection({
           restrictionMessage={restrictionMessage}
           commentsDisabled={commentsDisabled}
           allowClientAssetUpload={allowClientAssetUpload}
+          maxCommentAttachments={maxCommentAttachments}
           selectedVideoId={selectedVideoId}
           pendingAttachments={pendingAttachments}
           onAttachmentAdded={handleAttachmentAdded}

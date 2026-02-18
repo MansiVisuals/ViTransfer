@@ -192,6 +192,21 @@ export async function POST(request: NextRequest) {
       assetIds,
     } = validation.data
 
+    // Enforce configurable max comment attachments
+    if (assetIds && assetIds.length > 0) {
+      const globalSettings = await prisma.settings.findUnique({
+        where: { id: 'default' },
+        select: { maxCommentAttachments: true },
+      })
+      const maxAttachments = globalSettings?.maxCommentAttachments ?? 10
+      if (assetIds.length > maxAttachments) {
+        return NextResponse.json(
+          { error: `Too many attachments. Maximum allowed: ${maxAttachments}` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Get authentication context (single call for both admin and share token)
     const authContext = await getAuthContext(request)
 

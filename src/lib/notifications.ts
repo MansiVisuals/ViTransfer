@@ -29,35 +29,35 @@ interface ApprovalNotificationContext {
 
 /**
  * Send immediate notification (when schedule is IMMEDIATE)
+ * @param target - 'client' to send to clients, 'admin' to send to admins
  */
-export async function sendImmediateNotification(context: NotificationContext) {
+export async function sendImmediateNotification(context: NotificationContext, target: 'client' | 'admin' = 'client') {
   const { comment, project, video, attachmentNames } = context
 
-  // Check if notification was cancelled before sending
+  // Check if notification was cancelled (comment deleted)
   const redis = getRedis()
-  const notificationData = await redis.get(`comment_notification:${comment.id}`)
+  const cancelled = await redis.get(`comment_cancelled:${comment.id}`)
 
-  if (!notificationData) {
+  if (cancelled) {
     console.log(`[IMMEDIATE] Comment ${comment.id} notification was cancelled, skipping send`)
     return
   }
 
-  // Get recipients with notifications enabled
-  const allRecipients = await getProjectRecipients(comment.projectId)
-  const recipients = allRecipients.filter(r => r.receiveNotifications && r.email)
-
-  // Get all admins
-  const admins = await prisma.user.findMany({
-    where: { role: 'ADMIN' },
-    select: { email: true, name: true }
-  })
-
   const shareUrl = await generateShareUrl(project.slug)
   const videoName = video?.name || 'Unknown Video'
   const versionLabel = video?.versionLabel || 'Unknown Version'
+  const authorEmail = comment.authorEmail?.toLowerCase() || null
 
-  if (comment.isInternal) {
-    // Admin commented/replied → notify clients IMMEDIATELY
+  if (target === 'client') {
+    // Send to clients — skip author if they are a client
+    const allRecipients = await getProjectRecipients(comment.projectId)
+    const recipients = allRecipients.filter(r => {
+      if (!r.receiveNotifications || !r.email) return false
+      // Skip the author (client who wrote this comment)
+      if (!comment.isInternal && authorEmail && r.email.toLowerCase() === authorEmail) return false
+      return true
+    })
+
     if (recipients.length === 0) {
       console.log(`[IMMEDIATE→CLIENT] Skipped - no recipients for project "${project.title}"`)
       return
@@ -65,7 +65,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
 
     console.log(`[IMMEDIATE→CLIENT] Sending to ${recipients.length} recipient(s) for "${project.title}"`)
     console.log(`[IMMEDIATE→CLIENT]   Video: ${videoName} (${versionLabel})`)
-    console.log(`[IMMEDIATE→CLIENT]   Author: ${comment.authorName || 'Admin'}`)
+    console.log(`[IMMEDIATE→CLIENT]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
 
     const emailPromises = recipients.map(recipient => {
       let unsubscribeUrl: string | undefined
@@ -86,7 +86,7 @@ export async function sendImmediateNotification(context: NotificationContext) {
         projectTitle: project.title,
         videoName,
         versionLabel,
-        authorName: comment.authorName || 'Admin',
+        authorName: comment.authorName || (comment.isInternal ? 'Admin' : 'Client'),
         commentContent: comment.content,
         timecode: comment.timecode,
         fps: video?.fps,
@@ -106,19 +106,30 @@ export async function sendImmediateNotification(context: NotificationContext) {
 
     await Promise.allSettled(emailPromises)
   } else {
-    // Client commented → notify admins IMMEDIATELY
-    if (admins.length === 0) {
-      console.log(`[IMMEDIATE→ADMIN] Skipped - no admins configured`)
+    // Send to admins — skip author if they are an admin
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { email: true, name: true }
+    })
+
+    // Skip the author admin
+    const targetAdmins = admins.filter(a => {
+      if (comment.isInternal && authorEmail && a.email.toLowerCase() === authorEmail) return false
+      return true
+    })
+
+    if (targetAdmins.length === 0) {
+      console.log(`[IMMEDIATE→ADMIN] Skipped - no admins to notify for "${project.title}"`)
       return
     }
 
-    console.log(`[IMMEDIATE→ADMIN] Sending to ${admins.length} admin(s) for "${project.title}"`)
+    console.log(`[IMMEDIATE→ADMIN] Sending to ${targetAdmins.length} admin(s) for "${project.title}"`)
     console.log(`[IMMEDIATE→ADMIN]   Video: ${videoName} (${versionLabel})`)
-    console.log(`[IMMEDIATE→ADMIN]   Client: ${comment.authorName || 'Client'}`)
+    console.log(`[IMMEDIATE→ADMIN]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
 
     const result = await sendAdminCommentNotificationEmail({
-      adminEmails: admins.map(a => a.email),
-      clientName: comment.authorName || 'Client',
+      adminEmails: targetAdmins.map(a => a.email),
+      clientName: comment.authorName || (comment.isInternal ? 'Admin' : 'Client'),
       clientEmail: comment.authorEmail,
       projectTitle: project.title,
       projectId: project.id,
@@ -142,8 +153,12 @@ export async function sendImmediateNotification(context: NotificationContext) {
 
 /**
  * Queue notification for later batch sending (when schedule is not IMMEDIATE)
+ * @param alreadySentTo - sides already handled via IMMEDIATE, pre-mark as sent
  */
-export async function queueNotification(context: NotificationContext) {
+export async function queueNotification(
+  context: NotificationContext,
+  alreadySentTo?: { admins?: boolean; clients?: boolean }
+) {
   const { comment, project, video, isReply, attachmentNames } = context
 
   const type = comment.isInternal ? 'ADMIN_REPLY' : 'CLIENT_COMMENT'
@@ -169,10 +184,17 @@ export async function queueNotification(context: NotificationContext) {
     }
   }
 
+  const now = new Date()
+
   await prisma.notificationQueue.create({
     data: {
       projectId: comment.projectId,
       type,
+      // Pre-mark sides that were already sent immediately
+      sentToAdmins: alreadySentTo?.admins || false,
+      adminSentAt: alreadySentTo?.admins ? now : undefined,
+      sentToClients: alreadySentTo?.clients || false,
+      clientSentAt: alreadySentTo?.clients ? now : undefined,
       data: {
         type, // Include type in data JSON for email templates
         commentId: comment.id,
@@ -368,8 +390,8 @@ export async function flushPendingAdminNotifications(): Promise<void> {
     for (const notification of pendingNotifications) {
       const commentId = (notification.data as any).commentId
       if (commentId) {
-        const data = await redis.get(`comment_notification:${commentId}`)
-        if (!data) {
+        const isCancelled = await redis.get(`comment_cancelled:${commentId}`)
+        if (isCancelled) {
           cancelledIds.push(notification.id)
           continue
         }
@@ -492,8 +514,8 @@ export async function flushPendingClientNotifications(projectId: string): Promis
     for (const notification of project.notificationQueue) {
       const commentId = (notification.data as any).commentId
       if (commentId) {
-        const data = await redis.get(`comment_notification:${commentId}`)
-        if (!data) {
+        const isCancelled = await redis.get(`comment_cancelled:${commentId}`)
+        if (isCancelled) {
           cancelledIds.push(notification.id)
           continue
         }

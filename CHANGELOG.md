@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - Unreleased
+
+### Fixed
+- Fixed daily and weekly notification summaries being silently dropped due to Redis TTL expiring before the scheduled send time. Cancellation logic is now inverted: a `comment_cancelled` key is set on deletion instead of requiring a presence key that expired after 1 hour.
+- Fixed notification routing only notifying "the other side" (admin comment notified clients only, client comment notified admins only). Comments now route through both admin and client notification schedules independently, so other admins and other clients are also notified.
+- Fixed immediate email notifications being sent to the comment author. The author is now skipped by email match on immediate sends.
+- Fixed hourly notification summaries only firing if the worker check landed within the first 2 minutes of the hour. Removed the minute restriction; the `lastSent` comparison already prevents double-sends.
+- Fixed weekly notification summaries being skipped entirely if the worker missed the configured day. The worker now calculates the most recent occurrence of the configured day and catches up.
+
 ## [0.9.1] - 2026-02-18
 
 ### Added

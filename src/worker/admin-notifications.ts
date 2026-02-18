@@ -83,8 +83,8 @@ export async function processAdminNotifications() {
     for (const notification of pendingNotifications) {
       const commentId = (notification.data as any).commentId
       if (commentId) {
-        const notificationData = await redis.get(`comment_notification:${commentId}`)
-        if (!notificationData) {
+        const isCancelled = await redis.get(`comment_cancelled:${commentId}`)
+        if (isCancelled) {
           console.log(`[ADMIN]   Skipping cancelled notification for comment ${commentId}`)
           cancelledNotificationIds.push(notification.id)
           continue

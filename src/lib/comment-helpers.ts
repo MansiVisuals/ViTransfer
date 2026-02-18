@@ -283,27 +283,16 @@ export async function handleCommentNotifications(params: {
       return
     }
 
-    // Track this comment's notification in Redis (for deletion cancellation)
-    const redis = getRedis()
-    await redis.set(
-      `comment_notification:${comment.id}`,
-      JSON.stringify({ commentId: comment.id, projectId, videoId, queued: true }),
-      'EX',
-      3600 // Expire after 1 hour (covers all notification schedules)
-    )
-
     // Get settings for admin schedule
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
       select: { adminNotificationSchedule: true }
     })
 
-    // Determine which schedule to use
-    const schedule = isAdminComment
-      ? project.clientNotificationSchedule // Admin replies use client schedule
-      : (settings?.adminNotificationSchedule || 'IMMEDIATE') // Client comments use admin schedule
+    const adminSchedule = settings?.adminNotificationSchedule || 'IMMEDIATE'
+    const clientSchedule = project.clientNotificationSchedule
 
-    console.log(`[COMMENT-NOTIFICATION] Comment type: ${isAdminComment ? 'ADMIN' : 'CLIENT'}, Schedule: ${schedule}`)
+    console.log(`[COMMENT-NOTIFICATION] Comment type: ${isAdminComment ? 'ADMIN' : 'CLIENT'}, Admin schedule: ${adminSchedule}, Client schedule: ${clientSchedule}`)
 
     const context = {
       comment,
@@ -313,13 +302,32 @@ export async function handleCommentNotifications(params: {
       attachmentNames,
     }
 
-    // Handle notification based on schedule
-    if (schedule === 'IMMEDIATE') {
-      console.log('[COMMENT-NOTIFICATION] Sending immediately...')
-      await sendImmediateNotification(context)
-    } else {
-      console.log(`[COMMENT-NOTIFICATION] Queuing for later (${schedule})...`)
-      await queueNotification(context)
+    // Dual-path: route through BOTH admin and client schedules
+    // Each side uses its own schedule independently.
+    // A single queue entry has both sentToAdmins/sentToClients flags,
+    // so we only queue once when either (or both) sides are non-IMMEDIATE.
+
+    const clientImmediate = clientSchedule === 'IMMEDIATE'
+    const adminImmediate = adminSchedule === 'IMMEDIATE'
+
+    // Send immediate emails for sides that use IMMEDIATE
+    if (clientImmediate) {
+      console.log('[COMMENT-NOTIFICATION] Client path: sending immediately...')
+      await sendImmediateNotification(context, 'client')
+    }
+    if (adminImmediate) {
+      console.log('[COMMENT-NOTIFICATION] Admin path: sending immediately...')
+      await sendImmediateNotification(context, 'admin')
+    }
+
+    // Queue once if either side needs batched delivery.
+    // Pre-mark sides that were already sent immediately so workers don't re-process them.
+    if (!clientImmediate || !adminImmediate) {
+      console.log(`[COMMENT-NOTIFICATION] Queuing for batched delivery (admin: ${adminSchedule}, client: ${clientSchedule})...`)
+      await queueNotification(context, {
+        admins: adminImmediate,
+        clients: clientImmediate,
+      })
     }
   } catch (emailError) {
     // Don't fail the request if notification processing fails
@@ -335,15 +343,15 @@ export async function cancelCommentNotification(commentId: string): Promise<void
   try {
     const redis = getRedis()
 
-    // Check if notification is pending
-    const notificationData = await redis.get(`comment_notification:${commentId}`)
-
-    if (!notificationData) {
-      console.log(`[CANCEL-NOTIFICATION] No pending notification for comment ${commentId}`)
-      return
-    }
-
     console.log(`[CANCEL-NOTIFICATION] Cancelling notification for comment ${commentId}`)
+
+    // Mark as cancelled in Redis (8-day TTL covers weekly schedules)
+    await redis.set(
+      `comment_cancelled:${commentId}`,
+      '1',
+      'EX',
+      691200 // 8 days
+    )
 
     // Delete from notification queue if it exists
     await prisma.notificationQueue.deleteMany({
@@ -354,9 +362,6 @@ export async function cancelCommentNotification(commentId: string): Promise<void
         }
       }
     })
-
-    // Mark as cancelled in Redis
-    await redis.del(`comment_notification:${commentId}`)
 
     console.log(`[CANCEL-NOTIFICATION] Successfully cancelled notification for comment ${commentId}`)
   } catch (error) {

@@ -37,11 +37,8 @@ export function shouldSendNow(
   const getTargetTime = (): Date | null => {
     switch (schedule) {
       case 'HOURLY':
-        // Only send at the top of the hour (:00 or :01 minutes to account for cron timing)
-        // This ensures messages accumulate during the hour and send at the next :00
-        if (now.getMinutes() > 1) return null
-
-        // Target is the current hour (already at :00 or :01)
+        // Target = most recent top-of-hour. No minute restriction —
+        // the lastSent comparison below prevents double-sends.
         const hourTarget = new Date(now)
         hourTarget.setMinutes(0, 0, 0)
         return hourTarget
@@ -55,10 +52,15 @@ export function shouldSendNow(
 
       case 'WEEKLY':
         if (!time || day === null) return null
-        if (now.getDay() !== day) return null
         const [weeklyHour, weeklyMin] = time.split(':').map(Number)
         const weeklyTarget = new Date(now)
         weeklyTarget.setHours(weeklyHour, weeklyMin, 0, 0)
+        // Calculate most recent occurrence of the configured day
+        const currentDay = now.getDay()
+        let daysBack = currentDay - day
+        if (daysBack < 0) daysBack += 7
+        if (daysBack === 0 && now < weeklyTarget) daysBack = 7 // not yet today
+        weeklyTarget.setDate(weeklyTarget.getDate() - daysBack)
         return weeklyTarget
 
       default:

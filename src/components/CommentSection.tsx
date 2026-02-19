@@ -11,7 +11,7 @@ import CommentInput from './CommentInput'
 import { useCommentManagement } from '@/hooks/useCommentManagement'
 import { formatDate } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
-import { formatCommentTimestamp, timecodeToSeconds } from '@/lib/timecode'
+import { formatCommentTimestamp, timecodeToSeekSeconds } from '@/lib/timecode'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -89,6 +89,8 @@ export default function CommentSection({
     pendingAttachments,
     attachmentError,
     attachmentNotice,
+    pendingAnnotation,
+    selectedTimecodeEnd,
     handleCommentChange,
     handleSubmitComment,
     handleReply,
@@ -100,6 +102,9 @@ export default function CommentSection({
     handleAttachmentAdded,
     handleRemoveAttachment,
     handleAttachmentErrorChange,
+    handleStartDrawing,
+    handleSetTimecodeEnd,
+    handleClearTimecodeEnd,
   } = useCommentManagement({
     projectId,
     initialComments,
@@ -310,7 +315,7 @@ export default function CommentSection({
 
   const handleSeekToTimecode = (timecode: string, videoId: string, videoVersion: number | null) => {
     const fps = videos.find(v => v.id === videoId)?.fps || 24
-    const seconds = timecodeToSeconds(timecode, fps)
+    const seconds = timecodeToSeekSeconds(timecode, fps)
     handleSeekToTimestamp(seconds, videoId, videoVersion)
   }
 
@@ -383,6 +388,9 @@ export default function CommentSection({
               selectedVideoFps={selectedVideoFps}
               selectedVideoDurationSeconds={currentVideoDuration}
               timestampDisplayMode={timestampDisplayMode}
+              selectedTimecodeEnd={selectedTimecodeEnd}
+              onSetTimecodeEnd={handleSetTimecodeEnd}
+              onClearTimecodeEnd={handleClearTimecodeEnd}
               replyingToComment={replyingToComment}
               onCancelReply={handleCancelReply}
               showAuthorInput={!isAdminView && isPasswordProtected}
@@ -406,6 +414,8 @@ export default function CommentSection({
               attachmentNotice={attachmentNotice}
               onAttachmentErrorChange={handleAttachmentErrorChange}
               shareToken={shareToken}
+              pendingAnnotation={pendingAnnotation}
+              onStartDrawing={handleStartDrawing}
               showShortcutsButton={showShortcutsButton}
               onShowShortcuts={handleOpenShortcuts}
             />
@@ -468,6 +478,15 @@ export default function CommentSection({
                       mode: timestampDisplayMode,
                     })
                   : null
+                const timecodeEndLabel = (comment as any).timecodeEnd
+                  ? formatCommentTimestamp({
+                      timecode: (comment as any).timecodeEnd,
+                      fps,
+                      videoDurationSeconds: duration,
+                      mode: timestampDisplayMode,
+                    })
+                  : null
+                const hasAnnotation = !!(comment as any).annotations
 
                 return (
                   <div key={comment.id}>
@@ -483,6 +502,8 @@ export default function CommentSection({
                       replies={replies}
                       onDeleteReply={isAdminView ? handleDeleteComment : undefined}
                       timestampLabel={timestampLabel}
+                      timecodeEndLabel={timecodeEndLabel}
+                      hasAnnotation={hasAnnotation}
                       shareToken={shareToken}
                     />
                   </div>
@@ -506,6 +527,9 @@ export default function CommentSection({
           selectedVideoFps={selectedVideoFps}
           selectedVideoDurationSeconds={currentVideoDuration}
           timestampDisplayMode={timestampDisplayMode}
+          selectedTimecodeEnd={selectedTimecodeEnd}
+          onSetTimecodeEnd={handleSetTimecodeEnd}
+          onClearTimecodeEnd={handleClearTimecodeEnd}
           replyingToComment={replyingToComment}
           onCancelReply={handleCancelReply}
           showAuthorInput={!isAdminView && isPasswordProtected}
@@ -529,6 +553,8 @@ export default function CommentSection({
           attachmentNotice={attachmentNotice}
           onAttachmentErrorChange={handleAttachmentErrorChange}
           shareToken={shareToken}
+          pendingAnnotation={pendingAnnotation}
+          onStartDrawing={handleStartDrawing}
           showShortcutsButton={showShortcutsButton}
           onShowShortcuts={handleOpenShortcuts}
         />

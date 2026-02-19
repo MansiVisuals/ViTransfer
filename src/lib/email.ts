@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 import { prisma } from './db'
 import { decrypt } from './encryption'
-import { formatTimecodeDisplay, timecodeToSeconds } from './timecode'
+import { formatTimecodeDisplay, timecodeToSeekSeconds } from './timecode'
 import {
   getEmailTemplate,
   replacePlaceholders,
@@ -320,7 +320,7 @@ export function buildTimecodeDeepLink(shareUrl: string, opts: { videoName?: stri
     if (opts.videoName) url.searchParams.set('video', opts.videoName)
     if (opts.commentId) url.searchParams.set('comment', opts.commentId)
     const fps = typeof opts.fps === 'number' && isFinite(opts.fps) && opts.fps > 0 ? opts.fps : 24
-    const seconds = parseFloat(timecodeToSeconds(opts.timecode, fps).toFixed(2))
+    const seconds = parseFloat(timecodeToSeekSeconds(opts.timecode, fps).toFixed(2))
     url.searchParams.set('t', String(seconds))
     return url.toString()
   } catch {
@@ -340,7 +340,7 @@ export function buildAdminTimecodeDeepLink(appDomain: string, projectId: string,
     if (opts.videoName) params.set('video', opts.videoName)
     if (opts.commentId) params.set('comment', opts.commentId)
     const fps = typeof opts.fps === 'number' && isFinite(opts.fps) && opts.fps > 0 ? opts.fps : 24
-    const seconds = parseFloat(timecodeToSeconds(opts.timecode, fps).toFixed(2))
+    const seconds = parseFloat(timecodeToSeekSeconds(opts.timecode, fps).toFixed(2))
     params.set('t', String(seconds))
     path += `?${params.toString()}`
     return `${appDomain}/login?returnUrl=${encodeURIComponent(path)}`

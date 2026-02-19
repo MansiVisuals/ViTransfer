@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Comment } from '@prisma/client'
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward } from 'lucide-react'
 import { getUserColor } from '@/lib/utils'
-import { timecodeToSeconds, secondsToTimecode, formatCommentTimestamp } from '@/lib/timecode'
+import { timecodeToSeconds, timecodeToSeekSeconds, secondsToTimecode, formatCommentTimestamp } from '@/lib/timecode'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -292,6 +292,13 @@ interface MarkerData {
   position: number
 }
 
+interface RangeBarData {
+  id: string
+  startPosition: number
+  endPosition: number
+  colorKey: string
+}
+
 export default function CustomVideoControls({
   videoRef: _videoRef,
   videoDuration,
@@ -336,7 +343,7 @@ export default function CustomVideoControls({
         return true
       })
       .map((comment) => {
-        const timestamp = timecodeToSeconds(comment.timecode!, videoFps)
+        const timestamp = timecodeToSeekSeconds(comment.timecode!, videoFps)
         const effectiveAuthorName = comment.authorName ||
           ((comment as any).user?.name || (comment as any).user?.email || null)
         // Use isInternal from comment, default to false if not present (client comment)
@@ -354,6 +361,34 @@ export default function CustomVideoControls({
         }
       })
       .sort((a, b) => a.timestamp - b.timestamp)
+  }, [comments, videoDuration, videoFps, videoId])
+
+  // Range bars for comments with timecodeEnd
+  const rangeBars = useMemo((): RangeBarData[] => {
+    if (!videoDuration || videoDuration <= 0 || !comments.length) return []
+
+    return comments
+      .filter((comment) => {
+        if (comment.parentId) return false
+        if (videoId && comment.videoId !== videoId) return false
+        if (!comment.timecode || !(comment as any).timecodeEnd) return false
+        return true
+      })
+      .map((comment) => {
+        const start = timecodeToSeconds(comment.timecode!, videoFps)
+        const end = timecodeToSeconds((comment as any).timecodeEnd!, videoFps)
+        const effectiveAuthorName = comment.authorName ||
+          ((comment as any).user?.name || (comment as any).user?.email || null)
+        const isCommentInternal = (comment as any).isInternal ?? false
+        const colorKey = getUserColor(effectiveAuthorName, isCommentInternal).border
+
+        return {
+          id: comment.id,
+          startPosition: Math.max(0, (start / videoDuration) * 100),
+          endPosition: Math.min(100, (end / videoDuration) * 100),
+          colorKey,
+        }
+      })
   }, [comments, videoDuration, videoFps, videoId])
 
   // Group markers that are close together
@@ -540,6 +575,23 @@ export default function CustomVideoControls({
               style={{ width: `${progress}%` }}
             />
           </div>
+
+          {/* Range Bars for comments with timecodeEnd */}
+          {rangeBars.map((bar) => {
+            const colors = COLOR_MAP[bar.colorKey] || COLOR_MAP['border-gray-500']
+            const width = bar.endPosition - bar.startPosition
+            return (
+              <div
+                key={`range-${bar.id}`}
+                className={`absolute top-1/2 -translate-y-1/2 h-1.5 sm:h-2 rounded-full pointer-events-none ${colors.bg}`}
+                style={{
+                  left: `${bar.startPosition}%`,
+                  width: `${Math.max(width, 0.5)}%`,
+                  opacity: 0.85,
+                }}
+              />
+            )
+          })}
 
           {/* Comment Markers */}
           {groupedMarkers.map((group) => {

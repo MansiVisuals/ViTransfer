@@ -59,8 +59,10 @@ export function timecodeToSeconds(timecode: string, fps: number = 24): number {
 
     return totalFrames / fps
   } else {
-    // Non-drop-frame: simple linear conversion
-    return hours * 3600 + minutes * 60 + seconds + (frames / fps)
+    // Non-drop-frame: frame-count based conversion (consistent with DF path)
+    const roundedFps = Math.round(fps)
+    const totalFrames = hours * 3600 * roundedFps + minutes * 60 * roundedFps + seconds * roundedFps + frames
+    return totalFrames / fps
   }
 }
 
@@ -81,51 +83,57 @@ export function secondsToTimecode(seconds: number, fps: number = 24): string {
   const totalFrames = Math.round(seconds * fps)
 
   if (useDropFrame) {
-    // Drop-frame calculation
-    const dropFrames = Math.round(fps * 0.066666) // 2 for 29.97, 4 for 59.94
-    const framesPerMinute = roundedFps * 60
-    const framesPer10Minutes = framesPerMinute * 10
+    // Drop-frame: convert actual frame count back to display frame number
+    // using the standard SMPTE algorithm
+    const D = Math.round(fps * 0.066666) // 2 for 29.97, 4 for 59.94
+    const framesPerMin = roundedFps * 60
+    const actualFramesPerMin = framesPerMin - D
+    const framesPer10Min = framesPerMin * 10
+    const actualFramesPer10Min = framesPer10Min - (D * 9)
 
-    // Calculate total 10-minute intervals
-    const tenMinuteIntervals = Math.floor(totalFrames / framesPer10Minutes)
-    // Frames after the last 10-minute interval
-    let remainingFrames = totalFrames % framesPer10Minutes
+    // Count complete 10-minute chunks (no drops at 10-min boundaries)
+    const tenMinChunks = Math.floor(totalFrames / actualFramesPer10Min)
+    let remainder = totalFrames % actualFramesPer10Min
 
-    // Add back the dropped frames for 10-minute intervals
-    let adjustedFrames = totalFrames + (dropFrames * 9 * tenMinuteIntervals)
+    // Build display frame number by adding back dropped frame numbers
+    let displayFrame = tenMinChunks * framesPer10Min
 
-    // Handle frames within the current 10-minute interval
-    if (remainingFrames >= dropFrames) {
-      const oneMinuteIntervals = Math.floor((remainingFrames - dropFrames) / framesPerMinute)
-      adjustedFrames += dropFrames * oneMinuteIntervals
+    if (remainder < framesPerMin) {
+      // First minute of 10-min chunk (minute 0 has no drops)
+      displayFrame += remainder
+    } else {
+      // Subtract and add back first minute
+      remainder -= framesPerMin
+      displayFrame += framesPerMin
+
+      // Count subsequent minutes (each has actualFramesPerMin actual frames)
+      const additionalMinutes = Math.floor(remainder / actualFramesPerMin)
+      const framesIntoMinute = remainder % actualFramesPerMin
+
+      // Add display frames for complete minutes + dropped frames for current minute
+      displayFrame += additionalMinutes * framesPerMin
+      displayFrame += D + framesIntoMinute
     }
 
-    // Now convert adjusted frames to time components
-    const hours = Math.floor(adjustedFrames / (roundedFps * 60 * 60))
-    const minutes = Math.floor((adjustedFrames % (roundedFps * 60 * 60)) / (roundedFps * 60))
-    const secs = Math.floor((adjustedFrames % (roundedFps * 60)) / roundedFps)
-    const frames = adjustedFrames % roundedFps
+    // Decompose display frame into HH:MM:SS;FF
+    const frames = displayFrame % roundedFps
+    const secs = Math.floor(displayFrame / roundedFps) % 60
+    const minutes = Math.floor(displayFrame / (roundedFps * 60)) % 60
+    const hours = Math.floor(displayFrame / (roundedFps * 3600))
 
     // Use semicolon before frames for drop-frame
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')};${String(Math.floor(frames)).padStart(2, '0')}`
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')};${String(frames).padStart(2, '0')}`
   } else {
-    // Non-drop-frame: simple linear conversion
-    const totalSeconds = Math.floor(totalFrames / fps)
-    let frames = totalFrames - (totalSeconds * roundedFps)
+    // Non-drop-frame: decompose using roundedFps consistently (matching DF path)
+    const frames = totalFrames % roundedFps
+    const totalDisplaySeconds = Math.floor(totalFrames / roundedFps)
 
-    // Handle edge case where frames might be negative or >= fps due to rounding
-    if (frames < 0) {
-      frames = 0
-    } else if (frames >= roundedFps) {
-      frames = roundedFps - 1
-    }
-
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const secs = totalSeconds % 60
+    const hours = Math.floor(totalDisplaySeconds / 3600)
+    const minutes = Math.floor((totalDisplaySeconds % 3600) / 60)
+    const secs = totalDisplaySeconds % 60
 
     // Use colons throughout for non-drop-frame
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(Math.floor(frames)).padStart(2, '0')}`
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(frames).padStart(2, '0')}`
   }
 }
 
@@ -195,6 +203,19 @@ export function parseTimecodeInput(input: string, fps: number = 24): string {
  */
 export function getTimecodeLabel(fps: number): string {
   return isDropFrame(fps) ? 'DF' : 'NDF'
+}
+
+/**
+ * Convert timecode string to seconds with a half-frame offset for seeking.
+ * Landing in the middle of the target frame prevents browser seek imprecision
+ * from snapping to the previous frame.
+ * @param timecode - HH:MM:SS:FF or HH:MM:SS;FF format
+ * @param fps - Frames per second of the video
+ * @returns Total seconds targeting the center of the frame
+ */
+export function timecodeToSeekSeconds(timecode: string, fps: number = 24): number {
+  const halfFrame = 1 / (fps * 2)
+  return timecodeToSeconds(timecode, fps) + halfFrame
 }
 
 /**

@@ -6,7 +6,7 @@ import { validateCommentLength, containsSuspiciousPatterns, sanitizeCommentHtml 
 import { sendImmediateNotification, queueNotification } from '@/lib/notifications'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { getAppDomain } from '@/lib/url'
-import { formatTimecodeDisplay, timecodeToSeconds } from '@/lib/timecode'
+import { formatTimecodeDisplay, timecodeToSeekSeconds } from '@/lib/timecode'
 
 /**
  * Validate comment permissions
@@ -221,7 +221,7 @@ export async function handleCommentNotifications(params: {
 
         try {
           const fps = typeof video?.fps === 'number' && isFinite(video.fps) && video.fps > 0 ? video.fps : 24
-          const seconds = parseFloat(timecodeToSeconds(String(comment?.timecode || ''), fps).toFixed(2))
+          const seconds = parseFloat(timecodeToSeekSeconds(String(comment?.timecode || ''), fps).toFixed(2))
           if (isFinite(seconds) && seconds >= 0) params.set('t', String(seconds))
         } catch {
           // Ignore invalid timecode

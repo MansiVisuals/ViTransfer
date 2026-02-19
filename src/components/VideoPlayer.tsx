@@ -834,7 +834,7 @@ export default function VideoPlayer({
 
                 {/* Custom Video Controls with Integrated Timeline */}
                 <div
-                  className={`transition-opacity duration-300 ${
+                  className={`relative z-20 transition-opacity duration-300 ${
                     showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
                   }`}
                 >

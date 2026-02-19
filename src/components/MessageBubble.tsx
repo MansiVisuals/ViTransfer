@@ -87,39 +87,39 @@ export default function MessageBubble({
             <InitialsAvatar name={effectiveAuthorName} size="md" isInternal={comment.isInternal ?? false} />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-2 min-w-0">
+            <div className="flex items-center gap-2 mb-1 min-w-0">
               <span className="text-base font-semibold text-foreground truncate">
                 {effectiveAuthorName || 'Anonymous'}
               </span>
-              <span className="text-sm text-muted-foreground flex-shrink-0">
+              <span className="ml-auto text-sm text-muted-foreground flex-shrink-0">
                 {formatMessageTime(comment.createdAt)}
               </span>
             </div>
 
-            <div className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed">
-              {!isReply && timestampLabel && (
-                <span className="inline-flex items-center gap-1 mr-2 align-top">
-                  <button
-                    type="button"
-                    onClick={handleTimestampClick}
-                    className="inline-flex items-center gap-1 rounded-md bg-warning-visible px-2 py-1 text-sm font-semibold text-warning hover:opacity-90 transition-opacity"
-                    title="Seek to this timecode"
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span className="font-mono">
-                      {timestampLabel}{timecodeEndLabel ? ` \u2192 ${timecodeEndLabel}` : ''}
-                    </span>
-                  </button>
-                  {hasAnnotation && (
-                    <span className="inline-flex items-center rounded-md bg-blue-500/10 px-1.5 py-1 text-blue-600 dark:text-blue-400" title="Has drawing annotation">
-                      <Brush className="w-3.5 h-3.5" />
-                    </span>
-                  )}
-                </span>
-              )}
+            {!isReply && timestampLabel && (
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <button
+                  type="button"
+                  onClick={handleTimestampClick}
+                  className="inline-flex items-center gap-1 rounded-md bg-warning-visible px-2 py-0.5 text-xs font-semibold text-warning hover:opacity-90 transition-opacity"
+                  title="Seek to this timecode"
+                >
+                  <Clock className="w-3 h-3" />
+                  <span className="font-mono">
+                    {timestampLabel}{timecodeEndLabel ? ` \u2192 ${timecodeEndLabel}` : ''}
+                  </span>
+                </button>
+                {hasAnnotation && (
+                  <span className="inline-flex items-center rounded-md bg-blue-500/10 px-1.5 py-0.5 text-blue-600 dark:text-blue-400" title="Has drawing annotation">
+                    <Brush className="w-3.5 h-3.5" />
+                  </span>
+                )}
+              </div>
+            )}
 
+            <div className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed">
               <div
-                className={`${!isReply && timestampLabel ? 'inline' : ''} [&>p]:m-0 [&>p:first-child]:inline [&>br]:leading-[0]`}
+                className="[&>p]:m-0"
                 dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.content) }}
               />
             </div>

@@ -143,9 +143,10 @@ export default function AnnotationOverlay({
       if (!shapes) continue
 
       const startTime = timecodeToSeconds(comment.timecode, videoFps)
+      const frameDuration = 1 / (videoFps || 24)
       const endTime = comment.timecodeEnd
         ? timecodeToSeconds(comment.timecodeEnd, videoFps)
-        : startTime + 3
+        : startTime + frameDuration
 
       if (currentTime < startTime || currentTime > endTime) continue
 

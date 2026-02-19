@@ -1,7 +1,7 @@
 'use client'
 
 import { Comment } from '@prisma/client'
-import { Clock, Trash2 } from 'lucide-react'
+import { Clock, Trash2, Brush } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import CommentAttachments from './CommentAttachments'
@@ -22,6 +22,8 @@ interface MessageBubbleProps {
   replies?: Comment[]
   onDeleteReply?: (replyId: string) => void
   timestampLabel?: string | null
+  timecodeEndLabel?: string | null
+  hasAnnotation?: boolean
   shareToken?: string | null
 }
 
@@ -53,6 +55,8 @@ export default function MessageBubble({
   replies,
   onDeleteReply,
   timestampLabel,
+  timecodeEndLabel,
+  hasAnnotation,
   shareToken,
 }: MessageBubbleProps) {
   // Get effective author name for color generation
@@ -94,15 +98,24 @@ export default function MessageBubble({
 
             <div className="text-base text-foreground whitespace-pre-wrap break-words leading-relaxed">
               {!isReply && timestampLabel && (
-                <button
-                  type="button"
-                  onClick={handleTimestampClick}
-                  className="inline-flex items-center gap-1 rounded-md bg-warning-visible px-2 py-1 text-sm font-semibold text-warning mr-2 align-top hover:opacity-90 transition-opacity"
-                  title="Seek to this timecode"
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span className="font-mono">{timestampLabel}</span>
-                </button>
+                <span className="inline-flex items-center gap-1 mr-2 align-top">
+                  <button
+                    type="button"
+                    onClick={handleTimestampClick}
+                    className="inline-flex items-center gap-1 rounded-md bg-warning-visible px-2 py-1 text-sm font-semibold text-warning hover:opacity-90 transition-opacity"
+                    title="Seek to this timecode"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="font-mono">
+                      {timestampLabel}{timecodeEndLabel ? ` \u2192 ${timecodeEndLabel}` : ''}
+                    </span>
+                  </button>
+                  {hasAnnotation && (
+                    <span className="inline-flex items-center rounded-md bg-blue-500/10 px-1.5 py-1 text-blue-600 dark:text-blue-400" title="Has drawing annotation">
+                      <Brush className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                </span>
               )}
 
               <div

@@ -216,6 +216,10 @@ model Comment {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Annotation support
+  timecodeEnd String? // Optional end timecode for time range comments
+  annotations Json?   // JSONB storing drawing annotation shapes
+
   // Admin user tracking (for internal comments)
   userId String? // Admin user who created this comment
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)

@@ -56,6 +56,8 @@ export function sanitizeComment(
     videoId: comment.videoId,
     videoVersion: comment.videoVersion,
     timecode: normalizedTimecode,
+    timecodeEnd: comment.timecodeEnd || null,
+    annotations: comment.annotations || null,
     content: comment.content,
     isInternal: comment.isInternal,
     createdAt: comment.createdAt,

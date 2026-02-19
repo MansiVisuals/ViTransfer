@@ -357,11 +357,11 @@ export default function CommentAttachmentButton({
     <>
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="icon"
         onClick={() => setOpen(true)}
         disabled={disabled}
-        className="self-end text-muted-foreground hover:text-foreground"
+        className="h-8 w-8 flex-shrink-0"
         title="Attach files"
       >
         <Paperclip className="w-4 h-4" />

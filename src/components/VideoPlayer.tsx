@@ -6,6 +6,11 @@ import { Button } from './ui/button'
 import { CheckCircle2 } from 'lucide-react'
 import CustomVideoControls from './CustomVideoControls'
 import ProjectInfo from './ProjectInfo'
+import AnnotationOverlay from './AnnotationOverlay'
+import AnnotationCanvas from './AnnotationCanvas'
+import AnnotationToolbar from './AnnotationToolbar'
+import { useAnnotationDrawing } from '@/hooks/useAnnotationDrawing'
+import { secondsToTimecode } from '@/lib/timecode'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -85,6 +90,7 @@ export default function VideoPlayer({
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const videoWrapperRef = useRef<HTMLDivElement>(null)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hasInitiallySeenRef = useRef(false) // Track if initial seek already happened
   const lastTimeUpdateRef = useRef(0) // Throttle time updates
@@ -104,6 +110,57 @@ export default function VideoPlayer({
   // Safety check: ensure index is valid
   const safeIndex = Math.min(selectedVideoIndex, displayVideos.length - 1)
   const selectedVideo = displayVideos[safeIndex >= 0 ? safeIndex : 0]
+
+  // Drawing mode state
+  const [isDrawingMode, setIsDrawingMode] = useState(false)
+  const [drawingTimecodeStart, setDrawingTimecodeStart] = useState<string>('00:00:00:00')
+  const [drawingTimecodeEnd, setDrawingTimecodeEnd] = useState<string | null>(null)
+
+  const annotationDrawing = useAnnotationDrawing()
+
+  // Listen for enterDrawingMode event from CommentInput
+  useEffect(() => {
+    const handleEnterDrawing = (e: CustomEvent) => {
+      const fps = selectedVideo?.fps || 24
+      const timecodeStart = secondsToTimecode(currentTimeRef.current, fps)
+      setDrawingTimecodeStart(timecodeStart)
+      setDrawingTimecodeEnd(e.detail?.timecodeEnd || null)
+      setIsDrawingMode(true)
+
+      // Reset drawing state so we start with a fresh canvas each time
+      annotationDrawing.reset()
+
+      // Pause video when entering drawing mode
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause()
+      }
+    }
+
+    window.addEventListener('enterDrawingMode' as any, handleEnterDrawing as EventListener)
+    return () => {
+      window.removeEventListener('enterDrawingMode' as any, handleEnterDrawing as EventListener)
+    }
+  }, [selectedVideo?.fps, annotationDrawing.reset])
+
+  const handleDrawingDone = useCallback(() => {
+    const data = annotationDrawing.getAnnotationData()
+    setIsDrawingMode(false)
+
+    if (data) {
+      window.dispatchEvent(
+        new CustomEvent('annotationComplete', {
+          detail: {
+            annotations: data,
+            timecodeEnd: drawingTimecodeEnd,
+          },
+        })
+      )
+    }
+  }, [annotationDrawing, drawingTimecodeEnd])
+
+  const handleDrawingCancel = useCallback(() => {
+    setIsDrawingMode(false)
+  }, [])
 
   // Dispatch event when selected video changes (for immediate comment section update)
   useEffect(() => {
@@ -246,6 +303,7 @@ export default function VideoPlayer({
             if (videoRef.current) {
               videoRef.current.currentTime = timestamp
               currentTimeRef.current = timestamp
+              setCurrentTimeState(timestamp)
             }
           }, 500)
           return
@@ -256,6 +314,7 @@ export default function VideoPlayer({
       if (videoRef.current) {
         videoRef.current.currentTime = timestamp
         currentTimeRef.current = timestamp
+        setCurrentTimeState(timestamp)
       }
     }
 
@@ -713,6 +772,7 @@ export default function VideoPlayer({
               - Background color matches theme for clean letterboxing
             */}
             <div
+              ref={videoWrapperRef}
               className={`relative group w-full overflow-hidden rounded-xl bg-muted/50 backdrop-blur-sm ${fillContainer ? 'max-h-[60vh] xl:max-h-full' : 'max-h-[70vh]'}`}
               style={{ aspectRatio: '16 / 9' }}
             >
@@ -721,11 +781,11 @@ export default function VideoPlayer({
                 ref={videoRef}
                 src={videoUrl}
                 poster={(selectedVideo as any).thumbnailUrl || undefined}
-                className="w-full h-full cursor-pointer object-contain"
+                className={`w-full h-full object-contain ${isDrawingMode ? 'pointer-events-none' : 'cursor-pointer'}`}
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onContextMenu={!isAdmin ? (e) => e.preventDefault() : undefined}
-                onClick={handlePlayPause}
+                onClick={isDrawingMode ? undefined : handlePlayPause}
                 crossOrigin="anonymous"
                 playsInline
                 preload="metadata"
@@ -733,6 +793,44 @@ export default function VideoPlayer({
                 webkit-playsinline="true"
                 x-webkit-airplay="allow"
               />
+
+                {/* Annotation Overlay (read-only, renders saved drawing annotations during playback) */}
+                <AnnotationOverlay
+                  comments={comments as any[]}
+                  currentTime={currentTimeState}
+                  videoFps={selectedVideo?.fps || 24}
+                  containerRef={videoWrapperRef}
+                  videoRef={videoRef}
+                  hidden={isDrawingMode}
+                />
+
+                {/* Drawing Mode: Interactive Canvas + Toolbar + Keyframe Bar */}
+                {isDrawingMode && (
+                  <>
+                    <AnnotationCanvas
+                      containerRef={videoWrapperRef}
+                      videoRef={videoRef}
+                      shapes={annotationDrawing.shapes}
+                      activeShape={annotationDrawing.activeShape}
+                      onStartShape={annotationDrawing.startShape}
+                      onUpdateShape={annotationDrawing.updateShape}
+                      onFinishShape={annotationDrawing.finishShape}
+                    />
+                    <AnnotationToolbar
+                      activeColor={annotationDrawing.activeColor}
+                      strokeWidth={annotationDrawing.strokeWidth}
+                      opacity={annotationDrawing.opacity}
+                      canUndo={annotationDrawing.undoStack.length > 0}
+                      hasShapes={annotationDrawing.hasShapes}
+                      onColorChange={annotationDrawing.setActiveColor}
+                      onStrokeWidthChange={annotationDrawing.setStrokeWidth}
+                      onOpacityChange={annotationDrawing.setOpacity}
+                      onUndo={annotationDrawing.undo}
+                      onDone={handleDrawingDone}
+                      onCancel={handleDrawingCancel}
+                    />
+                  </>
+                )}
 
                 {/* Custom Video Controls with Integrated Timeline */}
                 <div

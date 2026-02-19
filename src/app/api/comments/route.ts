@@ -183,6 +183,7 @@ export async function POST(request: NextRequest) {
       videoId,
       videoVersion,
       timecode,
+      timecodeEnd,
       content,
       authorName,
       authorEmail,
@@ -190,6 +191,7 @@ export async function POST(request: NextRequest) {
       parentId,
       isInternal,
       assetIds,
+      annotations,
     } = validation.data
 
     // Enforce configurable max comment attachments
@@ -298,12 +300,14 @@ export async function POST(request: NextRequest) {
         videoId,
         videoVersion: finalVideoVersion || null,
         timecode,
+        timecodeEnd: timecodeEnd || null,
         content: contentValidation.sanitizedContent!,
         authorName: contentValidation.sanitizedAuthorName,
         authorEmail: finalAuthorEmail,
         isInternal: isInternal || false,
         parentId: parentId || null,
         userId: authContext.user?.id || null,
+        annotations: annotations || undefined,
       },
       include: {
         user: {

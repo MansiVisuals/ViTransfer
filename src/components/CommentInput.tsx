@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Clock, Send, X, Keyboard, Paperclip } from 'lucide-react'
+import { Clock, Send, X, Keyboard, Paperclip, Pencil, ArrowRight } from 'lucide-react'
 import { formatCommentTimestamp, secondsToTimecode } from '@/lib/timecode'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import CommentAttachmentButton from './CommentAttachmentButton'
@@ -22,6 +22,11 @@ interface CommentInputProps {
   selectedVideoFps: number // FPS of the currently selected video
   selectedVideoDurationSeconds?: number | null
   timestampDisplayMode?: 'TIMECODE' | 'AUTO'
+
+  // Timecode range (in/out)
+  selectedTimecodeEnd?: string | null
+  onSetTimecodeEnd?: () => void
+  onClearTimecodeEnd?: () => void
 
   // Reply state
   replyingToComment: Comment | null
@@ -54,6 +59,10 @@ interface CommentInputProps {
   shareToken?: string | null
   maxCommentAttachments?: number
 
+  // Annotation drawing
+  pendingAnnotation?: boolean
+  onStartDrawing?: () => void
+
   // Optional shortcuts UI (share pages)
   showShortcutsButton?: boolean
   onShowShortcuts?: () => void
@@ -69,6 +78,9 @@ export default function CommentInput({
   selectedVideoFps,
   selectedVideoDurationSeconds = null,
   timestampDisplayMode = 'TIMECODE',
+  selectedTimecodeEnd = null,
+  onSetTimecodeEnd,
+  onClearTimecodeEnd,
   replyingToComment,
   onCancelReply,
   showAuthorInput,
@@ -92,6 +104,8 @@ export default function CommentInput({
   onAttachmentErrorChange,
   shareToken = null,
   maxCommentAttachments,
+  pendingAnnotation = false,
+  onStartDrawing,
   showShortcutsButton = false,
   onShowShortcuts,
 }: CommentInputProps) {
@@ -100,7 +114,7 @@ export default function CommentInput({
   // Check if name selection is required but not provided
   const isNameRequired = showAuthorInput && namedRecipients.length > 0 && nameSource === 'none'
   const hasAttachments = pendingAttachments.length > 0
-  const canSubmit = !loading && (newComment.trim() || hasAttachments) && !isNameRequired
+  const canSubmit = !loading && (newComment.trim() || hasAttachments || pendingAnnotation) && !isNameRequired
   const timestampLabel =
     selectedTimestamp !== null && selectedTimestamp !== undefined
       ? formatCommentTimestamp({
@@ -110,6 +124,15 @@ export default function CommentInput({
           mode: timestampDisplayMode,
         })
       : null
+
+  const timecodeEndLabel = selectedTimecodeEnd
+    ? formatCommentTimestamp({
+        timecode: selectedTimecodeEnd,
+        fps: selectedVideoFps,
+        videoDurationSeconds: selectedVideoDurationSeconds,
+        mode: timestampDisplayMode,
+      })
+    : null
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Allow Ctrl+Space and other Ctrl shortcuts to pass through to VideoPlayer
@@ -228,13 +251,41 @@ export default function CommentInput({
         </div>
       )}
 
-      {/* Timestamp indicator */}
+      {/* Timestamp indicator with optional range */}
       {timestampLabel && !currentVideoRestricted && (
-        <div className="mb-3 flex items-center gap-2">
-          <div className="inline-flex items-center gap-2 rounded-md bg-warning-visible px-2 py-1 text-sm font-semibold text-warning">
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <div className="inline-flex items-center gap-1.5 rounded-md bg-warning-visible px-2 py-1 text-sm font-semibold text-warning">
             <Clock className="w-3.5 h-3.5" />
             <span className="font-mono">{timestampLabel}</span>
+            {timecodeEndLabel && (
+              <>
+                <ArrowRight className="w-3 h-3 mx-0.5" />
+                <span className="font-mono">{timecodeEndLabel}</span>
+                {onClearTimecodeEnd && (
+                  <button
+                    type="button"
+                    onClick={onClearTimecodeEnd}
+                    className="ml-0.5 hover:opacity-70 transition-opacity"
+                    title="Clear end timecode"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </>
+            )}
           </div>
+          {!timecodeEndLabel && onSetTimecodeEnd && (
+            <Button
+              type="button"
+              onClick={onSetTimecodeEnd}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2"
+              title="Set end timecode at current playback position"
+            >
+              Set Out Point
+            </Button>
+          )}
           <Button
             type="button"
             onClick={onClearTimestamp}
@@ -251,6 +302,16 @@ export default function CommentInput({
       {/* Message Input */}
       {!currentVideoRestricted && (
         <>
+          {/* Pending annotation indicator */}
+          {pendingAnnotation && (
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded-md text-xs text-blue-600 dark:text-blue-400">
+                <Pencil className="w-3 h-3" />
+                Drawing attached
+              </span>
+            </div>
+          )}
+
           {/* Pending attachment chips */}
           {pendingAttachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
@@ -275,7 +336,7 @@ export default function CommentInput({
             </div>
           )}
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-2">
             <Textarea
               placeholder="Type your message..."
               value={newComment}
@@ -284,23 +345,38 @@ export default function CommentInput({
               className="resize-none"
               rows={2}
             />
-            <div className="flex items-center justify-end gap-2 self-end sm:self-auto">
-              {allowClientAssetUpload && selectedVideoIdProp && onAttachmentAdded && (
-                <CommentAttachmentButton
-                  videoId={selectedVideoIdProp}
-                  shareToken={shareToken}
-                  onAttachmentAdded={onAttachmentAdded}
-                  onUploadError={onAttachmentErrorChange}
-                  disabled={loading}
-                  maxFiles={maxCommentAttachments}
-                />
-              )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                {onStartDrawing && (
+                  <Button
+                    type="button"
+                    onClick={onStartDrawing}
+                    variant={pendingAnnotation ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-8 w-8 flex-shrink-0"
+                    title="Draw on video"
+                    disabled={loading}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                )}
+                {allowClientAssetUpload && selectedVideoIdProp && onAttachmentAdded && (
+                  <CommentAttachmentButton
+                    videoId={selectedVideoIdProp}
+                    shareToken={shareToken}
+                    onAttachmentAdded={onAttachmentAdded}
+                    onUploadError={onAttachmentErrorChange}
+                    disabled={loading}
+                    maxFiles={maxCommentAttachments}
+                  />
+                )}
+              </div>
               <Button
                 onClick={onSubmit}
                 variant="default"
                 disabled={!canSubmit}
-                className="self-end"
                 size="icon"
+                className="h-8 w-8"
               >
                 <Send className="w-4 h-4" />
               </Button>

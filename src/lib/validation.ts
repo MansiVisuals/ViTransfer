@@ -315,6 +315,31 @@ export const createVideoSchema = z.object({
 // COMMENT SCHEMAS
 // ============================================================================
 
+// Annotation shape validation schemas
+const pointSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+})
+
+const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color')
+const strokeWidthSchema = z.number().min(0.001).max(0.05)
+
+const freehandShapeSchema = z.object({
+  id: z.string().min(1).max(50),
+  type: z.literal('freehand'),
+  color: hexColorSchema,
+  strokeWidth: strokeWidthSchema,
+  opacity: z.number().min(0).max(1).optional(),
+  points: z.array(pointSchema).min(1).max(5000),
+})
+
+const shapeSchema = freehandShapeSchema
+
+const annotationDataSchema = z.object({
+  version: z.literal(1),
+  shapes: z.array(shapeSchema).min(1).max(200),
+})
+
 export const createCommentSchema = z.object({
   projectId: cuidSchema,
   videoId: cuidSchema, // Required - all comments must be video-specific
@@ -322,6 +347,9 @@ export const createCommentSchema = z.object({
   timecode: z.string().refine(isValidTimecode, {
     message: 'Invalid timecode format. Expected HH:MM:SS:FF'
   }),
+  timecodeEnd: z.string().refine(isValidTimecode, {
+    message: 'Invalid end timecode format. Expected HH:MM:SS:FF'
+  }).optional().nullable(),
   content: contentSchema,
   authorName: safeStringSchema(1, 255).optional().nullable(),
   authorEmail: emailSchema.optional().nullable(),
@@ -329,6 +357,7 @@ export const createCommentSchema = z.object({
   parentId: cuidSchema.optional(),
   isInternal: z.boolean().optional(),
   assetIds: z.array(z.string()).max(50).optional(),
+  annotations: annotationDataSchema.optional().nullable(),
 })
 
 export const updateCommentSchema = z.object({

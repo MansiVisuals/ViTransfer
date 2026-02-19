@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Comment, Video } from '@prisma/client'
+import { Comment, Video, Prisma } from '@prisma/client'
 import { useRouter } from 'next/navigation'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { secondsToTimecode } from '@/lib/timecode'
+import { AnnotationData } from '@/types/annotations'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -61,6 +62,8 @@ export function useCommentManagement({
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
   const [attachmentNotice, setAttachmentNotice] = useState<string | null>(null)
+  const [pendingAnnotation, setPendingAnnotation] = useState<AnnotationData | null>(null)
+  const [selectedTimecodeEnd, setSelectedTimecodeEnd] = useState<string | null>(null)
   const attachmentUploadCountRef = useRef(0)
   const previousVideoIdRef = useRef<string | null>(null)
 
@@ -272,6 +275,24 @@ export function useCommentManagement({
     }
   }, [])
 
+  // Listen for annotationComplete event from drawing mode
+  useEffect(() => {
+    const handleAnnotationComplete = (e: CustomEvent) => {
+      const { annotations, timecodeEnd } = e.detail
+      if (annotations) {
+        setPendingAnnotation(annotations)
+      }
+      if (timecodeEnd) {
+        setSelectedTimecodeEnd(timecodeEnd)
+      }
+    }
+
+    window.addEventListener('annotationComplete', handleAnnotationComplete as EventListener)
+    return () => {
+      window.removeEventListener('annotationComplete', handleAnnotationComplete as EventListener)
+    }
+  }, [])
+
   // Keep selectedTimestamp in sync when the user frame-steps while commenting
   useEffect(() => {
     const handleVideoTimeUpdated = (e: CustomEvent) => {
@@ -318,8 +339,9 @@ export function useCommentManagement({
   const handleSubmitComment = async () => {
     const attachmentsForVideo = pendingAttachments.filter(a => a.videoId === selectedVideoId)
     const hasAttachments = attachmentsForVideo.length > 0
+    const hasAnnotations = !!pendingAnnotation
 
-    if (!newComment.trim() && !hasAttachments) return
+    if (!newComment.trim() && !hasAttachments && !hasAnnotations) return
 
     // Prevent rapid-fire submissions
     if (loading) return
@@ -356,11 +378,13 @@ export function useCommentManagement({
 
     setLoading(true)
 
-    // Auto-fill comment text when empty but has attachments
+    // Auto-fill comment text when empty but has attachments or annotations
     let commentContent = newComment
     if (!commentContent.trim() && hasAttachments) {
       attachmentUploadCountRef.current += 1
       commentContent = `Attachments uploaded #${attachmentUploadCountRef.current}`
+    } else if (!commentContent.trim() && hasAnnotations) {
+      commentContent = 'Drawing annotation'
     }
 
     // OPTIMISTIC UPDATE
@@ -376,6 +400,8 @@ export function useCommentManagement({
       videoId: validatedVideoId,
       videoVersion: videos.find(v => v.id === validatedVideoId)?.version || null,
       timecode,
+      timecodeEnd: selectedTimecodeEnd || null,
+      annotations: (pendingAnnotation as Prisma.JsonValue) || null,
       content: commentContent,
       authorName: isInternalComment
         ? (adminUser!.name || 'Admin')
@@ -400,6 +426,8 @@ export function useCommentManagement({
     // Keep selectedVideoId so user can post multiple comments
     setHasAutoFilledTimestamp(false)
     setReplyingToCommentId(null)
+    setPendingAnnotation(null)
+    setSelectedTimecodeEnd(null)
     const attachmentsForComment = pendingAttachments.filter(a => a.videoId === validatedVideoId)
     const commentAssetIds = attachmentsForComment.map(a => a.assetId)
     setPendingAttachments(prev => prev.filter(a => !commentAssetIds.includes(a.assetId)))
@@ -417,6 +445,14 @@ export function useCommentManagement({
         timecode: commentTimecode,
         content: commentContent,
         isInternal: isInternalComment,
+      }
+
+      // Include annotation data if present
+      if (pendingAnnotation) {
+        requestBody.annotations = pendingAnnotation
+      }
+      if (selectedTimecodeEnd) {
+        requestBody.timecodeEnd = selectedTimecodeEnd
       }
 
       // Add optional fields only if they have values
@@ -520,6 +556,7 @@ export function useCommentManagement({
     setSelectedTimestamp(null)
     setSelectedVideoId(null)
     setHasAutoFilledTimestamp(false)
+    setSelectedTimecodeEnd(null) // Clear end when clearing start
   }
 
   const handleNameSourceChange = (source: 'recipient' | 'custom' | 'none', recipientId?: string) => {
@@ -629,6 +666,38 @@ export function useCommentManagement({
     }
   }
 
+  const handleStartDrawing = () => {
+    // Dispatch event to VideoPlayer to enter drawing mode
+    window.dispatchEvent(
+      new CustomEvent('enterDrawingMode', {
+        detail: { timecodeEnd: selectedTimecodeEnd },
+      })
+    )
+  }
+
+  // Set end timecode from current video playback position
+  const handleSetTimecodeEnd = () => {
+    window.dispatchEvent(
+      new CustomEvent('getCurrentTime', {
+        detail: {
+          callback: (time: number, videoId: string) => {
+            if (videoId) {
+              setSelectedVideoId(videoId)
+            }
+            const video = videos.find(v => v.id === (videoId || selectedVideoId))
+            const fps = video?.fps || 24
+            const timecode = secondsToTimecode(time, fps)
+            setSelectedTimecodeEnd(timecode)
+          },
+        },
+      })
+    )
+  }
+
+  const handleClearTimecodeEnd = () => {
+    setSelectedTimecodeEnd(null)
+  }
+
   // Get FPS of currently selected video
   const selectedVideo = videos.find(v => v.id === selectedVideoId)
   const selectedVideoFps = selectedVideo?.fps || 24
@@ -637,6 +706,7 @@ export function useCommentManagement({
     comments,
     newComment,
     selectedTimestamp,
+    selectedTimecodeEnd,
     selectedVideoId,
     selectedVideoFps,
     loading,
@@ -649,6 +719,7 @@ export function useCommentManagement({
     pendingAttachments,
     attachmentError,
     attachmentNotice,
+    pendingAnnotation: !!pendingAnnotation,
     handleCommentChange,
     handleSubmitComment,
     handleReply,
@@ -660,5 +731,8 @@ export function useCommentManagement({
     handleAttachmentAdded,
     handleRemoveAttachment,
     handleAttachmentErrorChange,
+    handleStartDrawing,
+    handleSetTimecodeEnd,
+    handleClearTimecodeEnd,
   }
 }

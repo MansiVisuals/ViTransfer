@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.2] - Unreleased
 
+### Added
+- Freehand annotation drawing for video comments. Draw directly on the video with adjustable color, stroke width, and opacity. Annotations attach to comments with timecode ranges and display as overlays during playback with letterbox-aware coordinate mapping.
+
 ### Fixed
+- Fixed timecode round-trip precision for non-drop-frame (NDF) timecodes at non-integer frame rates (23.976fps, etc.). The NDF conversion now uses frame-count-based math consistent with the drop-frame path, preventing 1-frame offset on seek.
+- Fixed drop-frame (DF) timecode reconstruction at minute boundaries (e.g., `00:01:00;02` at 29.97fps). Replaced the adjustment algorithm with the standard SMPTE algorithm that correctly distinguishes actual frame counts from display frame numbers.
+- Fixed comment timestamp seek landing 1 frame early due to browser `currentTime` imprecision. Seeking now targets the center of the frame with a half-frame offset.
 - Fixed daily and weekly notification summaries being silently dropped due to Redis TTL expiring before the scheduled send time. Cancellation logic is now inverted: a `comment_cancelled` key is set on deletion instead of requiring a presence key that expired after 1 hour.
 - Fixed notification routing only notifying "the other side" (admin comment notified clients only, client comment notified admins only). Comments now route through both admin and client notification schedules independently, so other admins and other clients are also notified.
 - Fixed immediate email notifications being sent to the comment author. The author is now skipped by email match on immediate sends.

@@ -62,6 +62,7 @@ interface CommentInputProps {
   // Annotation drawing
   pendingAnnotation?: boolean
   onStartDrawing?: () => void
+  onClearAnnotation?: () => void
 
   // Optional shortcuts UI (share pages)
   showShortcutsButton?: boolean
@@ -106,6 +107,7 @@ export default function CommentInput({
   maxCommentAttachments,
   pendingAnnotation = false,
   onStartDrawing,
+  onClearAnnotation,
   showShortcutsButton = false,
   onShowShortcuts,
 }: CommentInputProps) {
@@ -308,6 +310,16 @@ export default function CommentInput({
               <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded-md text-xs text-blue-600 dark:text-blue-400">
                 <Pencil className="w-3 h-3" />
                 Drawing attached
+                {onClearAnnotation && (
+                  <button
+                    type="button"
+                    onClick={onClearAnnotation}
+                    className="ml-0.5 hover:opacity-70 transition-opacity"
+                    title="Remove drawing"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
               </span>
             </div>
           )}

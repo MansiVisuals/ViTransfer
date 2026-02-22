@@ -103,6 +103,7 @@ export default function CommentSection({
     handleRemoveAttachment,
     handleAttachmentErrorChange,
     handleStartDrawing,
+    handleClearAnnotation,
     handleSetTimecodeEnd,
     handleClearTimecodeEnd,
   } = useCommentManagement({
@@ -416,6 +417,7 @@ export default function CommentSection({
               shareToken={shareToken}
               pendingAnnotation={pendingAnnotation}
               onStartDrawing={handleStartDrawing}
+              onClearAnnotation={handleClearAnnotation}
               showShortcutsButton={showShortcutsButton}
               onShowShortcuts={handleOpenShortcuts}
             />
@@ -555,6 +557,7 @@ export default function CommentSection({
           shareToken={shareToken}
           pendingAnnotation={pendingAnnotation}
           onStartDrawing={handleStartDrawing}
+          onClearAnnotation={handleClearAnnotation}
           showShortcutsButton={showShortcutsButton}
           onShowShortcuts={handleOpenShortcuts}
         />

@@ -179,11 +179,15 @@ export default function VideoPlayer({
     setPendingAnnotation(null)
   }, [])
 
-  // Clear pending annotation preview once the comment is actually posted
+  // Clear pending annotation preview when comment is posted or annotation is removed
   useEffect(() => {
-    const handleCommentPosted = () => setPendingAnnotation(null)
-    window.addEventListener('commentPosted', handleCommentPosted)
-    return () => window.removeEventListener('commentPosted', handleCommentPosted)
+    const clear = () => setPendingAnnotation(null)
+    window.addEventListener('commentPosted', clear)
+    window.addEventListener('annotationCleared', clear)
+    return () => {
+      window.removeEventListener('commentPosted', clear)
+      window.removeEventListener('annotationCleared', clear)
+    }
   }, [])
 
   // Dispatch event when selected video changes (for immediate comment section update)

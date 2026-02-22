@@ -681,6 +681,12 @@ export function useCommentManagement({
     )
   }
 
+  const handleClearAnnotation = () => {
+    setPendingAnnotation(null)
+    // Tell VideoPlayer to clear its pending annotation preview
+    window.dispatchEvent(new CustomEvent('annotationCleared'))
+  }
+
   // Set end timecode from current video playback position
   const handleSetTimecodeEnd = () => {
     window.dispatchEvent(
@@ -738,6 +744,7 @@ export function useCommentManagement({
     handleRemoveAttachment,
     handleAttachmentErrorChange,
     handleStartDrawing,
+    handleClearAnnotation,
     handleSetTimecodeEnd,
     handleClearTimecodeEnd,
   }

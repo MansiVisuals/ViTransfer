@@ -30,7 +30,7 @@ export const ANNOTATION_COLORS = [
 
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number]
 
-export const DEFAULT_STROKE_WIDTH = 0.004
+export const DEFAULT_STROKE_WIDTH = 0.025
 export const MIN_STROKE_WIDTH = 0.001
 export const MAX_STROKE_WIDTH = 0.05
-export const DEFAULT_OPACITY = 1
+export const DEFAULT_OPACITY = 0.5

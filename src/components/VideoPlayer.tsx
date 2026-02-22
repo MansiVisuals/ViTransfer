@@ -10,6 +10,7 @@ import AnnotationOverlay from './AnnotationOverlay'
 import AnnotationCanvas from './AnnotationCanvas'
 import AnnotationToolbar from './AnnotationToolbar'
 import { useAnnotationDrawing } from '@/hooks/useAnnotationDrawing'
+import { AnnotationData } from '@/types/annotations'
 import { secondsToTimecode } from '@/lib/timecode'
 
 type CommentWithReplies = Comment & {
@@ -115,6 +116,11 @@ export default function VideoPlayer({
   const [isDrawingMode, setIsDrawingMode] = useState(false)
   const [drawingTimecodeStart, setDrawingTimecodeStart] = useState<string>('00:00:00:00')
   const [drawingTimecodeEnd, setDrawingTimecodeEnd] = useState<string | null>(null)
+  const [pendingAnnotation, setPendingAnnotation] = useState<{
+    annotations: AnnotationData
+    timecode: string
+    timecodeEnd?: string | null
+  } | null>(null)
 
   const annotationDrawing = useAnnotationDrawing()
 
@@ -126,6 +132,7 @@ export default function VideoPlayer({
       setDrawingTimecodeStart(timecodeStart)
       setDrawingTimecodeEnd(e.detail?.timecodeEnd || null)
       setIsDrawingMode(true)
+      setPendingAnnotation(null)
 
       // Reset drawing state so we start with a fresh canvas each time
       annotationDrawing.reset()
@@ -147,19 +154,36 @@ export default function VideoPlayer({
     setIsDrawingMode(false)
 
     if (data) {
+      // Store as pending so the overlay keeps showing the drawing
+      setPendingAnnotation({
+        annotations: data,
+        timecode: drawingTimecodeStart,
+        timecodeEnd: drawingTimecodeEnd,
+      })
+
       window.dispatchEvent(
         new CustomEvent('annotationComplete', {
           detail: {
             annotations: data,
+            timecodeStart: drawingTimecodeStart,
             timecodeEnd: drawingTimecodeEnd,
+            videoId: selectedVideo?.id,
           },
         })
       )
     }
-  }, [annotationDrawing, drawingTimecodeEnd])
+  }, [annotationDrawing, drawingTimecodeStart, drawingTimecodeEnd, selectedVideo?.id])
 
   const handleDrawingCancel = useCallback(() => {
     setIsDrawingMode(false)
+    setPendingAnnotation(null)
+  }, [])
+
+  // Clear pending annotation preview once the comment is actually posted
+  useEffect(() => {
+    const handleCommentPosted = () => setPendingAnnotation(null)
+    window.addEventListener('commentPosted', handleCommentPosted)
+    return () => window.removeEventListener('commentPosted', handleCommentPosted)
   }, [])
 
   // Dispatch event when selected video changes (for immediate comment section update)
@@ -802,6 +826,7 @@ export default function VideoPlayer({
                   containerRef={videoWrapperRef}
                   videoRef={videoRef}
                   hidden={isDrawingMode}
+                  pendingAnnotation={pendingAnnotation}
                 />
 
                 {/* Drawing Mode: Interactive Canvas + Toolbar + Keyframe Bar */}

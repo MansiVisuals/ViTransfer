@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Comment, Video, Prisma } from '@prisma/client'
 import { useRouter } from 'next/navigation'
 import { apiPost, apiDelete } from '@/lib/api-client'
-import { secondsToTimecode } from '@/lib/timecode'
+import { secondsToTimecode, timecodeToSeconds } from '@/lib/timecode'
 import { AnnotationData } from '@/types/annotations'
 
 type CommentWithReplies = Comment & {
@@ -275,15 +275,27 @@ export function useCommentManagement({
     }
   }, [])
 
+  // Shared helper: capture a timestamp + video for the comment input
+  const captureTimestamp = useCallback((time: number, videoId: string) => {
+    setSelectedTimestamp(time)
+    setSelectedVideoId(videoId)
+    setHasAutoFilledTimestamp(true)
+  }, [])
+
   // Listen for annotationComplete event from drawing mode
   useEffect(() => {
     const handleAnnotationComplete = (e: CustomEvent) => {
-      const { annotations, timecodeEnd } = e.detail
+      const { annotations, timecodeStart, timecodeEnd, videoId } = e.detail
       if (annotations) {
         setPendingAnnotation(annotations)
       }
       if (timecodeEnd) {
         setSelectedTimecodeEnd(timecodeEnd)
+      }
+      if (timecodeStart && videoId) {
+        const video = videos.find(v => v.id === videoId)
+        const fps = video?.fps || 24
+        captureTimestamp(timecodeToSeconds(timecodeStart, fps), videoId)
       }
     }
 
@@ -291,7 +303,7 @@ export function useCommentManagement({
     return () => {
       window.removeEventListener('annotationComplete', handleAnnotationComplete as EventListener)
     }
-  }, [])
+  }, [videos, captureTimestamp])
 
   // Keep selectedTimestamp in sync when the user frame-steps while commenting
   useEffect(() => {
@@ -323,13 +335,7 @@ export function useCommentManagement({
 
       window.dispatchEvent(
         new CustomEvent('getCurrentTime', {
-          detail: {
-            callback: (time: number, videoId: string) => {
-              setSelectedTimestamp(time)
-              setSelectedVideoId(videoId)
-              setHasAutoFilledTimestamp(true)
-            },
-          },
+          detail: { callback: captureTimestamp },
         })
       )
     }

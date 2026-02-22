@@ -4,6 +4,12 @@ import { useMemo, useState, useEffect, RefObject } from 'react'
 import { AnnotationData, Shape } from '@/types/annotations'
 import { timecodeToSeconds } from '@/lib/timecode'
 
+interface PendingAnnotation {
+  annotations: AnnotationData
+  timecode: string
+  timecodeEnd?: string | null
+}
+
 interface AnnotationOverlayProps {
   comments: Array<{
     id: string
@@ -16,6 +22,7 @@ interface AnnotationOverlayProps {
   containerRef: RefObject<HTMLDivElement | null>
   videoRef: RefObject<HTMLVideoElement | null>
   hidden?: boolean
+  pendingAnnotation?: PendingAnnotation | null
 }
 
 function renderShape(shape: Shape, renderWidth: number, renderHeight: number, key: string) {
@@ -83,6 +90,7 @@ export default function AnnotationOverlay({
   containerRef,
   videoRef,
   hidden = false,
+  pendingAnnotation = null,
 }: AnnotationOverlayProps) {
   const [rect, setRect] = useState<{ offsetX: number; offsetY: number; width: number; height: number } | null>(null)
 
@@ -144,17 +152,27 @@ export default function AnnotationOverlay({
 
       const startTime = timecodeToSeconds(comment.timecode, videoFps)
       const frameDuration = 1 / (videoFps || 24)
+      // Use a small tolerance to account for floating point drift in timecode round-trips
+      const tolerance = frameDuration * 0.5
       const endTime = comment.timecodeEnd
         ? timecodeToSeconds(comment.timecodeEnd, videoFps)
         : startTime + frameDuration
 
-      if (currentTime < startTime || currentTime > endTime) continue
+      if (currentTime < startTime - tolerance || currentTime > endTime + tolerance) continue
 
       result.push({ commentId: comment.id, shapes })
     }
 
+    // Always show pending annotation — it was just drawn at the current frame
+    if (pendingAnnotation) {
+      const ann = pendingAnnotation.annotations
+      if (Array.isArray(ann.shapes) && ann.shapes.length > 0) {
+        result.push({ commentId: 'pending', shapes: ann.shapes })
+      }
+    }
+
     return result
-  }, [comments, currentTime, videoFps, renderWidth, renderHeight])
+  }, [comments, currentTime, videoFps, renderWidth, renderHeight, pendingAnnotation])
 
   if (!renderWidth || !renderHeight || visibleShapes.length === 0 || hidden) return null
 

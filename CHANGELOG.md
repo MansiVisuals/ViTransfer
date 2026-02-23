@@ -7,15 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.2] - Unreleased
+## [0.9.2] - 2026-02-23
 
 ### Added
 - Freehand annotation drawing for video comments. Draw directly on the video with adjustable color, stroke width, and opacity. Annotations attach to comments with timecode ranges and display as overlays during playback with letterbox-aware coordinate mapping.
+- Hide/minimize toggle for the annotation toolbar so it doesn't obstruct drawing, especially on mobile.
+- Pending annotation preview: drawings now remain visible on the video between clicking "Done" and submitting the comment, and immediately after submission without needing a page reload.
+- Remove button for pending annotations: click the X on the "Drawing attached" indicator to discard a drawing before submitting.
+
+### Changed
+- Annotation toolbar color swatches no longer dim with the opacity setting; opacity only affects the drawn strokes.
+- Default stroke width and opacity are now set to 50% of their maximum values for a better starting point.
+- Annotation timecodes are now correctly synced to the comment timeline when completing a drawing.
+
+### Removed
+- Removed the Integrations tab and page from the admin panel. Premiere Pro and DaVinci Resolve integrations are no longer planned for v1.0. Development has been paused due to time constraints and technical difficulties with Premiere Pro. We can no longer adhere to the previously planned timeline. All pre-orders have been refunded.
 
 ### Fixed
 - Fixed timecode round-trip precision for non-drop-frame (NDF) timecodes at non-integer frame rates (23.976fps, etc.). The NDF conversion now uses frame-count-based math consistent with the drop-frame path, preventing 1-frame offset on seek.
 - Fixed drop-frame (DF) timecode reconstruction at minute boundaries (e.g., `00:01:00;02` at 29.97fps). Replaced the adjustment algorithm with the standard SMPTE algorithm that correctly distinguishes actual frame counts from display frame numbers.
 - Fixed comment timestamp seek landing 1 frame early due to browser `currentTime` imprecision. Seeking now targets the center of the frame with a half-frame offset.
+- Fixed annotations at the same timecode sometimes not displaying due to a tight single-frame visibility window. Added half-frame tolerance to account for floating-point drift in timecode round-trips.
 - Fixed daily and weekly notification summaries being silently dropped due to Redis TTL expiring before the scheduled send time. Cancellation logic is now inverted: a `comment_cancelled` key is set on deletion instead of requiring a presence key that expired after 1 hour.
 - Fixed notification routing only notifying "the other side" (admin comment notified clients only, client comment notified admins only). Comments now route through both admin and client notification schedules independently, so other admins and other clients are also notified.
 - Fixed immediate email notifications being sent to the comment author. The author is now skipped by email match on immediate sends.

@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/components/AuthProvider'
 import { Button } from '@/components/ui/button'
-import { Bug, Building2, CircleHelp, Coffee, Container, ExternalLink, FolderKanban, Github, LogOut, Settings, Shield, User, Users, Workflow } from 'lucide-react'
+import { Bug, Building2, CircleHelp, Coffee, Container, ExternalLink, FolderKanban, Github, LogOut, Settings, Shield, User, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -49,9 +49,6 @@ export default function AdminHeader() {
   if (showSecurityDashboard) {
     navLinks.push({ href: '/admin/security', label: 'Security', icon: Shield })
   }
-
-  // Integrations is always last and icon-only
-  navLinks.push({ href: '/admin/integrations', label: '', icon: Workflow, title: 'Integrations' })
 
   return (
     <div className="bg-card border-b border-border/50 shadow-elevation-sm backdrop-blur-sm">

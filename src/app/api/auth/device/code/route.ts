@@ -7,6 +7,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
+import { safeParseBody } from '@/lib/validation'
 
 // Valid client IDs for workflow integrations
 const VALID_CLIENT_IDS = [
@@ -45,8 +46,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json()
-    const { clientId } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { clientId } = parsed.data
 
     if (!clientId || !VALID_CLIENT_IDS.includes(clientId)) {
       return NextResponse.json(
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (!settings?.appDomain) {
       return NextResponse.json(
         { error: 'Server not configured. Application domain must be set in Settings.' },
-        { status: 500 }
+        { status: 503 }
       )
     }
 

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  poweredByHeader: false,
   // Increase body size limit for TUS chunked uploads
   // TUS uploads can send chunks larger than 10MB (default Next.js limit)
   // Set to 100MB to handle large video chunks safely
@@ -82,8 +83,8 @@ const nextConfig = {
       return header;
     });
 
-    // Only add HSTS when HTTPS is enabled
-    if (isHttpsEnabled) {
+    // Add HSTS when HTTPS is enabled or in production (behind reverse proxy/Cloudflare)
+    if (isHttpsEnabled || process.env.NODE_ENV === 'production') {
       securityHeaders.push({
         key: 'Strict-Transport-Security',
         value: 'max-age=63072000; includeSubDomains; preload'

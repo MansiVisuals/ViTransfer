@@ -35,14 +35,31 @@ async function clearAllLogoPngCaches(): Promise<void> {
   }
 }
 
+/**
+ * Decode HTML entities so encoded payloads like &#111;nload= are caught
+ */
+function decodeHtmlEntities(str: string): string {
+  const namedEntities: Record<string, string> = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'",
+  }
+  return str
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&(amp|lt|gt|quot|apos);/gi, (m) => namedEntities[m.toLowerCase()] || m)
+}
+
 function isSafeSvg(svg: string): boolean {
   // Strip XML declaration if present before checking for <svg
   const stripped = svg.trim().replace(/^<\?xml[^?]*\?>\s*/i, '')
   // Basic hardening: must start with <svg, reject scripts/handlers/js urls
   if (!/^<svg[\s>]/i.test(stripped)) return false
-  if (/<script[\s>]/i.test(svg)) return false
-  if (/on[a-zA-Z]+\s*=/.test(svg)) return false
-  if (/javascript:/i.test(svg)) return false
+
+  // Decode HTML entities to catch encoded attacks like &#111;nload=
+  const decoded = decodeHtmlEntities(svg)
+
+  if (/<script[\s>]/i.test(decoded)) return false
+  if (/on[a-zA-Z]+\s*=/i.test(decoded)) return false
+  if (/javascript:/i.test(decoded)) return false
   return true
 }
 

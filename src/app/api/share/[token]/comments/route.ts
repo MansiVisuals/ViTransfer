@@ -72,8 +72,8 @@ export async function GET(
 
     const { isAdmin, isAuthenticated, isGuest } = accessCheck
 
-    // Block guest users from seeing comments
-    if (project.guestMode && isGuest) {
+    // Block guest users from seeing comments (guests only have 'view' permission)
+    if (isGuest) {
       return NextResponse.json([])
     }
 

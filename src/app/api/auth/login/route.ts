@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyCredentials, issueAdminTokens } from '@/lib/auth'
 import { checkRateLimit, incrementRateLimit, clearRateLimit } from '@/lib/rate-limit'
-import { validateRequest, loginSchema } from '@/lib/validation'
+import { validateRequest, loginSchema, safeParseBody } from '@/lib/validation'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
@@ -36,8 +36,10 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
+
     // Validate input first to get the email/username
     const validation = validateRequest(loginSchema, body)
     if (!validation.success) {

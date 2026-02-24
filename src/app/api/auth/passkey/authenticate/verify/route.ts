@@ -6,6 +6,7 @@ import type { AuthenticationResponseJSON } from '@simplewebauthn/browser'
 import { issueAdminTokens } from '@/lib/auth'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { getAppUrl } from '@/lib/url'
+import { safeParseBody } from '@/lib/validation'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -36,7 +37,9 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
-    const body = await request.json()
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const response = body.response as AuthenticationResponseJSON
     const sessionId = body.sessionId as string | undefined
 

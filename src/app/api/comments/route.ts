@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAuthContext } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateRequest, createCommentSchema } from '@/lib/validation'
+import { validateRequest, createCommentSchema, safeParseBody } from '@/lib/validation'
 import { getPrimaryRecipient } from '@/lib/recipients'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
@@ -82,7 +82,8 @@ export async function GET(request: NextRequest) {
 
     const { isAdmin, isAuthenticated, isGuest } = accessCheck
 
-    if (project.guestMode && isGuest) {
+    // Block guest users from seeing comments (guests only have 'view' permission)
+    if (isGuest) {
       return NextResponse.json([])
     }
 
@@ -165,7 +166,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json()
+    // Get authentication context first (before body parsing)
+    const authContext = await getAuthContext(request)
+
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
 
     // Note: Don't log body - may contain PII (emails)
 
@@ -208,9 +214,6 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-
-    // Get authentication context (single call for both admin and share token)
-    const authContext = await getAuthContext(request)
 
     // Validate comment permissions
     const permissionCheck = await validateCommentPermissions({

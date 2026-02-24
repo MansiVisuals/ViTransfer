@@ -91,6 +91,15 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
 
+    // Reject prototype pollution attempts
+    const bodyKeys = Object.keys(body)
+    if (bodyKeys.some(k => k === '__proto__' || k === 'constructor' || k === 'prototype')) {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      )
+    }
+
     const {
       defaultTheme,
       accentColor,

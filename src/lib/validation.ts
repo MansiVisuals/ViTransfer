@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import DOMPurify from 'isomorphic-dompurify'
 import { isValidTimecode } from '@/lib/timecode'
+import { NextResponse } from 'next/server'
 
 /**
  * Input Validation Schemas
@@ -391,6 +392,27 @@ export const updateSettingsSchema = z.object({
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Safely parse JSON body from a request.
+ * Returns 400 on invalid/missing JSON instead of letting it bubble to 500.
+ */
+export async function safeParseBody(
+  request: Request
+): Promise<{ success: true; data: any } | { success: false; response: NextResponse }> {
+  try {
+    const data = await request.json()
+    return { success: true, data }
+  } catch {
+    return {
+      success: false,
+      response: NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      ),
+    }
+  }
+}
 
 /**
  * Validate request data against a schema

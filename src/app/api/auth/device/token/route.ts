@@ -8,6 +8,7 @@ import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
+import { safeParseBody } from '@/lib/validation'
 
 /**
  * POST /api/auth/device/token
@@ -45,8 +46,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json()
-    const { deviceCode, clientId } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { deviceCode, clientId } = parsed.data
 
     if (!deviceCode || !clientId) {
       return NextResponse.json(

@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { getSecuritySettings } from './video-access'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { generateShareUrl, getAppUrl } from '@/lib/url'
+import { getClientIpAddress } from '@/lib/utils'
 
 export async function trackSharePageAccess(params: {
   projectId: string
@@ -16,11 +17,7 @@ export async function trackSharePageAccess(params: {
   // Analytics tracking is optional and should never block share access.
   const settings = await getSecuritySettings()
 
-  // Get IP address from headers
-  const ipAddress =
-    request.headers.get('x-forwarded-for')?.split(',')[0] ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
+  const ipAddress = getClientIpAddress(request)
   const userAgent = request.headers.get('user-agent') || undefined
 
   if (settings.trackAnalytics) {

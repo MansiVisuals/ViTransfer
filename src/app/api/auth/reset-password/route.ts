@@ -6,6 +6,7 @@ import { hashPassword, validatePassword } from '@/lib/encryption'
 import { invalidateAdminSessions } from '@/lib/session-invalidation'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getRedis } from '@/lib/redis'
+import { getClientIpAddress } from '@/lib/utils'
 import crypto from 'crypto'
 
 export const runtime = 'nodejs'
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     await logSecurityEvent({
       type: 'ADMIN_PASSWORD_RESET_RATE_LIMIT_HIT',
       severity: 'WARNING',
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      ipAddress: getClientIpAddress(request),
       details: {
         reason: 'Too many password reset attempts',
       },
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
         severity: 'WARNING',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        ipAddress: getClientIpAddress(request),
         details: {
           reason: 'Invalid or expired token',
         },
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
         severity: 'WARNING',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        ipAddress: getClientIpAddress(request),
         details: {
           reason: 'Token already used',
           userId: payload.userId,
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
         severity: 'WARNING',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        ipAddress: getClientIpAddress(request),
         details: {
           reason: 'Token email mismatch',
           userId: user.id,
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
     await logSecurityEvent({
       type: 'ADMIN_PASSWORD_RESET_COMPLETED',
       severity: 'INFO',
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+      ipAddress: getClientIpAddress(request),
       details: {
         userId: user.id,
         email: user.email,

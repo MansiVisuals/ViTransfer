@@ -152,7 +152,10 @@ export async function generateUniqueSlug(
 }
 
 export function getClientIpAddress(request: NextRequest): string {
+  // Prefer CF-Connecting-IP (set by Cloudflare, not spoofable by clients)
+  // Fall back to X-Forwarded-For and X-Real-IP for non-Cloudflare deployments
   return (
+    request.headers.get('cf-connecting-ip') ||
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
     'unknown'

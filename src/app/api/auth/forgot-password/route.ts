@@ -5,6 +5,7 @@ import { generatePasswordResetToken, buildPasswordResetUrl } from '@/lib/passwor
 import { sendPasswordResetEmail } from '@/lib/email'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getAppDomain } from '@/lib/url'
+import { getClientIpAddress } from '@/lib/utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_UNKNOWN_EMAIL',
         severity: 'INFO',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        ipAddress: getClientIpAddress(request),
         details: {
           email,
         },
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
         severity: 'WARNING',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        ipAddress: getClientIpAddress(request),
         details: {
           userId: user.id,
           email: user.email,
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
         await logSecurityEvent({
           type: 'ADMIN_PASSWORD_RESET_EMAIL_SENT',
           severity: 'INFO',
-          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+          ipAddress: getClientIpAddress(request),
           details: {
             userId: user.id,
             email: user.email,
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
         await logSecurityEvent({
           type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
           severity: 'WARNING',
-          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+          ipAddress: getClientIpAddress(request),
           details: {
             userId: user.id,
             email: user.email,
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
         severity: 'WARNING',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        ipAddress: getClientIpAddress(request),
         details: {
           userId: user.id,
           email: user.email,

@@ -17,7 +17,9 @@ import BrandLogo from '@/components/BrandLogo'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const returnUrl = searchParams?.get('returnUrl') || '/admin/projects'
+  const rawReturnUrl = searchParams?.get('returnUrl') || '/admin/projects'
+  // SECURITY: Only allow relative paths — prevents javascript: and open redirect attacks
+  const returnUrl = rawReturnUrl.startsWith('/') && !rawReturnUrl.startsWith('//') ? rawReturnUrl : '/admin/projects'
   const sessionExpired = searchParams?.get('sessionExpired') === 'true'
 
   const [email, setEmail] = useState('')

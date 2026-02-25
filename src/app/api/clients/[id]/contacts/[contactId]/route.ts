@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { sanitizeText } from '@/lib/security/html-sanitization'
+import { safeParseBody } from '@/lib/validation'
 
 interface RouteParams {
   params: Promise<{ id: string; contactId: string }>
@@ -26,8 +28,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // 3. BUSINESS LOGIC
   try {
     const { id, contactId } = await params
-    const body = await request.json()
-    const { name, email } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { name, email } = parsed.data
 
     // Verify contact exists and belongs to this company
     const existingContact = await prisma.clientContact.findFirst({
@@ -47,7 +50,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
       }
-      updateData.name = name.trim()
+      updateData.name = sanitizeText(name)
     }
 
     if (email !== undefined) {

@@ -10,6 +10,7 @@ import { signShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
 import { trackSharePageAccess } from '@/lib/share-access-tracking'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { safeParseBody } from '@/lib/validation'
 import jwt from 'jsonwebtoken'
 export const runtime = 'nodejs'
 
@@ -94,8 +95,9 @@ export async function POST(
       }
     }
     
-    const body = await request.json()
-    const { password } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { password } = parsed.data
 
     if (!password) {
       return NextResponse.json({ error: 'Password is required' }, { status: 400 })

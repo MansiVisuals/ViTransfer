@@ -43,7 +43,13 @@ export async function GET(
     })
 
     if (!projectMeta) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      // SECURITY: Return same response shape as auth-required projects
+      // to prevent project enumeration via status code differences
+      return NextResponse.json({
+        error: 'Authentication required',
+        authMode: 'PASSWORD',
+        guestMode: false,
+      }, { status: 401 })
     }
 
     const shareContext = await getShareContext(request)

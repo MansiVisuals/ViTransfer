@@ -9,6 +9,7 @@ import { signShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
 import { trackSharePageAccess } from '@/lib/share-access-tracking'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { safeParseBody } from '@/lib/validation'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 export const runtime = 'nodejs'
@@ -37,8 +38,9 @@ export async function POST(
 ) {
   try {
     const { token } = await params
-    const body = await request.json()
-    const { email, code } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { email, code } = parsed.data
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json(

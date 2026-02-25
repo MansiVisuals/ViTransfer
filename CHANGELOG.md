@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-02-25
+
+### Added
+- Centralized `getClientIpAddress()` utility with Cloudflare `CF-Connecting-IP` support for accurate client identification behind proxies.
+- Safe JSON body parsing (`safeParseBody`) across all API routes that accept request bodies, returning proper 400 responses on malformed input.
+- Middleware-level `returnUrl` validation on the login page to enforce relative-path-only redirects.
+- Middleware-level query parameter sanitization to strip dangerous protocol schemes (`javascript:`, `data:`, `vbscript:`).
+- HTML entity decoding in SVG upload validation to catch encoded payloads.
+- Prototype pollution protection on settings PATCH endpoint.
+- Comment attachment file validation now blocks SVG, HTML, and XML uploads.
+
+### Changed
+- "Change Password" in the admin panel is now only available for your own account. Passkey management remains available for all users.
+- Client and contact name inputs are now sanitized with DOMPurify across all client management endpoints.
+- Guest users are now consistently blocked from accessing comments regardless of project guest mode configuration.
+- Device code endpoint returns 503 (instead of 500) when the application domain is not configured.
+- Consolidated duplicate IP address resolution logic into the shared `getClientIpAddress()` utility across all routes.
+- General security hardening and input validation improvements across API routes and middleware.
+
 ## [0.9.2] - 2026-02-23
 
 ### Added

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { sanitizeText } from '@/lib/security/html-sanitization'
+import { safeParseBody } from '@/lib/validation'
 
 // GET /api/clients - List all client companies with contacts
 export async function GET(request: NextRequest) {
@@ -68,14 +70,15 @@ export async function POST(request: NextRequest) {
 
   // 3. BUSINESS LOGIC
   try {
-    const body = await request.json()
-    const { name } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { name } = parsed.data
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
     }
 
-    const trimmedName = name.trim()
+    const trimmedName = sanitizeText(name)
 
     // Check for duplicate
     const existing = await prisma.clientCompany.findUnique({

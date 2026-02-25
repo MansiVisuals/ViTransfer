@@ -15,6 +15,7 @@ import { isSmtpConfigured } from '@/lib/email'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { getAppUrl } from '@/lib/url'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '@/lib/unsubscribe'
+import { safeParseBody } from '@/lib/validation'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -25,8 +26,9 @@ export async function POST(
 ) {
   try {
     const { token } = await params
-    const body = await request.json()
-    const { email } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { email } = parsed.data
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json(

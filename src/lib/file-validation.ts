@@ -144,6 +144,10 @@ export function isSuspiciousFilename(filename: string): boolean {
     /\.vbs$/i,
     /\.ws$/i,
     /\.wsf$/i,
+    /\.svg$/i,  // SVG can contain embedded JavaScript/XSS
+    /\.svgz$/i, // Compressed SVG
+    /\.html?$/i, // HTML files
+    /\.xml$/i,  // XML files (potential XXE)
     /\.\./,  // Directory traversal
     /^\.ht/,  // .htaccess, .htpasswd
     /^\.env/, // Environment files

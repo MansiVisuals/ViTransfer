@@ -60,6 +60,9 @@ function isSafeSvg(svg: string): boolean {
   if (/<script[\s>]/i.test(decoded)) return false
   if (/on[a-zA-Z]+\s*=/i.test(decoded)) return false
   if (/javascript:/i.test(decoded)) return false
+  // Block SVG animation elements that can inject event handlers via attributeName
+  if (/<set[\s>]/i.test(decoded)) return false
+  if (/<foreignObject[\s>]/i.test(decoded)) return false
   return true
 }
 

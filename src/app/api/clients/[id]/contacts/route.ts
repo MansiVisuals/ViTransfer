@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { sanitizeText } from '@/lib/security/html-sanitization'
+import { safeParseBody } from '@/lib/validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -58,8 +60,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   // 3. BUSINESS LOGIC
   try {
     const { id } = await params
-    const body = await request.json()
-    const { name, email } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { name, email } = parsed.data
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const contact = await prisma.clientContact.create({
       data: {
         companyId: id,
-        name: name.trim(),
+        name: sanitizeText(name),
         email: trimmedEmail
       }
     })

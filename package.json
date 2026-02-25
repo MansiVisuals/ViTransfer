@@ -1,6 +1,6 @@
 {
   "name": "vitransfer",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,11 +11,9 @@
     "worker": "tsx src/worker/index.ts"
   },
   "dependencies": {
-    "@isaacs/brace-expansion": "^5.0.1",
     "@prisma/client": "^6.19.0",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-label": "^2.1.8",
-    "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-select": "^2.1.2",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
@@ -23,7 +21,6 @@
     "@simplewebauthn/server": "^13.2.2",
     "@tus/file-store": "^2.0.0",
     "@tus/server": "^2.3.0",
-    "@types/jsonwebtoken": "^9.0.10",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.67.2",
@@ -49,6 +46,7 @@
   "devDependencies": {
     "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.9",
     "@types/nodemailer": "^7.0.2",
     "@types/react": "^19",

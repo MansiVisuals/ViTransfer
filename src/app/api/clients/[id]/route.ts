@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { sanitizeText } from '@/lib/security/html-sanitization'
+import { safeParseBody } from '@/lib/validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -69,14 +71,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // 3. BUSINESS LOGIC
   try {
     const { id } = await params
-    const body = await request.json()
-    const { name } = body
+    const parsed = await safeParseBody(request)
+    if (!parsed.success) return parsed.response
+    const { name } = parsed.data
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
     }
 
-    const trimmedName = name.trim()
+    const trimmedName = sanitizeText(name)
 
     // Check for duplicate (excluding current company)
     const existing = await prisma.clientCompany.findFirst({

@@ -317,16 +317,18 @@ export default function EditUserPage() {
 
                 {/* Action Buttons for Password and Passkeys */}
                 <div className="border-t pt-4 mt-4 space-y-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="default"
-                    className="w-full justify-start"
-                    onClick={() => setShowPasswordModal(true)}
-                  >
-                    <KeyRound className="w-4 h-4 mr-2" />
-                    Change Password
-                  </Button>
+                  {loggedInUser && currentUser && loggedInUser.id === currentUser.id && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="default"
+                      className="w-full justify-start"
+                      onClick={() => setShowPasswordModal(true)}
+                    >
+                      <KeyRound className="w-4 h-4 mr-2" />
+                      Change Password
+                    </Button>
+                  )}
 
                   <Button
                     type="button"

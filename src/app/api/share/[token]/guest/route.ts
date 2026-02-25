@@ -43,7 +43,7 @@ export async function POST(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // Check if guest mode is enabled

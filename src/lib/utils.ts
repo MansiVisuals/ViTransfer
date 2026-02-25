@@ -152,14 +152,19 @@ export async function generateUniqueSlug(
 }
 
 export function getClientIpAddress(request: NextRequest): string {
-  // Prefer CF-Connecting-IP (set by Cloudflare, not spoofable by clients)
-  // Fall back to X-Forwarded-For and X-Real-IP for non-Cloudflare deployments
-  return (
-    request.headers.get('cf-connecting-ip') ||
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  )
+  // Only trust CF-Connecting-IP when the request actually came through Cloudflare
+  // (cf-ray is always set by Cloudflare and cannot be spoofed by clients)
+  const isCloudflare = !!request.headers.get('cf-ray')
+  if (isCloudflare) {
+    const cfIp = request.headers.get('cf-connecting-ip')
+    if (cfIp) return cfIp
+  }
+
+  // For non-Cloudflare deployments, use X-Forwarded-For (first entry from trusted proxy)
+  const xff = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  if (xff) return xff
+
+  return request.headers.get('x-real-ip') || 'unknown'
 }
 
 /**

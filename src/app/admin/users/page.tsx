@@ -266,8 +266,7 @@ export default function UsersPage() {
   async function handleChangePassword() {
     if (!editingUser) return
 
-    const isOwnAccount = loggedInUser?.id === editingUser.id
-    if (isOwnAccount && !passwordData.oldPassword) {
+    if (!passwordData.oldPassword) {
       setError('Current password is required')
       return
     }
@@ -285,7 +284,7 @@ export default function UsersPage() {
 
     try {
       await apiPatch(`/api/users/${editingUser.id}`, {
-        oldPassword: isOwnAccount ? passwordData.oldPassword : undefined,
+        oldPassword: passwordData.oldPassword,
         password: passwordData.password,
       })
       setShowPasswordModal(false)
@@ -480,15 +479,17 @@ export default function UsersPage() {
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => openPasswordModal(user)}
-                    title="Change password"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                  </Button>
+                  {loggedInUser?.id === user.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openPasswordModal(user)}
+                      title="Change password"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </Button>
+                  )}
                   {passkeyAvailable && (
                     <Button
                       variant="ghost"
@@ -741,9 +742,7 @@ export default function UsersPage() {
               Change Password
             </DialogTitle>
             <DialogDescription>
-              {editingUser && loggedInUser?.id === editingUser.id
-                ? 'Enter your current password and choose a new one'
-                : `Set a new password for ${editingUser?.name || editingUser?.email}`}
+              Enter your current password and choose a new one
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -753,18 +752,16 @@ export default function UsersPage() {
                 <span className="text-sm text-destructive">{error}</span>
               </div>
             )}
-            {editingUser && loggedInUser?.id === editingUser.id && (
-              <div className="space-y-2">
-                <Label htmlFor="oldPassword">Current Password *</Label>
-                <Input
-                  id="oldPassword"
-                  type="password"
-                  value={passwordData.oldPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, oldPassword: e.target.value }))}
-                  autoComplete="current-password"
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="oldPassword">Current Password *</Label>
+              <Input
+                id="oldPassword"
+                type="password"
+                value={passwordData.oldPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, oldPassword: e.target.value }))}
+                autoComplete="current-password"
+              />
+            </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">New Password *</Label>

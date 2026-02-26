@@ -246,9 +246,10 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     // Validate and sanitize watermark text (defense-in-depth)
     const validatedText = validateAndSanitizeWatermarkText(watermarkText)
 
-    // SECURITY: Write watermark to temp file instead of inline
-    // This eliminates command injection risk even with complex escaping
-    watermarkTextFile = path.join(os.tmpdir(), `watermark-${crypto.randomBytes(16).toString('hex')}.txt`)
+    // SECURITY: Write watermark to secure temp directory instead of inline
+    // mkdtempSync creates a directory with restricted permissions (0700)
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'watermark-'))
+    watermarkTextFile = path.join(tmpDir, 'text.txt')
     fs.writeFileSync(watermarkTextFile, validatedText, 'utf-8')
 
     const isVertical = height > width
@@ -347,10 +348,12 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
 
     ffmpeg.on('close', (code) => {
-      // Cleanup watermark temp file
+      // Cleanup watermark temp file and directory
       if (watermarkTextFile && fs.existsSync(watermarkTextFile)) {
         try {
+          const tmpDir = path.dirname(watermarkTextFile)
           fs.unlinkSync(watermarkTextFile)
+          fs.rmdirSync(tmpDir)
           if (DEBUG) {
             console.log('[FFMPEG DEBUG] Cleaned up watermark temp file:', watermarkTextFile)
           }
@@ -378,10 +381,12 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
 
     ffmpeg.on('error', (err) => {
-      // Cleanup watermark temp file on error
+      // Cleanup watermark temp file and directory on error
       if (watermarkTextFile && fs.existsSync(watermarkTextFile)) {
         try {
+          const tmpDir = path.dirname(watermarkTextFile)
           fs.unlinkSync(watermarkTextFile)
+          fs.rmdirSync(tmpDir)
         } catch (cleanupErr) {
           console.error('Failed to cleanup watermark temp file:', cleanupErr)
         }

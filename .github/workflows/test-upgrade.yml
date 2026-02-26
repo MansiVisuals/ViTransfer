@@ -14,6 +14,9 @@ on:
         required: false
         default: 'latest'
 
+permissions:
+  contents: read
+
 jobs:
   test-upgrade:
     name: Upgrade Test (Auto-detect → ${{ github.event.inputs.to_version || 'latest' }})

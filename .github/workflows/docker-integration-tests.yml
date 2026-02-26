@@ -21,6 +21,9 @@ on:
       - 'package*.json'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   clean-install:
     name: Dev Clean Install Test

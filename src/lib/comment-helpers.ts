@@ -7,6 +7,7 @@ import { sendImmediateNotification, queueNotification } from '@/lib/notification
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { getAppDomain } from '@/lib/url'
 import { formatTimecodeDisplay, timecodeToSeekSeconds } from '@/lib/timecode'
+import { htmlToText } from 'html-to-text'
 
 /**
  * Validate comment permissions
@@ -236,12 +237,8 @@ export async function handleCommentNotifications(params: {
       const authorName = (comment?.authorName || comment?.name || '').toString().trim() || 'Client'
       const authorEmail = (comment?.authorEmail || comment?.email || '').toString().trim()
       const clientDisplay = authorEmail ? `${authorName} (${authorEmail})` : authorName
-      const rawContentHtml = (comment?.content || '').toString()
-      const rawContent = rawContentHtml
-        .replace(/<br\s*\/?\s*>/gi, '\n')
-        .replace(/<\/p>\s*<p>/gi, '\n')
-        .replace(/<[^>]*>/g, '')
-        .trim()
+      const rawContentHtml = sanitizeCommentHtml((comment?.content || '').toString())
+      const rawContent = htmlToText(rawContentHtml, { wordwrap: false }).trim()
       const commentPreview = rawContent.length > 400 ? `${rawContent.slice(0, 400)}...` : rawContent
       const timecode = comment?.timecode ? formatTimecodeDisplay(String(comment.timecode)) : ''
       const videoLabel = video?.versionLabel ? ` ${video.versionLabel}` : ''

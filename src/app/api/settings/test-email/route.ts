@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { testEmailConnection } from '@/lib/email'
+import { emailSchema } from '@/lib/validation'
 export const runtime = 'nodejs'
 
 
@@ -25,9 +26,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(testEmail)) {
+    // Validate email format using Zod schema
+    const parsed = emailSchema.safeParse(testEmail)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Invalid email address format' },
         { status: 400 }

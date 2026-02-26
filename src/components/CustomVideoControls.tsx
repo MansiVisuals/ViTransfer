@@ -349,6 +349,8 @@ export default function CustomVideoControls({
         // Use isInternal from comment, default to false if not present (client comment)
         const isCommentInternal = (comment as any).isInternal ?? false
         const colorKey = getUserColor(effectiveAuthorName, isCommentInternal).border
+        const rawContent = comment.content ?? ''
+        const normalizedContent = rawContent.replace(/[<>]/g, ' ')
 
         return {
           id: comment.id,
@@ -356,7 +358,7 @@ export default function CustomVideoControls({
           authorName: effectiveAuthorName,
           initials: initialsFromName(effectiveAuthorName),
           colorKey,
-          content: comment.content.replace(/<[^>]*>/g, '').slice(0, 100),
+          content: normalizedContent.slice(0, 100),
           position: Math.min(98, Math.max(2, (timestamp / videoDuration) * 100)),
         }
       })

@@ -6,6 +6,7 @@ import {
   getEmailTemplate,
   replacePlaceholders,
 } from './email-template-system'
+import { htmlToText } from 'html-to-text'
 
 // Email header style options for branding
 export type EmailHeaderStyle = 'NONE' | 'LOGO_ONLY' | 'NAME_ONLY' | 'LOGO_AND_NAME'
@@ -676,7 +677,7 @@ export async function sendEmail({
       from: `"${companyName}" <${fromAddress}>`,
       to,
       subject,
-      text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+      text: text || htmlToText(html),
       html,
     })
 

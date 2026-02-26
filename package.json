@@ -28,6 +28,7 @@
     "clsx": "^2.1.1",
     "dompurify": "^3.3.0",
     "file-type": "^19.0.0",
+    "html-to-text": "^9.0.5",
     "ioredis": "^5.8.2",
     "isomorphic-dompurify": "^2.31.0",
     "jsonwebtoken": "^9.0.2",
@@ -41,11 +42,13 @@
     "tsx": "^4.20.6",
     "tus-js-client": "^4.2.3",
     "web-push": "^3.6.7",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "html-to-text": "^9.0.5"
   },
   "devDependencies": {
     "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.6",
+    "@types/html-to-text": "^9.0.4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.9",
     "@types/nodemailer": "^7.0.2",

@@ -97,7 +97,8 @@ export function sanitizeFilename(filename: string): string {
   safe = safe.replace(/[\x00-\x1F\x7F]/g, '')
   
   // Remove leading/trailing dots and spaces
-  safe = safe.replace(/^[.\s]+|[.\s]+$/g, '')
+  while (safe.length > 0 && (safe[0] === '.' || safe[0] === ' ')) safe = safe.slice(1)
+  while (safe.length > 0 && (safe[safe.length - 1] === '.' || safe[safe.length - 1] === ' ')) safe = safe.slice(0, -1)
   
   // Prevent directory traversal
   safe = safe.replace(/\.\./g, '')

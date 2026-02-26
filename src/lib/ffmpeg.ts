@@ -248,7 +248,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
 
     // SECURITY: Write watermark to temp file instead of inline
     // This eliminates command injection risk even with complex escaping
-    watermarkTextFile = path.join(os.tmpdir(), `watermark-${Date.now()}-${crypto.randomBytes(8).toString('hex')}.txt`)
+    watermarkTextFile = path.join(os.tmpdir(), `watermark-${crypto.randomBytes(16).toString('hex')}.txt`)
     fs.writeFileSync(watermarkTextFile, validatedText, 'utf-8')
 
     const isVertical = height > width

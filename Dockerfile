@@ -59,15 +59,13 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV NODE_ENV=production
 
-# Update npm to patch bundled tar/minimatch CVEs
-RUN npm install -g npm@latest 2>/dev/null && npm cache clean --force 2>/dev/null || true
 
 # Python for Apprise notifications (with security updates)
 RUN apk add --no-cache python3 py3-pip py3-virtualenv \
     && python3 -m venv /opt/apprise-venv \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --upgrade pip==26.0 wheel==0.46.2 \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir "filelock>=3.20.3" "virtualenv>=20.36.1" \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir apprise==1.9.6 \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip==26.0.1 wheel==0.46.2 \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 "filelock>=3.20.3" "virtualenv>=20.36.1" \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.9.6 \
     && apk del --no-cache py3-pip py3-virtualenv
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3

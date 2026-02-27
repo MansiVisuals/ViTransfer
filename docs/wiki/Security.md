@@ -7,6 +7,7 @@
 - Rate limiting for IP and session traffic.
 - Security event logging and analytics.
 - Hotlink protection with strict/block modes.
+- IP and domain blocking.
 - AES-256 encryption at rest for sensitive fields.
 - HTTPS enforcement (HSTS) with env var override.
 - Session invalidation for security-sensitive changes.

@@ -1,4 +1,4 @@
-# Features (v0.9.3)
+# Features (v0.9.4)
 
 ## Core functionality
 - Video upload with resumable TUS uploads; originals preserved at any resolution.

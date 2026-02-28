@@ -65,7 +65,7 @@ RUN apk add --no-cache python3 py3-pip py3-virtualenv \
     && python3 -m venv /opt/apprise-venv \
     && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip==26.0.1 wheel==0.46.2 \
     && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 "filelock>=3.20.3" "virtualenv>=20.36.1" \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.9.6 \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.9.7 \
     && apk del --no-cache py3-pip py3-virtualenv
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3

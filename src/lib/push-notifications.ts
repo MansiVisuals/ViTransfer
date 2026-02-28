@@ -345,6 +345,13 @@ export function createNotificationPayload(
         body: data.body || 'A security event occurred',
       }
 
+    case 'DUE_DATE_REMINDER':
+      return {
+        ...basePayload,
+        title: data.title || 'Deadline Reminder',
+        body: data.body || `${data.projectTitle || 'A project'} deadline is approaching`,
+      }
+
     default:
       return {
         ...basePayload,

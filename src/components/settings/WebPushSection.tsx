@@ -25,6 +25,7 @@ const EVENT_LABELS: Record<NotificationEventType, string> = {
   CLIENT_COMMENT: 'New Comments',
   VIDEO_APPROVAL: 'Video Approvals',
   SECURITY_ALERT: 'Security Alerts',
+  DUE_DATE_REMINDER: 'Due Date Reminders',
 }
 
 export function WebPushSection({ active }: { active: boolean }) {

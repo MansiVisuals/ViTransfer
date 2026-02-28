@@ -217,6 +217,13 @@ function generateSampleValues(
       RESET_URL: `${appDomain}/reset-password?token=sample-reset-token`,
       EXPIRY_TIME: '30 minutes',
     },
+    DUE_DATE_REMINDER: {
+      ...base,
+      PROJECT_TITLE: 'Summer Campaign 2026',
+      DUE_DATE: 'March 15, 2026',
+      REMINDER_TYPE: 'tomorrow',
+      ADMIN_URL: `${appDomain}/admin`,
+    },
   }
 
   return typeValues[type] || base
@@ -235,6 +242,7 @@ function getEmailTitle(type: EmailTemplateType): string {
     PROJECT_GENERAL: 'Ready for Review',
     PASSWORD: 'Project Password',
     PASSWORD_RESET: 'Password Reset',
+    DUE_DATE_REMINDER: 'Deadline Reminder',
   }
   return titles[type] || 'Notification'
 }
@@ -254,6 +262,7 @@ function getEmailSubtitle(type: EmailTemplateType, values: Record<string, string
     PROJECT_GENERAL: projectTitle,
     PASSWORD: projectTitle,
     PASSWORD_RESET: 'Reset your admin account password',
+    DUE_DATE_REMINDER: `${projectTitle} is due tomorrow`,
   }
   return subtitles[type] || ''
 }

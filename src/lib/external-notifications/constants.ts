@@ -4,6 +4,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   'CLIENT_COMMENT',
   'VIDEO_APPROVAL',
   'SECURITY_ALERT',
+  'DUE_DATE_REMINDER',
 ] as const
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number]

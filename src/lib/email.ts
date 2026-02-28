@@ -1366,6 +1366,75 @@ export async function sendPasswordResetEmail({
 }
 
 /**
+ * Email template: Due date reminder (to admins)
+ */
+export async function sendDueDateReminderEmail({
+  adminEmails,
+  projectTitle,
+  dueDate,
+  reminderType,
+}: {
+  adminEmails: string[]
+  projectTitle: string
+  dueDate: string
+  reminderType: string
+}) {
+  const settings = await getEmailSettings()
+  const companyName = settings.companyName || 'ViTransfer'
+  const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
+
+  // Get custom template or use default
+  const template = await getEmailTemplate('DUE_DATE_REMINDER')
+
+  const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
+
+  // Build placeholder values
+  const placeholderValues: Record<string, string> = {
+    '{{RECIPIENT_NAME}}': 'Admin',
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{DUE_DATE}}': dueDate,
+    '{{REMINDER_TYPE}}': reminderType,
+    '{{ADMIN_URL}}': adminUrl,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  // Process subject line
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+
+  // Process body content with placeholders, buttons, and inline styles
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
+
+  const html = renderEmailShell({
+    companyName,
+    title: 'Deadline Reminder',
+    subtitle: `${projectTitle} is due ${reminderType}`,
+    preheader: `${projectTitle} is due ${reminderType}`,
+    brand,
+    brandingLogoUrl,
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
+    bodyContent,
+  })
+
+  // Send to all admin emails
+  const promises = adminEmails.map(email =>
+    sendEmail({
+      to: email,
+      subject,
+      html,
+    })
+  )
+
+  const results = await Promise.allSettled(promises)
+  const successCount = results.filter(r => r.status === 'fulfilled').length
+
+  return {
+    success: successCount > 0,
+    message: `Sent to ${successCount}/${adminEmails.length} admins`
+  }
+}
+
+/**
  * Test SMTP connection and send a test email
  */
 export async function testEmailConnection(testEmail: string, customConfig?: any) {

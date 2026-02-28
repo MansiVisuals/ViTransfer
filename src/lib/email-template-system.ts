@@ -18,6 +18,7 @@ export const EMAIL_TEMPLATE_TYPES = {
   PROJECT_GENERAL: 'PROJECT_GENERAL',
   PASSWORD: 'PASSWORD',
   PASSWORD_RESET: 'PASSWORD_RESET',
+  DUE_DATE_REMINDER: 'DUE_DATE_REMINDER',
 } as const
 
 export type EmailTemplateType = keyof typeof EMAIL_TEMPLATE_TYPES
@@ -104,6 +105,13 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{RESET_URL}}', description: 'Password reset link', example: 'https://review.acme.com/reset-password?token=abc123' },
     { key: '{{EXPIRY_TIME}}', description: 'How long the link is valid', example: '30 minutes' },
   ],
+  DUE_DATE_REMINDER: [
+    ...COMMON_PLACEHOLDERS,
+    { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
+    { key: '{{DUE_DATE}}', description: 'Formatted due date', example: 'March 15, 2026' },
+    { key: '{{REMINDER_TYPE}}', description: 'When the project is due (e.g., tomorrow, in 7 days)', example: 'tomorrow' },
+    { key: '{{ADMIN_URL}}', description: 'Link to admin panel', example: 'https://review.acme.com/admin' },
+  ],
 }
 
 // Template metadata for UI display
@@ -162,6 +170,12 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
     name: 'Admin Password Reset',
     description: 'Sent to admins when they request a password reset',
     category: 'security',
+  },
+  {
+    type: 'DUE_DATE_REMINDER',
+    name: 'Due Date Reminder',
+    description: 'Sent to admins when a project deadline is approaching',
+    category: 'admin',
   },
 ]
 
@@ -383,6 +397,26 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   If you didn't request this, you can safely ignore this email.
 </p>`,
+  },
+  {
+    type: 'DUE_DATE_REMINDER',
+    name: 'Due Date Reminder',
+    description: 'Sent to admins when a project deadline is approaching',
+    subject: 'Deadline Reminder: {{PROJECT_TITLE}} due {{REMINDER_TYPE}}',
+    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  <strong>{{PROJECT_TITLE}}</strong> is due <strong>{{REMINDER_TYPE}}</strong>.
+</p>
+
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">Project</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">Due Date</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{DUE_DATE}}</div>
+</div>
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:View in Admin Panel:{{ADMIN_URL}}}}
+</div>`,
   },
 ]
 

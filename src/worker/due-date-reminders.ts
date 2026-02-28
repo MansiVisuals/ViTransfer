@@ -1,6 +1,7 @@
 import { prisma } from '../lib/db'
 import { getRedis } from '../lib/redis'
 import { enqueueExternalNotification } from '../lib/external-notifications/enqueueExternalNotification'
+import { sendDueDateReminderEmail, isSmtpConfigured } from '../lib/email'
 
 const REDIS_KEY = 'due_date_reminder:last_check'
 
@@ -69,6 +70,34 @@ export async function processDueDateReminders() {
       title: `Deadline Reminder: ${project.title}`,
       body: `"${project.title}" is due ${project.reminderType} (${dueStr})`,
     })
+  }
+
+  // Send email reminders to all admins
+  try {
+    const smtpReady = await isSmtpConfigured()
+    if (smtpReady) {
+      const admins = await prisma.admin.findMany({ select: { email: true } })
+      const adminEmails = admins.map(a => a.email).filter(Boolean)
+
+      if (adminEmails.length > 0) {
+        for (const project of allReminders) {
+          const dueStr = new Date(project.dueDate!).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
+          await sendDueDateReminderEmail({
+            adminEmails,
+            projectTitle: project.title,
+            dueDate: dueStr,
+            reminderType: project.reminderType,
+          })
+        }
+        console.log(`[WORKER] Sent due date reminder emails to ${adminEmails.length} admin(s)`)
+      }
+    }
+  } catch (error) {
+    console.error('[WORKER] Failed to send due date reminder emails:', error)
   }
 
   console.log(`[WORKER] Sent ${allReminders.length} due date reminder(s)`)

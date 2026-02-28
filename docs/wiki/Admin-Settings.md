@@ -85,6 +85,16 @@ Configure in the admin panel under Settings.
 - Track security logs for events.
 - Show Security Events dashboard in admin navigation.
 
+## Calendar & Due Dates
+- Calendar view: day, week, month (default), and year scales.
+- Gantt chart: visual timeline of project due dates color-coded by status.
+- iCal feed: subscribe from any calendar app (Google Calendar, Apple Calendar, Outlook, etc.).
+- Per-admin calendar token: each admin gets a unique feed URL, regeneratable at any time.
+- Feed URL format: `https://yourdomain.com/api/calendar/feed?token=<token>`.
+- Regenerating the token invalidates the old feed URL immediately.
+- Due date reminders: automated notifications sent day-before or week-before (configurable per project).
+- Reminders run daily via the background worker using the server timezone (`TZ` env var).
+
 ## Per-project settings
 **Video processing**
 - Preview resolution override.
@@ -105,6 +115,12 @@ Configure in the admin panel under Settings.
 - Hide feedback from other clients.
 - Restrict comments to latest version only.
 - Timestamp display format.
+
+**Due dates**
+- Due date: optional date picker for project deadline.
+- Due reminder: NONE, DAY_BEFORE, or WEEK_BEFORE.
+- Due dates are stored at noon UTC to prevent timezone day-boundary issues.
+- Displayed in the user's local timezone (browser timezone client-side, `TZ` env var server-side).
 
 **Notifications**
 - Client notification schedule override.

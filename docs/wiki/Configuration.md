@@ -28,7 +28,7 @@
 - Use `openssl rand -base64 32/64` for encryption keys and JWT secrets.
 - Avoid special characters in `ADMIN_PASSWORD` due to JSON parsing.
 - `HTTPS_ENABLED` always overrides the admin setting.
-- Set `TZ` for correct notification scheduling.
+- Set `TZ` for correct notification scheduling and due date reminder timing.
 
 ---
 Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Contributing](Contributing) | [License](License)

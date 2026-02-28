@@ -1,4 +1,4 @@
-# Features (v0.9.4)
+# Features (v0.9.5)
 
 ## Core functionality
 - Video upload with resumable TUS uploads; originals preserved at any resolution.
@@ -10,6 +10,8 @@
 - Approval workflow per video; optional auto-approve project when all videos approved.
 - Project archiving to hide completed work while preserving data.
 - Share links with password, email OTP, both methods, or guest access.
+- Due dates with calendar view (day/week/month/year), Gantt chart, and iCal feed.
+- Automated due date reminders (day before or week before).
 - Email notifications with scheduling (immediate, hourly, daily, weekly).
 - Per-recipient unsubscribe for project emails.
 - Optional push notifications (Gotify, ntfy, Pushover, Telegram).
@@ -25,6 +27,8 @@
 - Custom email templates (8 types with placeholder system).
 - Custom branding logo (SVG upload, shown in email headers).
 - Appearance settings (10 accent colors, theme selection).
+- Calendar & Gantt views with day/week/month/year scales.
+- iCal feed subscription for external calendar apps (per-admin token).
 - Analytics dashboard for page visits and downloads.
 - Security features: rate limiting, hotlink protection, security event logs, encrypted credentials, IP-bound tokens.
 - IP and domain blocking.

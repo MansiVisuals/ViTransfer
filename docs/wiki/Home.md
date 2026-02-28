@@ -1,6 +1,6 @@
 # ViTransfer Wiki
 
-Welcome to the ViTransfer documentation wiki. This content reflects the application capabilities and behavior as of version **0.9.4**.
+Welcome to the ViTransfer documentation wiki. This content reflects the application capabilities and behavior as of version **0.9.5**.
 
 The canonical wiki lives on GitHub: https://github.com/MansiVisuals/ViTransfer/wiki
 This folder (`docs/wiki`) is a mirror of those pages for easy versioning in the repo.

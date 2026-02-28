@@ -346,39 +346,33 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           </div>
 
           {/* Due Date */}
-          {(project as any).dueDate && (
-            <div className="pb-3 border-b border-border">
-              <div className="text-sm">
-                <p className="text-muted-foreground mb-1">Due Date</p>
-                <p className={`font-medium flex items-center gap-2 ${(() => {
-                  const due = new Date((project as any).dueDate)
-                  const today = new Date()
-                  today.setHours(0, 0, 0, 0)
-                  due.setHours(0, 0, 0, 0)
-                  const diffDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-                  if (diffDays < 0) return 'text-destructive'
-                  if (diffDays <= 1) return 'text-warning'
-                  if (diffDays <= 7) return 'text-primary'
-                  return ''
-                })()}`}>
-                  <Calendar className="w-4 h-4" />
-                  {new Date((project as any).dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                </p>
-                {(() => {
-                  const due = new Date((project as any).dueDate)
-                  const today = new Date()
-                  today.setHours(0, 0, 0, 0)
-                  due.setHours(0, 0, 0, 0)
-                  const diffDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-                  if (diffDays < 0) return <p className="text-xs text-destructive mt-1">{Math.abs(diffDays)} day{Math.abs(diffDays) !== 1 ? 's' : ''} overdue</p>
-                  if (diffDays === 0) return <p className="text-xs text-warning mt-1">Due today</p>
-                  if (diffDays === 1) return <p className="text-xs text-warning mt-1">Due tomorrow</p>
-                  if (diffDays <= 7) return <p className="text-xs text-primary mt-1">{diffDays} days remaining</p>
-                  return <p className="text-xs text-muted-foreground mt-1">{diffDays} days remaining</p>
-                })()}
+          {(project as any).dueDate && (() => {
+            const due = new Date((project as any).dueDate)
+            const today = new Date()
+            // Compare using UTC dates to avoid timezone shifts
+            today.setHours(0, 0, 0, 0)
+            const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
+            const diffDays = Math.round((dueDay.getTime() - today.getTime()) / 86400000)
+            const colorClass = diffDays < 0 ? 'text-destructive' : diffDays <= 1 ? 'text-warning' : diffDays <= 7 ? 'text-primary' : ''
+            const dateStr = due.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+
+            return (
+              <div className="pb-3 border-b border-border">
+                <div className="text-sm">
+                  <p className="text-muted-foreground mb-1">Due Date</p>
+                  <p className={`font-medium flex items-center gap-2 ${colorClass}`}>
+                    <Calendar className="w-4 h-4" />
+                    {dateStr}
+                  </p>
+                  {diffDays < 0 && <p className="text-xs text-destructive mt-1">{Math.abs(diffDays)} day{Math.abs(diffDays) !== 1 ? 's' : ''} overdue</p>}
+                  {diffDays === 0 && <p className="text-xs text-warning mt-1">Due today</p>}
+                  {diffDays === 1 && <p className="text-xs text-warning mt-1">Due tomorrow</p>}
+                  {diffDays > 1 && diffDays <= 7 && <p className="text-xs text-primary mt-1">{diffDays} days remaining</p>}
+                  {diffDays > 7 && <p className="text-xs text-muted-foreground mt-1">{diffDays} days remaining</p>}
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Share Link */}
           {shareUrl && (

@@ -91,7 +91,7 @@ export default function NewProjectPage() {
       sharePassword: (authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected ? sharePassword : '',
       authMode: passwordProtected ? authMode : 'NONE',
       isShareOnly: isShareOnlyValue,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      dueDate: dueDate ? `${dueDate}T12:00:00.000Z` : null,
       dueReminder: dueDate ? dueReminder : null,
     }
 

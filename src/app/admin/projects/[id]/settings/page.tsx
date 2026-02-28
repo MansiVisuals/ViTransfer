@@ -214,7 +214,8 @@ export default function ProjectSettingsPage() {
 
         // Set due date
         if (data.dueDate) {
-          setDueDate(new Date(data.dueDate).toISOString().split('T')[0])
+          const d = new Date(data.dueDate)
+          setDueDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
         }
         setDueReminder(data.dueReminder || 'NONE')
 
@@ -307,7 +308,7 @@ export default function ProjectSettingsPage() {
         clientNotificationSchedule,
         clientNotificationTime: (clientNotificationSchedule === 'DAILY' || clientNotificationSchedule === 'WEEKLY') ? clientNotificationTime : null,
         clientNotificationDay: clientNotificationSchedule === 'WEEKLY' ? clientNotificationDay : null,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        dueDate: dueDate ? `${dueDate}T12:00:00.000Z` : null,
         dueReminder: dueDate ? dueReminder : null,
       }
 

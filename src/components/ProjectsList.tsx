@@ -89,8 +89,8 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
     const due = new Date(dueDate)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    due.setHours(0, 0, 0, 0)
-    const diffDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
+    const diffDays = Math.round((dueDay.getTime() - today.getTime()) / 86400000)
     if (diffDays < 0) return 'text-destructive'
     if (diffDays <= 1) return 'text-warning'
     if (diffDays <= 7) return 'text-primary'
@@ -211,14 +211,12 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                         <span className="font-medium">{project._count.comments}</span>
                         <span className="hidden sm:inline">comment{project._count.comments !== 1 ? 's' : ''}</span>
                       </div>
-                      {project.dueDate && (
-                        <div className={`inline-flex items-center gap-2 ${getDueDateColor(project.dueDate)}`}>
-                          <span className={metricIconWrapperClassName}>
-                            <Calendar className={metricIconClassName} />
-                          </span>
-                          <span className="font-medium text-xs">{formatDate(project.dueDate)}</span>
-                        </div>
-                      )}
+                      <div className={`inline-flex items-center gap-2 ${project.dueDate ? getDueDateColor(project.dueDate) : 'invisible'}`}>
+                        <span className={metricIconWrapperClassName}>
+                          <Calendar className={metricIconClassName} />
+                        </span>
+                        <span className="font-medium text-xs">{project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -238,7 +236,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
             <span className="flex-1 min-w-0">Name</span>
             <span className="w-40 hidden md:block">Client</span>
             <span className="w-28">Status</span>
-            <span className="w-16 text-center">Videos</span>
+            <span className="w-16 text-center hidden lg:block">Videos</span>
             <span className="w-16 text-center hidden lg:block">Comments</span>
             <span className="w-28 hidden lg:block">Due Date</span>
             <span className="w-28 hidden lg:block">Updated</span>
@@ -275,10 +273,10 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                       {project.status.replace('_', ' ')}
                     </span>
                   </span>
-                  <span className="w-16 text-center text-xs text-muted-foreground tabular-nums">{totalVideos}</span>
+                  <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
                   <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
                   <span className={`w-28 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate) : 'text-muted-foreground'}`}>
-                    {project.dueDate ? formatDate(project.dueDate) : '—'}
+                    {project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                   </span>
                   <span className="w-28 text-xs text-muted-foreground hidden lg:block">
                     {formatDate(project.updatedAt)}

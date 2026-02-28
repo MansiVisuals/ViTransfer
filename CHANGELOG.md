@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Video version comparison mode with side-by-side and slider overlay. Synced playback controls, frame stepping, speed adjustment, and keyboard shortcuts. Accessible via the "Compare" button when a video has 2+ versions.
+- Due date reminder email template. Admins now receive email notifications alongside push and external provider notifications when project deadlines approach. Template is fully customizable in Settings > Email Templates with placeholders for project title, due date, and reminder type.
+- "Due Date Reminders" event type added to browser push and external notification event filters.
+
 ## [0.9.3] - 2026-02-25
 
 ### Fixed

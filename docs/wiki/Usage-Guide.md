@@ -61,6 +61,17 @@
 5. Changes sync automatically when your calendar app refreshes the feed.
 6. To invalidate the feed URL, click **Regenerate** — this creates a new token and the old URL stops working.
 
+## Comparing video versions
+1. Open a project with 2 or more versions of the same video.
+2. Click the **Compare** button in the version selector bar.
+3. A fullscreen comparison view opens with two version selectors (A and B).
+4. By default, A is the previous version and B is the latest version.
+5. Use **Side-by-Side** mode to view both versions next to each other with synced playback.
+6. Switch to **Slider** mode for an overlay comparison — drag the vertical divider to reveal each side.
+7. Controls are shared: play/pause, seek, frame step, and speed affect both videos simultaneously.
+8. On mobile, side-by-side mode stacks vertically (top/bottom). Slider mode works as-is.
+9. Press **Escape** or the X button to close the comparison view.
+
 ## Admin tips
 - Use custom URLs for memorable share links.
 - Enable revision tracking for complex projects.

@@ -11,7 +11,8 @@
 - Project archiving to hide completed work while preserving data.
 - Share links with password, email OTP, both methods, or guest access.
 - Due dates with calendar view (day/week/month/year), Gantt chart, and iCal feed.
-- Automated due date reminders (day before or week before).
+- Automated due date reminders via push, external providers, and email (day before or week before).
+- Video version comparison: side-by-side and slider overlay modes with synced playback.
 - Email notifications with scheduling (immediate, hourly, daily, weekly).
 - Per-recipient unsubscribe for project emails.
 - Optional push notifications (Gotify, ntfy, Pushover, Telegram).
@@ -24,7 +25,7 @@
 - Secure password reset via email.
 - Passkey enforcement for accounts that enable it.
 - Client directory (companies and contacts management).
-- Custom email templates (8 types with placeholder system).
+- Custom email templates (9 types with placeholder system).
 - Custom branding logo (SVG upload, shown in email headers).
 - Appearance settings (10 accent colors, theme selection).
 - Calendar & Gantt views with day/week/month/year scales.
@@ -40,7 +41,7 @@
 - Per-project overrides for global settings.
 
 ## Technical features
-- Custom video player with comment markers and frame-accurate seeking.
+- Custom video player with comment markers, frame-accurate seeking, and version comparison.
 - Docker-first deployment with Compose, Unraid, TrueNAS, and Podman/Quadlet support.
 - Next.js 16 + React 19 UI; worker uses CPU-aware FFmpeg presets.
 - BullMQ + Redis background processing for transcoding and notifications.

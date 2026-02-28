@@ -18,7 +18,7 @@ Configure in the admin panel under Settings.
 - Auto-sync: contacts are automatically created from project recipients.
 
 ## Email Templates
-- 8 template types: customize emails for different notification events.
+- 9 template types: customize emails for different notification events.
 - Placeholder system: dynamic values (project name, client name, links, etc.).
 - Preview: preview rendered templates before saving.
 - Enable/disable: toggle individual templates on or off.
@@ -48,6 +48,7 @@ Configure in the admin panel under Settings.
 - Successful share access (project, method, optional client email, link).
 - Client comments (project, video, timecode, client, comment preview, deep link).
 - Video approvals (project, action, client, video list, link).
+- Due date reminders (project, due date, reminder type).
 
 **Notes**
 - IP and user-agent details are stored in Security Events.
@@ -93,6 +94,8 @@ Configure in the admin panel under Settings.
 - Feed URL format: `https://yourdomain.com/api/calendar/feed?token=<token>`.
 - Regenerating the token invalidates the old feed URL immediately.
 - Due date reminders: automated notifications sent day-before or week-before (configurable per project).
+- Reminder channels: browser push, external providers (Gotify/ntfy/Pushover/Telegram), and email to all admins.
+- Due date reminder email template: customizable in Settings > Email Templates with placeholders for project title, due date, and reminder type.
 - Reminders run daily via the background worker using the server timezone (`TZ` env var).
 
 ## Per-project settings

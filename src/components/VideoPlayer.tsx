@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Video, ProjectStatus, Comment } from '@prisma/client'
 import { Button } from './ui/button'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, GitCompareArrows } from 'lucide-react'
 import CustomVideoControls from './CustomVideoControls'
+import VideoComparison from './VideoComparison'
 import ProjectInfo from './ProjectInfo'
 import AnnotationOverlay from './AnnotationOverlay'
 import AnnotationCanvas from './AnnotationCanvas'
@@ -111,6 +112,9 @@ export default function VideoPlayer({
   // Safety check: ensure index is valid
   const safeIndex = Math.min(selectedVideoIndex, displayVideos.length - 1)
   const selectedVideo = displayVideos[safeIndex >= 0 ? safeIndex : 0]
+
+  // Comparison mode state
+  const [showComparison, setShowComparison] = useState(false)
 
   // Drawing mode state
   const [isDrawingMode, setIsDrawingMode] = useState(false)
@@ -781,6 +785,24 @@ export default function VideoPlayer({
               </Button>
             )
           })}
+          {displayVideos.length >= 2 && (
+            <Button
+              onClick={() => {
+                // Pause current video before opening comparison
+                if (videoRef.current && !videoRef.current.paused) {
+                  videoRef.current.pause()
+                  setIsPlaying(false)
+                }
+                setShowComparison(true)
+              }}
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap ml-auto"
+            >
+              <GitCompareArrows className="w-3.5 h-3.5 mr-1.5" />
+              Compare
+            </Button>
+          )}
         </div>
       )}
 
@@ -904,6 +926,15 @@ export default function VideoPlayer({
           </div>
         )}
       </div>
+
+      {/* Video Comparison Modal */}
+      {showComparison && displayVideos.length >= 2 && (
+        <VideoComparison
+          videoVersions={displayVideos}
+          defaultQuality={defaultQuality}
+          onClose={() => setShowComparison(false)}
+        />
+      )}
 
       {/* Video & Project Information */}
       <ProjectInfo

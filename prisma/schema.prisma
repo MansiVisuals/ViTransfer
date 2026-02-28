@@ -24,6 +24,7 @@ model User {
   comments          Comment[]
   passkeys          PasskeyCredential[]
   pushSubscriptions PushSubscription[]
+  calendarToken     CalendarToken?
 }
 
 enum UserRole {
@@ -71,6 +72,10 @@ model Project {
 
   // Approved playback settings
   usePreviewForApprovedPlayback Boolean @default(false) // Use browser-compatible preview instead of original after approval
+
+  // Due date tracking
+  dueDate     DateTime? // Optional project deadline
+  dueReminder String?   // NONE, DAY_BEFORE, WEEK_BEFORE
 
   // Client notification settings (per-project)
   // Note: Approval emails are always IMMEDIATE regardless of this setting
@@ -596,6 +601,16 @@ model ClientCompany {
 
   contacts ClientContact[]
   projects Project[]
+}
+
+// Calendar Token - Per-user iCal feed authentication
+model CalendarToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  token     String   @unique
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // Client Directory - Individual Contacts

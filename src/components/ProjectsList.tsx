@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, ArrowUpDown, Video, MessageSquare, ChevronRight } from 'lucide-react'
+import { Plus, ArrowUpDown, Video, MessageSquare, ChevronRight, Calendar } from 'lucide-react'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 import FilterDropdown from '@/components/FilterDropdown'
 import { formatDate } from '@/lib/utils'
@@ -24,6 +24,7 @@ interface Project {
   updatedAt: Date
   maxRevisions: number
   enableRevisions: boolean
+  dueDate: string | null
   videos: any[]
   recipients: any[]
   _count: { comments: number }
@@ -36,11 +37,11 @@ interface ProjectsListProps {
 }
 
 export default function ProjectsList({ projects, statusFilter: externalStatusFilter, onStatusFilterChange }: ProjectsListProps) {
-  const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>(() => {
+  const [sortMode, setSortMode] = useState<'status' | 'alphabetical' | 'dueDate'>(() => {
     // Load sort mode from localStorage
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('admin_projects_sort_mode')
-      if (stored === 'status' || stored === 'alphabetical') {
+      if (stored === 'status' || stored === 'alphabetical' || stored === 'dueDate') {
         return stored
       }
     }
@@ -84,12 +85,30 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
     localStorage.setItem('admin_projects_sort_mode', sortMode)
   }, [sortMode])
 
+  function getDueDateColor(dueDate: string): string {
+    const due = new Date(dueDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    due.setHours(0, 0, 0, 0)
+    const diffDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays < 0) return 'text-destructive'
+    if (diffDays <= 1) return 'text-warning'
+    if (diffDays <= 7) return 'text-primary'
+    return 'text-muted-foreground'
+  }
+
   // Filter projects by status
   const filteredProjects = projects.filter(p => statusFilter.has(p.status))
 
   const sortedProjects = [...filteredProjects].sort((a, b) => {
     if (sortMode === 'alphabetical') {
       return a.title.localeCompare(b.title)
+    } else if (sortMode === 'dueDate') {
+      // Projects with due dates first, sorted earliest first
+      if (!a.dueDate && !b.dueDate) return a.title.localeCompare(b.title)
+      if (!a.dueDate) return 1
+      if (!b.dueDate) return -1
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     } else {
       // Status sorting
       const statusPriority: Record<string, number> = { IN_REVIEW: 1, SHARE_ONLY: 2, APPROVED: 3, ARCHIVED: 4 }
@@ -116,11 +135,13 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
-            title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
+            onClick={() => setSortMode(current => current === 'alphabetical' ? 'status' : current === 'status' ? 'dueDate' : 'alphabetical')}
+            title={sortMode === 'alphabetical' ? 'Sort by status' : sortMode === 'status' ? 'Sort by due date' : 'Sort alphabetically'}
           >
-            <ArrowUpDown className="w-4 h-4" />
-            <span className="hidden sm:inline ml-2">Sort</span>
+            {sortMode === 'dueDate' ? <Calendar className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
+            <span className="hidden sm:inline ml-2">
+              {sortMode === 'alphabetical' ? 'A-Z' : sortMode === 'status' ? 'Status' : 'Due Date'}
+            </span>
           </Button>
         </div>
       )}
@@ -190,6 +211,14 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                         <span className="font-medium">{project._count.comments}</span>
                         <span className="hidden sm:inline">comment{project._count.comments !== 1 ? 's' : ''}</span>
                       </div>
+                      {project.dueDate && (
+                        <div className={`inline-flex items-center gap-2 ${getDueDateColor(project.dueDate)}`}>
+                          <span className={metricIconWrapperClassName}>
+                            <Calendar className={metricIconClassName} />
+                          </span>
+                          <span className="font-medium text-xs">{formatDate(project.dueDate)}</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -211,6 +240,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
             <span className="w-28">Status</span>
             <span className="w-16 text-center">Videos</span>
             <span className="w-16 text-center hidden lg:block">Comments</span>
+            <span className="w-28 hidden lg:block">Due Date</span>
             <span className="w-28 hidden lg:block">Updated</span>
             <span className="w-4"></span>
           </div>
@@ -247,6 +277,9 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                   </span>
                   <span className="w-16 text-center text-xs text-muted-foreground tabular-nums">{totalVideos}</span>
                   <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
+                  <span className={`w-28 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate) : 'text-muted-foreground'}`}>
+                    {project.dueDate ? formatDate(project.dueDate) : '—'}
+                  </span>
                   <span className="w-28 text-xs text-muted-foreground hidden lg:block">
                     {formatDate(project.updatedAt)}
                   </span>

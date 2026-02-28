@@ -386,6 +386,14 @@ export async function PATCH(
       }
     }
 
+    // Handle due date
+    if (validatedBody.dueDate !== undefined) {
+      updateData.dueDate = validatedBody.dueDate ? new Date(validatedBody.dueDate) : null
+    }
+    if (validatedBody.dueReminder !== undefined) {
+      updateData.dueReminder = validatedBody.dueReminder
+    }
+
     // Handle client notification schedule
     let previousClientSchedule: string | null = null
     if (validatedBody.clientNotificationSchedule !== undefined) {

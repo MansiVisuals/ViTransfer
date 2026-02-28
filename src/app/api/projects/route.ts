@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
         allowClientAssetUpload: true,
         previewResolution: true,
         companyName: true,
+        dueDate: true,
         maxRevisions: true,
         enableRevisions: true,
         videos: {
@@ -127,6 +128,8 @@ export async function POST(request: NextRequest) {
       enableRevisions,
       maxRevisions,
       restrictCommentsToLatestVersion,
+      dueDate,
+      dueReminder,
       isShareOnly
     } = validation.data
 
@@ -192,6 +195,8 @@ export async function POST(request: NextRequest) {
           timestampDisplay: settings?.defaultTimestampDisplay || 'TIMECODE',
           usePreviewForApprovedPlayback: settings?.defaultUsePreviewForApprovedPlayback ?? false,
           allowClientAssetUpload: settings?.defaultAllowClientAssetUpload ?? false,
+          dueDate: dueDate ? new Date(dueDate) : null,
+          dueReminder: dueReminder || null,
           createdById: admin.id,
         },
       })

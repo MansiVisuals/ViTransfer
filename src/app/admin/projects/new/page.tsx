@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle, Calendar } from 'lucide-react'
 import { apiPost, apiFetch } from '@/lib/api-client'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { ClientSelector } from '@/components/ClientSelector'
@@ -27,6 +27,10 @@ export default function NewProjectPage() {
   const [authMode, setAuthMode] = useState<'PASSWORD' | 'OTP' | 'BOTH'>('PASSWORD')
   const [smtpConfigured, setSmtpConfigured] = useState(false)
   
+  // Due date
+  const [dueDate, setDueDate] = useState('')
+  const [dueReminder, setDueReminder] = useState<'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE'>('NONE')
+
   // Client info
   const [companyName, setCompanyName] = useState('')
   const [clientCompanyId, setClientCompanyId] = useState<string | null>(null)
@@ -87,6 +91,8 @@ export default function NewProjectPage() {
       sharePassword: (authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected ? sharePassword : '',
       authMode: passwordProtected ? authMode : 'NONE',
       isShareOnly: isShareOnlyValue,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      dueReminder: dueDate ? dueReminder : null,
     }
 
     try {
@@ -147,6 +153,38 @@ export default function NewProjectPage() {
                 onRecipientEmailChange={setRecipientEmail}
                 disabled={loading}
               />
+
+              {/* Due Date */}
+              <div className="space-y-3">
+                <Label htmlFor="dueDate" className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Due Date (Optional)
+                </Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+                {dueDate && (
+                  <div className="space-y-2">
+                    <Label htmlFor="dueReminder">Reminder</Label>
+                    <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NONE">No Reminder</SelectItem>
+                        <SelectItem value="DAY_BEFORE">1 Day Before</SelectItem>
+                        <SelectItem value="WEEK_BEFORE">1 Week Before</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Sends a notification reminder before the due date
+                    </p>
+                  </div>
+                )}
+              </div>
 
               {/* Authentication Section */}
               <div className="space-y-4 border rounded-lg p-4 bg-primary-visible border-2 border-primary-visible">

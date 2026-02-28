@@ -19,7 +19,7 @@ import { apiFetch } from '@/lib/api-client'
 import { sanitizeSlug, generateSecurePassword } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check, Calendar } from 'lucide-react'
 
 // Client-safe slug generation using Web Crypto API
 function generateRandomSlug(): string {
@@ -68,6 +68,8 @@ interface Project {
   clientNotificationSchedule: string
   clientNotificationTime: string | null
   clientNotificationDay: number | null
+  dueDate: string | null
+  dueReminder: string | null
 }
 
 export default function ProjectSettingsPage() {
@@ -111,6 +113,10 @@ export default function ProjectSettingsPage() {
   const [clientNotificationSchedule, setClientNotificationSchedule] = useState('HOURLY')
   const [clientNotificationTime, setClientNotificationTime] = useState('09:00')
   const [clientNotificationDay, setClientNotificationDay] = useState(1)
+
+  // Due date state
+  const [dueDate, setDueDate] = useState('')
+  const [dueReminder, setDueReminder] = useState<'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE'>('NONE')
 
   // SMTP and recipients validation (for OTP)
   const [smtpConfigured, setSmtpConfigured] = useState(true)
@@ -206,6 +212,12 @@ export default function ProjectSettingsPage() {
           setCustomSlugValue(data.slug)
         }
 
+        // Set due date
+        if (data.dueDate) {
+          setDueDate(new Date(data.dueDate).toISOString().split('T')[0])
+        }
+        setDueReminder(data.dueReminder || 'NONE')
+
         // Set notification settings
         setClientNotificationSchedule(data.clientNotificationSchedule || 'HOURLY')
         setClientNotificationTime(data.clientNotificationTime || '09:00')
@@ -295,6 +307,8 @@ export default function ProjectSettingsPage() {
         clientNotificationSchedule,
         clientNotificationTime: (clientNotificationSchedule === 'DAILY' || clientNotificationSchedule === 'WEEKLY') ? clientNotificationTime : null,
         clientNotificationDay: clientNotificationSchedule === 'WEEKLY' ? clientNotificationDay : null,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        dueReminder: dueDate ? dueReminder : null,
       }
 
       // Detect changes to processing settings
@@ -594,6 +608,53 @@ export default function ProjectSettingsPage() {
                       Must be at least 1. Applies to each video group independently.
                     </p>
                   </div>
+                )}
+              </div>
+
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <Label htmlFor="dueDate" className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Due Date
+                </Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Optional deadline for this project. Shown on the calendar view.
+                </p>
+
+                {dueDate && (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor="dueReminder">Reminder</Label>
+                    <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NONE">No Reminder</SelectItem>
+                        <SelectItem value="DAY_BEFORE">1 Day Before</SelectItem>
+                        <SelectItem value="WEEK_BEFORE">1 Week Before</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Sends a notification reminder before the due date
+                    </p>
+                  </div>
+                )}
+
+                {dueDate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                    onClick={() => { setDueDate(''); setDueReminder('NONE') }}
+                  >
+                    Clear due date
+                  </Button>
                 )}
               </div>
 	          </CollapsibleSection>

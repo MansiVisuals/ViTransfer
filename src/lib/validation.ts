@@ -228,6 +228,8 @@ export const createProjectSchema = z.object({
   enableRevisions: z.boolean().optional(),
   maxRevisions: z.number().int().min(1).max(10).optional(),
   restrictCommentsToLatestVersion: z.boolean().optional(),
+  dueDate: z.string().datetime().nullable().optional(),
+  dueReminder: z.enum(['NONE', 'DAY_BEFORE', 'WEEK_BEFORE']).nullable().optional(),
   isShareOnly: z.boolean().optional(),
   previewResolution: z.enum(['720p', '1080p']).optional(),
   watermarkText: safeStringSchema(0, 100).optional()
@@ -291,6 +293,10 @@ export const updateProjectSchema = z.object({
   // Guest mode settings
   guestMode: z.boolean().optional(),
   guestLatestOnly: z.boolean().optional(),
+
+  // Due date
+  dueDate: z.string().datetime().nullable().optional(),
+  dueReminder: z.enum(['NONE', 'DAY_BEFORE', 'WEEK_BEFORE']).nullable().optional(),
 
   // Client notification settings
   clientNotificationSchedule: z.enum(['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']).optional(),

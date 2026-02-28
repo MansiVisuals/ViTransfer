@@ -10,6 +10,7 @@ import { processAdminNotifications } from './admin-notifications'
 import { processClientNotifications } from './client-notifications'
 import { processExternalNotificationJob } from './external-notifications/processExternalNotificationJob'
 import { createCleanPreviewWorker } from './clean-preview-processor'
+import { processDueDateReminders } from './due-date-reminders'
 import { cleanupOldTempFiles, ensureTempDir } from './cleanup'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
@@ -136,6 +137,7 @@ async function main() {
       await Promise.all([
         processAdminNotifications(),
         processClientNotifications(),
+        processDueDateReminders(),
       ])
 
       console.log('Notification check completed')

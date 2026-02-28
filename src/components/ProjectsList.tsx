@@ -167,7 +167,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
 
             return (
               <Link key={project.id} href={`/admin/projects/${project.id}`} className="block">
-                <Card className="cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-elevation-lg sm:hover:-translate-y-1">
+                <Card className="h-full cursor-pointer transition-all duration-200 hover:border-primary/50 hover:shadow-elevation-lg sm:hover:-translate-y-1">
                   <CardHeader className="p-2 sm:p-3">
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
@@ -196,7 +196,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                     </div>
                   </CardHeader>
                   <CardContent className="p-2 pt-0 sm:p-3 sm:pt-0">
-                    <div className="flex flex-wrap gap-3 sm:gap-6 text-muted-foreground text-xs sm:text-sm">
+                    <div className="flex flex-wrap gap-3 sm:gap-6 text-muted-foreground text-xs sm:text-sm min-h-[28px] sm:min-h-[32px]">
                       <div className="inline-flex items-center gap-2">
                         <span className={metricIconWrapperClassName}>
                           <Video className={metricIconClassName} />
@@ -211,12 +211,14 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                         <span className="font-medium">{project._count.comments}</span>
                         <span className="hidden sm:inline">comment{project._count.comments !== 1 ? 's' : ''}</span>
                       </div>
-                      <div className={`inline-flex items-center gap-2 ${project.dueDate ? getDueDateColor(project.dueDate) : 'invisible'}`}>
-                        <span className={metricIconWrapperClassName}>
-                          <Calendar className={metricIconClassName} />
-                        </span>
-                        <span className="font-medium text-xs">{project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}</span>
-                      </div>
+                      {project.dueDate && (
+                        <div className={`inline-flex items-center gap-2 ${getDueDateColor(project.dueDate)}`}>
+                          <span className={metricIconWrapperClassName}>
+                            <Calendar className={metricIconClassName} />
+                          </span>
+                          <span className="font-medium text-xs">{new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

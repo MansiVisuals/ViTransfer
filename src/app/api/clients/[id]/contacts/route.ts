@@ -68,6 +68,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
     }
 
+    const sanitizedName = sanitizeText(name)
+
+    // Validate AFTER sanitization — XSS payloads may sanitize to empty string
+    if (sanitizedName.length === 0) {
+      return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
+    }
+
     // Verify company exists
     const company = await prisma.clientCompany.findUnique({
       where: { id }
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const contact = await prisma.clientContact.create({
       data: {
         companyId: id,
-        name: sanitizeText(name),
+        name: sanitizedName,
         email: trimmedEmail
       }
     })

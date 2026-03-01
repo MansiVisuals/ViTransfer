@@ -81,6 +81,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const trimmedName = sanitizeText(name)
 
+    // Validate AFTER sanitization — XSS payloads may sanitize to empty string
+    if (trimmedName.length === 0) {
+      return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
+    }
+
     // Check for duplicate (excluding current company)
     const existing = await prisma.clientCompany.findFirst({
       where: {

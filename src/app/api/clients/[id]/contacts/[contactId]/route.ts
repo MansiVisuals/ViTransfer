@@ -50,7 +50,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (typeof name !== 'string' || name.trim().length === 0) {
         return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
       }
-      updateData.name = sanitizeText(name)
+      const sanitizedName = sanitizeText(name)
+      if (sanitizedName.length === 0) {
+        return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
+      }
+      updateData.name = sanitizedName
     }
 
     if (email !== undefined) {

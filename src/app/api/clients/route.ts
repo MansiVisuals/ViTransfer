@@ -80,6 +80,11 @@ export async function POST(request: NextRequest) {
 
     const trimmedName = sanitizeText(name)
 
+    // Validate AFTER sanitization — XSS payloads may sanitize to empty string
+    if (trimmedName.length === 0) {
+      return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
+    }
+
     // Check for duplicate
     const existing = await prisma.clientCompany.findUnique({
       where: { name: trimmedName }

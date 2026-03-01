@@ -4,9 +4,15 @@ import { enqueueExternalNotification } from '../lib/external-notifications/enque
 import { sendDueDateReminderEmail, isSmtpConfigured } from '../lib/email'
 
 const REDIS_KEY = 'due_date_reminder:last_check'
+let firstRun = true
 
 export async function processDueDateReminders() {
   const redis = getRedis()
+
+  if (firstRun) {
+    console.log('[WORKER] Due date reminder check initialized')
+    firstRun = false
+  }
 
   // Only run once per day
   const lastCheck = await redis.get(REDIS_KEY)
@@ -65,6 +71,8 @@ export async function processDueDateReminders() {
     console.log(`[WORKER] Due date check complete — no reminders to send (${dayBeforeProjects.length} day-before, ${weekBeforeProjects.length} week-before)`)
     return
   }
+
+  console.log(`[WORKER] Found ${allReminders.length} due date reminder(s) to send`)
 
   // Send external notifications for each reminder
   for (const project of allReminders) {

@@ -18,6 +18,7 @@ export async function processDueDateReminders() {
     }
   }
 
+  console.log('[WORKER] Running daily due date reminder check...')
   await redis.set(REDIS_KEY, new Date().toISOString(), 'EX', 86400)
 
   const now = new Date()
@@ -60,7 +61,10 @@ export async function processDueDateReminders() {
     ...weekBeforeProjects.map(p => ({ ...p, reminderType: 'in 7 days' })),
   ]
 
-  if (allReminders.length === 0) return
+  if (allReminders.length === 0) {
+    console.log(`[WORKER] Due date check complete — no reminders to send (${dayBeforeProjects.length} day-before, ${weekBeforeProjects.length} week-before)`)
+    return
+  }
 
   // Send external notifications for each reminder
   for (const project of allReminders) {

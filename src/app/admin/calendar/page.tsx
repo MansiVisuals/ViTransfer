@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Calendar, ChevronLeft, ChevronRight, Copy, RefreshCw, BarChart3, Check, Link2 } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import Link from 'next/link'
@@ -460,22 +461,36 @@ export default function CalendarPage() {
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Project deadlines and timeline overview</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="inline-flex items-center rounded-md border bg-card p-0.5">
             <Button
-              variant={viewMode === 'calendar' ? 'default' : 'outline'}
-              size="sm"
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setViewMode('calendar')}
+              aria-pressed={viewMode === 'calendar'}
+              className={cn(
+                'h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground',
+                viewMode === 'calendar' && 'bg-accent text-foreground'
+              )}
+              title="Calendar view"
             >
-              <Calendar className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Calendar</span>
+              <Calendar className="h-4 w-4" />
+              <span className="sr-only">Calendar view</span>
             </Button>
             <Button
-              variant={viewMode === 'gantt' ? 'default' : 'outline'}
-              size="sm"
+              type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => setViewMode('gantt')}
+              aria-pressed={viewMode === 'gantt'}
+              className={cn(
+                'h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground',
+                viewMode === 'gantt' && 'bg-accent text-foreground'
+              )}
+              title="Gantt view"
             >
-              <BarChart3 className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Gantt</span>
+              <BarChart3 className="h-4 w-4" />
+              <span className="sr-only">Gantt view</span>
             </Button>
           </div>
         </div>

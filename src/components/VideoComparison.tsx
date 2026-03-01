@@ -12,6 +12,7 @@ interface VideoComparisonProps {
   defaultQuality?: '720p' | '1080p'
   defaultVersionA?: number
   defaultVersionB?: number
+  timestampDisplayMode?: 'TIMECODE' | 'AUTO'
   onClose: () => void
 }
 
@@ -27,6 +28,7 @@ export default function VideoComparison({
   defaultQuality = '720p',
   defaultVersionA,
   defaultVersionB,
+  timestampDisplayMode = 'TIMECODE',
   onClose,
 }: VideoComparisonProps) {
   // Sort versions by version number ascending so selectors are ordered logically
@@ -53,15 +55,33 @@ export default function VideoComparison({
   const videoRefA = useRef<HTMLVideoElement | null>(null)
   const videoRefB = useRef<HTMLVideoElement | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const lastTimeUpdateRef = useRef(0)
-  const animFrameRef = useRef<number | null>(null)
+  const currentTimeRef = useRef(0)
+  const isSyncingRef = useRef(false)
 
   const versionA = sorted[versionAIndex]
   const versionB = sorted[versionBIndex]
   const videoUrlA = getVideoUrl(versionA, defaultQuality)
   const videoUrlB = getVideoUrl(versionB, defaultQuality)
+  const videoFps = versionA?.fps || versionB?.fps || 24
 
-  // Sync playback
+  // --- Synced playback ---
+  // Video A is the master clock. B follows A via timeupdate events.
+
+  const syncBToA = useCallback(() => {
+    const a = videoRefA.current
+    const b = videoRefB.current
+    if (!a || !b || isSyncingRef.current) return
+
+    const drift = Math.abs(a.currentTime - b.currentTime)
+    // Tight sync: correct any drift > 0.05s (roughly 1 frame at 24fps)
+    if (drift > 0.05) {
+      isSyncingRef.current = true
+      b.currentTime = a.currentTime
+      // Release lock after a short delay to avoid feedback loops
+      requestAnimationFrame(() => { isSyncingRef.current = false })
+    }
+  }, [])
+
   const handlePlayPause = useCallback(() => {
     const a = videoRefA.current
     const b = videoRefB.current
@@ -72,37 +92,43 @@ export default function VideoComparison({
       b.pause()
       setIsPlaying(false)
     } else {
-      a.play().catch(() => {})
-      b.play().catch(() => {})
+      // Sync B to A's position before playing
+      b.currentTime = a.currentTime
+      // Play both together
+      Promise.all([a.play(), b.play()]).catch(() => {})
       setIsPlaying(true)
     }
   }, [isPlaying])
 
   const handleSeek = useCallback((time: number) => {
-    if (videoRefA.current) videoRefA.current.currentTime = time
-    if (videoRefB.current) videoRefB.current.currentTime = time
+    const a = videoRefA.current
+    const b = videoRefB.current
+    if (a) a.currentTime = time
+    if (b) b.currentTime = time
+    currentTimeRef.current = time
     setCurrentTime(time)
   }, [])
 
   const handleFrameStep = useCallback((direction: 'forward' | 'backward') => {
-    const fps = versionA?.fps || versionB?.fps || 24
-    const frameDuration = 1 / fps
+    const a = videoRefA.current
+    const b = videoRefB.current
 
     // Pause both before stepping
-    if (videoRefA.current && !videoRefA.current.paused) {
-      videoRefA.current.pause()
-    }
-    if (videoRefB.current && !videoRefB.current.paused) {
-      videoRefB.current.pause()
-    }
+    if (a && !a.paused) a.pause()
+    if (b && !b.paused) b.pause()
     setIsPlaying(false)
 
+    const frameDuration = 1 / videoFps
+    const current = a?.currentTime ?? currentTimeRef.current
     const newTime = direction === 'forward'
-      ? Math.min(videoDuration, currentTime + frameDuration)
-      : Math.max(0, currentTime - frameDuration)
+      ? Math.min(videoDuration, current + frameDuration)
+      : Math.max(0, current - frameDuration)
 
-    handleSeek(newTime)
-  }, [versionA?.fps, versionB?.fps, videoDuration, currentTime, handleSeek])
+    if (a) a.currentTime = newTime
+    if (b) b.currentTime = newTime
+    currentTimeRef.current = newTime
+    setCurrentTime(newTime)
+  }, [videoFps, videoDuration])
 
   const handleSpeedChange = useCallback((speed: number) => {
     setPlaybackSpeed(speed)
@@ -110,33 +136,53 @@ export default function VideoComparison({
     if (videoRefB.current) videoRefB.current.playbackRate = speed
   }, [])
 
-  // Time update loop using requestAnimationFrame for smooth sync
+  // Master clock: A's timeupdate drives the UI and syncs B
   useEffect(() => {
-    const tick = () => {
-      const a = videoRefA.current
-      if (a && !a.paused) {
-        const now = Date.now()
-        if (now - lastTimeUpdateRef.current > 200) {
-          setCurrentTime(a.currentTime)
-          lastTimeUpdateRef.current = now
-        }
+    const a = videoRefA.current
+    if (!a) return
 
-        // Keep B in sync with A
-        const b = videoRefB.current
-        if (b && Math.abs(a.currentTime - b.currentTime) > 0.1) {
-          b.currentTime = a.currentTime
-        }
+    const onTimeUpdate = () => {
+      currentTimeRef.current = a.currentTime
+      setCurrentTime(a.currentTime)
+      syncBToA()
+    }
+
+    const onPlay = () => {
+      setIsPlaying(true)
+      // Ensure B is also playing when A starts
+      const b = videoRefB.current
+      if (b && b.paused) {
+        b.currentTime = a.currentTime
+        b.play().catch(() => {})
       }
-      animFrameRef.current = requestAnimationFrame(tick)
     }
 
-    animFrameRef.current = requestAnimationFrame(tick)
+    const onPause = () => {
+      setIsPlaying(false)
+      // Pause B when A pauses
+      videoRefB.current?.pause()
+    }
+
+    const onEnded = () => {
+      setIsPlaying(false)
+      videoRefB.current?.pause()
+    }
+
+    // Use the native timeupdate for sync (fires ~4x/sec, low overhead)
+    a.addEventListener('timeupdate', onTimeUpdate)
+    a.addEventListener('play', onPlay)
+    a.addEventListener('pause', onPause)
+    a.addEventListener('ended', onEnded)
+
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      a.removeEventListener('timeupdate', onTimeUpdate)
+      a.removeEventListener('play', onPlay)
+      a.removeEventListener('pause', onPause)
+      a.removeEventListener('ended', onEnded)
     }
-  }, [])
+  }, [syncBToA, videoUrlA])
 
-  // Handle metadata load — set duration from whichever loads first
+  // Handle metadata load — set duration, apply speed
   const handleLoadedMetadata = useCallback(() => {
     const a = videoRefA.current
     const b = videoRefB.current
@@ -144,50 +190,84 @@ export default function VideoComparison({
     if (dur && dur !== Infinity) {
       setVideoDuration(dur)
     }
-    // Apply current speed
     if (a) a.playbackRate = playbackSpeed
     if (b) b.playbackRate = playbackSpeed
   }, [playbackSpeed])
 
-  // Listen for play/pause events from video elements
-  useEffect(() => {
-    const a = videoRefA.current
-    if (!a) return
-
-    const handlePlay = () => setIsPlaying(true)
-    const handlePause = () => setIsPlaying(false)
-    const handleEnded = () => {
-      setIsPlaying(false)
-      videoRefB.current?.pause()
-    }
-
-    a.addEventListener('play', handlePlay)
-    a.addEventListener('pause', handlePause)
-    a.addEventListener('ended', handleEnded)
-
-    return () => {
-      a.removeEventListener('play', handlePlay)
-      a.removeEventListener('pause', handlePause)
-      a.removeEventListener('ended', handleEnded)
-    }
-  }, [videoUrlA])
-
-  // Keyboard shortcuts
+  // Keyboard shortcuts — match the main player exactly (Ctrl+ prefix)
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
+      // Escape: close comparison (no Ctrl needed)
       if (e.key === 'Escape') {
         onClose()
         return
       }
-      if (e.code === 'Space') {
+
+      // Ctrl+Space: Play/Pause
+      if (e.ctrlKey && e.code === 'Space') {
         e.preventDefault()
+        e.stopPropagation()
         handlePlayPause()
+        return
+      }
+
+      // Ctrl+, or Ctrl+<: Decrease speed by 0.25x
+      if (e.ctrlKey && (e.code === 'Comma' || e.key === '<')) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPlaybackSpeed(prev => {
+          const next = Math.max(0.25, prev - 0.25)
+          if (videoRefA.current) videoRefA.current.playbackRate = next
+          if (videoRefB.current) videoRefB.current.playbackRate = next
+          return next
+        })
+        return
+      }
+
+      // Ctrl+. or Ctrl+>: Increase speed by 0.25x
+      if (e.ctrlKey && (e.code === 'Period' || e.key === '>')) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPlaybackSpeed(prev => {
+          const next = Math.min(2.0, prev + 0.25)
+          if (videoRefA.current) videoRefA.current.playbackRate = next
+          if (videoRefB.current) videoRefB.current.playbackRate = next
+          return next
+        })
+        return
+      }
+
+      // Ctrl+/: Reset speed to 1.0x
+      if (e.ctrlKey && (e.code === 'Slash' || e.key === '/' || e.key === '?')) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPlaybackSpeed(1.0)
+        if (videoRefA.current) videoRefA.current.playbackRate = 1.0
+        if (videoRefB.current) videoRefB.current.playbackRate = 1.0
+        return
+      }
+
+      // Ctrl+J: Go back one frame
+      if (e.ctrlKey && e.code === 'KeyJ') {
+        e.preventDefault()
+        e.stopPropagation()
+        handleFrameStep('backward')
+        return
+      }
+
+      // Ctrl+L: Go forward one frame
+      if (e.ctrlKey && e.code === 'KeyL') {
+        e.preventDefault()
+        e.stopPropagation()
+        handleFrameStep('forward')
+        return
       }
     }
 
-    window.addEventListener('keydown', handleKeyboard)
-    return () => window.removeEventListener('keydown', handleKeyboard)
-  }, [onClose, handlePlayPause])
+    // Use capture phase like the main player
+    window.addEventListener('keydown', handleKeyboard, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyboard, { capture: true })
+  }, [onClose, handlePlayPause, handleFrameStep])
 
   // Pause on unmount
   useEffect(() => {
@@ -200,6 +280,7 @@ export default function VideoComparison({
   // Reset time when versions change
   useEffect(() => {
     setCurrentTime(0)
+    currentTimeRef.current = 0
     setVideoDuration(0)
     setIsPlaying(false)
   }, [versionAIndex, versionBIndex])
@@ -302,7 +383,7 @@ export default function VideoComparison({
                     key={`a-${versionA?.id}`}
                     src={videoUrlA}
                     poster={(versionA as any)?.thumbnailUrl || undefined}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain cursor-pointer"
                     crossOrigin="anonymous"
                     playsInline
                     preload="metadata"
@@ -325,7 +406,7 @@ export default function VideoComparison({
                     key={`b-${versionB?.id}`}
                     src={videoUrlB}
                     poster={(versionB as any)?.thumbnailUrl || undefined}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain cursor-pointer"
                     crossOrigin="anonymous"
                     playsInline
                     preload="metadata"
@@ -368,6 +449,8 @@ export default function VideoComparison({
             onModeChange={setMode}
             playbackSpeed={playbackSpeed}
             onSpeedChange={handleSpeedChange}
+            videoFps={videoFps}
+            timestampDisplayMode={timestampDisplayMode}
           />
         </div>
       </div>
@@ -375,7 +458,7 @@ export default function VideoComparison({
       {/* Speed indicator */}
       {playbackSpeed !== 1 && (
         <div className="absolute top-16 right-6 bg-black/80 text-white px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-30">
-          {playbackSpeed}x
+          {playbackSpeed.toFixed(2)}x
         </div>
       )}
     </div>

@@ -2,12 +2,24 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Play, Pause, SkipBack, SkipForward, Columns2, SplitSquareHorizontal } from 'lucide-react'
+import { secondsToTimecode, formatCommentTimestamp } from '@/lib/timecode'
 
 function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00'
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+function formatTimeWithMode(
+  seconds: number,
+  fps: number,
+  videoDurationSeconds: number,
+  mode: 'TIMECODE' | 'AUTO'
+): string {
+  if (!seconds || isNaN(seconds) || !isFinite(seconds)) return mode === 'TIMECODE' ? '00:00:00:00' : '0:00'
+  const timecode = secondsToTimecode(seconds, fps)
+  return formatCommentTimestamp({ timecode, fps, videoDurationSeconds, mode })
 }
 
 interface VideoComparisonControlsProps {
@@ -21,6 +33,8 @@ interface VideoComparisonControlsProps {
   onModeChange: (mode: 'side-by-side' | 'slider') => void
   playbackSpeed: number
   onSpeedChange: (speed: number) => void
+  videoFps: number
+  timestampDisplayMode: 'TIMECODE' | 'AUTO'
 }
 
 export default function VideoComparisonControls({
@@ -34,6 +48,8 @@ export default function VideoComparisonControls({
   onModeChange,
   playbackSpeed,
   onSpeedChange,
+  videoFps,
+  timestampDisplayMode,
 }: VideoComparisonControlsProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [hoveredTime, setHoveredTime] = useState<number | null>(null)
@@ -100,13 +116,6 @@ export default function VideoComparisonControls({
     return () => window.removeEventListener('mouseup', handleMouseUp)
   }, [isDragging])
 
-  const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2]
-  const nextSpeed = () => {
-    const idx = speeds.indexOf(playbackSpeed)
-    const next = idx >= 0 && idx < speeds.length - 1 ? speeds[idx + 1] : speeds[0]
-    onSpeedChange(next)
-  }
-
   return (
     <div className="bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2 sm:p-3 rounded-b-xl">
       {/* Timeline */}
@@ -148,7 +157,7 @@ export default function VideoComparisonControls({
                 transform: 'translateX(-50%)',
               }}
             >
-              {formatTime(hoveredTime)}
+              {formatTimeWithMode(hoveredTime, videoFps, videoDuration, timestampDisplayMode)}
             </div>
           )}
         </div>
@@ -162,6 +171,7 @@ export default function VideoComparisonControls({
             onClick={() => onFrameStep('backward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
             aria-label="Previous frame"
+            title="Previous frame (Ctrl+J)"
           >
             <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
@@ -170,6 +180,7 @@ export default function VideoComparisonControls({
             onClick={onPlayPause}
             className="p-2.5 sm:p-3 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
             aria-label={isPlaying ? 'Pause' : 'Play'}
+            title={isPlaying ? 'Pause (Ctrl+Space)' : 'Play (Ctrl+Space)'}
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
@@ -182,13 +193,14 @@ export default function VideoComparisonControls({
             onClick={() => onFrameStep('forward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
             aria-label="Next frame"
+            title="Next frame (Ctrl+L)"
           >
             <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
 
           {/* Time Display */}
           <div className="text-white text-xs sm:text-sm font-mono ml-1 sm:ml-2 whitespace-nowrap">
-            {formatTime(currentTime)} / {formatTime(videoDuration)}
+            {formatTimeWithMode(currentTime, videoFps, videoDuration, timestampDisplayMode)} / {formatTimeWithMode(videoDuration, videoFps, videoDuration, timestampDisplayMode)}
           </div>
         </div>
 
@@ -196,9 +208,15 @@ export default function VideoComparisonControls({
         <div className="flex items-center gap-1 sm:gap-2">
           {/* Speed */}
           <button
-            onClick={nextSpeed}
+            onClick={() => {
+              const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2]
+              const idx = speeds.indexOf(playbackSpeed)
+              const next = idx >= 0 && idx < speeds.length - 1 ? speeds[idx + 1] : speeds[0]
+              onSpeedChange(next)
+            }}
             className="px-2 py-1 sm:px-2.5 sm:py-1.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors text-white text-xs sm:text-sm font-mono touch-manipulation"
             aria-label="Playback speed"
+            title="Cycle speed (Ctrl+, / Ctrl+.)"
           >
             {playbackSpeed}x
           </button>

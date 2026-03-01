@@ -76,12 +76,16 @@ export default function VideoComparisonSlider({
     }
   }, [isDragging, updatePosition])
 
-  // Keyboard arrow keys to nudge slider
+  // Keyboard arrow keys to nudge slider (only when no modifier keys)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle plain arrow keys without Ctrl/Alt/Meta to avoid conflicts
+      if (e.ctrlKey || e.altKey || e.metaKey) return
       if (e.key === 'ArrowLeft') {
+        e.preventDefault()
         setSliderPosition(prev => Math.max(0, prev - 1))
       } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
         setSliderPosition(prev => Math.min(100, prev + 1))
       }
     }

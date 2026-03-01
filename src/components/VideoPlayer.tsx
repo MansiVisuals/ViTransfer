@@ -932,6 +932,7 @@ export default function VideoPlayer({
         <VideoComparison
           videoVersions={displayVideos}
           defaultQuality={defaultQuality}
+          timestampDisplayMode={timestampDisplayMode}
           onClose={() => setShowComparison(false)}
         />
       )}

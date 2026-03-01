@@ -58,17 +58,17 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Decrypt sensitive fields before sending to admin
-    const decryptedSettings = {
+    // SECURITY: Never send SMTP password in cleartext — return masked placeholder
+    const maskedSettings = {
       ...settings,
-      smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
+      smtpPassword: settings.smtpPassword ? '••••••••' : null,
     }
 
     // Check SMTP configuration status (reuse centralized helper)
     const smtpConfigured = await isSmtpConfigured()
 
     return NextResponse.json({
-      ...decryptedSettings,
+      ...maskedSettings,
       security: securitySettings,
       smtpConfigured,
     })
@@ -257,8 +257,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Handle SMTP password update - only update if actually changed
+    // SECURITY: Skip update if masked placeholder '••••••••' is sent back (password not changed)
     let passwordUpdate: string | null | undefined
-    if (smtpPassword !== undefined) {
+    if (smtpPassword !== undefined && smtpPassword !== '••••••••') {
       // Get current settings to compare password
       const currentSettings = await prisma.settings.findUnique({
         where: { id: 'default' },
@@ -285,7 +286,7 @@ export async function PATCH(request: NextRequest) {
         }
       }
     } else {
-      // Password not provided in request, don't update
+      // Password not provided or masked placeholder sent — don't update
       passwordUpdate = undefined
     }
 
@@ -381,13 +382,13 @@ export async function PATCH(request: NextRequest) {
       void flushPendingAdminNotifications()
     }
 
-    // Decrypt sensitive fields before sending to admin
-    const decryptedSettings = {
+    // SECURITY: Never send SMTP password in cleartext — return masked placeholder
+    const maskedSettings = {
       ...settings,
-      smtpPassword: settings.smtpPassword ? decrypt(settings.smtpPassword) : null,
+      smtpPassword: settings.smtpPassword ? '••••••••' : null,
     }
 
-    return NextResponse.json(decryptedSettings)
+    return NextResponse.json(maskedSettings)
   } catch (error) {
     console.error('Error updating settings:', error)
     return NextResponse.json(

@@ -170,9 +170,9 @@ export async function POST(
       }).catch(() => {})
 
       // SECURITY: Add random delay to match timing of valid email path
-      // Valid emails take 100-500ms for SMTP, add equivalent delay here
-      const minDelay = 150
-      const maxDelay = 500
+      // Valid emails take 500-2000ms for SMTP + Redis + DB, match that range here
+      const minDelay = 800
+      const maxDelay = 2000
       const randomDelay = crypto.randomInt(minDelay, maxDelay + 1)
       const elapsed = Date.now() - startTime
       if (elapsed < randomDelay) {

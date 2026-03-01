@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { testEmailConnection } from '@/lib/email'
 import { emailSchema } from '@/lib/validation'
+import { prisma } from '@/lib/db'
+import { decrypt } from '@/lib/encryption'
 export const runtime = 'nodejs'
 
 
@@ -33,6 +35,15 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid email address format' },
         { status: 400 }
       )
+    }
+
+    // SECURITY: If smtpPassword is the masked placeholder, replace with stored password
+    if (smtpConfig?.smtpPassword === '••••••••') {
+      const stored = await prisma.settings.findUnique({
+        where: { id: 'default' },
+        select: { smtpPassword: true },
+      })
+      smtpConfig.smtpPassword = stored?.smtpPassword ? decrypt(stored.smtpPassword) : null
     }
 
     // Test email connection and send test email with provided config or saved config

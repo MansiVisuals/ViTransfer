@@ -20,6 +20,15 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from')
     const to = searchParams.get('to')
 
+    // Validate date parameters to prevent 500 errors on malicious input
+    const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/
+    if (from && (!ISO_DATE_REGEX.test(from) || isNaN(new Date(from).getTime()))) {
+      return NextResponse.json({ error: 'Invalid "from" date parameter' }, { status: 400 })
+    }
+    if (to && (!ISO_DATE_REGEX.test(to) || isNaN(new Date(to).getTime()))) {
+      return NextResponse.json({ error: 'Invalid "to" date parameter' }, { status: 400 })
+    }
+
     const where: any = { dueDate: { not: null } }
     if (from || to) {
       where.dueDate = { ...where.dueDate }

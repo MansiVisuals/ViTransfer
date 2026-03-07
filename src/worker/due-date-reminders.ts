@@ -87,11 +87,18 @@ export async function processDueDateReminders() {
   // Send email reminders to all admins
   try {
     const smtpReady = await isSmtpConfigured()
-    if (smtpReady) {
-      const admins = await prisma.admin.findMany({ select: { email: true } })
+    if (!smtpReady) {
+      console.log('[WORKER] SMTP not configured — skipping due date reminder emails')
+    } else {
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMIN' },
+        select: { email: true },
+      })
       const adminEmails = admins.map(a => a.email).filter(Boolean)
 
-      if (adminEmails.length > 0) {
+      if (adminEmails.length === 0) {
+        console.log('[WORKER] No admin emails found — skipping due date reminder emails')
+      } else {
         for (const project of allReminders) {
           const dueStr = new Date(project.dueDate!).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -112,5 +119,5 @@ export async function processDueDateReminders() {
     console.error('[WORKER] Failed to send due date reminder emails:', error)
   }
 
-  console.log(`[WORKER] Sent ${allReminders.length} due date reminder(s)`)
+  console.log(`[WORKER] Due date check complete — ${allReminders.length} reminder(s) processed`)
 }

@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Due date reminder email template. Admins now receive email notifications alongside push and external provider notifications when project deadlines approach. Template is fully customizable in Settings > Email Templates with placeholders for project title, due date, and reminder type.
 - "Due Date Reminders" event type added to browser push and external notification event filters.
 
+### Fixed
+- Fixed BullMQ notification repeat job history accumulating indefinitely in Redis (~1,440 keys/day with no TTL). Added `removeOnComplete` and `removeOnFail` to prevent future accumulation.
+- Upgraded dompurify to 3.3.2 to fix XSS vulnerability (GHSA-v2wj-7wpq-c8vv).
+
+### Upgrade Notes
+- **Redis cleanup (optional):** If your Redis instance has been running since before this update, you may have accumulated stale `bull:notification-processing:repeat:*` keys. To reclaim memory, run:
+  ```
+  docker exec <redis-container> redis-cli -a '<password>' --no-auth-warning --scan --pattern 'bull:notification-processing:repeat:*' | xargs -L 100 docker exec -i <redis-container> redis-cli -a '<password>' --no-auth-warning DEL
+  ```
+
 ## [0.9.3] - 2026-02-25
 
 ### Fixed

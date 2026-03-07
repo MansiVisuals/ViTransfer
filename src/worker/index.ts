@@ -53,6 +53,9 @@ async function main() {
   const worker = new Worker<VideoProcessingJob>('video-processing', processVideo, {
     connection: getRedisForQueue(),
     concurrency,
+    lockDuration: 600_000,
+    stalledInterval: 300_000,
+    maxStalledCount: 2,
     limiter: {
       max: concurrency * 10,
       duration: 60000,

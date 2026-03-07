@@ -267,14 +267,27 @@ export async function processPreview(
     width: dimensions.width,
     height: dimensions.height,
     watermarkText: settings.watermarkText,
-    onProgress: async (progress) => {
-      debugLog(`Transcode progress: ${(progress * 100).toFixed(1)}%`)
-
-      await prisma.video.update({
-        where: { id: videoId },
-        data: { processingProgress: progress * PROGRESS_WEIGHTS.transcode },
-      })
-    },
+    onProgress: (() => {
+      let lastWrite = 0
+      let writing = false
+      return async (progress: number) => {
+        debugLog(`Transcode progress: ${(progress * 100).toFixed(1)}%`)
+        const now = Date.now()
+        if (writing || now - lastWrite < 3000) return
+        writing = true
+        lastWrite = now
+        try {
+          await prisma.video.update({
+            where: { id: videoId },
+            data: { processingProgress: progress * PROGRESS_WEIGHTS.transcode },
+          })
+        } catch (err) {
+          console.error(`[WORKER] Progress update failed for video ${videoId}:`, err)
+        } finally {
+          writing = false
+        }
+      }
+    })(),
   })
 
   const transcodeTime = Date.now() - transcodeStart

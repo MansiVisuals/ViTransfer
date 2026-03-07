@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Upgrade Notes
 - **Redis cleanup (optional):** If your Redis instance has been running since before this update, you may have accumulated stale `bull:notification-processing:repeat:*` keys. To reclaim memory, run:
   ```
-  docker exec <redis-container> redis-cli -a '<password>' --no-auth-warning --scan --pattern 'bull:notification-processing:repeat:*' | xargs -L 100 docker exec -i <redis-container> redis-cli -a '<password>' --no-auth-warning DEL
+  docker exec -it <redis-container> sh -c "redis-cli -a '<password>' --no-auth-warning --scan --pattern 'bull:notification-processing:repeat:*' | xargs -n 100 redis-cli -a '<password>' --no-auth-warning DEL"
   ```
 
 ## [0.9.3] - 2026-02-25

@@ -125,6 +125,8 @@ async function main() {
         pattern: '* * * * *',
       },
       jobId: 'notification-processor',
+      removeOnComplete: { count: 5 },
+      removeOnFail: { count: 10 },
     }
   )
 

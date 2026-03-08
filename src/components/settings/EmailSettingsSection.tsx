@@ -187,6 +187,7 @@ export function EmailSettingsContent({
             value={smtpPassword}
             onChange={(e) => setSmtpPassword(e.target.value)}
             placeholder="SMTP password or app password"
+            showToggle={false}
           />
           <p className="text-xs text-muted-foreground">
             For iCloud or Gmail, use an App Specific Password. For other providers, use your SMTP password.

@@ -3,9 +3,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import {
   getAllTemplates,
-  getPlaceholdersForType,
+  getLocalizedPlaceholdersForType,
   TEMPLATE_METADATA,
 } from '@/lib/email-template-system'
+import { prisma } from '@/lib/db'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,13 +30,19 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult
 
   try {
-    const templates = await getAllTemplates()
+    // Get the configured language for localized template display
+    const settings = await prisma.settings.findFirst({ select: { language: true } })
+    const locale = settings?.language || 'en'
 
-    // Include placeholder definitions for each template
-    const templatesWithPlaceholders = templates.map(template => ({
-      ...template,
-      placeholders: getPlaceholdersForType(template.type),
-    }))
+    const templates = await getAllTemplates(locale)
+
+    // Include localized placeholder definitions for each template
+    const templatesWithPlaceholders = await Promise.all(
+      templates.map(async template => ({
+        ...template,
+        placeholders: await getLocalizedPlaceholdersForType(template.type, locale),
+      }))
+    )
 
     return NextResponse.json({
       templates: templatesWithPlaceholders,

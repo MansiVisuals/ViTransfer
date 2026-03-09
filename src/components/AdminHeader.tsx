@@ -9,11 +9,14 @@ import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api-client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { useTranslations } from 'next-intl'
 
 export default function AdminHeader() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const [showSecurityDashboard, setShowSecurityDashboard] = useState(false)
+  const t = useTranslations('nav')
+  const ta = useTranslations('auth')
 
   // Fetch security settings to check if security dashboard should be shown
   useEffect(() => {
@@ -39,16 +42,16 @@ export default function AdminHeader() {
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION
 
   const navLinks: Array<{ href: string; label: string; icon: typeof FolderKanban; title?: string }> = [
-    { href: '/admin/projects', label: 'Projects', icon: FolderKanban },
-    { href: '/admin/calendar', label: 'Calendar', icon: Calendar },
-    { href: '/admin/clients', label: 'Clients', icon: Building2 },
-    { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/settings', label: 'Settings', icon: Settings },
+    { href: '/admin/projects', label: t('projects'), icon: FolderKanban },
+    { href: '/admin/calendar', label: t('calendar'), icon: Calendar },
+    { href: '/admin/clients', label: t('clients'), icon: Building2 },
+    { href: '/admin/users', label: t('users'), icon: Users },
+    { href: '/admin/settings', label: t('settings'), icon: Settings },
   ]
 
   // Add Security link if enabled
   if (showSecurityDashboard) {
-    navLinks.push({ href: '/admin/security', label: 'Security', icon: Shield })
+    navLinks.push({ href: '/admin/security', label: t('security'), icon: Shield })
   }
 
   return (
@@ -90,8 +93,8 @@ export default function AdminHeader() {
               <DialogTrigger asChild>
                 <button
                   className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
-                  aria-label="About ViTransfer"
-                  title="About"
+                  aria-label={t('aboutViTransfer')}
+                  title={t('about')}
                 >
                   <CircleHelp className="h-5 w-5 text-foreground" />
                 </button>
@@ -100,13 +103,13 @@ export default function AdminHeader() {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <CircleHelp className="w-5 h-5 text-primary" />
-                    About ViTransfer
+                    {t('aboutViTransfer')}
                   </DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Open-source video review and approval platform for creative professionals.
+                    {t('aboutDescription')}
                   </p>
 
                   {appVersion && (
@@ -119,25 +122,25 @@ export default function AdminHeader() {
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="w-4 h-4 mr-2" />
-                        vitransfer.com
+                        {t('website')}
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href={repoUrl} target="_blank" rel="noopener noreferrer">
                         <Github className="w-4 h-4 mr-2" />
-                        GitHub Repository
+                        {t('githubRepo')}
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href={`${repoUrl}/issues`} target="_blank" rel="noopener noreferrer">
                         <Bug className="w-4 h-4 mr-2" />
-                        Report an Issue
+                        {t('reportIssue')}
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full justify-start">
                       <a href="https://hub.docker.com/r/crypt010/vitransfer" target="_blank" rel="noopener noreferrer">
                         <Container className="w-4 h-4 mr-2" />
-                        Docker Hub
+                        {t('dockerHub')}
                       </a>
                     </Button>
                     <Button 
@@ -150,7 +153,7 @@ export default function AdminHeader() {
                       }}
                     >
                       <Coffee className="w-4 h-4 mr-2" />
-                      Support ViTransfer
+                      {t('supportViTransfer')}
                     </Button>
                   </div>
                 </div>
@@ -163,7 +166,7 @@ export default function AdminHeader() {
               className="flex items-center gap-2"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <span className="hidden sm:inline">{ta('signOut')}</span>
             </Button>
           </div>
         </div>

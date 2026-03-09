@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Video } from '@prisma/client'
 import { Button } from './ui/button'
 import { Download, Info, CheckCircle2, Keyboard } from 'lucide-react'
@@ -71,6 +72,9 @@ export default function ProjectInfo({
   const [_checkingAssets, setCheckingAssets] = useState(false)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
 
+  const t = useTranslations('videos')
+  const tc = useTranslations('common')
+
   const buildAuthHeaders = (shareTokenOverride?: string | null) => {
     const headers: Record<string, string> = {}
     const token = shareTokenOverride || (isAdmin ? getAccessToken() : null)
@@ -94,7 +98,7 @@ export default function ProjectInfo({
   const handleDownload = async () => {
     const downloadUrl = (selectedVideo as any).downloadUrl
     if (!downloadUrl) {
-      alert('Download is only available for approved projects')
+      alert(t('downloadApprovedOnly'))
       return
     }
 
@@ -159,7 +163,7 @@ export default function ProjectInfo({
       // Reload the page to show updated approval status
       window.location.reload()
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to approve project')
+      alert(error instanceof Error ? error.message : t('failedToApproveVideo'))
       setLoading(false)
       setShowApprovalConfirm(false)
     }
@@ -188,39 +192,39 @@ export default function ProjectInfo({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Keyboard className="w-5 h-5 text-primary" />
-              Keyboard Shortcuts
+              {t('keyboardShortcuts')}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Video playback controls
+              {t('videoPlaybackControls')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-muted-foreground">Play / Pause</span>
+              <span className="text-muted-foreground">{t('playPause')}</span>
               <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+Space</kbd>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-muted-foreground">Decrease Speed</span>
+              <span className="text-muted-foreground">{t('decreaseSpeed')}</span>
               <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+,</kbd>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-muted-foreground">Increase Speed</span>
+              <span className="text-muted-foreground">{t('increaseSpeed')}</span>
               <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+.</kbd>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-muted-foreground">Reset Speed</span>
+              <span className="text-muted-foreground">{t('resetSpeed')}</span>
               <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+/</kbd>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-muted-foreground">Previous Frame</span>
+              <span className="text-muted-foreground">{t('previousFrame')}</span>
               <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+J</kbd>
             </div>
             <div className="flex justify-between items-center py-2">
-              <span className="text-muted-foreground">Next Frame</span>
+              <span className="text-muted-foreground">{t('nextFrame')}</span>
               <kbd className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">Ctrl+L</kbd>
             </div>
             <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border">
-              Frame stepping pauses the video automatically. Speed range: 0.25x - 2.0x
+              {t('frameSteppingHint')}
             </p>
           </div>
         </DialogContent>
@@ -239,10 +243,10 @@ export default function ProjectInfo({
               onClick={() => setShowApprovalConfirm(true)}
               variant="success"
               size="sm"
-              title="Approve this video version"
+              title={t('approveVideoVersion')}
             >
               <CheckCircle2 className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Approve</span>
+              <span className="hidden sm:inline">{t('approve')}</span>
             </Button>
           )}
 
@@ -250,19 +254,19 @@ export default function ProjectInfo({
           {!isGuest && (
             <Dialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" title="View video information">
+                <Button variant="outline" size="sm" title={t('viewVideoInfo')}>
                   <Info className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Info</span>
+                  <span className="hidden sm:inline">{t('info')}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-card border-border text-card-foreground max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Info className="w-5 h-5 text-primary" />
-                    Video Information
+                    {t('videoInformation')}
                   </DialogTitle>
                   <DialogDescription className="text-muted-foreground">
-                    Project details and original file specifications
+                    {t('videoInfoDescription')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 text-xs sm:text-sm">
@@ -271,19 +275,19 @@ export default function ProjectInfo({
                     <div className="space-y-2 pb-3 border-b border-border">
                       {projectTitle && (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-muted-foreground text-xs">Project</span>
+                          <span className="text-muted-foreground text-xs">{t('project')}</span>
                           <span className="font-medium">{projectTitle}</span>
                         </div>
                       )}
                       {clientName && (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-muted-foreground text-xs">For</span>
-                          <span className="font-medium">{isPasswordProtected ? clientName : 'Client'}</span>
+                          <span className="text-muted-foreground text-xs">{t('forLabel')}</span>
+                          <span className="font-medium">{isPasswordProtected ? clientName : t('clientLabel')}</span>
                         </div>
                       )}
                       {projectDescription && (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-muted-foreground text-xs">Description</span>
+                          <span className="text-muted-foreground text-xs">{tc('description')}</span>
                           <span className="font-medium whitespace-pre-wrap">{projectDescription}</span>
                         </div>
                       )}
@@ -292,33 +296,33 @@ export default function ProjectInfo({
 
                   {/* Original File Specs Section */}
                   <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Original File Specs</p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{t('originalFileSpecs')}</p>
                     <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground text-xs">Filename</span>
+                      <span className="text-muted-foreground text-xs">{t('filename')}</span>
                       <span className="font-medium break-all">{selectedVideo.originalFileName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Resolution</span>
+                      <span className="text-muted-foreground">{t('resolution')}</span>
                       <span className="font-medium">{selectedVideo.width}x{selectedVideo.height}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Codec</span>
+                      <span className="text-muted-foreground">{t('codec')}</span>
                       <span className="font-medium">{selectedVideo.codec || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Duration</span>
+                      <span className="text-muted-foreground">{t('duration')}</span>
                       <span className="font-medium">{formatTimestamp(selectedVideo.duration)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">FPS</span>
+                      <span className="text-muted-foreground">{t('fps')}</span>
                       <span className="font-medium">{selectedVideo.fps ? selectedVideo.fps.toFixed(2) : 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">File Size</span>
+                      <span className="text-muted-foreground">{t('fileSize')}</span>
                       <span className="font-medium">{formatFileSize(Number(selectedVideo.originalFileSize))}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Upload Date</span>
+                      <span className="text-muted-foreground">{t('uploadDate')}</span>
                       <span className="font-medium">{formatDate(selectedVideo.createdAt)}</span>
                     </div>
                   </div>
@@ -326,13 +330,13 @@ export default function ProjectInfo({
                   {/* Playback Status */}
                   <div className="pt-3 border-t border-border">
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-                      <span className="text-muted-foreground">Playback Status</span>
+                      <span className="text-muted-foreground">{t('playbackStatus')}</span>
                       <span className="font-medium break-words">
                         {isVideoApproved
                           ? usePreviewForApprovedPlayback
-                            ? `Approved - Preview (${defaultQuality})`
-                            : 'Approved - Original Quality'
-                          : `Downscaled Preview (${defaultQuality})${watermarkEnabled ? ' with Watermark' : ''}`
+                            ? t('approvedPreview', { quality: defaultQuality })
+                            : t('approvedOriginal')
+                          : t('downscaledPreview', { quality: defaultQuality, watermark: watermarkEnabled ? t('withWatermark') : '' })
                         }
                       </span>
                     </div>
@@ -344,9 +348,9 @@ export default function ProjectInfo({
 
           {/* Download Button - Only show when video is approved and not in guest mode */}
           {isVideoApproved && !isGuest && !hideDownloadButton && (
-            <Button onClick={handleDownload} variant="default" size="sm" title="Download original quality video">
+            <Button onClick={handleDownload} variant="default" size="sm" title={t('downloadOriginal')}>
               <Download className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Download</span>
+              <span className="hidden sm:inline">{tc('download')}</span>
             </Button>
           )}
         </div>
@@ -358,25 +362,25 @@ export default function ProjectInfo({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-success" />
-              Approve Video
+              {t('approveVideo')}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Confirm approval for this video version
+              {t('confirmApprovalDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2 text-sm">
               <div className="flex gap-2">
-                <span className="text-muted-foreground">Video:</span>
+                <span className="text-muted-foreground">{t('videoLabel')}:</span>
                 <span className="font-medium">{(selectedVideo as any).name}</span>
               </div>
               <div className="flex gap-2">
-                <span className="text-muted-foreground">Version:</span>
+                <span className="text-muted-foreground">{tc('version')}:</span>
                 <span className="font-medium">{selectedVideo.versionLabel}</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Once approved, the original quality video will be available for download.
+              {t('approvalDownloadHint')}
             </p>
             <div className="flex gap-2 pt-2">
               <Button
@@ -386,7 +390,7 @@ export default function ProjectInfo({
                 size="default"
                 className="flex-1 font-semibold"
               >
-                {loading ? 'Approving...' : 'Approve'}
+                {loading ? t('approving') : t('approve')}
               </Button>
               <Button
                 onClick={() => setShowApprovalConfirm(false)}
@@ -394,7 +398,7 @@ export default function ProjectInfo({
                 disabled={loading}
                 size="default"
               >
-                Cancel
+                {tc('cancel')}
               </Button>
             </div>
           </div>

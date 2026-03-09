@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Video, ProjectStatus, Comment } from '@prisma/client'
 import { Button } from './ui/button'
 import { CheckCircle2, GitCompareArrows } from 'lucide-react'
@@ -79,6 +80,7 @@ export default function VideoPlayer({
   usePreviewForApprovedPlayback = false, // Default to false (use original)
   fillContainer = false, // Default to false (standard aspect ratio)
 }: VideoPlayerProps) {
+  const t = useTranslations('videos')
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
@@ -735,7 +737,7 @@ export default function VideoPlayer({
         selectedVideoIndex,
         isVideoApproved,
         displayVideos,
-        displayLabel: isVideoApproved ? 'Approved Version' : selectedVideo.versionLabel,
+        displayLabel: isVideoApproved ? t('approvedVersion') : selectedVideo.versionLabel,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -751,7 +753,7 @@ export default function VideoPlayer({
   }
 
   // Get display label - if video approved, show "Approved Version"
-  const displayLabel = isVideoApproved ? 'Approved Version' : selectedVideo.versionLabel
+  const displayLabel = isVideoApproved ? t('approvedVersion') : selectedVideo.versionLabel
 
   // Handle approval - stores video name in session storage and calls parent callback
   const handleApprove = async () => {
@@ -781,7 +783,7 @@ export default function VideoPlayer({
                 {videoApproved && (
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-success" />
                 )}
-                {videoApproved ? 'Approved Version' : video.versionLabel}
+                {videoApproved ? t('approvedVersion') : video.versionLabel}
               </Button>
             )
           })}

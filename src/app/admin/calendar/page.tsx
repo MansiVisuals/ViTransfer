@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Calendar, ChevronLeft, ChevronRight, Copy, RefreshCw, BarChart3, Check, Link2 } from 'lucide-react'
@@ -20,6 +21,8 @@ type ViewMode = 'calendar' | 'gantt'
 type CalendarScale = 'day' | 'week' | 'month' | 'year'
 
 export default function CalendarPage() {
+  const t = useTranslations('calendar')
+  const tc = useTranslations('common')
   const [projects, setProjects] = useState<CalendarProject[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('calendar')
@@ -182,7 +185,7 @@ export default function CalendarPage() {
           </Button>
           <div className="text-center">
             <h2 className="text-lg font-semibold">{getHeaderLabel()}</h2>
-            {isToday(currentDate) && <p className="text-xs text-primary">Today</p>}
+            {isToday(currentDate) && <p className="text-xs text-primary">{t('today')}</p>}
           </div>
           <Button variant="ghost" size="sm" onClick={navigateNext}>
             <ChevronRight className="w-4 h-4" />
@@ -190,7 +193,7 @@ export default function CalendarPage() {
         </div>
         <div className="p-4">
           {dayProjects.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No projects due on this day</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t('noProjectsDue')}</p>
           ) : (
             <div className="space-y-2">
               {dayProjects.map(project => (
@@ -280,8 +283,8 @@ export default function CalendarPage() {
         </div>
 
         <div className="grid grid-cols-7">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="px-2 py-2 text-xs font-medium text-muted-foreground text-center border-b border-border">
+          {[t('sun'), t('mon'), t('tue'), t('wed'), t('thu'), t('fri'), t('sat')].map((day, i) => (
+            <div key={i} className="px-2 py-2 text-xs font-medium text-muted-foreground text-center border-b border-border">
               {day}
             </div>
           ))}
@@ -349,8 +352,8 @@ export default function CalendarPage() {
                 </button>
                 <div className="grid grid-cols-7 gap-px">
                   {/* Day headers */}
-                  {['S','M','T','W','T','F','S'].map((d, i) => (
-                    <div key={i} className="text-[8px] text-muted-foreground text-center">{d}</div>
+                  {[t('sun'), t('mon'), t('tue'), t('wed'), t('thu'), t('fri'), t('sat')].map((d, i) => (
+                    <div key={i} className="text-[8px] text-muted-foreground text-center">{d.charAt(0)}</div>
                   ))}
                   {/* Empty cells */}
                   {Array.from({ length: monthStartOffset }).map((_, i) => (
@@ -372,7 +375,7 @@ export default function CalendarPage() {
                           hasProjects ? 'font-semibold text-foreground' : 'text-muted-foreground'
                         }`}
                         onClick={() => { setCurrentDate(date); setCalendarScale('day') }}
-                        title={hasProjects ? `${dayProjects.length} project(s)` : undefined}
+                        title={hasProjects ? t('projectCount', { count: dayProjects.length }) : undefined}
                       >
                         {dayNum}
                         {hasProjects && !today && (
@@ -439,12 +442,12 @@ export default function CalendarPage() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                 <Calendar className="w-7 h-7 sm:w-8 sm:h-8" />
-                Calendar
+                {t('title')}
               </h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Project deadlines and timeline overview</p>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">{t('description')}</p>
             </div>
           </div>
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{tc('loading')}</div>
         </div>
       </div>
     )
@@ -457,9 +460,9 @@ export default function CalendarPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <Calendar className="w-7 h-7 sm:w-8 sm:h-8" />
-              Calendar
+              {t('title')}
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Project deadlines and timeline overview</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">{t('description')}</p>
           </div>
           <div className="inline-flex items-center rounded-md border bg-card p-0.5">
             <Button
@@ -472,10 +475,10 @@ export default function CalendarPage() {
                 'h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground',
                 viewMode === 'calendar' && 'bg-accent text-foreground'
               )}
-              title="Calendar view"
+              title={t('calendarView')}
             >
               <Calendar className="h-4 w-4" />
-              <span className="sr-only">Calendar view</span>
+              <span className="sr-only">{t('calendarView')}</span>
             </Button>
             <Button
               type="button"
@@ -487,10 +490,10 @@ export default function CalendarPage() {
                 'h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground',
                 viewMode === 'gantt' && 'bg-accent text-foreground'
               )}
-              title="Gantt view"
+              title={t('ganttView')}
             >
               <BarChart3 className="h-4 w-4" />
-              <span className="sr-only">Gantt view</span>
+              <span className="sr-only">{t('ganttView')}</span>
             </Button>
           </div>
         </div>
@@ -510,12 +513,12 @@ export default function CalendarPage() {
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {scale.charAt(0).toUpperCase() + scale.slice(1)}
+                    {t(scale as 'day' | 'week' | 'month' | 'year')}
                   </button>
                 ))}
               </div>
               <Button variant="outline" size="sm" onClick={goToToday}>
-                Today
+                {t('today')}
               </Button>
             </div>
 
@@ -549,7 +552,7 @@ export default function CalendarPage() {
 
                 {ganttProjects.length === 0 ? (
                   <div className="px-4 py-8 text-sm text-muted-foreground text-center">
-                    No projects with due dates
+                    {t('noProjectsWithDueDates')}
                   </div>
                 ) : (
                   ganttProjects.map(project => (
@@ -574,14 +577,14 @@ export default function CalendarPage() {
         <div className="mt-6 bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Link2 className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-medium">Calendar Subscription</h3>
+            <h3 className="text-sm font-medium">{t('calendarSubscription')}</h3>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            Subscribe to this URL in your calendar app (Google Calendar, Outlook, Apple Calendar) to see project due dates.
+            {t('subscriptionHint')}
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 text-xs bg-muted px-3 py-2 rounded truncate">
-              {feedUrl || 'Loading...'}
+              {feedUrl || tc('loading')}
             </code>
             <Button variant="outline" size="sm" onClick={copyFeedUrl} disabled={!feedUrl}>
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}

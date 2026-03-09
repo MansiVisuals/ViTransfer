@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -40,6 +41,8 @@ interface VideoUploadModalProps {
 }
 
 export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete }: VideoUploadModalProps) {
+  const t = useTranslations('videos')
+  const tc = useTranslations('common')
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -71,7 +74,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
   // Validate video file format
   const validateVideoFile = async (file: File): Promise<{ valid: boolean; error?: string }> => {
     if (file.size === 0) {
-      return { valid: false, error: 'File is empty' }
+      return { valid: false, error: t('fileEmpty') }
     }
 
     try {
@@ -89,7 +92,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
       })
 
       if (headerBytes.length < 12) {
-        return { valid: false, error: 'File is too small to be a valid video' }
+        return { valid: false, error: t('fileTooSmall') }
       }
 
       const ftypSignature = String.fromCharCode(...headerBytes.subarray(4, 8))
@@ -104,10 +107,10 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
 
       return {
         valid: false,
-        error: 'File does not appear to be a valid MP4/MOV video.'
+        error: t('invalidVideoShort')
       }
     } catch {
-      return { valid: false, error: 'Failed to read file. Please try again.' }
+      return { valid: false, error: t('failedToRead') }
     }
   }
 
@@ -179,7 +182,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
 
     if (!videoName.trim()) {
       setPendingUploads(prev => prev.map(u =>
-        u.id === id ? { ...u, status: 'error', error: 'Video name is required' } : u
+        u.id === id ? { ...u, status: 'error', error: t('videoNameRequired') } : u
       ))
       return
     }
@@ -312,7 +315,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
           if (canResumeExisting && (statusCode === 404 || statusCode === 410)) {
             clearUploadMetadata(file)
             clearTUSFingerprint(file)
-            errorMessage = 'Upload session expired. Please try again.'
+            errorMessage = t('uploadExpired')
           } else if (createdVideoRecord && videoId) {
             try {
               await apiDelete(`/api/videos/${videoId}`)
@@ -338,7 +341,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
 
     } catch (error) {
       setPendingUploads(prev => prev.map(u =>
-        u.id === id ? { ...u, status: 'error', error: error instanceof Error ? error.message : 'Upload failed' } : u
+        u.id === id ? { ...u, status: 'error', error: error instanceof Error ? error.message : t('uploadFailed') } : u
       ))
     }
   }
@@ -408,7 +411,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5 text-primary" />
-            Upload Videos
+            {t('uploadVideos')}
           </DialogTitle>
         </DialogHeader>
 
@@ -439,7 +442,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
             >
               <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
-                {isDragging ? 'Drop videos here' : 'Drop videos here or click to browse'}
+                {isDragging ? t('dropVideosHere') : t('dropVideosOrBrowse')}
               </p>
             </div>
           )}
@@ -463,7 +466,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                         <Input
                           value={upload.videoName}
                           onChange={(e) => handleUpdateName(upload.id, e.target.value)}
-                          placeholder="Video name"
+                          placeholder={t('videoName')}
                           className="h-9 flex-1 min-w-0"
                           disabled={upload.status !== 'pending'}
                           maxLength={MAX_VIDEO_NAME_LENGTH}
@@ -485,7 +488,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                         <Input
                           value={upload.versionLabel}
                           onChange={(e) => handleUpdateVersionLabel(upload.id, e.target.value)}
-                          placeholder="Version label (optional, e.g. v1, Draft 1)"
+                          placeholder={t('versionLabelPlaceholder')}
                           className="h-8 text-sm w-full min-w-0"
                         />
                       )}
@@ -501,7 +504,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground">
-                              {upload.paused ? 'Paused' : upload.status === 'completed' ? 'Completed' : 'Uploading...'}
+                              {upload.paused ? t('paused') : upload.status === 'completed' ? t('completed') : t('uploading')}
                             </span>
                             <span className="font-medium">{upload.progress}%</span>
                           </div>
@@ -516,7 +519,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                           </div>
                           {upload.speed > 0 && upload.status === 'uploading' && !upload.paused && (
                             <p className="text-xs text-muted-foreground">
-                              Speed: {upload.speed} MB/s
+                              {t('speed')} {upload.speed} MB/s
                             </p>
                           )}
                         </div>
@@ -534,12 +537,12 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                             {upload.paused ? (
                               <>
                                 <Play className="w-3 h-3 mr-1" />
-                                Resume
+                                {t('resume')}
                               </>
                             ) : (
                               <>
                                 <Pause className="w-3 h-3 mr-1" />
-                                Pause
+                                {t('pause')}
                               </>
                             )}
                           </Button>
@@ -565,7 +568,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                               onClick={() => handleRetry(upload.id)}
                               className="h-8"
                             >
-                              Retry
+                              {tc('retry')}
                             </Button>
                             <Button
                               variant="ghost"
@@ -573,7 +576,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
                               onClick={() => handleRemove(upload.id)}
                               className="h-8"
                             >
-                              Remove
+                              {tc('remove')}
                             </Button>
                           </div>
                         </div>
@@ -594,7 +597,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
               className="w-full"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add More Videos
+              {t('addMoreVideos')}
             </Button>
           )}
 
@@ -605,12 +608,12 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
               onClick={handleClose}
               disabled={hasActiveUploads}
             >
-              {allCompleted ? 'Done' : 'Cancel'}
+              {allCompleted ? tc('done') : tc('cancel')}
             </Button>
             {hasPendingItems && !hasActiveUploads && (
               <Button onClick={handleStartAll}>
                 <Upload className="w-4 h-4 mr-2" />
-                Start Upload{pendingUploads.filter(u => u.status === 'pending').length > 1 ? 's' : ''}
+                {t('startUpload')}
               </Button>
             )}
           </div>
@@ -618,7 +621,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
           {/* Help text */}
           {!hasActiveUploads && !allCompleted && (
             <p className="text-xs text-muted-foreground text-center">
-              Leave version label empty to auto-generate (v1, v2, v3...)
+              {t('versionLabelHint')}
             </p>
           )}
         </div>

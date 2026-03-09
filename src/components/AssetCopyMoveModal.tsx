@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Copy, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
@@ -43,6 +44,8 @@ export function AssetCopyMoveModal({
   onComplete,
   isOpen,
 }: AssetCopyMoveModalProps) {
+  const t = useTranslations('videos')
+  const tc = useTranslations('common')
   const [assets, setAssets] = useState<VideoAsset[]>([])
   const [videos, setVideos] = useState<Video[]>([])
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
@@ -60,7 +63,7 @@ export function AssetCopyMoveModal({
       // Fetch assets for current video
       const assetsResponse = await apiFetch(`/api/videos/${currentVideoId}/assets`)
       if (!assetsResponse.ok) {
-        throw new Error('Failed to fetch assets')
+        throw new Error(t('failedToFetchAssets'))
       }
       const assetsData = await assetsResponse.json()
       setAssets(assetsData.assets)
@@ -68,7 +71,7 @@ export function AssetCopyMoveModal({
       // Fetch all videos in project to choose target
       const videosResponse = await apiFetch(`/api/projects/${projectId}`)
       if (!videosResponse.ok) {
-        throw new Error('Failed to fetch project videos')
+        throw new Error(t('failedToFetchVideos'))
       }
       const videosData = await videosResponse.json()
 
@@ -76,7 +79,7 @@ export function AssetCopyMoveModal({
       const otherVideos = videosData.videos.filter((v: Video) => v.id !== currentVideoId)
       setVideos(otherVideos)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data')
+      setError(err instanceof Error ? err.message : t('failedToLoadData'))
     } finally {
       setLoading(false)
     }
@@ -119,7 +122,7 @@ export function AssetCopyMoveModal({
       targetVideoId,
     })
       .then(() => {
-        setSuccess(`Successfully copied ${selectedAssets.size} asset(s) to the selected version`)
+        setSuccess(t('copiedSuccessfully', { count: selectedAssets.size }))
         setSelectedAssets(new Set())
 
         if (onComplete) {
@@ -127,7 +130,7 @@ export function AssetCopyMoveModal({
         }
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to copy assets')
+        setError(err instanceof Error ? err.message : t('failedToCopy'))
       })
       .finally(() => {
         setCopying(false)
@@ -139,7 +142,7 @@ export function AssetCopyMoveModal({
   }
 
   const getCategoryLabel = (category: string | null) => {
-    if (!category) return 'Other'
+    if (!category) return t('other')
     return category.charAt(0).toUpperCase() + category.slice(1)
   }
 
@@ -151,7 +154,7 @@ export function AssetCopyMoveModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="w-5 h-5 text-primary" />
-            Copy Assets to Another Version
+            {t('copyAssetsTitle')}
           </DialogTitle>
           <DialogDescription>
             {currentVideoName} - {currentVersionLabel}
@@ -168,16 +171,16 @@ export function AssetCopyMoveModal({
               {/* Target version selector */}
               <div className="space-y-3">
                 <label htmlFor="target-version" className="font-medium text-sm">
-                  Select Target Version
+                  {t('selectTargetVersion')}
                 </label>
                 {videos.length === 0 ? (
                   <div className="p-4 border-2 border-dashed border-border rounded-lg text-center text-sm text-muted-foreground">
-                    No other versions available. Create a new version first.
+                    {t('noOtherVersions')}
                   </div>
                 ) : (
                   <Select value={targetVideoId} onValueChange={setTargetVideoId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="-- Select a version --" />
+                      <SelectValue placeholder={t('selectVersion')} />
                     </SelectTrigger>
                     <SelectContent>
                       {videos.map((video) => (
@@ -193,14 +196,14 @@ export function AssetCopyMoveModal({
               {/* Assets selection */}
               {assets.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No assets available to copy
+                  {t('noAssetsToCopy')}
                 </div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-sm">Select Assets to Copy ({assets.length})</h3>
+                    <h3 className="font-medium text-sm">{t('selectAssetsToCopy', { count: assets.length })}</h3>
                     <Button variant="ghost" size="sm" onClick={selectAll}>
-                      {selectedAssets.size === assets.length ? 'Deselect All' : 'Select All'}
+                      {selectedAssets.size === assets.length ? tc('deselectAll') : tc('selectAll')}
                     </Button>
                   </div>
 
@@ -253,12 +256,12 @@ export function AssetCopyMoveModal({
                 {copying ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Copying assets...
+                    {t('copyingAssets')}
                   </>
                 ) : (
                   <>
                     <Copy className="h-4 w-4 mr-2" />
-                    Copy {selectedAssets.size} asset(s)
+                    {t('copyAssets', { count: selectedAssets.size })}
                   </>
                 )}
               </Button>

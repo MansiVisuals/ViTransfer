@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,6 +24,8 @@ interface UserData {
 }
 
 export default function UsersPage() {
+  const t = useTranslations('users')
+  const tc = useTranslations('common')
   const [users, setUsers] = useState<UserData[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -80,7 +83,7 @@ export default function UsersPage() {
       const data = await res.json()
       setUsers(data.users)
     } catch (err) {
-      setError('Failed to load users')
+      setError(t('failedToLoadUsers'))
     } finally {
       setLoading(false)
     }
@@ -189,11 +192,11 @@ export default function UsersPage() {
   // Add user
   async function handleAddUser() {
     if (!newUserData.email || !newUserData.password) {
-      setError('Email and password are required')
+      setError(t('emailAndPasswordRequired'))
       return
     }
     if (newUserData.password !== newUserData.confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('passwordsDoNotMatch'))
       return
     }
 
@@ -211,7 +214,7 @@ export default function UsersPage() {
       setNewUserData({ email: '', username: '', name: '', password: '', confirmPassword: '' })
       setShowAddUserModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user')
+      setError(err instanceof Error ? err.message : t('failedToCreateUser'))
     } finally {
       setSaving(false)
     }
@@ -231,7 +234,7 @@ export default function UsersPage() {
 
   async function handleEditUser() {
     if (!editingUser || !editFormData.email) {
-      setError('Email is required')
+      setError(t('emailIsRequired'))
       return
     }
 
@@ -247,7 +250,7 @@ export default function UsersPage() {
       await fetchUsers()
       setShowEditUserModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user')
+      setError(err instanceof Error ? err.message : t('failedToUpdateUser'))
     } finally {
       setSaving(false)
     }
@@ -267,15 +270,15 @@ export default function UsersPage() {
     if (!editingUser) return
 
     if (!passwordData.oldPassword) {
-      setError('Current password is required')
+      setError(t('currentPasswordRequired'))
       return
     }
     if (!passwordData.password) {
-      setError('New password is required')
+      setError(t('newPasswordRequired'))
       return
     }
     if (passwordData.password !== passwordData.confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('passwordsDoNotMatch'))
       return
     }
 
@@ -289,7 +292,7 @@ export default function UsersPage() {
       })
       setShowPasswordModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change password')
+      setError(err instanceof Error ? err.message : t('failedToChangePassword'))
     } finally {
       setSaving(false)
     }
@@ -316,11 +319,11 @@ export default function UsersPage() {
       await fetchPasskeys(editingUser.id)
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
-        setError('Cancelled or timed out')
+        setError(t('cancelledOrTimedOut'))
       } else if (err.name === 'InvalidStateError') {
-        setError('This authenticator is already registered')
+        setError(t('alreadyRegistered'))
       } else {
-        setError('Failed to register PassKey')
+        setError(t('failedToRegisterPasskey'))
       }
     } finally {
       setSaving(false)
@@ -328,13 +331,13 @@ export default function UsersPage() {
   }
 
   async function handleDeletePasskey(passkeyId: string) {
-    if (!editingUser || !confirm('Delete this PassKey?')) return
+    if (!editingUser || !confirm(t('deletePasskeyConfirm'))) return
 
     try {
       await apiDelete(`/api/auth/passkey/${passkeyId}?userId=${editingUser.id}`)
       await fetchPasskeys(editingUser.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete passkey')
+      setError(err instanceof Error ? err.message : t('failedToDeletePasskey'))
     }
   }
 
@@ -356,7 +359,7 @@ export default function UsersPage() {
       await fetchUsers()
       setShowDeleteConfirm(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user')
+      setError(err instanceof Error ? err.message : t('failedToDeleteUser'))
     } finally {
       setSaving(false)
     }
@@ -381,10 +384,10 @@ export default function UsersPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <Users className="w-7 h-7 sm:w-8 sm:h-8" />
-              User Management
+              {t('title')}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Manage administrator accounts
+              {t('description')}
             </p>
           </div>
           <Button
@@ -399,7 +402,7 @@ export default function UsersPage() {
             }}
           >
             <UserPlus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Add User</span>
+            <span className="hidden sm:inline">{t('addUser')}</span>
           </Button>
         </div>
 
@@ -408,7 +411,7 @@ export default function UsersPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search users..."
+              placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -427,9 +430,9 @@ export default function UsersPage() {
         {filteredUsers.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="font-medium">No users found</p>
+            <p className="font-medium">{t('noUsers')}</p>
             <p className="text-sm mt-1">
-              {searchQuery ? 'Try a different search term' : 'Add your first admin user to get started'}
+              {searchQuery ? t('noUsersSearch') : t('noUsersHint')}
             </p>
           </div>
         ) : (
@@ -447,11 +450,11 @@ export default function UsersPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium truncate">{user.name || user.username || user.email}</p>
                       <span className="px-2 py-0.5 text-xs rounded-full bg-info-visible text-info border border-info-visible flex-shrink-0">
-                        ADMIN
+                        {t('admin')}
                       </span>
                       {loggedInUser?.id === user.id && (
                         <span className="px-2 py-0.5 text-xs rounded-full bg-success-visible text-success border border-success-visible flex-shrink-0">
-                          You
+                          {t('you')}
                         </span>
                       )}
                     </div>
@@ -465,7 +468,7 @@ export default function UsersPage() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Created {formatDate(user.createdAt)}
+                      {t('created', { date: formatDate(user.createdAt) })}
                     </p>
                   </div>
                 </div>
@@ -475,7 +478,7 @@ export default function UsersPage() {
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => openEditModal(user)}
-                    title="Edit user"
+                    title={t('editUser')}
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
@@ -485,7 +488,7 @@ export default function UsersPage() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => openPasswordModal(user)}
-                      title="Change password"
+                      title={t('changePassword')}
                     >
                       <KeyRound className="w-4 h-4" />
                     </Button>
@@ -496,7 +499,7 @@ export default function UsersPage() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => openPasskeyModal(user)}
-                      title="Manage passkeys"
+                      title={t('managePasskeys')}
                     >
                       <Fingerprint className="w-4 h-4" />
                     </Button>
@@ -506,7 +509,7 @@ export default function UsersPage() {
                     size="icon"
                     onClick={() => confirmDelete(user)}
                     className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    title="Delete user"
+                    title={t('deleteUser')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -523,10 +526,10 @@ export default function UsersPage() {
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
-              Add New User
+              {t('addNewUser')}
             </DialogTitle>
             <DialogDescription>
-              Create a new administrator account
+              {t('addNewUserDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-2 py-1">
@@ -537,11 +540,11 @@ export default function UsersPage() {
               </div>
             )}
             <div className="space-y-1">
-              <Label htmlFor="newEmail" className="text-xs">Email *</Label>
+              <Label htmlFor="newEmail" className="text-xs">{t('emailRequired')}</Label>
               <Input
                 id="newEmail"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder={t('emailPlaceholder')}
                 value={newUserData.email}
                 onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
                 className="h-8"
@@ -553,10 +556,10 @@ export default function UsersPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label htmlFor="newUsername" className="text-xs">Username</Label>
+                <Label htmlFor="newUsername" className="text-xs">{t('username')}</Label>
                 <Input
                   id="newUsername"
-                  placeholder="admin"
+                  placeholder={t('usernamePlaceholder')}
                   value={newUserData.username}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, username: e.target.value }))}
                   className="h-8"
@@ -567,10 +570,10 @@ export default function UsersPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="newName" className="text-xs">Display Name</Label>
+                <Label htmlFor="newName" className="text-xs">{t('displayName')}</Label>
                 <Input
                   id="newName"
-                  placeholder="John Doe"
+                  placeholder={t('displayNamePlaceholder')}
                   value={newUserData.name}
                   onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
                   className="h-8"
@@ -583,7 +586,7 @@ export default function UsersPage() {
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <Label htmlFor="newPassword" className="text-xs">Password *</Label>
+                <Label htmlFor="newPassword" className="text-xs">{t('passwordRequired')}</Label>
                 <div className="flex gap-1">
                   <Button
                     type="button"
@@ -593,7 +596,7 @@ export default function UsersPage() {
                     className="h-6 px-2 text-xs"
                   >
                     <RefreshCw className="w-3 h-3 mr-1" />
-                    Generate
+                    {tc('generate')}
                   </Button>
                   {newUserData.password && (
                     <Button
@@ -630,7 +633,7 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="newConfirmPassword" className="text-xs">Confirm Password *</Label>
+              <Label htmlFor="newConfirmPassword" className="text-xs">{t('confirmPasswordRequired')}</Label>
               <div className="relative">
                 <Input
                   id="newConfirmPassword"
@@ -656,10 +659,10 @@ export default function UsersPage() {
           </div>
           <DialogFooter className="pt-2">
             <DialogClose asChild>
-              <Button variant="outline" size="sm">Cancel</Button>
+              <Button variant="outline" size="sm">{tc('cancel')}</Button>
             </DialogClose>
             <Button size="sm" onClick={handleAddUser} disabled={saving}>
-              {saving ? 'Creating...' : 'Create User'}
+              {saving ? tc('creating') : t('addUser')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -671,10 +674,10 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5 text-primary" />
-              Edit User
+              {t('editUserTitle')}
             </DialogTitle>
             <DialogDescription>
-              Update user information
+              {t('editUserDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -685,7 +688,7 @@ export default function UsersPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="editEmail">Email *</Label>
+              <Label htmlFor="editEmail">{t('emailRequired')}</Label>
               <Input
                 id="editEmail"
                 type="email"
@@ -698,7 +701,7 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="editUsername">Username</Label>
+              <Label htmlFor="editUsername">{t('username')}</Label>
               <Input
                 id="editUsername"
                 value={editFormData.username}
@@ -710,7 +713,7 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="editName">Display Name</Label>
+              <Label htmlFor="editName">{t('displayName')}</Label>
               <Input
                 id="editName"
                 value={editFormData.name}
@@ -724,10 +727,10 @@ export default function UsersPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleEditUser} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? tc('saving') : tc('saveChanges')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -739,10 +742,10 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="w-5 h-5 text-primary" />
-              Change Password
+              {t('changePasswordTitle')}
             </DialogTitle>
             <DialogDescription>
-              Enter your current password and choose a new one
+              {t('changePasswordDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -753,7 +756,7 @@ export default function UsersPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="oldPassword">Current Password *</Label>
+              <Label htmlFor="oldPassword">{t('currentPasswordStar')}</Label>
               <Input
                 id="oldPassword"
                 type="password"
@@ -764,7 +767,7 @@ export default function UsersPage() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">New Password *</Label>
+                <Label htmlFor="password">{t('newPasswordStar')}</Label>
                 <div className="flex gap-1">
                   <Button
                     type="button"
@@ -774,7 +777,7 @@ export default function UsersPage() {
                     className="h-7 px-2 text-xs"
                   >
                     <RefreshCw className="w-3 h-3 mr-1" />
-                    Generate
+                    {tc('generate')}
                   </Button>
                   {passwordData.password && (
                     <Button
@@ -808,7 +811,7 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <Label htmlFor="confirmPassword">{t('confirmPasswordRequired')}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -831,10 +834,10 @@ export default function UsersPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleChangePassword} disabled={saving}>
-              {saving ? 'Changing...' : 'Change Password'}
+              {saving ? t('changing') : t('changePasswordTitle')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -846,10 +849,10 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Fingerprint className="w-5 h-5 text-primary" />
-              Passkeys
+              {t('passkeysTitle')}
             </DialogTitle>
             <DialogDescription>
-              Manage passkeys for {editingUser?.name || editingUser?.email}
+              {t('passkeysDescription', { name: editingUser?.name || editingUser?.email || '' })}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -863,8 +866,8 @@ export default function UsersPage() {
             {passkeys.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground">
                 <Fingerprint className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">No passkeys registered</p>
-                <p className="text-xs mt-1">Add a passkey for passwordless login</p>
+                <p className="text-sm">{t('noPasskeys')}</p>
+                <p className="text-xs mt-1">{t('noPasskeysHint')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -877,10 +880,10 @@ export default function UsersPage() {
                       <Fingerprint className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">
-                          {passkey.deviceType || 'Unknown Device'}
+                          {passkey.deviceType || t('unknownDevice')}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Added {formatDate(passkey.createdAt)}
+                          {t('added', { date: formatDate(passkey.createdAt) })}
                         </p>
                       </div>
                     </div>
@@ -904,19 +907,19 @@ export default function UsersPage() {
                 className="w-full"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                {saving ? 'Registering...' : 'Add New Passkey'}
+                {saving ? t('registering') : t('addNewPasskey')}
               </Button>
             )}
 
             {loggedInUser?.id !== editingUser?.id && (
               <p className="text-xs text-muted-foreground text-center">
-                Users can only add passkeys to their own account
+                {t('passkeysOwnAccountOnly')}
               </p>
             )}
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Close</Button>
+              <Button variant="outline">{tc('close')}</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -928,10 +931,10 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-destructive" />
-              Confirm Delete
+              {t('confirmDeleteTitle')}
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete user &quot;{deleteTarget?.name || deleteTarget?.email}&quot;? This action cannot be undone.
+              {t('confirmDeleteUser', { name: deleteTarget?.name || deleteTarget?.email || '' })}
             </DialogDescription>
           </DialogHeader>
           {error && (
@@ -942,10 +945,10 @@ export default function UsersPage() {
           )}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button variant="destructive" onClick={handleDelete} disabled={saving}>
-              {saving ? 'Deleting...' : 'Delete User'}
+              {saving ? tc('deleting') : t('deleteUserButton')}
             </Button>
           </DialogFooter>
         </DialogContent>

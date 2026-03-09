@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { FileText, Image, Music, Film, Download, Loader2 } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 
@@ -39,6 +40,7 @@ export default function CommentAttachments({
   videoId,
   shareToken,
 }: CommentAttachmentsProps) {
+  const t = useTranslations('comments')
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
@@ -68,13 +70,13 @@ export default function CommentAttachments({
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
-        throw new Error(err.error || 'Download failed')
+        throw new Error(err.error || t('downloadFailed'))
       }
 
       const { url } = await response.json()
       window.location.href = url
     } catch (error) {
-      setDownloadError(error instanceof Error ? error.message : 'Download failed')
+      setDownloadError(error instanceof Error ? error.message : t('downloadFailed'))
     } finally {
       setDownloadingId(null)
     }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import CommentSection from '@/components/CommentSection'
@@ -15,12 +16,15 @@ import { Lock, Check, Mail, KeyRound } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import ThemeToggle from '@/components/ThemeToggle'
+import LanguageToggle from '@/components/LanguageToggle'
 
 interface SharePageClientProps {
   token: string
 }
 
 export default function SharePageClient({ token }: SharePageClientProps) {
+  const t = useTranslations('share')
+  const tc = useTranslations('common')
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
@@ -519,10 +523,10 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         setError('') // Clear any previous errors
       } else {
         // Show generic message to prevent email enumeration
-        setError(data.error || 'Failed to send code. Please try again.')
+        setError(data.error || t('failedToSendCode'))
       }
     } catch (error) {
-      setError('An error occurred. Please try again.')
+      setError(tc('errorTryAgain'))
     } finally {
       setSendingOtp(false)
     }
@@ -554,10 +558,10 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         await fetchProjectData(data.shareToken)
       } else {
-        setError('Invalid or expired code. Please try again.')
+        setError(t('invalidCode'))
       }
     } catch (error) {
-      setError('An error occurred. Please try again.')
+      setError(tc('errorTryAgain'))
     } finally {
       setLoading(false)
     }
@@ -586,10 +590,10 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         await fetchProjectData(data.shareToken)
       } else {
-        setError('Incorrect password')
+        setError(t('incorrectPassword'))
       }
     } catch (error) {
-      setError('An error occurred')
+      setError(tc('error'))
     } finally {
       setLoading(false)
     }
@@ -616,10 +620,10 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         await fetchProjectData(data.shareToken)
       } else {
-        setError('Unable to access as guest')
+        setError(t('unableToAccessGuest'))
       }
     } catch (error) {
-      setError('An error occurred')
+      setError(tc('error'))
     } finally {
       setLoading(false)
     }
@@ -629,7 +633,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   if (isPasswordProtected === null) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{tc('loading')}</p>
       </div>
     )
   }
@@ -638,6 +642,11 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   if (isPasswordProtected && !isAuthenticated) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
+        {/* Language and theme toggles for auth view */}
+        <div className="fixed top-3 right-3 z-20 flex items-center gap-2">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-md flex flex-col items-center gap-4">
           <BrandLogo height={64} className="mx-auto" />
           <Card className="bg-card border-border w-full">
@@ -645,14 +654,14 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               <div className="flex justify-center">
                 <Lock className="w-12 h-12 text-muted-foreground" />
               </div>
-              <CardTitle className="text-foreground">Authentication Required</CardTitle>
+              <CardTitle className="text-foreground">{t('authRequired')}</CardTitle>
               <p className="text-muted-foreground text-sm mt-2">
-                {authMode === 'PASSWORD' && 'Please enter the password to continue.'}
-                {authMode === 'OTP' && 'Enter your email to receive an access code.'}
-                {authMode === 'BOTH' && 'Choose your preferred authentication method.'}
+                {authMode === 'PASSWORD' && t('passwordPrompt')}
+                {authMode === 'OTP' && t('otpPrompt')}
+                {authMode === 'BOTH' && t('bothPrompt')}
               </p>
               <p className="text-xs text-muted-foreground mt-3 px-4">
-                This authentication is for project recipients only.
+                {t('recipientsOnly')}
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -662,12 +671,12 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   {authMode === 'BOTH' && (
                     <div className="flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Password</p>
+                    <p className="text-sm font-medium text-foreground">{t('password')}</p>
                   </div>
                 )}
                 <form onSubmit={handlePasswordSubmit} className="space-y-4">
                   <PasswordInput
-                    placeholder="Enter password"
+                    placeholder={t('enterPassword')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoFocus={authMode === 'PASSWORD'}
@@ -680,7 +689,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     className="w-full"
                   >
                     <Check className="w-4 h-4 mr-2" />
-                    {loading ? 'Verifying...' : 'Submit'}
+                    {loading ? t('verifying') : tc('submit')}
                   </Button>
                 </form>
               </div>
@@ -693,7 +702,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   <div className="w-full border-t border-border"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                  <span className="bg-card px-2 text-muted-foreground">{tc('or')}</span>
                 </div>
               </div>
             )}
@@ -704,14 +713,14 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 {authMode === 'BOTH' && (
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Email Verification</p>
+                    <p className="text-sm font-medium text-foreground">{t('emailVerification')}</p>
                   </div>
                 )}
                 {!otpSent ? (
                   <form onSubmit={handleSendOtp} className="space-y-4">
                     <Input
                       type="email"
-                      placeholder="Enter your email address"
+                      placeholder={t('enterEmail')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       autoFocus={authMode === 'OTP'}
@@ -725,14 +734,14 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                       className="w-full"
                     >
                       <Mail className="w-4 h-4 mr-2" />
-                      {sendingOtp ? 'Sending Code...' : 'Send Verification Code'}
+                      {sendingOtp ? t('sendingCode') : t('sendCode')}
                     </Button>
                   </form>
                 ) : (
                   <form onSubmit={handleOtpSubmit} className="space-y-4">
                     <div className="space-y-3">
                       <p className="text-sm text-muted-foreground text-center">
-                        If a recipient exists with <span className="font-medium text-foreground">{email}</span>, you will receive a verification code shortly.
+                        {t('codePrompt', { email })}
                       </p>
                       <OTPInput
                         value={otp}
@@ -786,7 +795,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     <div className="w-full border-t border-border"></div>
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Not a recipient?</span>
+                    <span className="bg-card px-2 text-muted-foreground">{t('notRecipient')}</span>
                   </div>
                 </div>
                 <Button
@@ -796,7 +805,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   disabled={loading}
                   className="w-full bg-warning text-warning-foreground hover:bg-warning/90 shadow-elevation hover:shadow-elevation-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-elevation transition-all duration-200"
                 >
-                  Continue as Guest
+                  {t('continueAsGuest')}
                 </Button>
               </>
             )}
@@ -813,7 +822,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
         <Card className="bg-card border-border">
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Project not found</p>
+            <p className="text-muted-foreground">{t('projectNotFound')}</p>
           </CardContent>
         </Card>
       </div>
@@ -840,8 +849,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   if (viewState === 'grid') {
     return (
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
-        {/* Theme toggle for grid view */}
-        <div className="absolute top-3 right-3 z-20">
+        {/* Theme and language toggles for grid view */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+          <LanguageToggle />
           <ThemeToggle />
         </div>
         <div className="flex-1 overflow-y-auto">

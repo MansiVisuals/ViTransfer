@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { Project } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -39,6 +40,8 @@ interface ProjectActionsProps {
 }
 
 export default function ProjectActions({ project, videos, onRefresh, shareUrl = '', recipients = [] }: ProjectActionsProps) {
+  const t = useTranslations('projects')
+  const tc = useTranslations('common')
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingApproval, setIsTogglingApproval] = useState(false)
@@ -159,7 +162,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
       setShowUnapproveModal(true)
     } else {
       // For approval, just confirm and proceed
-      if (!confirm(`Are you sure you want to approve this project?`)) {
+      if (!confirm(t('confirmApproveProject'))) {
         return
       }
 
@@ -168,13 +171,13 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
       // Approve project in background without blocking UI
       apiPatch(`/api/projects/${project.id}`, { status: 'APPROVED' })
         .then(() => {
-          alert('Project approved successfully')
+          alert(t('approvedSuccessfully'))
           // Refresh in background
           onRefresh?.()
           router.refresh()
         })
         .catch(() => {
-          alert('Failed to approve project')
+          alert(t('failedToApprove'))
         })
         .finally(() => {
           setIsTogglingApproval(false)
@@ -194,18 +197,18 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
       .then((data) => {
         // Show appropriate success message
         if (data.unapprovedVideos && data.unapprovedCount > 0) {
-          alert(`Project unapproved successfully. ${data.unapprovedCount} video(s) were also unapproved.`)
+          alert(`${t('unapprovedSuccessfully')} ${data.unapprovedCount} ${t('videosUnapproved')}`)
         } else if (data.unapprovedVideos && data.unapprovedCount === 0) {
-          alert('Project unapproved successfully. No videos were approved.')
+          alert(`${t('unapprovedSuccessfully')} ${t('noVideosApproved')}`)
         } else {
-          alert('Project unapproved successfully. Videos remain approved.')
+          alert(`${t('unapprovedSuccessfully')} ${t('videosRemainApproved')}`)
         }
         // Refresh in background
         onRefresh?.()
         router.refresh()
       })
       .catch(() => {
-        alert('Failed to unapprove project')
+        alert(t('failedToUnapprove'))
       })
       .finally(() => {
         setIsTogglingApproval(false)
@@ -228,14 +231,12 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
     // Prevent double-clicks during deletion
     if (isDeleting) return
 
-    if (!confirm(
-      'Are you sure you want to delete this project? This will permanently delete all videos and files. This action cannot be undone.'
-    )) {
+    if (!confirm(t('deleteConfirm'))) {
       return
     }
 
     // Double confirmation for safety
-    if (!confirm('This is your last warning. Delete permanently?')) {
+    if (!confirm(t('deleteLastWarning'))) {
       return
     }
 
@@ -249,7 +250,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
         router.refresh()
       })
       .catch(() => {
-        alert('Failed to delete project')
+        alert(t('failedToDelete'))
         setIsDeleting(false)
       })
   }
@@ -261,7 +262,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
     const action = isCurrentlyArchived ? 'unarchive' : 'archive'
     const newStatus = isCurrentlyArchived ? 'IN_REVIEW' : 'ARCHIVED'
 
-    if (!confirm(`Are you sure you want to ${action} this project?${!isCurrentlyArchived ? ' The share link will become inaccessible to clients.' : ''}`)) {
+    if (!confirm(isCurrentlyArchived ? t('unarchiveConfirm') : t('archiveConfirm'))) {
       return
     }
 
@@ -269,12 +270,12 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
 
     apiPatch(`/api/projects/${project.id}`, { status: newStatus })
       .then(() => {
-        alert(`Project ${action}d successfully`)
+        alert(action === 'archive' ? t('archivedSuccessfully') : t('unarchivedSuccessfully'))
         onRefresh?.()
         router.refresh()
       })
       .catch(() => {
-        alert(`Failed to ${action} project`)
+        alert(action === 'archive' ? t('failedToArchive') : t('failedToUnarchive'))
       })
       .finally(() => {
         setIsArchiving(false)
@@ -314,7 +315,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           {/* Client Information */}
           <div className="pb-3 border-b border-border">
             <div className="text-sm">
-              <p className="text-muted-foreground mb-1">Client</p>
+              <p className="text-muted-foreground mb-1">{t('client')}</p>
               {(() => {
                 const clientCompany = (project as any).companyName
                 const primaryRecipient = recipients?.find((r: any) => r.isPrimary) || recipients?.[0]
@@ -337,7 +338,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                       </p>
                     )}
                     {!clientCompany && !clientName && !clientEmail && (
-                      <p className="font-medium">No client info</p>
+                      <p className="font-medium">{t('noClientInfo')}</p>
                     )}
                   </>
                 )
@@ -359,16 +360,16 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             return (
               <div className="pb-3 border-b border-border">
                 <div className="text-sm">
-                  <p className="text-muted-foreground mb-1">Due Date</p>
+                  <p className="text-muted-foreground mb-1">{t('dueDateLabel')}</p>
                   <p className={`font-medium flex items-center gap-2 ${colorClass}`}>
                     <Calendar className="w-4 h-4" />
                     {dateStr}
                   </p>
-                  {diffDays < 0 && <p className="text-xs text-destructive mt-1">{Math.abs(diffDays)} day{Math.abs(diffDays) !== 1 ? 's' : ''} overdue</p>}
-                  {diffDays === 0 && <p className="text-xs text-warning mt-1">Due today</p>}
-                  {diffDays === 1 && <p className="text-xs text-warning mt-1">Due tomorrow</p>}
-                  {diffDays > 1 && diffDays <= 7 && <p className="text-xs text-primary mt-1">{diffDays} days remaining</p>}
-                  {diffDays > 7 && <p className="text-xs text-muted-foreground mt-1">{diffDays} days remaining</p>}
+                  {diffDays < 0 && <p className="text-xs text-destructive mt-1">{Math.abs(diffDays)} {Math.abs(diffDays) !== 1 ? t('days') : t('day')} {t('overdue')}</p>}
+                  {diffDays === 0 && <p className="text-xs text-warning mt-1">{t('dueToday')}</p>}
+                  {diffDays === 1 && <p className="text-xs text-warning mt-1">{t('dueTomorrow')}</p>}
+                  {diffDays > 1 && diffDays <= 7 && <p className="text-xs text-primary mt-1">{diffDays} {t('daysRemaining')}</p>}
+                  {diffDays > 7 && <p className="text-xs text-muted-foreground mt-1">{diffDays} {t('daysRemaining')}</p>}
                 </div>
               </div>
             )
@@ -377,7 +378,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           {/* Share Link */}
           {shareUrl && (
             <div className="pb-3 border-b border-border">
-              <p className="text-sm text-muted-foreground mb-2">Share Link</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('shareLink')}</p>
               <div className="flex flex-col gap-2">
                 <input
                   type="text"
@@ -399,12 +400,12 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                     {linkCopied ? (
                       <>
                         <Check className="w-4 h-4 mr-2 text-success" />
-                        Copied!
+                        {tc('copied')}
                       </>
                     ) : (
                       <>
                         <Copy className="w-4 h-4 mr-2" />
-                        Copy
+                        {tc('copy')}
                       </>
                     )}
                   </Button>
@@ -415,7 +416,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                     className="flex-1"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Open
+                    {tc('open')}
                   </Button>
                 </div>
               </div>
@@ -424,7 +425,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
 
           {/* Actions Section Title */}
           <div className="pt-2">
-            <h3 className="text-sm font-semibold mb-3">Project Actions</h3>
+            <h3 className="text-sm font-semibold mb-3">{t('projectActions')}</h3>
           </div>
 
           {/* Send Notification Button - only show if there are ready videos */}
@@ -438,23 +439,23 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                 disabled={smtpConfigured === false || !hasRecipientWithEmail}
                 title={
                   smtpConfigured === false
-                    ? 'SMTP not configured. Please configure email settings in Settings.'
+                    ? t('smtpNotConfigured')
                     : !hasRecipientWithEmail
-                    ? 'No recipients with email addresses configured. Please add at least one recipient with an email in Settings.'
+                    ? t('noRecipientsEmail')
                     : ''
                 }
               >
                 <Send className="w-4 h-4 mr-2" />
-                Send Notification
+                {t('sendNotification')}
               </Button>
               {smtpConfigured === false && (
                 <p className="text-xs text-muted-foreground mt-1 px-1">
-                  Configure SMTP in Settings to enable email notifications
+                  {t('configureSMTPToEnable')}
                 </p>
               )}
               {smtpConfigured && !hasRecipientWithEmail && (
                 <p className="text-xs text-muted-foreground mt-1 px-1">
-                  Add at least one recipient with an email address in Settings
+                  {t('addRecipientWithEmail')}
                 </p>
               )}
             </div>
@@ -467,7 +468,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             onClick={handleViewSharePage}
           >
             <ExternalLink className="w-4 h-4 mr-2" />
-            View Share Page
+            {t('viewSharePage')}
           </Button>
 
           <Button
@@ -477,7 +478,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             onClick={() => router.push(`/admin/projects/${project.id}/analytics`)}
           >
             <BarChart3 className="w-4 h-4 mr-2" />
-            View Analytics
+            {t('viewAnalytics')}
           </Button>
 
           {/* Approve/Unapprove Toggle Button - hidden when archived */}
@@ -491,25 +492,25 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                 disabled={isTogglingApproval || (project.status !== 'APPROVED' && !canApproveProject)}
                 title={
                   project.status !== 'APPROVED' && !canApproveProject
-                    ? 'Approve one version of each video first'
+                    ? t('approveFirst')
                     : ''
                 }
               >
                 {project.status === 'APPROVED' ? (
                   <>
                     <RotateCcw className="w-4 h-4 mr-2" />
-                    {isTogglingApproval ? 'Unapproving...' : 'Unapprove Project'}
+                    {isTogglingApproval ? tc('changing') : t('unapproveProject')}
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    {isTogglingApproval ? 'Approving...' : 'Approve Project'}
+                    {isTogglingApproval ? tc('changing') : t('approveProject')}
                   </>
                 )}
               </Button>
               {project.status !== 'APPROVED' && !canApproveProject && (
                 <p className="text-xs text-muted-foreground mt-1 px-1">
-                  Approve one version of each video to enable project approval
+                  {t('approveFirstLong')}
                 </p>
               )}
             </div>
@@ -525,12 +526,12 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             {project.status === 'ARCHIVED' ? (
               <>
                 <ArchiveRestore className="w-4 h-4 mr-2" />
-                {isArchiving ? 'Unarchiving...' : 'Unarchive Project'}
+                {isArchiving ? t('unarchiving') : t('unarchiveProject')}
               </>
             ) : (
               <>
                 <Archive className="w-4 h-4 mr-2" />
-                {isArchiving ? 'Archiving...' : 'Archive Project'}
+                {isArchiving ? t('archiving') : t('archiveProject')}
               </>
             )}
           </Button>
@@ -543,7 +544,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             disabled={isDeleting}
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            {isDeleting ? 'Deleting...' : 'Delete Project'}
+            {isDeleting ? tc('deleting') : t('deleteProject')}
           </Button>
         </CardContent>
       </Card>
@@ -554,7 +555,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Send className="w-5 h-5 text-primary" />
-              Send Notification
+              {t('sendNotification')}
             </DialogTitle>
           </DialogHeader>
 
@@ -562,7 +563,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             {/* Notification Type Selection */}
             <div>
               <label className="text-sm font-medium mb-2 block">
-                Notification Type
+                {t('notificationType')}
               </label>
               <Select value={notificationType} onValueChange={handleNotificationTypeChange}>
                 <SelectTrigger>
@@ -570,10 +571,10 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="entire-project">
-                    Entire Project (All Ready Videos)
+                    {t('entireProject')}
                   </SelectItem>
                   <SelectItem value="specific-video">
-                    Specific Video & Version
+                    {t('specificVideo')}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -584,11 +585,11 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
               <>
                 <div>
                   <label className="text-sm font-medium mb-2 block">
-                    Select Video
+                    {t('selectVideo')}
                   </label>
                   <Select value={selectedVideoName} onValueChange={handleVideoNameChange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a video..." />
+                      <SelectValue placeholder={t('selectVideoPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {videoNames.map((name) => (
@@ -603,11 +604,11 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                 {selectedVideoName && (
                   <div>
                     <label className="text-sm font-medium mb-2 block">
-                      Select Version
+                      {t('selectVersion')}
                     </label>
                     <Select value={selectedVideoId} onValueChange={setSelectedVideoId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a version..." />
+                        <SelectValue placeholder={t('selectVersionPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {versionsForSelectedVideo.map((video) => (
@@ -636,14 +637,14 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                   htmlFor="send-password"
                   className="text-sm font-medium cursor-pointer"
                 >
-                  Send password in separate email
+                  {t('sendPasswordSeparate')}
                 </label>
               </div>
             )}
 
             {isPasswordProtected && (
               <p className="text-xs text-muted-foreground bg-accent/50 p-3 rounded-md border border-border">
-                <strong>Note:</strong> This project is password protected. {sendPasswordSeparately ? 'The password will be sent in a separate email for enhanced security.' : 'The password will NOT be included in the email - you must share it separately.'}
+                <strong>{t('noteLabel')}</strong> {t('passwordProtected')} {sendPasswordSeparately ? t('passwordSentSeparate') : t('passwordNotIncluded')}
               </p>
             )}
 
@@ -655,12 +656,12 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
+                  {t('sendingNotification')}
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
-                  Send Email Notification
+                  {t('sendEmailNotification')}
                 </>
               )}
             </Button>
@@ -679,8 +680,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
 
             <p className="text-xs text-muted-foreground">
               {notificationType === 'entire-project'
-                ? 'This will send an email to the client with access to all ready videos in this project.'
-                : 'This will send an email to the client with a link to view the selected video version.'}
+                ? t('notifyAllVideos')
+                : t('notifySpecificVideo')}
             </p>
           </div>
         </DialogContent>

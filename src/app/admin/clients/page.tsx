@@ -1,17 +1,21 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
-import { Building2, Plus, Search, Users, Trash2, Edit, FolderKanban, User, Mail, ChevronRight, RefreshCw, AlertCircle, Check } from 'lucide-react'
+import { Building2, Plus, Search, Users, Trash2, Edit, FolderKanban, User, Mail, ChevronRight, RefreshCw, AlertCircle, Check, Globe } from 'lucide-react'
 import { apiFetch, apiPost, apiPatch, apiDelete } from '@/lib/api-client'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SUPPORTED_LOCALES, LOCALE_NAMES } from '@/i18n/locale'
 
 interface ClientContact {
   id: string
   name: string
   email: string | null
+  language: string | null
   companyId: string
 }
 
@@ -25,6 +29,8 @@ interface ClientCompany {
 }
 
 export default function ClientsPage() {
+  const t = useTranslations('clients')
+  const tc = useTranslations('common')
   const [companies, setCompanies] = useState<ClientCompany[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -43,6 +49,7 @@ export default function ClientsPage() {
   const [selectedCompany, setSelectedCompany] = useState<ClientCompany | null>(null)
   const [newContactName, setNewContactName] = useState('')
   const [newContactEmail, setNewContactEmail] = useState('')
+  const [newContactLanguage, setNewContactLanguage] = useState('')
   const [editingContact, setEditingContact] = useState<ClientContact | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'company' | 'contact'; id: string; name: string } | null>(null)
   
@@ -83,20 +90,20 @@ export default function ClientsPage() {
 
   async function handleAddCompany() {
     if (!newCompanyName.trim()) {
-      setError('Company name is required')
+      setError(t('companyNameRequired'))
       return
     }
-    
+
     setSaving(true)
     setError('')
-    
+
     try {
       const response = await apiPost('/api/clients', { name: newCompanyName.trim() })
       setCompanies(prev => [...prev, response.company].sort((a, b) => a.name.localeCompare(b.name)))
       setNewCompanyName('')
       setShowAddCompanyModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add company')
+      setError(err instanceof Error ? err.message : t('failedToAddCompany'))
     } finally {
       setSaving(false)
     }
@@ -104,29 +111,29 @@ export default function ClientsPage() {
 
   async function handleEditCompany() {
     if (!editingCompany || !newCompanyName.trim()) {
-      setError('Company name is required')
+      setError(t('companyNameRequired'))
       return
     }
-    
+
     setSaving(true)
     setError('')
-    
+
     try {
       const response = await apiPatch(`/api/clients/${editingCompany.id}`, { name: newCompanyName.trim() })
-      setCompanies(prev => 
+      setCompanies(prev =>
         prev.map(c => c.id === editingCompany.id ? response.company : c)
           .sort((a, b) => a.name.localeCompare(b.name))
       )
       setNewCompanyName('')
       setEditingCompany(null)
       setShowEditCompanyModal(false)
-      
+
       // Update selected company if viewing contacts
       if (selectedCompany?.id === editingCompany.id) {
         setSelectedCompany(response.company)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update company')
+      setError(err instanceof Error ? err.message : t('failedToUpdateCompany'))
     } finally {
       setSaving(false)
     }
@@ -134,34 +141,36 @@ export default function ClientsPage() {
 
   async function handleAddContact() {
     if (!selectedCompany || !newContactName.trim()) {
-      setError('Contact name is required')
+      setError(t('contactNameRequired'))
       return
     }
-    
+
     setSaving(true)
     setError('')
-    
+
     try {
       await apiPost(`/api/clients/${selectedCompany.id}/contacts`, {
         name: newContactName.trim(),
-        email: newContactEmail.trim() || null
+        email: newContactEmail.trim() || null,
+        language: newContactLanguage && newContactLanguage !== 'default' ? newContactLanguage : null
       })
-      
+
       // Reload companies to get updated contacts
       await loadCompanies()
-      
+
       // Reload selected company contacts
       const response = await apiFetch(`/api/clients/${selectedCompany.id}`)
       if (response.ok) {
         const data = await response.json()
         setSelectedCompany(data.company)
       }
-      
+
       setNewContactName('')
       setNewContactEmail('')
+      setNewContactLanguage('')
       setShowAddContactModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add contact')
+      setError(err instanceof Error ? err.message : t('failedToAddContact'))
     } finally {
       setSaving(false)
     }
@@ -169,32 +178,34 @@ export default function ClientsPage() {
 
   async function handleEditContact() {
     if (!selectedCompany || !editingContact || !newContactName.trim()) {
-      setError('Contact name is required')
+      setError(t('contactNameRequired'))
       return
     }
-    
+
     setSaving(true)
     setError('')
-    
+
     try {
       await apiPatch(`/api/clients/${selectedCompany.id}/contacts/${editingContact.id}`, {
         name: newContactName.trim(),
-        email: newContactEmail.trim() || null
+        email: newContactEmail.trim() || null,
+        language: newContactLanguage && newContactLanguage !== 'default' ? newContactLanguage : null
       })
-      
+
       // Reload selected company contacts
       const response = await apiFetch(`/api/clients/${selectedCompany.id}`)
       if (response.ok) {
         const data = await response.json()
         setSelectedCompany(data.company)
       }
-      
+
       setNewContactName('')
       setNewContactEmail('')
+      setNewContactLanguage('')
       setEditingContact(null)
       setShowEditContactModal(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update contact')
+      setError(err instanceof Error ? err.message : t('failedToUpdateContact'))
     } finally {
       setSaving(false)
     }
@@ -227,7 +238,7 @@ export default function ClientsPage() {
       setDeleteTarget(null)
       setShowDeleteConfirm(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete')
+      setError(err instanceof Error ? err.message : t('failedToDelete'))
     } finally {
       setSaving(false)
     }
@@ -242,7 +253,7 @@ export default function ClientsPage() {
       setBackfillStats(response.message)
       await loadCompanies()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to backfill')
+      setError(err instanceof Error ? err.message : t('failedToBackfill'))
     } finally {
       setBackfilling(false)
     }
@@ -264,6 +275,7 @@ export default function ClientsPage() {
   function openAddContact() {
     setNewContactName('')
     setNewContactEmail('')
+    setNewContactLanguage('')
     setError('')
     setShowAddContactModal(true)
   }
@@ -272,6 +284,7 @@ export default function ClientsPage() {
     setEditingContact(contact)
     setNewContactName(contact.name)
     setNewContactEmail(contact.email || '')
+    setNewContactLanguage(contact.language || '')
     setError('')
     setShowEditContactModal(true)
   }
@@ -301,10 +314,10 @@ export default function ClientsPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <Building2 className="w-7 h-7 sm:w-8 sm:h-8" />
-              Client Directory
+              {t('title')}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Manage your client companies and contacts
+              {t('description')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -313,14 +326,14 @@ export default function ClientsPage() {
               size="default"
               onClick={handleBackfill}
               disabled={backfilling}
-              title="Import existing clients from historical projects"
+              title={t('syncTitle')}
             >
               {backfilling ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline ml-2">Sync Existing</span>
+              <span className="hidden sm:inline ml-2">{t('syncExisting')}</span>
             </Button>
             <Button
               variant="default"
@@ -332,7 +345,7 @@ export default function ClientsPage() {
               }}
             >
               <Plus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Add Company</span>
+              <span className="hidden sm:inline">{t('addCompany')}</span>
             </Button>
           </div>
         </div>
@@ -349,7 +362,7 @@ export default function ClientsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search companies or contacts..."
+              placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -368,8 +381,8 @@ export default function ClientsPage() {
         {companies.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="font-medium">No clients yet</p>
-            <p className="text-sm mt-1">Add your first client company or import from existing projects</p>
+            <p className="font-medium">{t('noClients')}</p>
+            <p className="text-sm mt-1">{t('noClientsHint')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -387,11 +400,11 @@ export default function ClientsPage() {
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Users className="w-3 h-3" />
-                        {company.contacts.length} contact{company.contacts.length !== 1 ? 's' : ''}
+                        {t('contactCount', { count: company.contacts.length })}
                       </span>
                       <span className="flex items-center gap-1">
                         <FolderKanban className="w-3 h-3" />
-                        {company._count.projects} project{company._count.projects !== 1 ? 's' : ''}
+                        {t('projectCount', { count: company._count.projects })}
                       </span>
                     </div>
                   </div>
@@ -401,7 +414,7 @@ export default function ClientsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditCompany(company)}
-                        title="Edit company"
+                        title={t('editCompany')}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -409,7 +422,7 @@ export default function ClientsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => confirmDelete('company', company.id, company.name)}
-                        title="Delete company"
+                        title={t('deleteCompany')}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -420,7 +433,7 @@ export default function ClientsPage() {
                         onClick={() => openContactsModal(company)}
                         className="ml-2"
                       >
-                        <span className="hidden sm:inline mr-1">Contacts</span>
+                        <span className="hidden sm:inline mr-1">{t('contacts')}</span>
                         <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
@@ -436,10 +449,10 @@ export default function ClientsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="w-5 h-5 text-primary" />
-              Add Client Company
+              {t('addClientCompany')}
             </DialogTitle>
             <DialogDescription>
-              Create a new client company in your directory
+              {t('addClientCompanyDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -450,10 +463,10 @@ export default function ClientsPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name</Label>
+              <Label htmlFor="companyName">{t('companyName')}</Label>
               <Input
                 id="companyName"
-                placeholder="e.g., Acme Corporation"
+                placeholder={t('companyNamePlaceholder')}
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCompany()}
@@ -469,10 +482,10 @@ export default function ClientsPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleAddCompany} disabled={saving}>
-              {saving ? 'Adding...' : 'Add Company'}
+              {saving ? tc('adding') : t('addCompany')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -484,10 +497,10 @@ export default function ClientsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5 text-primary" />
-              Edit Company
+              {t('editCompanyTitle')}
             </DialogTitle>
             <DialogDescription>
-              Update the company name
+              {t('editCompanyDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -498,7 +511,7 @@ export default function ClientsPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="editCompanyName">Company Name</Label>
+              <Label htmlFor="editCompanyName">{t('companyName')}</Label>
               <Input
                 id="editCompanyName"
                 value={newCompanyName}
@@ -516,10 +529,10 @@ export default function ClientsPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleEditCompany} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? tc('saving') : tc('saveChanges')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -534,7 +547,7 @@ export default function ClientsPage() {
               {selectedCompany?.name}
             </DialogTitle>
             <DialogDescription>
-              Manage contacts for this company
+              {t('manageContacts')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -546,17 +559,17 @@ export default function ClientsPage() {
             )}
             
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-medium">Contacts</span>
+              <span className="text-sm font-medium">{t('contacts')}</span>
               <Button size="sm" variant="outline" onClick={openAddContact}>
                 <Plus className="w-4 h-4 mr-1" />
-                Add Contact
+                {t('addContact')}
               </Button>
             </div>
             
             {selectedCompany?.contacts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No contacts yet</p>
+                <p className="text-sm">{t('noContacts')}</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -575,6 +588,12 @@ export default function ClientsPage() {
                           <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
                             <Mail className="w-3 h-3" />
                             {contact.email}
+                          </p>
+                        )}
+                        {contact.language && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                            <Globe className="w-3 h-3" />
+                            {LOCALE_NAMES[contact.language] || contact.language}
                           </p>
                         )}
                       </div>
@@ -604,7 +623,7 @@ export default function ClientsPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Close</Button>
+              <Button variant="outline">{tc('close')}</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -616,10 +635,10 @@ export default function ClientsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-primary" />
-              Add Contact
+              {t('addContact')}
             </DialogTitle>
             <DialogDescription>
-              Add a new contact to {selectedCompany?.name}
+              {t('addContactDescription', { company: selectedCompany?.name ?? '' })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -630,10 +649,10 @@ export default function ClientsPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="contactName">Name</Label>
+              <Label htmlFor="contactName">{t('contactName')}</Label>
               <Input
                 id="contactName"
-                placeholder="e.g., John Doe"
+                placeholder={t('contactNamePlaceholder')}
                 value={newContactName}
                 onChange={(e) => setNewContactName(e.target.value)}
                 autoComplete="off"
@@ -646,11 +665,11 @@ export default function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contactEmail">Email (Optional)</Label>
+              <Label htmlFor="contactEmail">{t('contactEmail')}</Label>
               <Input
                 id="contactEmail"
                 type="email"
-                placeholder="e.g., john@example.com"
+                placeholder={t('contactEmailPlaceholder')}
                 value={newContactEmail}
                 onChange={(e) => setNewContactEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddContact()}
@@ -663,13 +682,30 @@ export default function ClientsPage() {
                 data-1p-ignore
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="contactLanguage">{t('contactLanguage')}</Label>
+              <Select value={newContactLanguage} onValueChange={setNewContactLanguage}>
+                <SelectTrigger id="contactLanguage">
+                  <SelectValue placeholder={t('contactLanguageDefault')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">{t('contactLanguageDefault')}</SelectItem>
+                  {SUPPORTED_LOCALES.map(code => (
+                    <SelectItem key={code} value={code}>
+                      {LOCALE_NAMES[code] || code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t('contactLanguageHint')}</p>
+            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleAddContact} disabled={saving}>
-              {saving ? 'Adding...' : 'Add Contact'}
+              {saving ? tc('adding') : t('addContact')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -681,10 +717,10 @@ export default function ClientsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5 text-primary" />
-              Edit Contact
+              {t('editContact')}
             </DialogTitle>
             <DialogDescription>
-              Update contact information
+              {t('editContactDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -695,7 +731,7 @@ export default function ClientsPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="editContactName">Name</Label>
+              <Label htmlFor="editContactName">{t('contactName')}</Label>
               <Input
                 id="editContactName"
                 value={newContactName}
@@ -710,7 +746,7 @@ export default function ClientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="editContactEmail">Email (Optional)</Label>
+              <Label htmlFor="editContactEmail">{t('contactEmail')}</Label>
               <Input
                 id="editContactEmail"
                 type="email"
@@ -726,13 +762,30 @@ export default function ClientsPage() {
                 data-1p-ignore
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="editContactLanguage">{t('contactLanguage')}</Label>
+              <Select value={newContactLanguage} onValueChange={setNewContactLanguage}>
+                <SelectTrigger id="editContactLanguage">
+                  <SelectValue placeholder={t('contactLanguageDefault')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">{t('contactLanguageDefault')}</SelectItem>
+                  {SUPPORTED_LOCALES.map(code => (
+                    <SelectItem key={code} value={code}>
+                      {LOCALE_NAMES[code] || code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t('contactLanguageHint')}</p>
+            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleEditContact} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? tc('saving') : tc('saveChanges')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -744,12 +797,12 @@ export default function ClientsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-destructive" />
-              Confirm Delete
+              {t('confirmDeleteTitle')}
             </DialogTitle>
             <DialogDescription>
-              {deleteTarget?.type === 'company' 
-                ? `Are you sure you want to delete "${deleteTarget?.name}"? All contacts for this company will also be deleted.`
-                : `Are you sure you want to delete contact "${deleteTarget?.name}"?`
+              {deleteTarget?.type === 'company'
+                ? t('confirmDeleteCompany', { name: deleteTarget?.name ?? '' })
+                : t('confirmDeleteContact', { name: deleteTarget?.name ?? '' })
               }
             </DialogDescription>
           </DialogHeader>
@@ -761,10 +814,10 @@ export default function ClientsPage() {
           )}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">{tc('cancel')}</Button>
             </DialogClose>
             <Button variant="destructive" onClick={handleDelete} disabled={saving}>
-              {saving ? 'Deleting...' : 'Delete'}
+              {saving ? tc('deleting') : tc('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

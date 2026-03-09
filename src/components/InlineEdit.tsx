@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Check, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface InlineEditProps {
   value: string
@@ -21,6 +22,7 @@ export function InlineEdit({
   inputClassName = 'h-8 w-48',
   stopPropagation = false
 }: InlineEditProps) {
+  const t = useTranslations('common')
   const handleContainerClick = (e: React.MouseEvent) => {
     if (stopPropagation) {
       e.stopPropagation()
@@ -54,7 +56,7 @@ export function InlineEdit({
           onSave()
         }}
         disabled={disabled}
-        title="Save"
+        title={t('save')}
       >
         <Check className="w-4 h-4" />
       </Button>
@@ -67,7 +69,7 @@ export function InlineEdit({
           onCancel()
         }}
         disabled={disabled}
-        title="Cancel"
+        title={t('cancel')}
       >
         <X className="w-4 h-4" />
       </Button>

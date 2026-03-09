@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Settings as SettingsIcon, Save } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { AppearanceSection } from '@/components/settings/AppearanceSection'
 import { NotificationsSection } from '@/components/settings/NotificationsSection'
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
@@ -12,6 +13,7 @@ import { apiPatch, apiPost, apiFetch } from '@/lib/api-client'
 
 interface Settings {
   id: string
+  language: string | null
   defaultTheme: string | null
   accentColor: string | null
   companyName: string | null
@@ -72,6 +74,8 @@ interface BlockedDomain {
 
 export default function GlobalSettingsPage() {
   const router = useRouter()
+  const t = useTranslations('settings')
+  const tc = useTranslations('common')
 
   const [_settings, setSettings] = useState<Settings | null>(null)
   const [_securitySettings, setSecuritySettings] = useState<SecuritySettings | null>(null)
@@ -82,6 +86,9 @@ export default function GlobalSettingsPage() {
   const [testEmailSending, setTestEmailSending] = useState(false)
   const [testEmailResult, setTestEmailResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [testEmailAddress, setTestEmailAddress] = useState('')
+
+  // Form state for language
+  const [language, setLanguage] = useState('en')
 
   // Form state for appearance
   const [defaultTheme, setDefaultTheme] = useState('auto')
@@ -149,6 +156,7 @@ export default function GlobalSettingsPage() {
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
 
   const applySettingsToForm = useCallback((data: Settings) => {
+    setLanguage(data.language || 'en')
     setDefaultTheme(data.defaultTheme || 'auto')
     setAccentColor(data.accentColor || 'blue')
     setCompanyName(data.companyName || '')
@@ -204,13 +212,13 @@ export default function GlobalSettingsPage() {
     try {
       // File type validation
       if (!file || (!file.type.includes('svg') && !file.name.toLowerCase().endsWith('.svg'))) {
-        setLogoError('Only SVG files are allowed')
+        setLogoError(t('onlySvg'))
         return
       }
       
       // Size validation (max 300KB)
       if (file.size > 300 * 1024) {
-        setLogoError('SVG too large (max 300KB)')
+        setLogoError(t('svgTooLarge'))
         return
       }
 
@@ -219,7 +227,7 @@ export default function GlobalSettingsPage() {
       // Magic byte check: must start with <svg or <?xml
       const leading = text.trimStart().slice(0, 256).toLowerCase()
       if (!leading.startsWith('<svg') && !leading.startsWith('<?xml')) {
-        setLogoError('Invalid SVG file')
+        setLogoError(t('invalidSvg'))
         return
       }
       
@@ -227,19 +235,19 @@ export default function GlobalSettingsPage() {
       // Strip XML declaration if present before checking for <svg
       const stripped = text.trim().replace(/^<\?xml[^?]*\?>\s*/i, '')
       if (!/^<svg[\s>]/i.test(stripped)) {
-        setLogoError('Invalid or unsafe SVG content')
+        setLogoError(t('unsafeSvg'))
         return
       }
       if (/<script[\s>]/i.test(text)) {
-        setLogoError('Invalid or unsafe SVG content')
+        setLogoError(t('unsafeSvg'))
         return
       }
       if (/on[a-zA-Z]+\s*=/.test(text)) {
-        setLogoError('Invalid or unsafe SVG content')
+        setLogoError(t('unsafeSvg'))
         return
       }
       if (/javascript:/i.test(text)) {
-        setLogoError('Invalid or unsafe SVG content')
+        setLogoError(t('unsafeSvg'))
         return
       }
 
@@ -248,7 +256,7 @@ export default function GlobalSettingsPage() {
       setPendingLogoRemoval(false)
       setBrandingLogoPreview(URL.createObjectURL(file))
     } catch {
-      setLogoError('Invalid SVG file')
+      setLogoError(t('invalidSvg'))
     } finally {
       setLogoUploading(false)
     }
@@ -267,7 +275,7 @@ export default function GlobalSettingsPage() {
       try {
         const response = await apiFetch('/api/settings')
         if (!response.ok) {
-          throw new Error('Failed to load settings')
+          throw new Error(t('failedToLoad'))
         }
         const data = await response.json()
         setSettings(data)
@@ -282,7 +290,7 @@ export default function GlobalSettingsPage() {
           applySecuritySettingsToForm(securityData)
         }
       } catch (err) {
-        setError('Failed to load settings')
+        setError(t('failedToLoad'))
       } finally {
         setLoading(false)
       }
@@ -334,7 +342,7 @@ export default function GlobalSettingsPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        setError(error.error || 'Failed to block IP')
+        setError(error.error || t('failedToBlockIP'))
         return
       }
 
@@ -342,12 +350,12 @@ export default function GlobalSettingsPage() {
       setNewIPReason('')
       loadBlocklists()
     } catch {
-      setError('Failed to block IP address')
+      setError(t('failedToBlockIP'))
     }
   }
 
   const handleRemoveIP = async (id: string) => {
-    if (!confirm('Remove this IP from blocklist?')) return
+    if (!confirm(t('confirmRemoveIP'))) return
 
     try {
       await apiFetch('/api/security/blocklist/ips', {
@@ -358,7 +366,7 @@ export default function GlobalSettingsPage() {
 
       loadBlocklists()
     } catch {
-      setError('Failed to remove IP from blocklist')
+      setError(t('failedToRemoveIP'))
     }
   }
 
@@ -375,7 +383,7 @@ export default function GlobalSettingsPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        setError(error.error || 'Failed to block domain')
+        setError(error.error || t('failedToBlockDomain'))
         return
       }
 
@@ -383,12 +391,12 @@ export default function GlobalSettingsPage() {
       setNewDomainReason('')
       loadBlocklists()
     } catch {
-      setError('Failed to block domain')
+      setError(t('failedToBlockDomain'))
     }
   }
 
   const handleRemoveDomain = async (id: string) => {
-    if (!confirm('Remove this domain from blocklist?')) return
+    if (!confirm(t('confirmRemoveDomain'))) return
 
     try {
       await apiFetch('/api/security/blocklist/domains', {
@@ -399,7 +407,7 @@ export default function GlobalSettingsPage() {
 
       loadBlocklists()
     } catch {
-      setError('Failed to remove domain from blocklist')
+      setError(t('failedToRemoveDomain'))
     }
   }
 
@@ -423,12 +431,12 @@ export default function GlobalSettingsPage() {
           })
           const data = await res.json().catch(() => ({}))
           if (!res.ok) {
-            throw new Error(data?.error || 'Failed to upload logo')
+            throw new Error(data?.error || t('failedToUploadLogo'))
           }
           newLogoPath = data.path || '/uploads/branding/logo.svg'
           setPendingLogoFile(null)
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Failed to upload logo'
+          const message = err instanceof Error ? err.message : t('failedToUploadLogo')
           setLogoError(message)
           throw err
         } finally {
@@ -441,12 +449,12 @@ export default function GlobalSettingsPage() {
           const res = await apiFetch('/api/settings/logo', { method: 'DELETE' })
           if (!res.ok && res.status !== 404) {
             const data = await res.json().catch(() => ({}))
-            throw new Error(data?.error || 'Failed to remove logo')
+            throw new Error(data?.error || t('failedToRemoveLogo'))
           }
           newLogoPath = null
           setPendingLogoRemoval(false)
         } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Failed to remove logo'
+          const message = err instanceof Error ? err.message : t('failedToRemoveLogo')
           setLogoError(message)
           throw err
         } finally {
@@ -455,6 +463,7 @@ export default function GlobalSettingsPage() {
       }
 
       const updates = {
+        language: language || 'en',
         defaultTheme: defaultTheme || 'auto',
         accentColor: accentColor || 'blue',
         companyName: companyName || null,
@@ -526,7 +535,7 @@ export default function GlobalSettingsPage() {
       // Refresh the page to update server components (like AdminHeader menu)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      setError(err instanceof Error ? err.message : t('failedToSave'))
     } finally {
       setSaving(false)
     }
@@ -554,7 +563,7 @@ export default function GlobalSettingsPage() {
           !smtpConfig.smtpPassword || !smtpConfig.smtpFromAddress) {
         setTestEmailResult({
           type: 'error',
-          message: 'Please fill in all SMTP fields before testing'
+          message: t('fillSmtpFields')
         })
         setTestEmailSending(false)
         return
@@ -567,12 +576,12 @@ export default function GlobalSettingsPage() {
 
       setTestEmailResult({
         type: 'success',
-        message: data.message || 'Test email sent successfully! Check your inbox.'
+        message: data.message || t('testEmailSuccess')
       })
     } catch (error) {
       setTestEmailResult({
         type: 'error',
-        message: 'Failed to send test email'
+        message: t('failedToSendTest')
       })
     } finally {
       setTestEmailSending(false)
@@ -582,7 +591,7 @@ export default function GlobalSettingsPage() {
   if (loading) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{tc('loading')}</p>
       </div>
     )
   }
@@ -596,16 +605,16 @@ export default function GlobalSettingsPage() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                 <SettingsIcon className="w-7 h-7 sm:w-8 sm:h-8" />
-                Global Settings
+                {t('title')}
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                Configure application-wide settings
+                {t('description')}
               </p>
             </div>
 
             <Button onClick={handleSave} variant="default" disabled={saving} size="default">
               <Save className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
+              <span className="hidden sm:inline">{saving ? tc('saving') : tc('saveChanges')}</span>
             </Button>
           </div>
         </div>
@@ -618,12 +627,14 @@ export default function GlobalSettingsPage() {
 
         {success && (
           <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-success-visible border-2 border-success-visible rounded-lg">
-            <p className="text-xs sm:text-sm text-success font-medium">Settings saved successfully!</p>
+            <p className="text-xs sm:text-sm text-success font-medium">{t('savedSuccessfully')}</p>
           </div>
         )}
 
         <div className="space-y-4 sm:space-y-6">
           <AppearanceSection
+            language={language}
+            setLanguage={setLanguage}
             defaultTheme={defaultTheme}
             setDefaultTheme={setDefaultTheme}
             accentColor={accentColor}
@@ -753,7 +764,7 @@ export default function GlobalSettingsPage() {
         {/* Success notification at bottom */}
         {success && (
           <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-success-visible border-2 border-success-visible rounded-lg">
-            <p className="text-xs sm:text-sm text-success font-medium">Settings saved successfully!</p>
+            <p className="text-xs sm:text-sm text-success font-medium">{t('savedSuccessfully')}</p>
           </div>
         )}
 
@@ -761,7 +772,7 @@ export default function GlobalSettingsPage() {
         <div className="mt-6 sm:mt-8 pb-20 lg:pb-24 flex justify-end">
           <Button onClick={handleSave} variant="default" disabled={saving} size="default">
             <Save className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
+            <span className="hidden sm:inline">{saving ? tc('saving') : tc('saveChanges')}</span>
           </Button>
         </div>
         </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from './ui/dialog'
 import { AlertTriangle } from 'lucide-react'
@@ -23,33 +24,37 @@ export function ReprocessModal({
   onSaveAndReprocess,
   saving,
   reprocessing,
-  title = 'Video Processing Settings Changed',
-  description = "You've changed settings that affect how videos are processed. These changes will only apply to newly uploaded videos.",
+  title,
+  description,
   isSingleVideo = false
 }: ReprocessModalProps) {
+  const t = useTranslations('reprocess')
+  const tc = useTranslations('common')
+  const resolvedTitle = title || t('title')
+  const resolvedDescription = description || t('description')
   return (
     <Dialog open={show} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-warning" />
-            {title}
+            {resolvedTitle}
           </DialogTitle>
           <DialogDescription>
-            {description}
+            {resolvedDescription}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-2">
           <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-2 text-sm">
             <p className="font-semibold">
-              Would you like to reprocess {isSingleVideo ? 'this video' : 'existing videos'}?
+              {t('wouldYouLike')} {isSingleVideo ? t('thisVideo') : t('existingVideos')}?
             </p>
             <ul className="space-y-1 ml-4 list-disc text-muted-foreground">
-              <li>{isSingleVideo ? 'Video' : 'All existing videos'} will be regenerated with new settings</li>
-              <li>Old preview files will be deleted (originals are kept safe)</li>
-              <li>{isSingleVideo ? 'Video' : 'Videos'} will be temporarily unavailable during processing</li>
-              {!isSingleVideo && <li>This uses server CPU and storage resources</li>}
+              <li>{isSingleVideo ? t('thisVideo') : t('allExisting')} {t('willRegenerate')}</li>
+              <li>{t('originalsKeptSafe')}</li>
+              <li>{isSingleVideo ? t('thisVideo') : t('existingVideos')} {t('temporarilyUnavailable')}</li>
+              {!isSingleVideo && <li>{t('usesResources')}</li>}
             </ul>
           </div>
         </div>
@@ -57,7 +62,7 @@ export function ReprocessModal({
         <DialogFooter className="flex-col gap-2 sm:flex-row">
           <DialogClose asChild>
             <Button variant="outline" disabled={saving || reprocessing}>
-              Cancel
+              {tc('cancel')}
             </Button>
           </DialogClose>
           <Button
@@ -65,14 +70,14 @@ export function ReprocessModal({
             onClick={onSaveWithoutReprocess}
             disabled={saving || reprocessing}
           >
-            {saving ? 'Saving...' : 'Save Without Reprocessing'}
+            {saving ? tc('saving') : t('saveWithout')}
           </Button>
           <Button
             variant="default"
             onClick={onSaveAndReprocess}
             disabled={saving || reprocessing}
           >
-            {reprocessing ? 'Reprocessing...' : 'Save & Reprocess'}
+            {reprocessing ? t('reprocessing') : t('saveAndReprocess')}
           </Button>
         </DialogFooter>
       </DialogContent>

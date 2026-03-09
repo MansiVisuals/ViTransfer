@@ -12,8 +12,11 @@ import { PasswordRequirements } from '@/components/PasswordRequirements'
 import { apiPatch, apiPost, apiDelete, apiFetch } from '@/lib/api-client'
 import { startRegistration } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
+import { useTranslations } from 'next-intl'
 
 export default function EditUserPage() {
+  const t = useTranslations('users')
+  const tc = useTranslations('common')
   const router = useRouter()
   const params = useParams()
   const userId = params?.id as string
@@ -131,11 +134,11 @@ export default function EditUserPage() {
       console.error('[PASSKEY] Registration error:', err)
 
       if (err.name === 'NotAllowedError') {
-        setPasskeyError('Cancelled or timed out')
+        setPasskeyError(t('cancelledOrTimedOut'))
       } else if (err.name === 'InvalidStateError') {
-        setPasskeyError('This authenticator is already registered')
+        setPasskeyError(t('alreadyRegistered'))
       } else {
-        setPasskeyError('Failed to register PassKey. Please check your configuration.')
+        setPasskeyError(t('failedToRegisterPasskeyConfig'))
       }
     } finally {
       setPasskeyLoading(false)
@@ -143,7 +146,7 @@ export default function EditUserPage() {
   }
 
   const handleDeletePasskey = async (id: string) => {
-    if (!confirm('Delete this PassKey?')) return
+    if (!confirm(t('deletePasskeyConfirm'))) return
 
     setPasskeyError('')
     try {
@@ -207,12 +210,12 @@ export default function EditUserPage() {
     setPasswordError('')
 
     if (passwordData.password !== passwordData.confirmPassword) {
-      setPasswordError('Passwords do not match')
+      setPasswordError(t('passwordsDoNotMatch'))
       return
     }
 
     if (!passwordData.oldPassword) {
-      setPasswordError('Current password is required')
+      setPasswordError(t('currentPasswordRequired'))
       return
     }
 
@@ -226,7 +229,7 @@ export default function EditUserPage() {
 
       setShowPasswordModal(false)
       setPasswordData({ oldPassword: '', password: '', confirmPassword: '' })
-      alert('Password changed successfully')
+      alert(t('passwordChangedSuccess'))
     } catch (err: any) {
       setPasswordError(err.message)
     } finally {
@@ -263,16 +266,16 @@ export default function EditUserPage() {
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                   <UserCog className="w-7 h-7 sm:w-8 sm:h-8" />
-                  Edit User
+                  {t('editUserTitle')}
                 </h1>
-                <p className="text-sm sm:text-base text-muted-foreground mt-1">Update administrator account details</p>
+                <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('updateAccountDetails')}</p>
               </div>
             </div>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>User Details</CardTitle>
+              <CardTitle>{t('userDetails')}</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -283,7 +286,7 @@ export default function EditUserPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{t('emailRequired')}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -294,24 +297,24 @@ export default function EditUserPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">{t('username')}</Label>
                   <Input
                     id="username"
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    placeholder="Optional"
+                    placeholder={tc('optional')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">{t('fullName')}</Label>
                   <Input
                     id="name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Optional"
+                    placeholder={tc('optional')}
                   />
                 </div>
 
@@ -326,7 +329,7 @@ export default function EditUserPage() {
                       onClick={() => setShowPasswordModal(true)}
                     >
                       <KeyRound className="w-4 h-4 mr-2" />
-                      Change Password
+                      {t('changePasswordTitle')}
                     </Button>
                   )}
 
@@ -340,7 +343,7 @@ export default function EditUserPage() {
                     title={!passkeyAvailable ? passkeyReason : undefined}
                   >
                     <Fingerprint className="w-4 h-4 mr-2" />
-                    Manage Passkeys
+                    {t('managePasskeys')}
                     {passkeys.length > 0 && (
                       <span className="ml-auto text-xs text-muted-foreground">({passkeys.length})</span>
                     )}
@@ -353,7 +356,7 @@ export default function EditUserPage() {
                 <div className="flex gap-3 pt-4">
                   <Button type="submit" variant="default" size="default" disabled={loading}>
                     <Save className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">{loading ? 'Saving...' : 'Save Changes'}</span>
+                    <span className="hidden sm:inline">{loading ? tc('saving') : tc('saveChanges')}</span>
                   </Button>
                   <Button
                     type="button"
@@ -363,7 +366,7 @@ export default function EditUserPage() {
                     disabled={loading}
                   >
                     <X className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Cancel</span>
+                    <span className="hidden sm:inline">{tc('cancel')}</span>
                   </Button>
                 </div>
               </form>
@@ -378,7 +381,7 @@ export default function EditUserPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="w-5 h-5 text-primary" />
-              Change Password
+              {t('changePasswordTitle')}
             </DialogTitle>
           </DialogHeader>
 
@@ -397,23 +400,23 @@ export default function EditUserPage() {
                 onClick={generateRandomPassword}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Generate
+                {tc('generate')}
               </Button>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="oldPassword">Current Password</Label>
+              <Label htmlFor="oldPassword">{t('currentPassword')}</Label>
               <Input
                 id="oldPassword"
                 type="password"
                 value={passwordData.oldPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
-                placeholder="Required"
+                placeholder={t('required')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
+              <Label htmlFor="password">{t('newPassword')}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -430,7 +433,7 @@ export default function EditUserPage() {
                       size="sm"
                       onClick={copyPassword}
                       className="h-7 w-7 p-0"
-                      title="Copy password"
+                      title={t('copyPassword')}
                     >
                       {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
@@ -452,7 +455,7 @@ export default function EditUserPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">{t('confirmNewPassword')}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -475,12 +478,12 @@ export default function EditUserPage() {
               </div>
               {passwordData.password && passwordData.confirmPassword && passwordData.password !== passwordData.confirmPassword && (
                 <p className="text-sm text-destructive flex items-center gap-1">
-                  <X className="w-4 h-4" /> Passwords do not match
+                  <X className="w-4 h-4" /> {t('passwordsDoNotMatch')}
                 </p>
               )}
               {passwordData.password && passwordData.confirmPassword && passwordData.password === passwordData.confirmPassword && passwordData.password.length > 0 && (
                 <p className="text-sm text-success flex items-center gap-1">
-                  <Check className="w-4 h-4" /> Passwords match
+                  <Check className="w-4 h-4" /> {t('passwordsMatch')}
                 </p>
               )}
             </div>
@@ -490,7 +493,7 @@ export default function EditUserPage() {
               disabled={passwordLoading || !passwordData.oldPassword || !passwordData.password || passwordData.password !== passwordData.confirmPassword}
               className="w-full"
             >
-              {passwordLoading ? 'Changing...' : 'Change Password'}
+              {passwordLoading ? t('changing') : t('changePasswordTitle')}
             </Button>
           </div>
         </DialogContent>
@@ -502,7 +505,7 @@ export default function EditUserPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Fingerprint className="w-5 h-5 text-primary" />
-              Manage Passkeys
+              {t('managePasskeys')}
             </DialogTitle>
             {currentUser && (
               <p className="text-sm text-muted-foreground pt-1">
@@ -513,7 +516,7 @@ export default function EditUserPage() {
 
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Passkeys allow passwordless login using biometrics or security keys.
+              {t('passkeysInfo')}
             </p>
 
             {passkeyError && (
@@ -525,7 +528,7 @@ export default function EditUserPage() {
             <div className="flex items-center justify-between bg-muted p-3 rounded">
               <div className="text-sm">
                 <p className="font-medium">
-                  {passkeys.length === 0 ? 'No passkeys registered' : `${passkeys.length} passkey(s)`}
+                  {passkeys.length === 0 ? t('noPasskeys') : t('passkeyCount', { count: passkeys.length })}
                 </p>
               </div>
               {loggedInUser && currentUser && loggedInUser.id === currentUser.id && (
@@ -537,7 +540,7 @@ export default function EditUserPage() {
                   disabled={passkeyLoading}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Add
+                  {tc('add')}
                 </Button>
               )}
             </div>
@@ -547,10 +550,10 @@ export default function EditUserPage() {
                 {passkeys.map((pk: any) => (
                   <div key={pk.id} className="flex items-center justify-between bg-card border p-3 rounded">
                     <div className="text-sm">
-                      <p className="font-medium">{pk.credentialName || 'Unnamed PassKey'}</p>
+                      <p className="font-medium">{pk.credentialName || t('unnamedPasskey')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {pk.deviceType === 'multiDevice' ? 'Multi-device' : 'Single device'} •
-                        Last used: {new Date(pk.lastUsedAt).toLocaleDateString()}
+                        {pk.deviceType === 'multiDevice' ? t('multiDevice') : t('singleDevice')} •
+                        {t('added', { date: new Date(pk.lastUsedAt).toLocaleDateString() })}
                       </p>
                     </div>
                     <Button

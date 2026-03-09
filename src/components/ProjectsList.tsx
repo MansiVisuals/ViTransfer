@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -9,12 +10,7 @@ import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 import FilterDropdown from '@/components/FilterDropdown'
 import { formatDate } from '@/lib/utils'
 
-const STATUS_OPTIONS = [
-  { value: 'IN_REVIEW', label: 'In Review' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'SHARE_ONLY', label: 'Share Only' },
-  { value: 'ARCHIVED', label: 'Archived' },
-]
+const STATUS_OPTIONS_KEYS = ['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED'] as const
 
 interface Project {
   id: string
@@ -37,6 +33,16 @@ interface ProjectsListProps {
 }
 
 export default function ProjectsList({ projects, statusFilter: externalStatusFilter, onStatusFilterChange }: ProjectsListProps) {
+  const t = useTranslations('projects')
+  const tc = useTranslations('common')
+  const tn = useTranslations('nav')
+  const STATUS_OPTIONS = STATUS_OPTIONS_KEYS.map(value => ({
+    value,
+    label: value === 'IN_REVIEW' ? t('statusInReview') :
+           value === 'APPROVED' ? t('statusApproved') :
+           value === 'SHARE_ONLY' ? t('statusShareOnly') :
+           t('statusArchived'),
+  }))
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical' | 'dueDate'>(() => {
     // Load sort mode from localStorage
     if (typeof window !== 'undefined') {
@@ -50,7 +56,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   // Use external filter if provided, otherwise use internal filter (default: all except ARCHIVED)
   const [internalStatusFilter, setInternalStatusFilter] = useState<Set<string>>(
-    new Set(STATUS_OPTIONS.filter(o => o.value !== 'ARCHIVED').map(o => o.value))
+    new Set(STATUS_OPTIONS_KEYS.filter(v => v !== 'ARCHIVED'))
   )
   
   // Use external filter if provided, otherwise use internal
@@ -126,7 +132,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
           <FilterDropdown
             groups={[{
               key: 'status',
-              label: 'Status',
+              label: tc('status'),
               options: STATUS_OPTIONS,
               selected: statusFilter,
               onChange: setStatusFilter,
@@ -136,11 +142,11 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
             variant="outline"
             size="sm"
             onClick={() => setSortMode(current => current === 'alphabetical' ? 'status' : current === 'status' ? 'dueDate' : 'alphabetical')}
-            title={sortMode === 'alphabetical' ? 'Sort by status' : sortMode === 'status' ? 'Sort by due date' : 'Sort alphabetically'}
+            title={sortMode === 'alphabetical' ? t('sortByStatus') : sortMode === 'status' ? t('sortByDueDate') : t('sortAlphabetically')}
           >
             {sortMode === 'dueDate' ? <Calendar className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
             <span className="hidden sm:inline ml-2">
-              {sortMode === 'alphabetical' ? 'A-Z' : sortMode === 'status' ? 'Status' : 'Due Date'}
+              {sortMode === 'alphabetical' ? t('aToZ') : sortMode === 'status' ? tc('status') : t('dueDateLabel')}
             </span>
           </Button>
         </div>
@@ -149,11 +155,11 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
       {projects.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">No projects yet</p>
+            <p className="text-muted-foreground mb-4">{t('noProjectsYet')}</p>
             <Link href="/admin/projects/new">
               <Button variant="default" size="default">
                 <Plus className="w-4 h-4 mr-2" />
-                Create Your First Project
+                {t('createFirst')}
               </Button>
             </Link>
           </CardContent>
@@ -163,7 +169,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
           {sortedProjects.map((project) => {
             const totalVideos = project.videos.length
             const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
-            const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
+            const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || t('client')
 
             return (
               <Link key={project.id} href={`/admin/projects/${project.id}`} className="block">
@@ -175,7 +181,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                           {project.title}
                         </CardTitle>
                         <CardDescription className="mt-1 break-words text-xs sm:text-sm">
-                          Client: {displayName}
+                          {t('clientLabel')} {displayName}
                         </CardDescription>
                       </div>
                       <span
@@ -191,7 +197,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                             : 'bg-muted text-muted-foreground border border-border'
                         }`}
                       >
-                        {project.status.replace('_', ' ')}
+                        {{ IN_REVIEW: t('statusInReview'), APPROVED: t('statusApproved'), SHARE_ONLY: t('statusShareOnly'), ARCHIVED: t('statusArchived') }[project.status] || project.status}
                       </span>
                     </div>
                   </CardHeader>
@@ -202,14 +208,14 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                           <Video className={metricIconClassName} />
                         </span>
                         <span className="font-medium">{totalVideos}</span>
-                        <span className="hidden sm:inline">video{totalVideos !== 1 ? 's' : ''}</span>
+                        <span className="hidden sm:inline">{totalVideos !== 1 ? t('videosPlural') : t('video')}</span>
                       </div>
                       <div className="inline-flex items-center gap-2">
                         <span className={metricIconWrapperClassName}>
                           <MessageSquare className={metricIconClassName} />
                         </span>
                         <span className="font-medium">{project._count.comments}</span>
-                        <span className="hidden sm:inline">comment{project._count.comments !== 1 ? 's' : ''}</span>
+                        <span className="hidden sm:inline">{project._count.comments !== 1 ? t('commentsPlural') : t('comment')}</span>
                       </div>
                       {project.dueDate && (
                         <div className={`inline-flex items-center gap-2 ${getDueDateColor(project.dueDate)}`}>
@@ -230,25 +236,25 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
         /* Table View */
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 border-b bg-muted/30">
-            <span className="text-sm font-medium">Projects</span>
-            <span className="text-xs text-muted-foreground">{sortedProjects.length} projects</span>
+            <span className="text-sm font-medium">{tn('projects')}</span>
+            <span className="text-xs text-muted-foreground">{sortedProjects.length} {t('projectsCount')}</span>
           </div>
           {/* Table Header */}
           <div className="hidden sm:flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-2 text-xs text-muted-foreground bg-muted/20 border-b">
-            <span className="flex-1 min-w-0">Name</span>
-            <span className="w-40 hidden md:block">Client</span>
-            <span className="w-28">Status</span>
-            <span className="w-16 text-center hidden lg:block">Videos</span>
-            <span className="w-16 text-center hidden lg:block">Comments</span>
-            <span className="w-28 hidden lg:block">Due Date</span>
-            <span className="w-28 hidden lg:block">Updated</span>
+            <span className="flex-1 min-w-0">{tc('name')}</span>
+            <span className="w-40 hidden md:block">{t('client')}</span>
+            <span className="w-28">{tc('status')}</span>
+            <span className="w-16 text-center hidden lg:block">{t('videos')}</span>
+            <span className="w-16 text-center hidden lg:block">{t('comments')}</span>
+            <span className="w-28 hidden lg:block">{t('dueDateLabel')}</span>
+            <span className="w-28 hidden lg:block">{tc('updated')}</span>
             <span className="w-4"></span>
           </div>
           <div className="divide-y">
             {sortedProjects.map((project) => {
               const totalVideos = project.videos.length
               const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
-              const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
+              const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || t('client')
 
               return (
                 <Link
@@ -272,7 +278,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                         : 'bg-muted text-muted-foreground border border-border'
                       }`}
                     >
-                      {project.status.replace('_', ' ')}
+                      {{ IN_REVIEW: t('statusInReview'), APPROVED: t('statusApproved'), SHARE_ONLY: t('statusShareOnly'), ARCHIVED: t('statusArchived') }[project.status] || project.status}
                     </span>
                   </span>
                   <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>

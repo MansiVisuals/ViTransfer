@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Comment } from '@prisma/client'
 import { Clock, Trash2, Brush } from 'lucide-react'
 import DOMPurify from 'dompurify'
@@ -59,6 +60,8 @@ export default function MessageBubble({
   hasAnnotation,
   shareToken,
 }: MessageBubbleProps) {
+  const t = useTranslations('comments')
+
   // Get effective author name for color generation
   // For internal comments without authorName, fall back to user.name or user.email
   const effectiveAuthorName = comment.authorName ||
@@ -89,7 +92,7 @@ export default function MessageBubble({
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1 min-w-0">
               <span className="text-base font-semibold text-foreground truncate">
-                {effectiveAuthorName || 'Anonymous'}
+                {effectiveAuthorName || t('anonymous')}
               </span>
               <span className="ml-auto text-sm text-muted-foreground flex-shrink-0">
                 {formatMessageTime(comment.createdAt)}
@@ -102,7 +105,7 @@ export default function MessageBubble({
                   type="button"
                   onClick={handleTimestampClick}
                   className="inline-flex items-center gap-1 rounded-md bg-warning-visible px-2 py-0.5 text-xs font-semibold text-warning hover:opacity-90 transition-opacity"
-                  title="Seek to this timecode"
+                  title={t('seekToTimecode')}
                 >
                   <Clock className="w-3 h-3" />
                   <span className="font-mono">
@@ -110,7 +113,7 @@ export default function MessageBubble({
                   </span>
                 </button>
                 {hasAnnotation && (
-                  <span className="inline-flex items-center rounded-md bg-blue-500/10 px-1.5 py-0.5 text-blue-600 dark:text-blue-400" title="Has drawing annotation">
+                  <span className="inline-flex items-center rounded-md bg-blue-500/10 px-1.5 py-0.5 text-blue-600 dark:text-blue-400" title={t('hasAnnotation')}>
                     <Brush className="w-3.5 h-3.5" />
                   </span>
                 )}
@@ -139,17 +142,17 @@ export default function MessageBubble({
                     onClick={onReply}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
                   >
-                    Reply
+                    {t('reply')}
                   </button>
                 )}
                 {onDelete && (
                   <button
                     onClick={onDelete}
                     className="text-sm text-muted-foreground hover:text-destructive transition-colors font-medium flex items-center gap-1"
-                    title="Delete comment"
+                    title={t('deleteComment')}
                   >
                     <Trash2 className="w-4 h-4" />
-                    Delete
+                    {t('deleteComment')}
                   </button>
                 )}
               </div>
@@ -175,7 +178,7 @@ export default function MessageBubble({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-2 min-w-0">
                     <span className="text-base font-semibold text-foreground truncate">
-                      {replyEffectiveName || 'Anonymous'}
+                      {replyEffectiveName || t('anonymous')}
                     </span>
                     <span className="text-sm text-muted-foreground flex-shrink-0">
                       {formatMessageTime(reply.createdAt)}
@@ -184,7 +187,7 @@ export default function MessageBubble({
                       <button
                         onClick={() => onDeleteReply(reply.id)}
                         className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
-                        title="Delete reply"
+                        title={t('deleteReply')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { QueuedUpload } from '@/hooks/useAssetUploadQueue'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
@@ -36,6 +37,7 @@ export function VideoAssetUploadItem({
   onRemove,
   onRetry
 }: VideoAssetUploadItemProps) {
+  const t = useTranslations('videos')
 
   const getFileIcon = () => {
     const fileName = upload.file.name.toLowerCase()
@@ -76,7 +78,7 @@ export function VideoAssetUploadItem({
   }
 
   const getCategoryLabel = (category: string) => {
-    if (!category) return 'Other'
+    if (!category) return t('other')
     return category.charAt(0).toUpperCase() + category.slice(1)
   }
 
@@ -100,15 +102,15 @@ export function VideoAssetUploadItem({
   const getStatusText = () => {
     switch (upload.status) {
       case 'queued':
-        return 'Queued'
+        return t('queued')
       case 'uploading':
-        return 'Uploading...'
+        return t('uploading')
       case 'paused':
-        return 'Paused'
+        return t('paused')
       case 'completed':
-        return 'Complete'
+        return t('uploadComplete')
       case 'error':
-        return 'Failed'
+        return t('failed')
       default:
         return upload.status
     }
@@ -153,7 +155,7 @@ export function VideoAssetUploadItem({
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">
-                {upload.status === 'paused' ? 'Paused' : 'Uploading...'}
+                {upload.status === 'paused' ? t('paused') : t('uploading')}
               </span>
               <span className="font-medium">{upload.progress}%</span>
             </div>
@@ -178,13 +180,13 @@ export function VideoAssetUploadItem({
             {/* Speed and ETA (match video upload pattern) */}
             {upload.status === 'uploading' && upload.uploadSpeed > 0 && (
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Speed: {upload.uploadSpeed} MB/s</span>
+                <span>{t('speed')} {upload.uploadSpeed} MB/s</span>
                 <span>
                   {(() => {
                     const remainingBytes = upload.file.size * (1 - upload.progress / 100)
                     const seconds = remainingBytes / (upload.uploadSpeed * 1024 * 1024)
                     const eta = Math.max(0, Math.ceil(seconds))
-                    return eta > 0 ? `Estimated: ${eta} seconds` : 'Estimated: <1 second'
+                    return eta > 0 ? `${t('estimated')} ${eta} ${t('seconds')}` : t('estimatedLessThanSecond')
                   })()}
                 </span>
               </div>
@@ -206,7 +208,7 @@ export function VideoAssetUploadItem({
             variant="ghost"
             size="icon"
             onClick={onPause}
-            title="Pause upload"
+            title={t('pauseUpload')}
             className="h-8 w-8"
           >
             <Pause className="h-4 w-4" />
@@ -219,7 +221,7 @@ export function VideoAssetUploadItem({
             variant="ghost"
             size="icon"
             onClick={onResume}
-            title="Resume upload"
+            title={t('resumeUpload')}
             className="h-8 w-8"
           >
             <Play className="h-4 w-4" />
@@ -232,7 +234,7 @@ export function VideoAssetUploadItem({
             variant="ghost"
             size="icon"
             onClick={onRetry}
-            title="Retry upload"
+            title={t('retryUpload')}
             className="h-8 w-8"
           >
             <RotateCw className="h-4 w-4" />
@@ -245,7 +247,7 @@ export function VideoAssetUploadItem({
             variant="ghost"
             size="icon"
             onClick={onCancel}
-            title="Cancel upload"
+            title={t('cancelUpload')}
             className="h-8 w-8 text-destructive hover:text-destructive"
           >
             <X className="h-4 w-4" />
@@ -258,7 +260,7 @@ export function VideoAssetUploadItem({
             variant="ghost"
             size="icon"
             onClick={onRemove}
-            title="Remove from list"
+            title={t('removeFromList')}
             className="h-8 w-8"
           >
             <X className="h-4 w-4" />

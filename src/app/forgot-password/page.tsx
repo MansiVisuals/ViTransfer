@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +13,8 @@ import BrandLogo from '@/components/BrandLogo'
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations('auth')
+  const tc = useTranslations('common')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [message, setMessage] = useState('')
@@ -32,15 +35,15 @@ export default function ForgotPasswordPage() {
 
       if (res.ok) {
         setStatus('success')
-        setMessage(data.message || 'Password reset instructions have been sent to your email.')
+        setMessage(data.message || t('resetEmailSent'))
         setEmail('')
       } else {
         setStatus('error')
-        setMessage(data.error || 'Something went wrong. Please try again.')
+        setMessage(data.error || t('somethingWrong'))
       }
     } catch (error) {
       setStatus('error')
-      setMessage('Unable to process your request. Please try again.')
+      setMessage(t('unableToProcess'))
     }
   }
 
@@ -50,18 +53,18 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <BrandLogo height={64} className="mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-foreground">ViTransfer</h1>
-            <p className="text-sm text-muted-foreground mt-2">Video Review, Feedback & Deliverables</p>
+            <h1 className="text-3xl font-bold text-foreground">{tc('viTransfer')}</h1>
+            <p className="text-sm text-muted-foreground mt-2">{tc('videoReviewTagline')}</p>
           </div>
 
           <Card className="border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
-                Forgot Password
+                {t('forgotPasswordTitle')}
               </CardTitle>
               <CardDescription>
-                Enter your email to receive password reset instructions.
+                {t('forgotPasswordDescription')}
               </CardDescription>
             </CardHeader>
 
@@ -86,11 +89,11 @@ export default function ForgotPasswordPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email or Username</Label>
+                  <Label htmlFor="email">{t('emailOrUsername')}</Label>
                   <Input
                     id="email"
                     type="text"
-                    placeholder="Enter your email or username"
+                    placeholder={t('emailOrUsernamePlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -106,13 +109,13 @@ export default function ForgotPasswordPage() {
                   disabled={status === 'loading' || status === 'success'}
                 >
                   <Mail className="w-4 h-4 mr-2" />
-                  {status === 'loading' ? 'Sending...' : 'Send Reset Link'}
+                  {status === 'loading' ? tc('sending') : t('sendResetLink')}
                 </Button>
 
                 <div className="text-center pt-4">
                   <Link href="/login" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <ArrowLeft className="w-4 h-4 mr-1" />
-                    Back to Login
+                    {t('backToLogin')}
                   </Link>
                 </div>
               </form>

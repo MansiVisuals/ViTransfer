@@ -2,10 +2,12 @@
 
 import Image from 'next/image'
 import { useRef, useEffect, useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { CheckCircle2, ChevronLeft, ChevronRight, Film, Layers, Grid3X3, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from '@/components/ThemeToggle'
+import LanguageToggle from '@/components/LanguageToggle'
 
 interface ThumbnailReelProps {
   videosByName: Record<string, any[]>
@@ -31,6 +33,8 @@ export default function ThumbnailReel({
   isCommentPanelVisible = true,
   onToggleCommentPanel,
 }: ThumbnailReelProps) {
+  const tShare = useTranslations('share')
+  const tComments = useTranslations('comments')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   // Start collapsed on first load
   const [isExpanded, setIsExpanded] = useState(false)
@@ -169,10 +173,10 @@ export default function ThumbnailReel({
                 size="sm"
                 onClick={onBackToGrid}
                 className="shrink-0 gap-1.5 px-2 sm:px-3 h-8"
-                title="Back to all videos"
+                title={tShare('backToAllVideos')}
               >
                 <Grid3X3 className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">All Videos</span>
+                <span className="hidden sm:inline text-sm">{tShare('allVideos')}</span>
               </Button>
             )}
           </div>
@@ -186,7 +190,7 @@ export default function ThumbnailReel({
                 onClick={handlePrevVideo}
                 disabled={activeIndex <= 0}
                 className="h-7 w-7 sm:h-8 sm:w-8"
-                title="Previous video"
+                title={tShare('previousVideo')}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -223,7 +227,7 @@ export default function ThumbnailReel({
                   <div className="absolute left-1/2 -translate-x-1/2 -top-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-foreground/90" />
                   {/* Tooltip content */}
                   <div className="bg-foreground/90 text-background text-[11px] px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
-                    Click to browse all videos
+                    {tShare('browseAllVideos')}
                   </div>
                 </div>
               </div>
@@ -234,7 +238,7 @@ export default function ThumbnailReel({
                 onClick={handleNextVideo}
                 disabled={activeIndex >= totalVideos - 1}
                 className="h-7 w-7 sm:h-8 sm:w-8"
-                title="Next video"
+                title={tShare('nextVideo')}
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -251,7 +255,7 @@ export default function ThumbnailReel({
                 size="icon"
                 onClick={onToggleCommentPanel}
                 className="hidden lg:flex h-8 w-8"
-                title={isCommentPanelVisible ? 'Hide feedback' : 'Show feedback'}
+                title={isCommentPanelVisible ? tComments('hideFeedback') : tComments('showFeedback')}
               >
                 {isCommentPanelVisible ? (
                   <PanelRightClose className="w-4 h-4" />
@@ -261,7 +265,8 @@ export default function ThumbnailReel({
               </Button>
             )}
 
-            {/* Theme toggle */}
+            {/* Language and theme toggles */}
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -85,10 +86,12 @@ function useResponsivePageSize(rowHeight: number, headerOffset: number): number 
 }
 
 export default function SecurityEventsClient() {
+  const t = useTranslations('security')
+  const tc = useTranslations('common')
   const SEVERITY_OPTIONS = [
-    { value: 'CRITICAL', label: 'Critical' },
-    { value: 'WARNING', label: 'Warning' },
-    { value: 'INFO', label: 'Info' },
+    { value: 'CRITICAL', label: t('critical') },
+    { value: 'WARNING', label: t('warning') },
+    { value: 'INFO', label: t('info') },
   ]
 
   // Row ~40px, header/stats/filters ~280px offset
@@ -131,7 +134,7 @@ export default function SecurityEventsClient() {
       }
 
       const response = await apiFetch(`/api/security/events?${params}`)
-      if (!response.ok) throw new Error('Failed to load security events')
+      if (!response.ok) throw new Error(t('failedToLoadEvents'))
 
       const data: SecurityEventsResponse = await response.json()
       setEvents(data.events)
@@ -152,7 +155,7 @@ export default function SecurityEventsClient() {
   const loadRateLimits = async () => {
     try {
       const response = await apiFetch('/api/security/rate-limits')
-      if (!response.ok) throw new Error('Failed to load rate limits')
+      if (!response.ok) throw new Error(t('failedToLoadRateLimits'))
 
       const data = await response.json()
       setRateLimits(data.entries || [])
@@ -162,7 +165,7 @@ export default function SecurityEventsClient() {
   }
 
   const handleUnblockRateLimit = async (key: string) => {
-    if (!confirm('Unblock this rate limit entry? The user/IP will be able to attempt login again.')) {
+    if (!confirm(t('unblockConfirm'))) {
       return
     }
 
@@ -175,12 +178,12 @@ export default function SecurityEventsClient() {
       alert(data.message)
       loadRateLimits()
     } catch (error) {
-      alert('Failed to unblock rate limit')
+      alert(t('failedToUnblock'))
     }
   }
 
   const handleClearAllRateLimits = async () => {
-    if (!confirm('Clear ALL rate limits? This will unblock every locked out user and IP address.')) {
+    if (!confirm(t('clearAllConfirm'))) {
       return
     }
 
@@ -193,7 +196,7 @@ export default function SecurityEventsClient() {
       alert(data.message)
       loadRateLimits()
     } catch (error) {
-      alert('Failed to clear all rate limits')
+      alert(t('failedToClearAll'))
     }
   }
 
@@ -232,9 +235,9 @@ export default function SecurityEventsClient() {
   const handleDeleteOld = async (days: number) => {
     let confirmMessage
     if (days === 0) {
-      confirmMessage = 'Delete ALL security events? This will permanently delete every security event in the system and CANNOT be undone.'
+      confirmMessage = t('deleteAllConfirm')
     } else {
-      confirmMessage = `Delete all security events older than ${days} days? This cannot be undone.`
+      confirmMessage = t('deleteOlderConfirm', { days })
     }
 
     if (!confirm(confirmMessage)) {
@@ -251,7 +254,7 @@ export default function SecurityEventsClient() {
       alert(data.message)
       loadEvents()
     } catch (error) {
-      alert('Failed to delete events')
+      alert(t('failedToDeleteEvents'))
     } finally {
       setDeleting(false)
     }
@@ -263,10 +266,10 @@ export default function SecurityEventsClient() {
         <div className="mb-4 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <Shield className="w-7 h-7 sm:w-8 sm:h-8" />
-            Security Events
+            {t('title')}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Monitor events, rate limits, and suspicious activity
+            {t('description')}
           </p>
         </div>
 
@@ -275,14 +278,14 @@ export default function SecurityEventsClient() {
             groups={[
               {
                 key: 'type',
-                label: 'Event Type',
+                label: t('eventType'),
                 options: stats.map(s => ({ value: s.type, label: formatSecurityEventType(s.type) })),
                 selected: typeFilter ?? new Set(),
                 onChange: setTypeFilter,
               },
               {
                 key: 'severity',
-                label: 'Severity',
+                label: t('severity'),
                 options: SEVERITY_OPTIONS,
                 selected: severityFilter,
                 onChange: setSeverityFilter,
@@ -294,19 +297,19 @@ export default function SecurityEventsClient() {
             variant="outline"
             size="sm"
             disabled={loading}
-            title="Refresh"
+            title={tc('refresh')}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline ml-2">Refresh</span>
+            <span className="hidden sm:inline ml-2">{tc('refresh')}</span>
           </Button>
           <Button
             onClick={() => setShowRateLimitsModal(true)}
             variant="outline"
             size="sm"
-            title="Rate Limits"
+            title={t('rateLimits')}
           >
             <Unlock className="w-4 h-4" />
-            <span className="hidden sm:inline ml-2">Rate Limits</span>
+            <span className="hidden sm:inline ml-2">{t('rateLimits')}</span>
             {rateLimits.length > 0 && (
               <span className="ml-1 text-xs tabular-nums">({rateLimits.length})</span>
             )}
@@ -315,10 +318,10 @@ export default function SecurityEventsClient() {
             onClick={() => setShowCleanupModal(true)}
             variant="destructive"
             size="sm"
-            title="Delete Events"
+            title={t('deleteEvents')}
           >
             <Trash2 className="w-4 h-4" />
-            <span className="hidden sm:inline ml-2">Delete</span>
+            <span className="hidden sm:inline ml-2">{tc('delete')}</span>
           </Button>
         </div>
 
@@ -330,7 +333,7 @@ export default function SecurityEventsClient() {
                 <Shield className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Events</p>
+                <p className="text-xs text-muted-foreground">{t('events')}</p>
                 <p className="text-base font-semibold tabular-nums">{pagination.total.toLocaleString()}</p>
               </div>
             </div>
@@ -339,7 +342,7 @@ export default function SecurityEventsClient() {
                 <Tag className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Types</p>
+                <p className="text-xs text-muted-foreground">{t('types')}</p>
                 <p className="text-base font-semibold tabular-nums">{stats.length}</p>
               </div>
             </div>
@@ -348,7 +351,7 @@ export default function SecurityEventsClient() {
                 <XCircle className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Blocked</p>
+                <p className="text-xs text-muted-foreground">{t('blocked')}</p>
                 <p className="text-base font-semibold tabular-nums">{events.filter(e => e.wasBlocked).length}</p>
               </div>
             </div>
@@ -358,25 +361,25 @@ export default function SecurityEventsClient() {
         {/* Events List */}
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
-            <span className="text-sm font-medium">Security Events</span>
+            <span className="text-sm font-medium">{t('title')}</span>
             <span className="text-xs text-muted-foreground">
-              Showing {events.length} of {pagination.total}
+              {t('showing', { count: events.length, total: pagination.total })}
             </span>
           </div>
           {/* Table Header */}
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground bg-muted/20 border-b">
-            <span className="w-20 flex-shrink-0">Severity</span>
-            <span className="flex-1 min-w-0">Event Type</span>
-            <span className="w-28 hidden md:block">IP Address</span>
-            <span className="w-32 hidden lg:block">Date</span>
-            <span className="w-8 text-center">Block</span>
+            <span className="w-20 flex-shrink-0">{t('severity')}</span>
+            <span className="flex-1 min-w-0">{t('eventType')}</span>
+            <span className="w-28 hidden md:block">{t('ipAddress')}</span>
+            <span className="w-32 hidden lg:block">{tc('date')}</span>
+            <span className="w-8 text-center">{t('block')}</span>
             <span className="w-4"></span>
           </div>
           <div>
             {loading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading events...</div>
+              <div className="text-center py-8 text-muted-foreground">{t('loadingEvents')}</div>
             ) : events.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No security events found</div>
+              <div className="text-center py-8 text-muted-foreground">{t('noEvents')}</div>
             ) : (
               <div className="divide-y">
                 {events.map((event) => {
@@ -416,7 +419,7 @@ export default function SecurityEventsClient() {
                         {/* Blocked */}
                         <span className="w-8 flex justify-center">
                           {event.wasBlocked ? (
-                            <span title="Blocked">
+                            <span title={t('blocked')}>
                               <ShieldX className="w-4 h-4 text-destructive" />
                             </span>
                           ) : (
@@ -444,34 +447,34 @@ export default function SecurityEventsClient() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
                               {event.ipAddress && (
                                 <div className="flex gap-2">
-                                  <span className="text-muted-foreground">IP:</span>
+                                  <span className="text-muted-foreground">{t('ip')}:</span>
                                   <span className="break-all">{formatIpAddress(event.ipAddress)}</span>
                                 </div>
                               )}
                               {event.sessionId && (
                                 <div className="flex gap-2">
-                                  <span className="text-muted-foreground">Session:</span>
+                                  <span className="text-muted-foreground">{t('session')}:</span>
                                   <span className="break-all">{formatSessionId(event.sessionId)}</span>
                                 </div>
                               )}
                               {event.project && (
                                 <div className="flex gap-2">
-                                  <span className="text-muted-foreground">Project:</span>
+                                  <span className="text-muted-foreground">{t('project')}:</span>
                                   <span>{event.project.title}</span>
                                 </div>
                               )}
                               <div className="flex gap-2 sm:hidden">
-                                <span className="text-muted-foreground">Time:</span>
+                                <span className="text-muted-foreground">{t('time')}:</span>
                                 <span>{formatDateTime(event.createdAt)}</span>
                               </div>
                               {event.referer && (
                                 <div className="flex gap-2 sm:col-span-2">
-                                  <span className="text-muted-foreground">Referer:</span>
+                                  <span className="text-muted-foreground">{t('referer')}:</span>
                                   <span className="break-all">{event.referer}</span>
                                 </div>
                               )}
                               <div className="flex gap-2">
-                                <span className="text-muted-foreground">Category:</span>
+                                <span className="text-muted-foreground">{t('category')}:</span>
                                 <span>{getSecurityEventCategory(event.type)}</span>
                               </div>
                             </div>
@@ -479,7 +482,7 @@ export default function SecurityEventsClient() {
                             {/* Technical Details - shown inline */}
                             {event.details && (
                               <div className="text-xs">
-                                <span className="text-muted-foreground">Technical Details:</span>
+                                <span className="text-muted-foreground">{t('technicalDetails')}:</span>
                                 <pre className="mt-1 bg-muted/50 p-2 rounded border overflow-auto max-h-32">
                                   {JSON.stringify(event.details, null, 2)}
                                 </pre>
@@ -503,10 +506,10 @@ export default function SecurityEventsClient() {
                   variant="outline"
                   size="sm"
                 >
-                  Previous
+                  {tc('previous')}
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  Page {pagination.page} of {pagination.pages}
+                  {tc('pageOf', { page: pagination.page, pages: pagination.pages })}
                 </span>
                 <Button
                   onClick={(e) => { e.stopPropagation(); setPagination(p => ({ ...p, page: p.page + 1 })) }}
@@ -514,7 +517,7 @@ export default function SecurityEventsClient() {
                   variant="outline"
                   size="sm"
                 >
-                  Next
+                  {tc('next')}
                 </Button>
               </div>
             )}
@@ -528,10 +531,10 @@ export default function SecurityEventsClient() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-destructive" />
-              Delete Security Events
+              {t('deleteEvents')}
             </DialogTitle>
             <DialogDescription>
-              Remove old security events from the database. This action cannot be undone.
+              {t('deleteEventsDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-4">
@@ -541,7 +544,7 @@ export default function SecurityEventsClient() {
               className="justify-start"
               disabled={deleting}
             >
-              Delete events older than 7 days
+              {t('deleteOlderThan7')}
             </Button>
             <Button
               onClick={() => { handleDeleteOld(30); setShowCleanupModal(false) }}
@@ -549,7 +552,7 @@ export default function SecurityEventsClient() {
               className="justify-start"
               disabled={deleting}
             >
-              Delete events older than 30 days
+              {t('deleteOlderThan30')}
             </Button>
             <Button
               onClick={() => { handleDeleteOld(90); setShowCleanupModal(false) }}
@@ -557,7 +560,7 @@ export default function SecurityEventsClient() {
               className="justify-start"
               disabled={deleting}
             >
-              Delete events older than 90 days
+              {t('deleteOlderThan90')}
             </Button>
             <Button
               onClick={() => { handleDeleteOld(0); setShowCleanupModal(false) }}
@@ -565,7 +568,7 @@ export default function SecurityEventsClient() {
               className="justify-start"
               disabled={deleting}
             >
-              Delete all events
+              {t('deleteAllEvents')}
             </Button>
           </div>
         </DialogContent>
@@ -577,16 +580,16 @@ export default function SecurityEventsClient() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Unlock className="w-5 h-5 text-primary" />
-              Active Rate Limits
+              {t('activeRateLimits')}
             </DialogTitle>
             <DialogDescription>
-              Currently locked out IPs and accounts due to excessive failed attempts.
+              {t('rateLimitsDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {rateLimits.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No active rate limits
+                {t('noRateLimits')}
               </div>
             ) : (
               <div className="space-y-2 max-h-[60vh] overflow-y-auto">
@@ -594,12 +597,12 @@ export default function SecurityEventsClient() {
                   <div key={entry.key} className="border rounded-lg p-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm">Type: {entry.type}</div>
+                        <div className="font-medium text-sm">{tc('type')}: {entry.type}</div>
                         <div className="text-xs text-muted-foreground">
-                          Failed attempts: {entry.count}
+                          {t('failedAttempts', { count: entry.count })}
                         </div>
                         <div className="text-xs text-muted-foreground break-words">
-                          Locked until: {new Date(entry.lockoutUntil).toLocaleString()}
+                          {t('lockedUntil', { date: new Date(entry.lockoutUntil).toLocaleString() })}
                         </div>
                       </div>
                       {entry.lockoutUntil > Date.now() ? (
@@ -609,11 +612,11 @@ export default function SecurityEventsClient() {
                           size="sm"
                         >
                           <Unlock className="w-4 h-4 mr-2" />
-                          Unblock
+                          {t('unblock')}
                         </Button>
                       ) : (
                         <div className="text-xs text-muted-foreground">
-                          Lock expired
+                          {t('lockExpired')}
                         </div>
                       )}
                     </div>
@@ -625,11 +628,11 @@ export default function SecurityEventsClient() {
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {rateLimits.length > 0 && (
               <Button variant="destructive" size="sm" onClick={handleClearAllRateLimits} className="sm:mr-auto">
-                Clear All Rate Limits
+                {t('clearAllRateLimits')}
               </Button>
             )}
             <Button variant="outline" onClick={() => setShowRateLimitsModal(false)}>
-              Close
+              {tc('close')}
             </Button>
           </DialogFooter>
         </DialogContent>

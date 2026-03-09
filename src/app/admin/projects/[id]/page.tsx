@@ -9,11 +9,14 @@ import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import { ArrowLeft, Settings, ArrowUpDown, Video, Upload } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
+import { useTranslations } from 'next-intl'
 
 // Force dynamic rendering (no static pre-rendering)
 export const dynamic = 'force-dynamic'
 
 export default function ProjectPage() {
+  const t = useTranslations('projects')
+  const tc = useTranslations('common')
   const params = useParams()
   const router = useRouter()
   const id = params?.id as string
@@ -115,7 +118,7 @@ export default function ProjectPage() {
   if (loading) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{tc('loading')}</p>
       </div>
     )
   }
@@ -125,7 +128,7 @@ export default function ProjectPage() {
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Project not found</p>
+            <p className="text-muted-foreground">{t('projectNotFound')}</p>
           </CardContent>
         </Card>
       </div>
@@ -143,8 +146,8 @@ export default function ProjectPage() {
           <Link href="/admin/projects">
             <Button variant="ghost" size="default" className="justify-start px-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Back to Projects</span>
-              <span className="sm:hidden">Back</span>
+              <span className="hidden sm:inline">{t('backToProjects')}</span>
+              <span className="sm:hidden">{tc('back')}</span>
             </Button>
           </Link>
           <div className="flex items-center gap-2">
@@ -155,13 +158,13 @@ export default function ProjectPage() {
                 onClick={() => videoManagerRef.current?.triggerUpload()}
               >
                 <Upload className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Upload Video(s)</span>
+                <span className="hidden sm:inline">{t('uploadVideos')}</span>
               </Button>
             )}
             <Link href={`/admin/projects/${id}/settings`}>
               <Button variant="outline" size="default">
                 <Settings className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Project Settings</span>
+                <span className="hidden sm:inline">{t('projectSettings')}</span>
               </Button>
             </Link>
           </div>
@@ -187,7 +190,7 @@ export default function ProjectPage() {
                   <span className={iconBadgeClassName}>
                     <Video className={iconBadgeIconClassName} />
                   </span>
-                  Videos
+                  {t('videos')}
                 </h2>
                 {project.videos.length > 0 && (
                   <Button
@@ -195,7 +198,7 @@ export default function ProjectPage() {
                     size="sm"
                     onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
                     className="text-muted-foreground hover:text-foreground"
-                    title={sortMode === 'status' ? 'Sort alphabetically' : 'Sort by status'}
+                    title={sortMode === 'status' ? t('sortAlphabetically') : t('sortByStatus')}
                   >
                     <ArrowUpDown className="w-4 h-4" />
                   </Button>

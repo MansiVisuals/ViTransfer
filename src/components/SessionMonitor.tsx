@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { getAccessToken, getRefreshToken, clearTokens, subscribe } from '@/lib/token-store'
 
 const DEFAULT_INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
@@ -9,6 +10,7 @@ const CHECK_INTERVAL = 30 * 1000 // 30 seconds
 
 export default function SessionMonitor() {
   const router = useRouter()
+  const t = useTranslations('session')
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
   const lastActivityRef = useRef<number>(Date.now())
@@ -139,13 +141,13 @@ export default function SessionMonitor() {
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-warning">
-              Inactivity Warning
+              {t('inactivityWarning')}
             </h3>
             <p className="text-sm text-warning font-medium mt-1">
-              You will be logged out in {minutes}:{seconds.toString().padStart(2, '0')} due to inactivity.
+              {t('logoutCountdown', { time: `${minutes}:${seconds.toString().padStart(2, '0')}` })}
             </p>
             <p className="text-xs text-warning font-medium mt-2">
-              Click anywhere or move your mouse to stay logged in.
+              {t('stayLoggedIn')}
             </p>
           </div>
         </div>

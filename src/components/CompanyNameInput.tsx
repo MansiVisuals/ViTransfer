@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Building2, Check, Plus } from 'lucide-react'
 import { apiFetch, apiPost } from '@/lib/api-client'
@@ -24,6 +25,8 @@ export function CompanyNameInput({
   onChange,
   disabled = false
 }: CompanyNameInputProps) {
+  const t = useTranslations('clients')
+  const tc = useTranslations('common')
   const [search, setSearch] = useState(value)
   const [companies, setCompanies] = useState<ClientCompany[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
@@ -118,7 +121,7 @@ export function CompanyNameInput({
         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           id="companyName"
-          placeholder="e.g., XYZ Corporation"
+          placeholder={t('companyNamePlaceholder')}
           value={search}
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => search.length >= 1 && setShowDropdown(true)}
@@ -137,7 +140,7 @@ export function CompanyNameInput({
       {showDropdown && (
         <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
           {loading ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
+            <div className="px-3 py-2 text-sm text-muted-foreground">{tc('loading')}</div>
           ) : (
             <>
               {companies.map((company) => (
@@ -152,7 +155,7 @@ export function CompanyNameInput({
                     <span>{company.name}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {company.contactCount} contact{company.contactCount !== 1 ? 's' : ''}
+                    {company.contactCount} {company.contactCount !== 1 ? t('contactsPlural') : t('contact')}
                   </span>
                 </button>
               ))}
@@ -163,11 +166,11 @@ export function CompanyNameInput({
                   onClick={handleCreateCompany}
                 >
                   <Plus className="w-4 h-4 text-primary" />
-                  <span>Add &quot;{search.trim()}&quot; to directory</span>
+                  <span>{t('addCompany')} &quot;{search.trim()}&quot;</span>
                 </button>
               )}
               {companies.length === 0 && !showCreateOption && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">No matching companies</div>
+                <div className="px-3 py-2 text-sm text-muted-foreground">{tc('noResults')}</div>
               )}
             </>
           )}

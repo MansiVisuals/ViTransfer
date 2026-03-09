@@ -11,6 +11,7 @@ import { VideoUploadModal } from './VideoUploadModal'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { apiPatch } from '@/lib/api-client'
+import { useTranslations } from 'next-intl'
 
 interface AdminVideoManagerProps {
   projectId: string
@@ -39,6 +40,8 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
   maxRevisions,
   enableRevisions
 }, ref) => {
+  const t = useTranslations('videos')
+  const tc = useTranslations('common')
   const router = useRouter()
 
   // Group videos by name
@@ -95,7 +98,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
 
   const handleSaveGroupName = async (oldName: string) => {
     if (!editGroupValue.trim()) {
-      alert('Video name cannot be empty')
+      alert(t('videoNameEmpty'))
       return
     }
 
@@ -114,7 +117,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
         router.refresh()
       })
       .catch(() => {
-        alert('Failed to update video name')
+        alert(t('failedToUpdateName'))
       })
       .finally(() => {
         setSavingGroupName(null)
@@ -192,7 +195,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
                             size="icon"
                             className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
                             onClick={(e) => handleStartEditGroupName(groupName, e)}
-                            title="Edit video name"
+                            title={t('editVideoName')}
                           >
                             <Pencil className="w-3 h-3" />
                           </Button>
@@ -200,18 +203,18 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
                         {hasProcessingVideos && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-primary-visible text-primary border border-primary-visible flex-shrink-0">
                             <div className="animate-spin rounded-full h-2.5 w-2.5 border-b border-primary"></div>
-                            {processingCount} Processing
+                            {processingCount} {t('processing')}
                           </span>
                         )}
                         {hasErrorVideos && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-destructive-visible text-destructive border border-destructive-visible flex-shrink-0">
-                            {errorCount} Error
+                            {errorCount} {t('error')}
                           </span>
                         )}
                         {hasApprovedVideos && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible flex-shrink-0">
                             <CheckCircle2 className="w-3 h-3" />
-                            {approvedCount} Approved
+                            {approvedCount} {t('approved')}
                           </span>
                         )}
                       </>
@@ -219,10 +222,10 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
                   </div>
                   {editingGroupName !== groupName && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {groupVideos.length} {groupVideos.length === 1 ? 'version' : 'versions'} •
-                      Latest: {latestVideo.versionLabel || `v${latestVideo.version}`}
+                      {groupVideos.length} {groupVideos.length === 1 ? t('versionSingular') : t('versions')} •
+                      {t('latestLabel')} {latestVideo.versionLabel || `v${latestVideo.version}`}
                       {enableRevisions && maxRevisions && (
-                        <> • Revisions {groupVideos.length}/{maxRevisions}</>
+                        <> • {t('revisionsLabel')} {groupVideos.length}/{maxRevisions}</>
                       )}
                     </p>
                   )}
@@ -242,7 +245,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
                 {/* Upload new version for this video */}
                 {projectStatus !== 'APPROVED' && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-3">Upload New Version</h4>
+                    <h4 className="text-sm font-medium mb-3">{t('uploadNewVersion')}</h4>
                     <VideoUpload
                       projectId={projectId}
                       videoName={groupName}
@@ -253,7 +256,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
 
                 {/* Version list */}
                 <div className="mt-5">
-                  <h4 className="text-sm font-medium mb-3">All Versions</h4>
+                  <h4 className="text-sm font-medium mb-3">{t('allVersions')}</h4>
                   <VideoList
                     videos={groupVideos.sort((a, b) => {
                       if (sortMode === 'alphabetical') {

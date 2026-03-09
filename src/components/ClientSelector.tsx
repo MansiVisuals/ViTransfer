@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Building2, User, Plus, Check } from 'lucide-react'
@@ -39,6 +40,8 @@ export function ClientSelector({
   onRecipientEmailChange,
   disabled = false
 }: ClientSelectorProps) {
+  const t = useTranslations('clients')
+  const tc = useTranslations('common')
   const [companySearch, setCompanySearch] = useState(companyName)
   const [contactSearch, setContactSearch] = useState(recipientName)
   const [companies, setCompanies] = useState<ClientCompany[]>([])
@@ -201,14 +204,14 @@ export function ClientSelector({
     <div className="space-y-3">
       {/* Company Selection */}
       <div className="space-y-1.5" ref={companyRef}>
-        <Label htmlFor="companyName" className="text-xs">Company/Brand (Optional)</Label>
+        <Label htmlFor="companyName" className="text-xs">{t('companyName')} ({tc('optional')})</Label>
         <div className="relative">
           <div className="relative">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               id="companyName"
               name="company-search-field"
-              placeholder="e.g., XYZ Corporation"
+              placeholder={t('companyNamePlaceholder')}
               value={companySearch}
               onChange={(e) => handleCompanyInputChange(e.target.value)}
               onFocus={() => companySearch.length >= 1 && setShowCompanyDropdown(true)}
@@ -232,7 +235,7 @@ export function ClientSelector({
           {showCompanyDropdown && (
             <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
               {loading ? (
-                <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
+                <div className="px-3 py-2 text-sm text-muted-foreground">{tc('loading')}</div>
               ) : (
                 <>
                   {companies.map((company) => (
@@ -247,7 +250,7 @@ export function ClientSelector({
                         <span>{company.name}</span>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {company.contactCount} contact{company.contactCount !== 1 ? 's' : ''}
+                        {company.contactCount} {company.contactCount !== 1 ? t('contactsPlural') : t('contact')}
                       </span>
                     </button>
                   ))}
@@ -258,11 +261,11 @@ export function ClientSelector({
                       onClick={handleCreateCompany}
                     >
                       <Plus className="w-4 h-4 text-primary" />
-                      <span>Create &quot;{companySearch.trim()}&quot;</span>
+                      <span>{t('addCompany')} &quot;{companySearch.trim()}&quot;</span>
                     </button>
                   )}
                   {companies.length === 0 && !showCreateCompanyOption && (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No matching companies</div>
+                    <div className="px-3 py-2 text-sm text-muted-foreground">{tc('noResults')}</div>
                   )}
                 </>
               )}
@@ -274,14 +277,14 @@ export function ClientSelector({
       {/* Client Contact */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5" ref={contactRef}>
-          <Label htmlFor="recipientName" className="text-xs">Client Name (Optional)</Label>
+          <Label htmlFor="recipientName" className="text-xs">{t('contactName')} ({tc('optional')})</Label>
           <div className="relative">
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="recipientName"
                 name="contact-search-field"
-                placeholder="e.g., John Doe"
+                placeholder={t('contactNamePlaceholder')}
                 value={contactSearch}
                 onChange={(e) => handleContactInputChange(e.target.value)}
                 onFocus={() => contactSearch.length >= 1 && setShowContactDropdown(true)}
@@ -324,12 +327,12 @@ export function ClientSelector({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="recipientEmail" className="text-xs">Client Email (Optional)</Label>
+          <Label htmlFor="recipientEmail" className="text-xs">{t('emailOptional')}</Label>
           <Input
             id="recipientEmail"
             name="client-email-field"
             type="email"
-            placeholder="e.g., client@example.com"
+            placeholder={t('emailPlaceholder')}
             value={recipientEmail}
             onChange={(e) => onRecipientEmailChange(e.target.value)}
             disabled={disabled}
@@ -345,7 +348,7 @@ export function ClientSelector({
         </div>
       </div>
       <p className="text-xs text-muted-foreground -mt-1">
-        Start typing to search your client directory. Selected contacts will auto-fill company and email.
+        {t('directoryDescription')}
       </p>
     </div>
   )

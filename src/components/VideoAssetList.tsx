@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   FileImage,
   FileVideo,
@@ -44,6 +45,7 @@ interface VideoAssetListProps {
 }
 
 export function VideoAssetList({ videoId, videoName, versionLabel, projectId, onAssetDeleted, refreshTrigger, defaultCollapsed = true }: VideoAssetListProps) {
+  const t = useTranslations('videos')
   const [assets, setAssets] = useState<VideoAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -79,7 +81,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   }, [fetchAssets, refreshTrigger])
 
   const handleDelete = async (assetId: string, fileName: string) => {
-    if (!confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+    if (!confirm(`${t('deleteAssetConfirm')} "${fileName}"?`)) {
       return
     }
 
@@ -100,7 +102,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
       .catch(() => {
         // Restore on error
         setAssets(previousAssets)
-        alert('Failed to delete asset')
+        alert(t('failedToDeleteAsset'))
       })
       .finally(() => {
         setDeletingId(null)
@@ -108,7 +110,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   }
 
   const getCategoryLabel = (category: string | null) => {
-    if (!category) return 'Other'
+    if (!category) return t('other')
     return category.charAt(0).toUpperCase() + category.slice(1)
   }
 
@@ -196,7 +198,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
         triggerDownload(url)
       })
       .catch(() => {
-        alert('Failed to download asset')
+        alert(t('failedToDownloadAsset'))
       })
   }
 
@@ -208,8 +210,8 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     // Toggle behavior: if current, remove it; if not current, set it
     const action = isCurrent ? 'remove' : 'set'
     const confirmMessage = isCurrent
-      ? `Remove "${fileName}" as the video thumbnail? The system-generated thumbnail will be used instead.`
-      : `Set "${fileName}" as the video thumbnail?`
+      ? t('removeThumbnailConfirm')
+      : t('setThumbnailConfirm')
 
     if (!confirm(confirmMessage)) {
       return
@@ -230,7 +232,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
         }
       })
       .catch(() => {
-        alert(`Failed to ${action} thumbnail`)
+        alert(action === 'set' ? t('failedToSetThumbnail') : t('failedToRemoveThumbnail'))
       })
       .finally(() => {
         setSettingThumbnail(null)
@@ -248,7 +250,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading assets...</span>
+        <span>{t('loadingAssets')}</span>
       </div>
     )
   }
@@ -265,7 +267,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
         <Package className="h-4 w-4" />
-        <span>No assets</span>
+        <span>{t('noAssets')}</span>
       </div>
     )
   }
@@ -278,7 +280,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
       >
         <Package className="h-4 w-4" />
-        <span>Assets ({assets.length})</span>
+        <span>{t('assets')} ({assets.length})</span>
         <ChevronDown className="h-4 w-4" />
       </button>
     )
@@ -294,7 +296,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
             className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <Package className="h-4 w-4" />
-            <span>Assets ({assets.length})</span>
+            <span>{t('assets')} ({assets.length})</span>
             <ChevronUp className="h-4 w-4" />
           </button>
           {assets.length > 0 && (
@@ -305,7 +307,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
               onClick={() => setShowCopyModal(true)}
             >
               <Copy className="h-4 w-4 mr-2" />
-              Copy to Version
+              {t('copyToVersion')}
             </Button>
           )}
         </div>
@@ -324,7 +326,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                   <span>{getCategoryLabel(asset.category)}</span>
                   {asset.uploadedBy === 'client' && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
-                      Client Upload
+                      {t('clientUpload')}
                     </span>
                   )}
                 </div>
@@ -337,7 +339,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                     size="icon"
                     onClick={() => handleSetThumbnail(asset.id, asset.fileName)}
                     disabled={settingThumbnail === asset.id}
-                    title={isCurrentThumbnail(asset) ? "Remove custom thumbnail (revert to system-generated)" : "Set as video thumbnail"}
+                    title={isCurrentThumbnail(asset) ? t('removeCustomThumbnail') : t('setAsThumbnail')}
                   >
                     {settingThumbnail === asset.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -351,7 +353,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDownload(asset.id, asset.fileName)}
-                  title="Download asset"
+                  title={t('downloadAsset')}
                 >
                   <Download className="h-4 w-4 text-primary" />
                 </Button>
@@ -361,7 +363,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                   size="icon"
                   onClick={() => handleDelete(asset.id, asset.fileName)}
                   disabled={deletingId === asset.id}
-                  title="Delete asset"
+                  title={t('deleteAsset')}
                 >
                   {deletingId === asset.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

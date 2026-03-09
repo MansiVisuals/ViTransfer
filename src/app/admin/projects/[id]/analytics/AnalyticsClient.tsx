@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -86,6 +87,9 @@ function useResponsivePageSize(rowHeight: number, headerOffset: number): number 
 }
 
 export default function AnalyticsClient({ id }: { id: string }) {
+  const t = useTranslations('analytics')
+  const tc = useTranslations('common')
+  const tp = useTranslations('projects')
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -143,7 +147,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
   if (loading) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading analytics...</p>
+        <p className="text-muted-foreground">{t('loadingAnalytics')}</p>
       </div>
     )
   }
@@ -152,9 +156,9 @@ export default function AnalyticsClient({ id }: { id: string }) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Project not found</p>
+          <p className="text-muted-foreground mb-4">{tc('noResults')}</p>
           <Link href="/admin/projects">
-            <Button>Back to Projects</Button>
+            <Button>{t('backToProject')}</Button>
           </Link>
         </div>
       </div>
@@ -171,8 +175,8 @@ export default function AnalyticsClient({ id }: { id: string }) {
             <Link href={`/admin/projects/${id}`}>
               <Button variant="ghost" size="default" className="justify-start px-3 mb-2">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Back to Project</span>
-                <span className="sm:hidden">Back</span>
+                <span className="hidden sm:inline">{t('backToProject')}</span>
+                <span className="sm:hidden">{tc('back')}</span>
               </Button>
             </Link>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
@@ -180,7 +184,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
               {project.title}
             </h1>
             {project.recipientName && (
-              <p className="text-muted-foreground mt-1">Client: {project.recipientName}</p>
+              <p className="text-muted-foreground mt-1">{project.recipientName}</p>
             )}
           </div>
         </div>
@@ -193,7 +197,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
                 <Eye className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Visits</p>
+                <p className="text-xs text-muted-foreground">{tp('visits')}</p>
                 <p className="text-base font-semibold tabular-nums">{stats.totalVisits.toLocaleString()}</p>
               </div>
             </div>
@@ -202,7 +206,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
                 <Users className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Unique</p>
+                <p className="text-xs text-muted-foreground">{t('unique')}</p>
                 <p className="text-base font-semibold tabular-nums">{stats.uniqueVisits.toLocaleString()}</p>
               </div>
             </div>
@@ -211,7 +215,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
                 <Download className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Downloads</p>
+                <p className="text-xs text-muted-foreground">{tp('downloads')}</p>
                 <p className="text-base font-semibold tabular-nums">{stats.totalDownloads.toLocaleString()}</p>
               </div>
             </div>
@@ -220,7 +224,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
                 <Video className="w-4 h-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Videos</p>
+                <p className="text-xs text-muted-foreground">{tp('videos')}</p>
                 <p className="text-base font-semibold tabular-nums">{stats.videoCount}</p>
               </div>
             </div>
@@ -230,20 +234,20 @@ export default function AnalyticsClient({ id }: { id: string }) {
         <div className="grid gap-4 lg:grid-cols-2 overflow-hidden">
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
-              <span className="text-sm font-medium">Videos in this Project</span>
-              <span className="text-xs text-muted-foreground">{videoStats.length} videos</span>
+              <span className="text-sm font-medium">{t('videosInProject')}</span>
+              <span className="text-xs text-muted-foreground">{t('videoCount', { count: videoStats.length })}</span>
             </div>
             <div className="overflow-x-hidden">
               {videoStats.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4 text-sm">No videos available</p>
+                <p className="text-center text-muted-foreground py-4 text-sm">{t('noVideosAvailable')}</p>
               ) : (
                 <div className="divide-y">
                   {/* Table Header */}
                   <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-muted-foreground bg-muted/20">
                     <span className="w-4 flex-shrink-0"></span>
-                    <span className="flex-1 min-w-0">Name</span>
-                    <span className="w-16 text-right">Versions</span>
-                    <span className="w-20 text-right">Downloads</span>
+                    <span className="flex-1 min-w-0">{tc('name')}</span>
+                    <span className="w-16 text-right">{t('versions')}</span>
+                    <span className="w-20 text-right">{tp('downloads')}</span>
                     <span className="w-4 flex-shrink-0"></span>
                   </div>
                   {videoStats.map((video) => {
@@ -275,7 +279,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
                               {video.versions.map((version) => (
                                 <div key={version.id} className="flex items-center justify-between gap-2 text-xs py-0.5">
                                   <span className="text-muted-foreground truncate">{version.versionLabel}</span>
-                                  <span className="font-medium tabular-nums">{version.downloads} downloads</span>
+                                  <span className="font-medium tabular-nums">{version.downloads} {tp('downloads').toLowerCase()}</span>
                                 </div>
                               ))}
                             </div>
@@ -291,19 +295,19 @@ export default function AnalyticsClient({ id }: { id: string }) {
 
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
-              <span className="text-sm font-medium">Project Activity</span>
-              <span className="text-xs text-muted-foreground">{activity.length} events</span>
+              <span className="text-sm font-medium">{t('projectActivity')}</span>
+              <span className="text-xs text-muted-foreground">{t('eventCount', { count: activity.length })}</span>
             </div>
             {/* Table Header */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground bg-muted/20 border-b">
-              <span className="w-24 flex-shrink-0">Type</span>
-              <span className="flex-1 min-w-0">Details</span>
-              <span className="w-32 hidden md:block">Date</span>
+              <span className="w-24 flex-shrink-0">{tc('type')}</span>
+              <span className="flex-1 min-w-0">{tc('details')}</span>
+              <span className="w-32 hidden md:block">{tc('date')}</span>
               <span className="w-4"></span>
             </div>
             <div className="overflow-x-hidden">
               {activity.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4 text-sm">No activity yet</p>
+                <p className="text-center text-muted-foreground py-4 text-sm">{t('noActivity')}</p>
               ) : (
                 <div className="divide-y">
                   {activity.slice((activityPage - 1) * activityPerPage, activityPage * activityPerPage).map((event) => {
@@ -326,18 +330,18 @@ export default function AnalyticsClient({ id }: { id: string }) {
                             <ActivityIcon className={`w-4 h-4 flex-shrink-0 ${iconColor}`} />
                             <span className="text-xs font-medium hidden sm:inline">
                               {event.type === 'AUTH' ? (
-                                event.accessMethod === 'OTP' ? 'OTP' :
-                                event.accessMethod === 'PASSWORD' ? 'Password' :
-                                event.accessMethod === 'GUEST' ? 'Guest' : 'Public'
+                                event.accessMethod === 'OTP' ? t('otp') :
+                                event.accessMethod === 'PASSWORD' ? tc('password') :
+                                event.accessMethod === 'GUEST' ? t('guest') : t('public')
                               ) : (
-                                event.assetIds ? 'ZIP' : event.assetId ? 'Asset' : 'Download'
+                                event.assetIds ? t('zip') : event.assetId ? t('asset') : tc('download')
                               )}
                             </span>
                           </div>
                           {/* Details */}
                           <span className="flex-1 min-w-0 text-muted-foreground truncate">
                             {event.type === 'AUTH' ? (
-                              event.email || (event.accessMethod === 'GUEST' ? 'Guest visitor' : 'Public visitor')
+                              event.email || (event.accessMethod === 'GUEST' ? t('guestVisitor') : t('publicVisitor'))
                             ) : (
                               event.videoName
                             )}
@@ -359,18 +363,18 @@ export default function AnalyticsClient({ id }: { id: string }) {
                             <div className="pl-6 text-xs space-y-1">
                               {/* Date - shown on mobile only */}
                               <div className="flex gap-2 md:hidden">
-                                <span className="text-muted-foreground">Date:</span>
+                                <span className="text-muted-foreground">{tc('date')}:</span>
                                 <span>{formatDateTime(event.createdAt)}</span>
                               </div>
                               {event.type === 'AUTH' ? (
                                 <>
                                   <div className="flex gap-2">
-                                    <span className="text-muted-foreground">Action:</span>
-                                    <span>Accessed the project</span>
+                                    <span className="text-muted-foreground">{tc('actions')}:</span>
+                                    <span>{t('accessedProject')}</span>
                                   </div>
                                   {event.email && (
                                     <div className="flex gap-2">
-                                      <span className="text-muted-foreground">Email:</span>
+                                      <span className="text-muted-foreground">{tc('email')}:</span>
                                       <span className="break-all">{event.email}</span>
                                     </div>
                                   )}
@@ -378,21 +382,21 @@ export default function AnalyticsClient({ id }: { id: string }) {
                               ) : (
                                 <>
                                   <div className="flex gap-2">
-                                    <span className="text-muted-foreground">Video:</span>
+                                    <span className="text-muted-foreground">{tp('video')}:</span>
                                     <span>{event.videoName}</span>
                                   </div>
                                   <div className="flex gap-2">
-                                    <span className="text-muted-foreground">Version:</span>
+                                    <span className="text-muted-foreground">{tc('version')}:</span>
                                     <span>{event.versionLabel}</span>
                                   </div>
                                   <div className="flex gap-2">
-                                    <span className="text-muted-foreground">Content:</span>
+                                    <span className="text-muted-foreground">{t('content')}:</span>
                                     <span>
                                       {event.assetFileNames && event.assetFileNames.length > 0
-                                        ? `ZIP (${event.assetFileNames.length} assets)`
+                                        ? t('zipAssets', { count: event.assetFileNames.length })
                                         : event.assetFileName
                                         ? event.assetFileName
-                                        : 'Full video file'}
+                                        : t('fullVideoFile')}
                                     </span>
                                   </div>
                                   {event.assetFileNames && event.assetFileNames.length > 0 && (
@@ -424,10 +428,10 @@ export default function AnalyticsClient({ id }: { id: string }) {
                     onClick={(e) => { e.stopPropagation(); setActivityPage(p => Math.max(1, p - 1)) }}
                     disabled={activityPage === 1}
                   >
-                    Previous
+                    {tc('previous')}
                   </Button>
                   <span className="text-xs text-muted-foreground">
-                    Page {activityPage} of {Math.ceil(activity.length / activityPerPage)}
+                    {tc('pageOf', { page: activityPage, pages: Math.ceil(activity.length / activityPerPage) })}
                   </span>
                   <Button
                     variant="outline"
@@ -435,7 +439,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
                     onClick={(e) => { e.stopPropagation(); setActivityPage(p => Math.min(Math.ceil(activity.length / activityPerPage), p + 1)) }}
                     disabled={activityPage >= Math.ceil(activity.length / activityPerPage)}
                   >
-                    Next
+                    {tc('next')}
                   </Button>
                 </div>
               )}

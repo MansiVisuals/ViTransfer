@@ -1,9 +1,16 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
-import { Monitor, Moon, Sun, Check, Upload, Trash2, Image as ImageIcon } from 'lucide-react'
+import { Monitor, Moon, Sun, Check, Upload, Trash2, Image as ImageIcon, Globe } from 'lucide-react'
 import { useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { EmailTemplatesEditor } from '@/components/settings/EmailTemplatesSection'
+
+const SUPPORTED_LANGUAGES = [
+  { code: 'en' },
+  { code: 'nl' },
+] as const
 
 // Accent color presets with HSL values for light and dark modes
 export const ACCENT_COLORS = {
@@ -22,6 +29,8 @@ export const ACCENT_COLORS = {
 export type AccentColorKey = keyof typeof ACCENT_COLORS
 
 interface AppearanceSectionProps {
+  language: string
+  setLanguage: (value: string) => void
   defaultTheme: string
   setDefaultTheme: (value: string) => void
   accentColor: string
@@ -42,6 +51,8 @@ interface AppearanceSectionProps {
 }
 
 export function AppearanceSection({
+  language,
+  setLanguage,
   defaultTheme,
   setDefaultTheme,
   accentColor,
@@ -60,40 +71,41 @@ export function AppearanceSection({
   show,
   setShow
 }: AppearanceSectionProps) {
+  const t = useTranslations('settings')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const themeOptions = [
-    { value: 'auto', label: 'Auto (System)', icon: Monitor, description: 'Follow device settings' },
-    { value: 'light', label: 'Light', icon: Sun, description: 'Always use light theme' },
-    { value: 'dark', label: 'Dark', icon: Moon, description: 'Always use dark theme' },
+    { value: 'auto', label: t('appearance.auto'), icon: Monitor, description: t('appearance.autoDescription') },
+    { value: 'light', label: t('appearance.light'), icon: Sun, description: t('appearance.lightDescription') },
+    { value: 'dark', label: t('appearance.dark'), icon: Moon, description: t('appearance.darkDescription') },
   ]
 
   return (
     <CollapsibleSection
       className="border-border"
-      title="Branding & Appearance"
-      description="Configure company identity, domain, theme, accent colors, and email templates"
+      title={t('appearance.title')}
+      description={t('appearance.description')}
       open={show}
       onOpenChange={setShow}
       contentClassName="space-y-4 border-t pt-4"
     >
       {/* Company Name */}
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label htmlFor="companyName">Company Name</Label>
+        <Label htmlFor="companyName">{t('appearance.companyName')}</Label>
         <Input
           id="companyName"
           type="text"
           value={companyName}
           onChange={(e) => setCompanyName(e.target.value)}
-          placeholder="e.g., Studio, Your Company Name"
+          placeholder={t('appearance.companyNamePlaceholder')}
         />
         <p className="text-xs text-muted-foreground">
-          Displayed in email notifications and throughout the application
+          {t('appearance.companyNameHint')}
         </p>
       </div>
 
       {/* Custom Logo Upload */}
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label>Custom Logo (SVG)</Label>
+        <Label>{t('appearance.customLogo')}</Label>
         <input
           ref={fileInputRef}
           type="file"
@@ -111,7 +123,7 @@ export function AppearanceSection({
           <div className="w-24 h-16 rounded-xl border border-border bg-card flex items-center justify-center overflow-hidden">
             {brandingLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={brandingLogoUrl} alt="Custom logo preview" className="w-full h-full object-contain" />
+              <img src={brandingLogoUrl} alt={t('appearance.logoPreview')} className="w-full h-full object-contain" />
             ) : (
               <ImageIcon className="w-6 h-6 text-muted-foreground" />
             )}
@@ -124,7 +136,7 @@ export function AppearanceSection({
               disabled={logoUploading}
             >
               <Upload className="w-4 h-4" />
-              {logoUploading ? 'Validating…' : brandingLogoUrl ? 'Replace Logo' : 'Upload Logo'}
+              {logoUploading ? t('appearance.validating') : brandingLogoUrl ? t('appearance.replaceLogo') : t('appearance.uploadLogo')}
             </button>
             <button
               type="button"
@@ -133,7 +145,7 @@ export function AppearanceSection({
               disabled={!brandingLogoUrl || logoUploading}
             >
               <Trash2 className="w-4 h-4" />
-              Remove
+              {t('appearance.removeLogo')}
             </button>
           </div>
         </div>
@@ -141,29 +153,29 @@ export function AppearanceSection({
           <p className="text-xs text-destructive font-medium">{logoError}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Upload an SVG up to 300 KB. Appears in app screens and emails. Favicons stay unchanged.
+            {t('appearance.logoHint')}
           </p>
         )}
       </div>
 
       {/* Application Domain */}
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label htmlFor="appDomain">Application Domain</Label>
+        <Label htmlFor="appDomain">{t('appearance.appDomain')}</Label>
         <Input
           id="appDomain"
           type="text"
           value={appDomain}
           onChange={(e) => setAppDomain(e.target.value)}
-          placeholder="e.g., https://yourdomain.com"
+          placeholder={t('appearance.appDomainPlaceholder')}
         />
         <p className="text-xs text-muted-foreground">
-          Include protocol (https://) and no trailing slash. Used for generating share links.
+          {t('appearance.appDomainHint')}
         </p>
       </div>
 
       {/* Theme Selection */}
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label>Default Theme</Label>
+        <Label>{t('appearance.defaultTheme')}</Label>
         <div className="grid grid-cols-3 gap-2">
           {themeOptions.map((option) => {
             const Icon = option.icon
@@ -188,13 +200,13 @@ export function AppearanceSection({
           })}
         </div>
         <p className="text-xs text-muted-foreground">
-          Users can still toggle the theme using the button in the header.
+          {t('appearance.themeToggleHint')}
         </p>
       </div>
 
       {/* Accent Color Selection */}
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label>Accent Color</Label>
+        <Label>{t('appearance.accentColor')}</Label>
         <div className="flex flex-wrap gap-3">
           {Object.entries(ACCENT_COLORS).map(([key, color]) => {
             const isSelected = accentColor === key
@@ -216,21 +228,44 @@ export function AppearanceSection({
                 >
                   {isSelected && <Check className="w-5 h-5 text-white" />}
                 </div>
-                <span className="text-xs text-muted-foreground">{color.name}</span>
+                <span className="text-xs text-muted-foreground">{t(`appearance.${key}` as any)}</span>
               </button>
             )
           })}
         </div>
         <p className="text-xs text-muted-foreground">
-          Choose an accent color for buttons, links, and highlights throughout the application.
+          {t('appearance.accentColorHint')}
         </p>
       </div>
 
       {/* Email Templates */}
-      <EmailTemplatesEditor 
+      <EmailTemplatesEditor
         emailHeaderStyle={emailHeaderStyle}
         setEmailHeaderStyle={setEmailHeaderStyle}
       />
+
+      {/* Language */}
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <Label className="flex items-center gap-2">
+          <Globe className="w-4 h-4" />
+          {t('language.label')}
+        </Label>
+        <Select value={language} onValueChange={setLanguage}>
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <SelectItem key={lang.code} value={lang.code}>
+                {t(`language.${lang.code}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {t('language.hint')}
+        </p>
+      </div>
     </CollapsibleSection>
   )
 }

@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AccentColorProvider } from "@/components/AccentColorProvider";
 import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { prisma } from "@/lib/db";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -63,11 +65,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch admin appearance settings server-side
+  // Fetch admin appearance settings and locale server-side
   const appearance = await getAppearanceSettings()
+  const locale = await getLocale()
+  const messages = await getMessages()
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -134,9 +138,11 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.className} flex flex-col min-h-dvh overflow-x-hidden`}>
-        <AccentColorProvider />
-        <ServiceWorkerProvider />
-        <main className="flex-1 min-h-0 flex flex-col">{children}</main>
+        <NextIntlClientProvider messages={messages}>
+          <AccentColorProvider />
+          <ServiceWorkerProvider />
+          <main className="flex-1 min-h-0 flex flex-col">{children}</main>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

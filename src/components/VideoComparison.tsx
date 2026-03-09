@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Video } from '@prisma/client'
 import { X, ChevronDown } from 'lucide-react'
 import { Button } from './ui/button'
@@ -31,6 +32,7 @@ export default function VideoComparison({
   timestampDisplayMode = 'TIMECODE',
   onClose,
 }: VideoComparisonProps) {
+  const t = useTranslations('videos')
   // Sort versions by version number ascending so selectors are ordered logically
   const sorted = [...videoVersions].sort((a, b) => a.version - b.version)
 
@@ -291,7 +293,7 @@ export default function VideoComparison({
       <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <h2 className="text-sm font-semibold text-foreground truncate">
-            Compare Versions
+            {t('compareVersions')}
           </h2>
           <span className="text-xs text-muted-foreground hidden sm:inline">
             {versionA?.name}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Comment } from '@prisma/client'
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward } from 'lucide-react'
 import { getUserColor } from '@/lib/utils'
@@ -320,6 +321,8 @@ export default function CustomVideoControls({
   timestampDisplayMode = 'TIMECODE',
   onMarkerClick,
 }: CustomVideoControlsProps) {
+  const t = useTranslations('controls')
+  const tComments = useTranslations('comments')
   const [isDragging, setIsDragging] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null)
@@ -630,7 +633,7 @@ export default function CustomVideoControls({
                     ${colors.bg} ${colors.ring} ${colors.text}
                     ${isHovered ? 'scale-125 shadow-xl z-30' : 'z-10'}
                   `}
-                  aria-label={`Comment by ${primaryMarker.authorName || 'Anonymous'} at ${formatTime(primaryMarker.timestamp)}`}
+                  aria-label={`Comment by ${primaryMarker.authorName || tComments('anonymous')} at ${formatTime(primaryMarker.timestamp)}`}
                 >
                   <span className="text-[11px] sm:text-xs font-semibold leading-none">
                     {primaryMarker.initials}
@@ -670,7 +673,7 @@ export default function CustomVideoControls({
                             </div>
                             <div className="flex-1 min-w-0">
                               <span className="font-semibold text-[10px] text-white truncate block">
-                                {marker.authorName || 'Anonymous'}
+                                {marker.authorName || tComments('anonymous')}
                               </span>
                             </div>
                             <span className="text-[9px] text-white/70 font-mono">
@@ -685,7 +688,7 @@ export default function CustomVideoControls({
                     })}
                     {group.length > 3 && (
                       <p className="text-[9px] text-white/60 mt-2 pt-2 border-t border-white/20">
-                        +{group.length - 3} more
+                        {t('moreComments', { count: group.length - 3 })}
                       </p>
                     )}
                   </div>
@@ -725,8 +728,8 @@ export default function CustomVideoControls({
           <button
             onClick={() => onFrameStep('backward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label="Previous frame"
-            title="Previous frame (Ctrl+J)"
+            aria-label={t('previousFrame')}
+            title={`${t('previousFrame')} (Ctrl+J)`}
           >
             <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
@@ -735,8 +738,8 @@ export default function CustomVideoControls({
           <button
             onClick={onPlayPause}
             className="p-2.5 sm:p-3 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-            title={isPlaying ? 'Pause (Ctrl+Space)' : 'Play (Ctrl+Space)'}
+            aria-label={isPlaying ? t('pauseVideo') : t('playVideo')}
+            title={isPlaying ? `${t('pauseVideo')} (Ctrl+Space)` : `${t('playVideo')} (Ctrl+Space)`}
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
@@ -749,8 +752,8 @@ export default function CustomVideoControls({
           <button
             onClick={() => onFrameStep('forward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label="Next frame"
-            title="Next frame (Ctrl+L)"
+            aria-label={t('nextFrame')}
+            title={`${t('nextFrame')} (Ctrl+L)`}
           >
             <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
@@ -772,8 +775,8 @@ export default function CustomVideoControls({
             <button
               onClick={onToggleMute}
               className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-              title={isMuted ? 'Unmute' : 'Mute'}
+              aria-label={isMuted ? t('unmute') : t('mute')}
+              title={isMuted ? t('unmute') : t('mute')}
             >
               {isMuted || volume === 0 ? (
                 <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -806,8 +809,8 @@ export default function CustomVideoControls({
           <button
             onClick={onToggleFullscreen}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
+            title={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
           >
             {isFullscreen ? (
               <Minimize className="w-4 h-4 sm:w-5 sm:h-5 text-white" />

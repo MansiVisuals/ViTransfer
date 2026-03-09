@@ -428,10 +428,379 @@ export function getPlaceholdersForType(type: EmailTemplateType): PlaceholderDefi
 }
 
 /**
+ * Get available placeholders with localized descriptions
+ */
+export async function getLocalizedPlaceholdersForType(
+  type: EmailTemplateType,
+  locale?: string
+): Promise<PlaceholderDefinition[]> {
+  const placeholders = getPlaceholdersForType(type)
+  if (!locale) return placeholders
+
+  try {
+    const messages = (await import(`../locales/${locale}.json`)).default
+    const descriptions = messages.settings?.emailTemplates?.placeholderDescriptions || {}
+
+    return placeholders.map(p => {
+      // Extract key name from {{KEY}} format
+      const keyName = p.key.replace(/^\{\{|\}\}$/g, '')
+      return {
+        ...p,
+        description: descriptions[keyName] || p.description,
+      }
+    })
+  } catch {
+    return placeholders
+  }
+}
+
+/**
  * Get the default template for a type
  */
 export function getDefaultTemplate(type: EmailTemplateType): DefaultTemplate | undefined {
   return DEFAULT_TEMPLATES.find(t => t.type === type)
+}
+
+/**
+ * Load email translation messages for a given locale
+ * Falls back to English if locale file not found
+ */
+export async function loadEmailMessages(locale: string = 'en'): Promise<Record<string, any>> {
+  try {
+    const messages = (await import(`../locales/${locale}.json`)).default
+    return messages.email || {}
+  } catch {
+    try {
+      const messages = (await import('../locales/en.json')).default
+      return messages.email || {}
+    } catch {
+      return {}
+    }
+  }
+}
+
+/**
+ * Load all locale messages for a given locale
+ * Falls back to English if locale file not found
+ */
+export async function loadLocaleMessages(locale: string = 'en'): Promise<Record<string, any>> {
+  try {
+    return (await import(`../locales/${locale}.json`)).default
+  } catch {
+    try {
+      return (await import('../locales/en.json')).default
+    } catch {
+      return {}
+    }
+  }
+}
+
+/**
+ * Get localized template metadata (name + description) for a template type
+ */
+export async function getLocalizedTemplateMetadata(
+  type: EmailTemplateType,
+  locale?: string
+): Promise<{ name: string; description: string }> {
+  const meta = TEMPLATE_METADATA.find(m => m.type === type)
+  const defaultName = meta?.name || type
+  const defaultDescription = meta?.description || ''
+
+  if (!locale) return { name: defaultName, description: defaultDescription }
+
+  try {
+    const messages = await loadLocaleMessages(locale)
+    const settingsMessages = messages.settings?.emailTemplates || {}
+    return {
+      name: settingsMessages.templateNames?.[type] || defaultName,
+      description: settingsMessages.templateDescriptions?.[type] || defaultDescription,
+    }
+  } catch {
+    return { name: defaultName, description: defaultDescription }
+  }
+}
+
+/**
+ * Build a localized default template from email messages
+ * Uses the same HTML structure as DEFAULT_TEMPLATES but with translated text
+ */
+export function buildLocalizedDefaultTemplate(
+  type: EmailTemplateType,
+  messages: Record<string, any>
+): DefaultTemplate | undefined {
+  const common = messages.common || {}
+  const greeting = common.greeting || 'Hi <strong>{{RECIPIENT_NAME}}</strong>,'
+  const questionsFooter = common.questionsFooter || 'Questions? Simply reply to this email.'
+  const projectLabel = common.projectLabel || 'Project'
+  const deliverableLabel = common.deliverableLabel || 'Deliverable'
+  const deliverablesLabel = common.deliverablesLabel || 'Deliverables'
+  const passwordLabel = common.passwordLabel || 'Password'
+  const securityNoticeLabel = common.securityNoticeLabel || 'Security Notice'
+  const dueDateLabel = common.dueDateLabel || 'Due Date'
+
+  const meta = TEMPLATE_METADATA.find(m => m.type === type)
+  if (!meta) return undefined
+
+  switch (type) {
+    case 'NEW_VERSION': {
+      const t = messages.newVersion || {}
+      return {
+        type: 'NEW_VERSION',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'New Version Available: {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+  ${greeting}
+</p>
+
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || 'A new version of {{VIDEO_NAME}} (<span class="accent-text">{{VERSION_LABEL}}</span>) is ready for your review in {{PROJECT_TITLE}}.'}
+</p>
+
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">${projectLabel}</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">${deliverableLabel}</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span></div>
+</div>
+
+{{PASSWORD_NOTICE}}
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View Project'}:{{SHARE_URL}}}}
+</div>
+
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  ${questionsFooter}
+</p>`,
+      }
+    }
+    case 'PROJECT_APPROVED': {
+      const t = messages.projectApproved || {}
+      return {
+        type: 'PROJECT_APPROVED',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || '{{PROJECT_TITLE}} - Approved and Ready for Download',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+  ${greeting}
+</p>
+
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  {{APPROVAL_MESSAGE}}
+</p>
+
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">${projectLabel}</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">${deliverableLabel}</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
+</div>
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'Download Files'}:{{SHARE_URL}}}}
+</div>
+
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  ${questionsFooter}
+</p>`,
+      }
+    }
+    case 'COMMENT_NOTIFICATION': {
+      const t = messages.commentNotification || {}
+      return {
+        type: 'COMMENT_NOTIFICATION',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'New Comment on {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+  ${greeting}
+</p>
+
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || "There's a new comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}."}
+</p>
+
+<div class="info-box">
+  <div class="info-label">{{AUTHOR_NAME}} &nbsp;{{TIMECODE}}</div>
+  <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
+</div>
+
+{{ATTACHMENTS}}
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View Project'}:{{SHARE_URL}}}}
+</div>
+
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  ${questionsFooter}
+</p>`,
+      }
+    }
+    case 'ADMIN_COMMENT_NOTIFICATION': {
+      const t = messages.adminCommentNotification || {}
+      return {
+        type: 'ADMIN_COMMENT_NOTIFICATION',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'New Comment from {{CLIENT_NAME}}: {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || '<strong>{{CLIENT_NAME}}</strong> left a comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}.'}
+</p>
+
+<div class="info-box">
+  <div class="info-label">{{CLIENT_NAME}} &nbsp;{{TIMECODE}}</div>
+  <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
+</div>
+
+{{ATTACHMENTS}}
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View in Admin Panel'}:{{ADMIN_URL}}}}
+</div>`,
+      }
+    }
+    case 'ADMIN_PROJECT_APPROVED': {
+      const t = messages.adminProjectApproved || {}
+      return {
+        type: 'ADMIN_PROJECT_APPROVED',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || '{{CLIENT_NAME}} {{APPROVAL_STATUS}}: {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || '<strong>{{CLIENT_NAME}}</strong> has {{APPROVAL_ACTION}} {{VIDEO_NAME}} in {{PROJECT_TITLE}}.'}
+</p>
+
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">${projectLabel}</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">${deliverableLabel}</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
+</div>
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View in Admin Panel'}:{{ADMIN_URL}}}}
+</div>`,
+      }
+    }
+    case 'PROJECT_GENERAL': {
+      const t = messages.projectGeneral || {}
+      return {
+        type: 'PROJECT_GENERAL',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'Ready for Review: {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+  ${greeting}
+</p>
+
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || '{{PROJECT_TITLE}} is ready for your review.'}
+</p>
+
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">${projectLabel}</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
+  <div class="info-label">${deliverablesLabel}</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_LIST}}</div>
+</div>
+
+{{PASSWORD_NOTICE}}
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View Project'}:{{SHARE_URL}}}}
+</div>
+
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  ${questionsFooter}
+</p>`,
+      }
+    }
+    case 'PASSWORD': {
+      const t = messages.password || {}
+      return {
+        type: 'PASSWORD',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'Access Password: {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+  ${greeting}
+</p>
+
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || 'Use this password to access <strong>{{PROJECT_TITLE}}</strong>. We send it separately for security.'}
+</p>
+
+<div class="info-box" style="text-align: center;">
+  <div class="info-label">${passwordLabel}</div>
+  <div style="display: inline-block; padding: 12px 18px; border-radius: 10px; border: 1px dashed currentColor; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 18px; letter-spacing: 1px; word-break: break-all; background: #ffffff;">{{PASSWORD}}</div>
+</div>
+
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  ${t.keepConfidential || 'Keep this password confidential. Pair it with the review link we sent separately.'}
+</p>`,
+      }
+    }
+    case 'PASSWORD_RESET': {
+      const t = messages.passwordReset || {}
+      return {
+        type: 'PASSWORD_RESET',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'Reset Your Password - {{COMPANY_NAME}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+  ${greeting}
+</p>
+
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || 'We received a request to reset your password. Click the button below to create a new one.'}
+</p>
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'Reset Password'}:{{RESET_URL}}}}
+</div>
+
+<div class="secondary-box">
+  <div class="info-label">${securityNoticeLabel}</div>
+  <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+    <li>${t.expiresIn || 'This link expires in <strong>{{EXPIRY_TIME}}</strong>'}</li>
+    <li>${t.singleUse || 'Can only be used once'}</li>
+    <li>${t.sessionsLogout || 'All sessions will be logged out after reset'}</li>
+  </ul>
+</div>
+
+<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
+  ${t.ignoreNotice || "If you didn't request this, you can safely ignore this email."}
+</p>`,
+      }
+    }
+    case 'DUE_DATE_REMINDER': {
+      const t = messages.dueDateReminder || {}
+      return {
+        type: 'DUE_DATE_REMINDER',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'Deadline Reminder: {{PROJECT_TITLE}} due {{REMINDER_TYPE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || '<strong>{{PROJECT_TITLE}}</strong> is due <strong>{{REMINDER_TYPE}}</strong>.'}
+</p>
+
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">${projectLabel}</div>
+  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
+  <div class="info-label">${dueDateLabel}</div>
+  <div style="font-size: 14px; line-height: 1.8;">{{DUE_DATE}}</div>
+</div>
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View in Admin Panel'}:{{ADMIN_URL}}}}
+</div>`,
+      }
+    }
+    default:
+      return undefined
+  }
 }
 
 /**
@@ -458,7 +827,7 @@ export function extractPlaceholders(content: string): string[] {
 /**
  * Get template from database or return default
  */
-export async function getEmailTemplate(type: EmailTemplateType): Promise<{
+export async function getEmailTemplate(type: EmailTemplateType, locale?: string): Promise<{
   subject: string
   bodyContent: string
   isCustom: boolean
@@ -480,7 +849,20 @@ export async function getEmailTemplate(type: EmailTemplateType): Promise<{
     // Fall back to default if database error
   }
 
-  // Return default template
+  // Return localized default template if locale provided
+  if (locale) {
+    const messages = await loadEmailMessages(locale)
+    const localizedTemplate = buildLocalizedDefaultTemplate(type, messages)
+    if (localizedTemplate) {
+      return {
+        subject: localizedTemplate.subject,
+        bodyContent: localizedTemplate.bodyContent,
+        isCustom: false,
+      }
+    }
+  }
+
+  // Fallback to hardcoded English default
   const defaultTemplate = getDefaultTemplate(type)
   if (!defaultTemplate) {
     throw new Error(`No default template found for type: ${type}`)
@@ -573,8 +955,9 @@ interface DbEmailTemplate {
 
 /**
  * Get all templates with their current status
+ * When locale is provided, template names, descriptions, and default content are localized
  */
-export async function getAllTemplates(): Promise<Array<{
+export async function getAllTemplates(locale?: string): Promise<Array<{
   type: EmailTemplateType
   name: string
   description: string
@@ -588,18 +971,52 @@ export async function getAllTemplates(): Promise<Array<{
   const customTemplates: DbEmailTemplate[] = await (prisma as any).emailTemplate?.findMany() || []
   const customMap = new Map<string, DbEmailTemplate>(customTemplates.map(t => [t.type, t]))
 
+  // Load locale messages for template names/descriptions and default content
+  let settingsMessages: Record<string, any> = {}
+  let emailMessages: Record<string, any> = {}
+  if (locale) {
+    try {
+      const messages = await loadLocaleMessages(locale)
+      settingsMessages = messages.settings?.emailTemplates || {}
+      emailMessages = messages.email || {}
+    } catch {
+      // Fall back to English
+    }
+  }
+
+  const templateNames = settingsMessages.templateNames || {}
+  const templateDescriptions = settingsMessages.templateDescriptions || {}
+
   // Merge with metadata
   return TEMPLATE_METADATA.map(meta => {
     const custom = customMap.get(meta.type)
-    const defaultTemplate = getDefaultTemplate(meta.type)
+
+    // For default (non-custom) content, use localized template if locale provided
+    let subject = ''
+    let bodyContent = ''
+
+    if (custom) {
+      subject = custom.subject
+      bodyContent = custom.bodyContent
+    } else if (locale && Object.keys(emailMessages).length > 0) {
+      const localizedTemplate = buildLocalizedDefaultTemplate(meta.type, emailMessages)
+      subject = localizedTemplate?.subject || ''
+      bodyContent = localizedTemplate?.bodyContent || ''
+    }
+
+    if (!subject || !bodyContent) {
+      const defaultTemplate = getDefaultTemplate(meta.type)
+      subject = subject || defaultTemplate?.subject || ''
+      bodyContent = bodyContent || defaultTemplate?.bodyContent || ''
+    }
 
     return {
       type: meta.type,
-      name: meta.name,
-      description: meta.description,
+      name: templateNames[meta.type] || meta.name,
+      description: templateDescriptions[meta.type] || meta.description,
       category: meta.category,
-      subject: custom?.subject || defaultTemplate?.subject || '',
-      bodyContent: custom?.bodyContent || defaultTemplate?.bodyContent || '',
+      subject,
+      bodyContent,
       isCustom: custom?.isCustom ?? false,
       enabled: custom?.enabled ?? true,
     }

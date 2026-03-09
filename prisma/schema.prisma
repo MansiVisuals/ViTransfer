@@ -276,6 +276,9 @@ model NotificationQueue {
 model Settings {
   id String @id @default("default")
 
+  // Language / i18n
+  language String @default("en") // UI language code (en, nl, de, fr, etc.)
+
   // Appearance
   defaultTheme String @default("auto") // "light", "dark", or "auto" (system preference)
   accentColor  String @default("blue") // Preset accent color name
@@ -620,6 +623,7 @@ model ClientContact {
   company   ClientCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name      String
   email     String?
+  language  String?  // Preferred language for emails (null = use system default)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

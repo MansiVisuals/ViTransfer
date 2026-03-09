@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { CheckCircle2, Film, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +25,9 @@ export default function ThumbnailGrid({
   projectDescription,
   clientName,
 }: ThumbnailGridProps) {
+  const t = useTranslations('share')
+  const tv = useTranslations('videos')
+
   // Sort videos: For review (not approved) first, then approved, both alphabetically
   const videoNames = useMemo(() => {
     const names = Object.keys(videosByName)
@@ -70,7 +74,7 @@ export default function ThumbnailGrid({
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Select a video to begin
+          {t('selectVideoToBegin')}
         </p>
       </div>
 
@@ -141,7 +145,7 @@ export default function ThumbnailGrid({
                   {name}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 text-left">
-                  {versionCount} {versionCount === 1 ? 'version' : 'versions'}
+                  {versionCount} {versionCount === 1 ? tv('versions').slice(0, -1) : tv('versions')}
                 </p>
               </div>
             </button>

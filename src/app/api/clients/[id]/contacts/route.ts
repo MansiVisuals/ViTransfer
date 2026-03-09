@@ -4,6 +4,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
+import { SUPPORTED_LOCALES } from '@/i18n/locale'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
-    const { name, email } = parsed.data
+    const { name, email, language } = parsed.data
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
@@ -91,11 +92,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
+    // Validate language if provided
+    const contactLanguage = language?.trim() || null
+    if (contactLanguage && !SUPPORTED_LOCALES.includes(contactLanguage as any)) {
+      return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
+    }
+
     const contact = await prisma.clientContact.create({
       data: {
         companyId: id,
         name: sanitizedName,
-        email: trimmedEmail
+        email: trimmedEmail,
+        language: contactLanguage,
       }
     })
 

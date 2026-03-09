@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Play, Pause, SkipBack, SkipForward, Columns2, SplitSquareHorizontal } from 'lucide-react'
 import { secondsToTimecode, formatCommentTimestamp } from '@/lib/timecode'
 
@@ -54,6 +55,7 @@ export default function VideoComparisonControls({
   const [isDragging, setIsDragging] = useState(false)
   const [hoveredTime, setHoveredTime] = useState<number | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
+  const t = useTranslations('videos')
 
   const progress = videoDuration > 0 ? (currentTime / videoDuration) * 100 : 0
 
@@ -170,8 +172,8 @@ export default function VideoComparisonControls({
           <button
             onClick={() => onFrameStep('backward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label="Previous frame"
-            title="Previous frame (Ctrl+J)"
+            aria-label={t('previousFrame')}
+            title={t('previousFrame') + ' (Ctrl+J)'}
           >
             <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
@@ -179,8 +181,8 @@ export default function VideoComparisonControls({
           <button
             onClick={onPlayPause}
             className="p-2.5 sm:p-3 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-            title={isPlaying ? 'Pause (Ctrl+Space)' : 'Play (Ctrl+Space)'}
+            aria-label={isPlaying ? t('decreaseSpeed') : t('playPause')}
+            title={(isPlaying ? t('decreaseSpeed') : t('playPause')) + ' (Ctrl+Space)'}
           >
             {isPlaying ? (
               <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
@@ -192,8 +194,8 @@ export default function VideoComparisonControls({
           <button
             onClick={() => onFrameStep('forward')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label="Next frame"
-            title="Next frame (Ctrl+L)"
+            aria-label={t('nextFrame')}
+            title={t('nextFrame') + ' (Ctrl+L)'}
           >
             <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </button>
@@ -215,8 +217,8 @@ export default function VideoComparisonControls({
               onSpeedChange(next)
             }}
             className="px-2 py-1 sm:px-2.5 sm:py-1.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors text-white text-xs sm:text-sm font-mono touch-manipulation"
-            aria-label="Playback speed"
-            title="Cycle speed (Ctrl+, / Ctrl+.)"
+            aria-label={t('playbackSpeed')}
+            title={t('cycleSpeed')}
           >
             {playbackSpeed}x
           </button>
@@ -225,8 +227,8 @@ export default function VideoComparisonControls({
           <button
             onClick={() => onModeChange(mode === 'side-by-side' ? 'slider' : 'side-by-side')}
             className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label={mode === 'side-by-side' ? 'Switch to slider mode' : 'Switch to side-by-side mode'}
-            title={mode === 'side-by-side' ? 'Slider mode' : 'Side-by-side mode'}
+            aria-label={mode === 'side-by-side' ? t('switchToSlider') : t('switchToSideBySide')}
+            title={mode === 'side-by-side' ? t('sliderMode') : t('sideBySideMode')}
           >
             {mode === 'side-by-side' ? (
               <SplitSquareHorizontal className="w-4 h-4 sm:w-5 sm:h-5 text-white" />

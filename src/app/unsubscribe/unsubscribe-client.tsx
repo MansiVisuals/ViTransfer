@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, CheckCircle2, MailX } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import BrandLogo from '@/components/BrandLogo'
+import { useTranslations } from 'next-intl'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
 export function UnsubscribeClient({ token }: { token: string }) {
+  const t = useTranslations('unsubscribe')
+  const tc = useTranslations('common')
   const [effectiveToken, setEffectiveToken] = useState(token)
   const hasToken = useMemo(() => effectiveToken.trim().length > 0, [effectiveToken])
   const [status, setStatus] = useState<Status>('idle')
@@ -63,17 +66,17 @@ export function UnsubscribeClient({ token }: { token: string }) {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <BrandLogo height={64} className="mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-foreground">ViTransfer</h1>
-            <p className="text-sm text-muted-foreground mt-2">Video Review, Feedback & Deliverables</p>
+            <h1 className="text-3xl font-bold text-foreground">{tc('viTransfer')}</h1>
+            <p className="text-sm text-muted-foreground mt-2">{tc('videoReviewTagline')}</p>
           </div>
 
           <Card className="border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MailX className="w-5 h-5" />
-                Email Preferences
+                {t('title')}
               </CardTitle>
-              <CardDescription>Unsubscribe from project email notifications.</CardDescription>
+              <CardDescription>{t('description')}</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
@@ -81,7 +84,7 @@ export function UnsubscribeClient({ token }: { token: string }) {
                 <div className="p-3 bg-warning-visible border-2 border-warning-visible rounded-lg">
                   <p className="text-sm text-warning font-medium flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                    This unsubscribe link is missing or invalid. Please use the link from your email.
+                    {t('invalidLink')}
                   </p>
                 </div>
               )}
@@ -90,7 +93,7 @@ export function UnsubscribeClient({ token }: { token: string }) {
                 <div className="p-3 bg-success-visible border-2 border-success-visible rounded-lg">
                   <p className="text-sm text-success font-medium flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                    You’re unsubscribed from project email notifications.
+                    {t('success')}
                   </p>
                 </div>
               )}
@@ -99,7 +102,7 @@ export function UnsubscribeClient({ token }: { token: string }) {
                 <div className="p-3 bg-destructive-visible border-2 border-destructive-visible rounded-lg">
                   <p className="text-sm text-destructive font-medium flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                    Something went wrong. Please try again.
+                    {t('failed')}
                   </p>
                 </div>
               )}
@@ -111,11 +114,11 @@ export function UnsubscribeClient({ token }: { token: string }) {
                 disabled={!hasToken || status === 'loading' || status === 'success'}
               >
                 <MailX className="w-4 h-4 mr-2" />
-                {status === 'loading' ? 'Unsubscribing…' : 'Unsubscribe'}
+                {status === 'loading' ? t('unsubscribing') : t('unsubscribe')}
               </Button>
 
               <p className="text-xs text-muted-foreground">
-                Stops email notifications only. Your share link still works.
+                {t('hint')}
               </p>
             </CardContent>
           </Card>

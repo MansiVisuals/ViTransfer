@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Label } from './ui/label'
 import { Input } from './ui/input'
@@ -20,6 +21,7 @@ export function VideoAssetUploadQueue({
   onUploadComplete,
   maxConcurrent = 3
 }: VideoAssetUploadQueueProps) {
+  const t = useTranslations('videos')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -55,7 +57,7 @@ export function VideoAssetUploadQueue({
 
   function validateAssetFile(file: File): { valid: boolean; error?: string } {
     if (file.size === 0) {
-      return { valid: false, error: 'File is empty' }
+      return { valid: false, error: t('fileEmpty') }
     }
 
     // Don't validate against category - just check if file type is allowed
@@ -144,7 +146,7 @@ export function VideoAssetUploadQueue({
 
         {/* File Selection */}
         <div className="space-y-2">
-          <Label htmlFor={`asset-file-${videoId}`}>Asset Files (Multiple)</Label>
+          <Label htmlFor={`asset-file-${videoId}`}>{t('assetFiles')}</Label>
           <div className="flex items-center gap-2">
             <Input
               ref={fileInputRef}
@@ -161,12 +163,12 @@ export function VideoAssetUploadQueue({
               className="w-full"
             >
               <Upload className="w-4 h-4 mr-2" />
-              {selectedFiles.length > 0 ? 'Change Files' : 'Drag & Drop or Click to Choose'}
+              {selectedFiles.length > 0 ? t('changeFiles') : t('dragDropOrClick')}
             </Button>
           </div>
           {selectedFiles.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              Selected: {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} ({(selectedFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(2)} MB total)
+              {t('selected')} {selectedFiles.length} {selectedFiles.length !== 1 ? t('files') : t('file')} ({(selectedFiles.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024)).toFixed(2)} {t('mbTotal')})
             </p>
           )}
         </div>
@@ -179,7 +181,7 @@ export function VideoAssetUploadQueue({
             className="w-full"
           >
             <Upload className="w-4 h-4 mr-2" />
-            Add to Upload Queue
+            {t('addToQueue')}
           </Button>
         )}
       </div>
@@ -190,27 +192,27 @@ export function VideoAssetUploadQueue({
           <div className="flex gap-4 text-sm">
             {stats.uploading > 0 && (
               <span className="font-medium text-primary">
-                {stats.uploading} uploading
+                {stats.uploading} {t('uploading')}
               </span>
             )}
             {stats.queued > 0 && (
               <span className="text-muted-foreground">
-                {stats.queued} queued
+                {stats.queued} {t('queued')}
               </span>
             )}
             {stats.paused > 0 && (
               <span className="text-warning">
-                {stats.paused} paused
+                {stats.paused} {t('paused')}
               </span>
             )}
             {stats.completed > 0 && (
               <span className="text-success">
-                {stats.completed} completed
+                {stats.completed} {t('completed')}
               </span>
             )}
             {stats.error > 0 && (
               <span className="text-destructive">
-                {stats.error} failed
+                {stats.error} {t('failed')}
               </span>
             )}
           </div>
@@ -224,7 +226,7 @@ export function VideoAssetUploadQueue({
               className="text-xs"
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Clear Completed
+              {t('clearCompleted')}
             </Button>
           )}
         </div>
@@ -234,7 +236,7 @@ export function VideoAssetUploadQueue({
       {queue.length > 0 && (
         <div className="space-y-2">
           <h5 className="text-sm font-medium text-muted-foreground">
-            Upload Queue ({queue.length})
+            {t('uploadQueue')} ({queue.length})
           </h5>
           <div className="space-y-2">
             {queue.map((upload) => (
@@ -255,7 +257,7 @@ export function VideoAssetUploadQueue({
       {/* Info message when queue is empty */}
       {queue.length === 0 && (
         <div className="text-center py-4 text-sm text-muted-foreground">
-          Select files above to add them to the upload queue. You can upload up to {maxConcurrent} files simultaneously.
+          {t('selectFilesHint')} {maxConcurrent} {t('filesSimultaneously')}
         </div>
       )}
     </div>

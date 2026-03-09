@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
+import { useTranslations } from 'next-intl'
 
 interface VideoProcessingSettingsSectionProps {
   defaultPreviewResolution: string
@@ -41,70 +42,71 @@ export function VideoProcessingSettingsSection({
   show,
   setShow,
 }: VideoProcessingSettingsSectionProps) {
+  const t = useTranslations('settings')
   return (
     <CollapsibleSection
       className="border-border"
-      title="Default Project Settings"
-      description="Defaults applied when creating new projects"
+      title={t('videoProcessing.title')}
+      description={t('videoProcessing.description')}
       open={show}
       onOpenChange={setShow}
       contentClassName="space-y-4 border-t pt-4"
     >
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label>Default Preview Resolution</Label>
+        <Label>{t('videoProcessing.previewResolution')}</Label>
         <Select value={defaultPreviewResolution} onValueChange={setDefaultPreviewResolution}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="720p">720p (1280x720 or 720x1280 for vertical)</SelectItem>
-            <SelectItem value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</SelectItem>
+            <SelectItem value="720p">{t('videoProcessing.resolution720')}</SelectItem>
+            <SelectItem value="1080p">{t('videoProcessing.resolution1080')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          New projects will use this resolution by default. Can be overridden per project.
+          {t('videoProcessing.resolutionHint')}
         </p>
       </div>
 
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label>Default Comment Timestamp Display</Label>
+        <Label>{t('videoProcessing.timestampDisplay')}</Label>
         <Select value={defaultTimestampDisplay} onValueChange={setDefaultTimestampDisplay}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="TIMECODE">Timecode (HH:MM:SS:FF)</SelectItem>
-            <SelectItem value="AUTO">Simple Time (MM:SS / HH:MM:SS)</SelectItem>
+            <SelectItem value="TIMECODE">{t('videoProcessing.timecode')}</SelectItem>
+            <SelectItem value="AUTO">{t('videoProcessing.simpleTime')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Used for new projects by default. You can change this per project in Project Settings.
+          {t('videoProcessing.timestampHint')}
         </p>
       </div>
 
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="watermarkEnabled">Enable Watermarks</Label>
-            <p className="text-xs text-muted-foreground">Add watermarks to processed videos</p>
+            <Label htmlFor="watermarkEnabled">{t('videoProcessing.enableWatermarks')}</Label>
+            <p className="text-xs text-muted-foreground">{t('videoProcessing.enableWatermarksHint')}</p>
           </div>
           <Switch id="watermarkEnabled" checked={defaultWatermarkEnabled} onCheckedChange={setDefaultWatermarkEnabled} />
         </div>
 
         {defaultWatermarkEnabled && (
           <div className="space-y-2 pt-2 mt-2 border-t border-border">
-            <Label htmlFor="watermark">Custom Watermark Text</Label>
+            <Label htmlFor="watermark">{t('videoProcessing.customWatermarkText')}</Label>
             <Input
               id="watermark"
               value={defaultWatermarkText}
               onChange={(e) => setDefaultWatermarkText(e.target.value)}
-              placeholder="e.g., PREVIEW, CONFIDENTIAL"
+              placeholder={t('videoProcessing.watermarkPlaceholder')}
               maxLength={100}
             />
             <p className="text-xs text-muted-foreground">
-              Leave empty to use project-specific format. New projects will use this as default.
+              {t('videoProcessing.watermarkHint')}
               <br />
-              <span className="text-warning">Only letters, numbers, spaces, and these characters: - _ . ( )</span>
+              <span className="text-warning">{t('videoProcessing.watermarkCharsAllowed')}</span>
             </p>
           </div>
         )}
@@ -113,11 +115,9 @@ export function VideoProcessingSettingsSection({
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5 flex-1">
-            <Label htmlFor="defaultUsePreviewForApprovedPlayback">Use Preview for Approved Playback</Label>
+            <Label htmlFor="defaultUsePreviewForApprovedPlayback">{t('videoProcessing.usePreviewApproved')}</Label>
             <p className="text-xs text-muted-foreground">
-              After approval, play the browser-compatible preview instead of the original file.
-              Useful when originals use codecs browsers cannot play (ProRes, PCM audio).
-              Downloads always provide the original file.
+              {t('videoProcessing.usePreviewApprovedHint')}
             </p>
           </div>
           <Switch
@@ -128,7 +128,7 @@ export function VideoProcessingSettingsSection({
         </div>
         {defaultUsePreviewForApprovedPlayback && defaultWatermarkEnabled && (
           <p className="text-xs text-muted-foreground italic">
-            When enabled with watermarks, a clean preview without watermarks will be generated when videos are approved.
+            {t('videoProcessing.cleanPreviewNote')}
           </p>
         )}
       </div>
@@ -136,10 +136,9 @@ export function VideoProcessingSettingsSection({
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5 flex-1">
-            <Label htmlFor="defaultAllowClientAssetUpload">Allow Client File Attachments</Label>
+            <Label htmlFor="defaultAllowClientAssetUpload">{t('videoProcessing.clientAttachments')}</Label>
             <p className="text-xs text-muted-foreground">
-              Allow clients to attach files (images, documents, audio) to their comments.
-              New projects will use this as default. Can be overridden per project.
+              {t('videoProcessing.clientAttachmentsHint')}
             </p>
           </div>
           <Switch
@@ -153,14 +152,12 @@ export function VideoProcessingSettingsSection({
       <div className="space-y-4 border p-4 rounded-lg bg-muted/30">
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5 flex-1">
-            <Label htmlFor="autoApproveProject">Auto-approve project when all videos are approved</Label>
+            <Label htmlFor="autoApproveProject">{t('videoProcessing.autoApprove')}</Label>
             <p className="text-xs text-muted-foreground">
-              When enabled, the project is marked as APPROVED when all unique videos have at least one approved
-              version.
+              {t('videoProcessing.autoApproveHint')}
             </p>
             <p className="text-xs text-warning mt-2">
-              Disable this if you upload videos one-by-one and don&apos;t want the project to auto-approve until
-              you&apos;re ready.
+              {t('videoProcessing.autoApproveDisableHint')}
             </p>
           </div>
           <Switch id="autoApproveProject" checked={autoApproveProject} onCheckedChange={setAutoApproveProject} />

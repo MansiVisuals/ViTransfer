@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Paperclip, Loader2, CheckCircle2, AlertCircle, Upload, X, FileIcon, RotateCcw } from 'lucide-react'
 import { Button } from './ui/button'
 import {
@@ -92,6 +93,8 @@ export default function CommentAttachmentButton({
   disabled = false,
   maxFiles: maxFilesProp,
 }: CommentAttachmentButtonProps) {
+  const t = useTranslations('comments')
+  const tc = useTranslations('common')
   const MAX_FILES = maxFilesProp ?? DEFAULT_MAX_FILES
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<FileUploadItem[]>([])
@@ -161,7 +164,7 @@ export default function CommentAttachmentButton({
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
-        throw new Error(err.error || 'Failed to create asset record')
+        throw new Error(err.error || t('failedToCreateAsset'))
       }
 
       const data = await response.json()
@@ -169,7 +172,7 @@ export default function CommentAttachmentButton({
       fileName = data.fileName
       category = data.category
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create asset record'
+      const message = error instanceof Error ? error.message : t('failedToCreateAsset')
       setItems((prev) =>
         prev.map((i) => (i.id === item.id ? { ...i, status: 'error', error: message } : i))
       )
@@ -362,7 +365,7 @@ export default function CommentAttachmentButton({
         onClick={() => setOpen(true)}
         disabled={disabled}
         className="h-8 w-8 flex-shrink-0"
-        title="Attach files"
+        title={t('attachFiles')}
       >
         <Paperclip className="w-4 h-4" />
       </Button>
@@ -370,7 +373,7 @@ export default function CommentAttachmentButton({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Attach Files</DialogTitle>
+            <DialogTitle>{t('attachFilesTitle')}</DialogTitle>
           </DialogHeader>
 
           {/* Drop zone */}
@@ -393,11 +396,11 @@ export default function CommentAttachmentButton({
               <Upload className="w-8 h-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center">
                 {atLimit
-                  ? 'Maximum files reached'
-                  : 'Drag & drop files here or click to browse'}
+                  ? t('maxFilesReached')
+                  : t('dragDropFiles')}
               </p>
               <p className="text-xs text-muted-foreground/60 text-center">
-                {ALLOWED_TYPES_DISPLAY}
+                {t('supportedFileTypes')}
               </p>
               <input
                 ref={fileInputRef}
@@ -414,14 +417,14 @@ export default function CommentAttachmentButton({
           {isUploading && (
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Uploading {uploadProgress.current} of {uploadProgress.total}...
+              {tc('loading')} {uploadProgress.current}/{uploadProgress.total}
             </p>
           )}
 
           {allDone && (
             <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
-              All files uploaded
+              {t('allFilesUploaded')}
             </p>
           )}
 
@@ -476,7 +479,7 @@ export default function CommentAttachmentButton({
                         type="button"
                         onClick={() => retryFile(item.id)}
                         className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                        title="Retry"
+                        title={tc('retry')}
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                       </button>
@@ -514,7 +517,7 @@ export default function CommentAttachmentButton({
               {items.length}/{MAX_FILES}
             </span>
             {allDone ? (
-              <Button onClick={handleDone}>Done</Button>
+              <Button onClick={handleDone}>{tc('done')}</Button>
             ) : (
               <Button
                 onClick={startUpload}
@@ -523,10 +526,10 @@ export default function CommentAttachmentButton({
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
+                    {tc('loading')}
                   </>
                 ) : (
-                  'Upload'
+                  tc('upload')
                 )}
               </Button>
             )}

@@ -1,0 +1,54 @@
+import { prisma } from '@/lib/db'
+
+export const SUPPORTED_LOCALES = ['en', 'nl'] as const
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
+
+export const LOCALE_NAMES: Record<string, string> = {
+  en: 'English',
+  nl: 'Nederlands',
+}
+
+/**
+ * Get the configured language from the database.
+ * Falls back to 'en' if not set or on error.
+ */
+export async function getConfiguredLocale(): Promise<string> {
+  try {
+    const settings = await prisma.settings.findUnique({
+      where: { id: 'default' },
+      select: { language: true },
+    })
+    return settings?.language || 'en'
+  } catch {
+    return 'en'
+  }
+}
+
+/**
+ * Load locale messages for server-side use (e.g., email templates).
+ * Returns the full messages object for the given locale.
+ */
+export async function loadLocaleMessages(locale: string): Promise<Record<string, any>> {
+  try {
+    return (await import(`../locales/${locale}.json`)).default
+  } catch {
+    return (await import('../locales/en.json')).default
+  }
+}
+
+/**
+ * Get available locales by checking which locale files exist.
+ * Only returns locales that have a corresponding JSON file.
+ */
+export function getAvailableLocales(): Array<{ code: string; name: string }> {
+  return SUPPORTED_LOCALES
+    .filter(code => {
+      try {
+        require(`../locales/${code}.json`)
+        return true
+      } catch {
+        return false
+      }
+    })
+    .map(code => ({ code, name: LOCALE_NAMES[code] || code }))
+}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from './ui/dialog'
 import { AlertTriangle } from 'lucide-react'
@@ -19,39 +20,41 @@ export function UnapproveModal({
   onUnapproveAll,
   processing,
 }: UnapproveModalProps) {
+  const t = useTranslations('unapprove')
+  const tc = useTranslations('common')
   return (
     <Dialog open={show} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-warning" />
-            Unapprove Project
+            {t('title')}
           </DialogTitle>
           <DialogDescription>
-            You are about to change the project status from APPROVED back to IN REVIEW.
+            {t('description')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="bg-muted/30 border border-border rounded-lg p-4 space-y-2 text-sm">
             <p className="font-semibold">
-              What would you like to do with the approved videos?
+              {t('whatToDo')}
             </p>
             <ul className="space-y-1 ml-4 list-disc text-muted-foreground">
-              <li><strong>Unapprove All:</strong> Unapprove the project AND all approved videos (removes access to original quality downloads)</li>
-              <li><strong>Project Only:</strong> Only change project status, keep videos approved (clients retain original quality access)</li>
+              <li><strong>{t('unapproveAll')}</strong> {t('unapproveAllDescription')}</li>
+              <li><strong>{t('projectOnly')}</strong> {t('projectOnlyDescription')}</li>
             </ul>
           </div>
 
           <div className="bg-accent/50 border border-border rounded-lg p-3 text-xs text-muted-foreground">
-            <strong>Tip:</strong> Use &quot;Project Only&quot; if you need to make changes to the project without affecting client access to approved videos.
+            <strong>{t('tip')}</strong> {t('tipUse')} &quot;{t('projectOnlyButton')}&quot; {t('tipDescription')}
           </div>
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-row">
           <DialogClose asChild>
             <Button variant="outline" disabled={processing}>
-              Cancel
+              {tc('cancel')}
             </Button>
           </DialogClose>
           <Button
@@ -59,14 +62,14 @@ export function UnapproveModal({
             onClick={onUnapproveProjectOnly}
             disabled={processing}
           >
-            {processing ? 'Processing...' : 'Project Only'}
+            {processing ? t('processing') : t('projectOnlyButton')}
           </Button>
           <Button
             variant="destructive"
             onClick={onUnapproveAll}
             disabled={processing}
           >
-            {processing ? 'Processing...' : 'Unapprove All'}
+            {processing ? t('processing') : t('unapproveAllButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -12,8 +12,11 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ThemeToggle from '@/components/ThemeToggle'
+import { useTranslations } from 'next-intl'
 
 export default function AdminSharePage() {
+  const t = useTranslations('projects')
+  const tc = useTranslations('common')
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -406,7 +409,7 @@ export default function AdminSharePage() {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{tc('loading')}</p>
       </div>
     )
   }
@@ -417,11 +420,11 @@ export default function AdminSharePage() {
       <div className="fixed inset-0 bg-background flex items-center justify-center p-4">
         <Card className="bg-card">
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">Project not found</p>
+            <p className="text-muted-foreground mb-4">{t('projectNotFound')}</p>
             <Link href="/admin/projects">
               <Button>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Projects
+                {t('backToProjects')}
               </Button>
             </Link>
           </CardContent>
@@ -445,7 +448,7 @@ export default function AdminSharePage() {
 
   const clientDisplayName = (() => {
     const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
-    return project.companyName || primaryRecipient?.name || primaryRecipient?.email || 'Client'
+    return project.companyName || primaryRecipient?.name || primaryRecipient?.email || t('client')
   })()
 
   const showCommentPanel = !project.hideFeedback && !hideComments
@@ -465,11 +468,11 @@ export default function AdminSharePage() {
             size="sm"
             onClick={() => router.push(projectUrl)}
             className="bg-card/95 backdrop-blur-sm"
-            title="Back to project"
+            title={t('backToProject')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Back to Project</span>
-            <span className="sm:hidden">Back</span>
+            <span className="hidden sm:inline">{t('backToProject')}</span>
+            <span className="sm:hidden">{tc('back')}</span>
           </Button>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -510,7 +513,7 @@ export default function AdminSharePage() {
             <Card className="bg-card">
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
-                  {tokensLoading ? 'Loading video...' : 'No videos are ready for review yet.'}
+                  {tokensLoading ? t('loadingVideo') : t('noVideosReadyForReview')}
                 </p>
               </CardContent>
             </Card>

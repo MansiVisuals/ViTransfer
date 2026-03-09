@@ -11,6 +11,7 @@ import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { ChevronDown, ChevronUp, Plus, Send, Trash2, Save } from 'lucide-react'
 import { apiDelete, apiFetch, apiPatch, apiPost } from '@/lib/api-client'
 import { NOTIFICATION_EVENT_TYPES, type NotificationEventType } from '@/lib/external-notifications/constants'
+import { useTranslations } from 'next-intl'
 
 type Provider = 'GOTIFY' | 'NTFY' | 'PUSHOVER' | 'TELEGRAM'
 
@@ -31,13 +32,13 @@ interface ExternalNotificationsSectionProps {
   setShow: (value: boolean) => void
 }
 
-const EVENT_LABELS: Record<NotificationEventType, string> = {
-  SHARE_ACCESS: 'Share Page Access',
-  ADMIN_ACCESS: 'Admin Login',
-  CLIENT_COMMENT: 'New Comments',
-  VIDEO_APPROVAL: 'Video Approvals',
-  SECURITY_ALERT: 'Security Alerts',
-  DUE_DATE_REMINDER: 'Due Date Reminders',
+const EVENT_LABEL_KEYS: Record<NotificationEventType, string> = {
+  SHARE_ACCESS: 'sharePageAccess',
+  ADMIN_ACCESS: 'adminLogin',
+  CLIENT_COMMENT: 'newComments',
+  VIDEO_APPROVAL: 'videoApprovals',
+  SECURITY_ALERT: 'securityAlerts',
+  DUE_DATE_REMINDER: 'dueDateReminders',
 }
 
 function createDefaultSubscriptions(): Record<NotificationEventType, boolean> {
@@ -48,6 +49,8 @@ function createDefaultSubscriptions(): Record<NotificationEventType, boolean> {
 }
 
 export function ExternalNotificationsContent({ active, showIntro = true }: { active: boolean; showIntro?: boolean }) {
+  const t = useTranslations('settings.externalNotifications')
+  const tc = useTranslations('common')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [destinations, setDestinations] = useState<DestinationRow[]>([])
@@ -79,12 +82,12 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
     try {
       const response = await apiFetch('/api/settings/notifications')
       if (!response.ok) {
-        throw new Error('Failed to load push notification destinations')
+        throw new Error(t('failedToLoad'))
       }
       const data = await response.json()
       setDestinations(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load destinations')
+      setError(err instanceof Error ? err.message : t('failedToLoad'))
     } finally {
       setLoading(false)
     }
@@ -99,17 +102,17 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
   const providerHelp = useMemo(() => {
     switch (newProvider) {
       case 'GOTIFY':
-        return 'Send notifications to a self-hosted Gotify server.'
+        return t('gotifyHint')
       case 'NTFY':
-        return 'Send notifications to an ntfy topic (self-hosted or ntfy.sh).'
+        return t('ntfyHint')
       case 'PUSHOVER':
-        return 'Send notifications using Pushover (mobile push).'
+        return t('pushoverHint')
       case 'TELEGRAM':
-        return 'Send notifications using a Telegram bot.'
+        return t('telegramHint')
       default:
         return ''
     }
-  }, [newProvider])
+  }, [newProvider, t])
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -158,7 +161,7 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
       resetNewForm()
       await loadDestinations()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create destination')
+      setError(err instanceof Error ? err.message : t('failedToCreate'))
     }
   }
 
@@ -180,7 +183,7 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
       await apiPatch(`/api/settings/notifications/${row.id}`, payload)
       await loadDestinations()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update destination')
+      setError(err instanceof Error ? err.message : t('failedToUpdate'))
     }
   }
 
@@ -195,7 +198,7 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
       })
       await loadDestinations()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete destination')
+      setError(err instanceof Error ? err.message : t('failedToDelete'))
     }
   }
 
@@ -204,7 +207,7 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
     try {
       await apiPost(`/api/settings/notifications/${id}/test`, {})
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to queue test notification')
+      setError(err instanceof Error ? err.message : t('failedToQueueTest'))
     }
   }
 
@@ -213,23 +216,23 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="newGotifyBaseUrl">Gotify Base URL</Label>
+            <Label htmlFor="newGotifyBaseUrl">{t('gotifyUrl')}</Label>
             <Input
               id="newGotifyBaseUrl"
               type="url"
               value={newGotifyBaseUrl}
               onChange={(e) => setNewGotifyBaseUrl(e.target.value)}
-              placeholder="https://gotify.example.com"
+              placeholder={t('gotifyUrlPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="newGotifyToken">App Token</Label>
+            <Label htmlFor="newGotifyToken">{t('appToken')}</Label>
             <PasswordInput
               id="newGotifyToken"
               value={newGotifyAppToken}
               onChange={(e) => setNewGotifyAppToken(e.target.value)}
-              placeholder="Gotify app token"
+              placeholder={t('appTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -241,34 +244,34 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="newNtfyServerUrl">Server URL (Optional)</Label>
+            <Label htmlFor="newNtfyServerUrl">{t('serverUrl')}</Label>
             <Input
               id="newNtfyServerUrl"
               type="url"
               value={newNtfyServerUrl}
               onChange={(e) => setNewNtfyServerUrl(e.target.value)}
-              placeholder="https://ntfy.sh (leave empty for default)"
+              placeholder={t('serverUrlPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="newNtfyTopic">Topic</Label>
+            <Label htmlFor="newNtfyTopic">{t('topic')}</Label>
             <Input
               id="newNtfyTopic"
               type="text"
               value={newNtfyTopic}
               onChange={(e) => setNewNtfyTopic(e.target.value)}
-              placeholder="your-topic"
+              placeholder={t('topicPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="newNtfyToken">Access Token (Optional)</Label>
+            <Label htmlFor="newNtfyToken">{t('accessToken')}</Label>
             <PasswordInput
               id="newNtfyToken"
               value={newNtfyAccessToken}
               onChange={(e) => setNewNtfyAccessToken(e.target.value)}
-              placeholder="Bearer token (optional)"
+              placeholder={t('accessTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -280,22 +283,22 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="newPushoverUserKey">User Key</Label>
+            <Label htmlFor="newPushoverUserKey">{t('userKey')}</Label>
             <PasswordInput
               id="newPushoverUserKey"
               value={newPushoverUserKey}
               onChange={(e) => setNewPushoverUserKey(e.target.value)}
-              placeholder="Pushover user key"
+              placeholder={t('userKeyPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="newPushoverApiToken">API Token</Label>
+            <Label htmlFor="newPushoverApiToken">{t('apiToken')}</Label>
             <PasswordInput
               id="newPushoverApiToken"
               value={newPushoverApiToken}
               onChange={(e) => setNewPushoverApiToken(e.target.value)}
-              placeholder="Pushover application token"
+              placeholder={t('apiTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -307,23 +310,23 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="newTelegramChatId">Chat ID</Label>
+            <Label htmlFor="newTelegramChatId">{t('chatId')}</Label>
             <Input
               id="newTelegramChatId"
               type="text"
               value={newTelegramChatId}
               onChange={(e) => setNewTelegramChatId(e.target.value)}
-              placeholder="123456789"
+              placeholder={t('chatIdPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="newTelegramBotToken">Bot Token</Label>
+            <Label htmlFor="newTelegramBotToken">{t('botToken')}</Label>
             <PasswordInput
               id="newTelegramBotToken"
               value={newTelegramBotToken}
               onChange={(e) => setNewTelegramBotToken(e.target.value)}
-              placeholder="Telegram bot token"
+              placeholder={t('botTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -344,34 +347,34 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
 
       {showIntro && (
         <div className="text-sm text-muted-foreground">
-          Configure one or more destinations below.
+          {t('configureBelow')}
         </div>
       )}
 
       <div className="space-y-4 border p-4 rounded-lg bg-muted/30">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <Label className="text-base">Add Destination</Label>
+                <Label className="text-base">{t('addDestination')}</Label>
                 <p className="text-xs text-muted-foreground mt-1">{providerHelp}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="newName">Name</Label>
-                <Input id="newName" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Admin Phone" />
+                <Label htmlFor="newName">{tc('name')}</Label>
+                <Input id="newName" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('namePlaceholder')} />
               </div>
               <div className="space-y-2">
-                <Label>Provider</Label>
+                <Label>{t('provider')}</Label>
                 <Select value={newProvider} onValueChange={(v) => setNewProvider(v as Provider)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="GOTIFY">Gotify</SelectItem>
-                    <SelectItem value="NTFY">ntfy</SelectItem>
-                    <SelectItem value="PUSHOVER">Pushover</SelectItem>
-                    <SelectItem value="TELEGRAM">Telegram</SelectItem>
+                    <SelectItem value="GOTIFY">{t('gotify')}</SelectItem>
+                    <SelectItem value="NTFY">{t('ntfy')}</SelectItem>
+                    <SelectItem value="PUSHOVER">{t('pushover')}</SelectItem>
+                    <SelectItem value="TELEGRAM">{t('telegram')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -380,12 +383,12 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
             {renderNewProviderFields()}
 
             <div className="space-y-3 border-2 border-border p-4 rounded-lg bg-accent/5">
-              <h4 className="font-semibold text-sm">Send Notifications For:</h4>
+              <h4 className="font-semibold text-sm">{t('sendFor')}</h4>
               <div className="space-y-3">
                 {NOTIFICATION_EVENT_TYPES.map((eventType) => (
                   <div key={eventType} className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label className="text-sm font-normal">{EVENT_LABELS[eventType]}</Label>
+                      <Label className="text-sm font-normal">{t(EVENT_LABEL_KEYS[eventType])}</Label>
                     </div>
                     <Switch
                       checked={!!newSubscriptions[eventType]}
@@ -406,20 +409,20 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
                 className="w-full sm:w-auto"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Destination
+                {t('addDestination')}
               </Button>
               <Button type="button" variant="outline" onClick={resetNewForm} className="w-full sm:w-auto">
-                Reset
+                {tc('reset')}
               </Button>
             </div>
           </div>
 
       <div className="space-y-3">
-        <Label className="text-base">Destinations</Label>
+        <Label className="text-base">{t('destinations')}</Label>
 
         {destinations.length === 0 && (
           <div className="text-sm text-muted-foreground border p-4 rounded-lg bg-muted/30">
-            No push notification destinations configured yet.
+            {t('noDestinations')}
           </div>
         )}
 
@@ -436,7 +439,7 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
                   <span className="text-xs text-muted-foreground">({dest.provider})</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {dest.hasSecrets ? 'Configured' : 'Secrets not configured'} • Updated{' '}
+                  {dest.hasSecrets ? t('configured') : t('secretsNotConfigured')} • {tc('updated')}{' '}
                   {new Date(dest.updatedAt).toLocaleString()}
                 </div>
               </div>
@@ -459,11 +462,12 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
 }
 
 export function ExternalNotificationsSection({ show, setShow }: ExternalNotificationsSectionProps) {
+  const t = useTranslations('settings.externalNotifications')
   return (
     <CollapsibleSection
       className="border-border"
-      title="Push Notifications"
-      description="Configure push notifications to Gotify, ntfy, Pushover, and more"
+      title={t('title')}
+      description={t('description')}
       open={show}
       onOpenChange={setShow}
       contentClassName="space-y-6 border-t pt-4"
@@ -484,6 +488,8 @@ function DestinationEditor({
   onDelete: (id: string) => Promise<void>
   onTest: (id: string) => Promise<void>
 }) {
+  const t = useTranslations('settings.externalNotifications')
+  const tc = useTranslations('common')
   const [name, setName] = useState(dest.name)
   const [subscriptions, setSubscriptions] = useState<Record<string, boolean>>(dest.subscriptions || {})
 
@@ -541,15 +547,15 @@ function DestinationEditor({
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label>Gotify Base URL</Label>
+            <Label>{t('gotifyUrl')}</Label>
             <Input value={gotifyBaseUrl} onChange={(e) => setGotifyBaseUrl(e.target.value)} className="font-mono text-sm" />
           </div>
           <div className="space-y-2">
-            <Label>App Token {dest.hasSecrets ? '(leave empty to keep current)' : ''}</Label>
+            <Label>{t('appToken')} {dest.hasSecrets ? `(${t('leaveEmptyKeep')})` : ''}</Label>
             <PasswordInput
               value={gotifyAppToken}
               onChange={(e) => setGotifyAppToken(e.target.value)}
-              placeholder={dest.hasSecrets ? '••••••••' : 'Gotify app token'}
+              placeholder={dest.hasSecrets ? '••••••••' : t('appTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -561,19 +567,19 @@ function DestinationEditor({
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label>Server URL (Optional)</Label>
+            <Label>{t('serverUrl')}</Label>
             <Input value={ntfyServerUrl} onChange={(e) => setNtfyServerUrl(e.target.value)} className="font-mono text-sm" />
           </div>
           <div className="space-y-2">
-            <Label>Topic</Label>
+            <Label>{t('topic')}</Label>
             <Input value={ntfyTopic} onChange={(e) => setNtfyTopic(e.target.value)} className="font-mono text-sm" />
           </div>
           <div className="space-y-2">
-            <Label>Access Token (Optional)</Label>
+            <Label>{t('accessToken')}</Label>
             <PasswordInput
               value={ntfyAccessToken}
               onChange={(e) => setNtfyAccessToken(e.target.value)}
-              placeholder={dest.hasSecrets ? '••••••••' : 'Bearer token (optional)'}
+              placeholder={dest.hasSecrets ? '••••••••' : t('accessTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -585,20 +591,20 @@ function DestinationEditor({
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label>User Key {dest.hasSecrets ? '(leave empty to keep current)' : ''}</Label>
+            <Label>{t('userKey')} {dest.hasSecrets ? `(${t('leaveEmptyKeep')})` : ''}</Label>
             <PasswordInput
               value={pushoverUserKey}
               onChange={(e) => setPushoverUserKey(e.target.value)}
-              placeholder={dest.hasSecrets ? '••••••••' : 'Pushover user key'}
+              placeholder={dest.hasSecrets ? '••••••••' : t('userKeyPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
           <div className="space-y-2">
-            <Label>API Token {dest.hasSecrets ? '(leave empty to keep current)' : ''}</Label>
+            <Label>{t('apiToken')} {dest.hasSecrets ? `(${t('leaveEmptyKeep')})` : ''}</Label>
             <PasswordInput
               value={pushoverApiToken}
               onChange={(e) => setPushoverApiToken(e.target.value)}
-              placeholder={dest.hasSecrets ? '••••••••' : 'Pushover application token'}
+              placeholder={dest.hasSecrets ? '••••••••' : t('apiTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -610,15 +616,15 @@ function DestinationEditor({
       return (
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label>Chat ID</Label>
+            <Label>{t('chatId')}</Label>
             <Input value={telegramChatId} onChange={(e) => setTelegramChatId(e.target.value)} className="font-mono text-sm" />
           </div>
           <div className="space-y-2">
-            <Label>Bot Token {dest.hasSecrets ? '(leave empty to keep current)' : ''}</Label>
+            <Label>{t('botToken')} {dest.hasSecrets ? `(${t('leaveEmptyKeep')})` : ''}</Label>
             <PasswordInput
               value={telegramBotToken}
               onChange={(e) => setTelegramBotToken(e.target.value)}
-              placeholder={dest.hasSecrets ? '••••••••' : 'Telegram bot token'}
+              placeholder={dest.hasSecrets ? '••••••••' : t('botTokenPlaceholder')}
               className="font-mono text-sm"
             />
           </div>
@@ -633,23 +639,23 @@ function DestinationEditor({
     <div className="px-4 pb-4 space-y-4">
       <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Name</Label>
+          <Label>{tc('name')}</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
       </div>
 
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-        <Label className="text-base">Provider Configuration</Label>
+        <Label className="text-base">{t('providerConfig')}</Label>
         {renderProviderFields()}
       </div>
 
       <div className="space-y-3 border-2 border-border p-4 rounded-lg bg-accent/5">
-        <h4 className="font-semibold text-sm">Send Notifications For:</h4>
+        <h4 className="font-semibold text-sm">{t('sendFor')}</h4>
         <div className="space-y-3">
           {NOTIFICATION_EVENT_TYPES.map((eventType) => (
             <div key={eventType} className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-sm font-normal">{EVENT_LABELS[eventType]}</Label>
+                <Label className="text-sm font-normal">{t(EVENT_LABEL_KEYS[eventType])}</Label>
               </div>
               <Switch
                 checked={!!subscriptions[eventType]}
@@ -663,15 +669,15 @@ function DestinationEditor({
       <div className="flex flex-col sm:flex-row gap-3">
         <Button type="button" onClick={() => void onSave(dest, buildUpdates())} disabled={!canSave} className="w-full sm:w-auto">
           <Save className="w-4 h-4 mr-2" />
-          Save
+          {tc('save')}
         </Button>
         <Button type="button" variant="outline" onClick={() => void onTest(dest.id)} className="w-full sm:w-auto">
           <Send className="w-4 h-4 mr-2" />
-          Send Test
+          {t('sendTest')}
         </Button>
         <Button type="button" variant="destructive" onClick={() => void onDelete(dest.id)} className="w-full sm:w-auto">
           <Trash2 className="w-4 h-4 mr-2" />
-          Delete
+          {tc('delete')}
         </Button>
       </div>
     </div>

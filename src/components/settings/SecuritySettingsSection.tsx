@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { Clock, AlertTriangle, CheckCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 function formatDurationSetting(value: string, unit: string, fallbackValue = 15): string {
   const parsedValue = Number.parseInt(value, 10)
@@ -118,21 +119,23 @@ export function SecuritySettingsSection({
   onRemoveDomain,
   blocklistsLoading,
 }: SecuritySettingsSectionProps) {
+  const t = useTranslations('settings')
+  const tc = useTranslations('common')
   return (
     <CollapsibleSection
       className="border-border"
-      title="Advanced Security Settings"
-      description="Configure advanced security options"
+      title={t('security.title')}
+      description={t('security.description')}
       open={showSecuritySettings}
       onOpenChange={setShowSecuritySettings}
       contentClassName="space-y-4 border-t pt-4"
     >
           <div className="p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
             <p className="text-sm font-semibold text-warning">
-              Warning: Advanced Configuration
+              {t('security.warning')}
             </p>
             <p className="text-xs text-warning font-medium mt-1">
-              These settings control critical security features including rate limiting, hotlink protection, and access controls. Modifying these values without proper understanding may impact system functionality and security. Only adjust if you are familiar with these security mechanisms.
+              {t('security.warningDescription')}
             </p>
           </div>
 
@@ -140,9 +143,9 @@ export function SecuritySettingsSection({
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5 flex-1">
-                <Label htmlFor="httpsEnabled">HTTPS Enforcement</Label>
+                <Label htmlFor="httpsEnabled">{t('security.httpsEnforcement')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Enable for production deployments. Disable for local development with HTTP.
+                  {t('security.httpsHint')}
                 </p>
               </div>
               <Switch
@@ -155,35 +158,35 @@ export function SecuritySettingsSection({
             {httpsEnabled && (
               <div className="p-3 bg-primary-visible border-2 border-primary-visible rounded-md">
                 <p className="text-xs text-primary">
-                  HSTS header is enabled, forcing browsers to use HTTPS connections.
+                  {t('security.hstsEnabled')}
                 </p>
               </div>
             )}
           </div>
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-            <Label>Hotlink Protection</Label>
+            <Label>{t('security.hotlinkProtection')}</Label>
             <Select value={hotlinkProtection} onValueChange={setHotlinkProtection}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="DISABLED">Disabled - No hotlink protection</SelectItem>
-                <SelectItem value="LOG_ONLY">Log Only - Detect but allow</SelectItem>
-                <SelectItem value="BLOCK_STRICT">Block Strict - Block suspected hotlinks</SelectItem>
+                <SelectItem value="DISABLED">{t('security.hotlinkDisabled')}</SelectItem>
+                <SelectItem value="LOG_ONLY">{t('security.hotlinkLogOnly')}</SelectItem>
+                <SelectItem value="BLOCK_STRICT">{t('security.hotlinkBlockStrict')}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Controls how the system handles hotlinking attempts. Log Only is recommended for monitoring.
+              {t('security.hotlinkHint')}
             </p>
             <div className="mt-4 space-y-4 border-t pt-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Hotlink Blocklists</h4>
-                {blocklistsLoading && <span className="text-xs text-muted-foreground">Refreshing...</span>}
+                <h4 className="text-sm font-semibold">{t('security.hotlinkBlocklists')}</h4>
+                {blocklistsLoading && <span className="text-xs text-muted-foreground">{t('security.refreshing')}</span>}
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Blocked IP Addresses</p>
+                  <p className="text-xs text-muted-foreground">{t('security.blockedIPs')}</p>
                   <form
                     onSubmit={onAddIP}
                     className="flex flex-col gap-2"
@@ -192,25 +195,25 @@ export function SecuritySettingsSection({
                       type="text"
                       value={newIP}
                       onChange={(e) => setNewIP(e.target.value)}
-                      placeholder="IP Address (e.g., 192.168.1.1)"
+                      placeholder={t('security.ipPlaceholder')}
                       className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
                     <input
                       type="text"
                       value={newIPReason}
                       onChange={(e) => setNewIPReason(e.target.value)}
-                      placeholder="Reason (optional)"
+                      placeholder={t('security.reasonPlaceholder')}
                       className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
                     <button
                       type="submit"
                       className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md w-full sm:w-auto"
                     >
-                      Add
+                      {tc('add')}
                     </button>
                   </form>
                   {blockedIPs.length === 0 ? (
-                    <div className="text-xs text-muted-foreground">No blocked IPs</div>
+                    <div className="text-xs text-muted-foreground">{t('security.noBlockedIPs')}</div>
                   ) : (
                     <div className="space-y-2">
                       {blockedIPs.map(ip => (
@@ -219,7 +222,7 @@ export function SecuritySettingsSection({
                             <div className="font-mono text-sm break-all">{ip.ipAddress}</div>
                             {ip.reason && <div className="text-xs text-muted-foreground mt-1 break-words">{ip.reason}</div>}
                             <div className="text-[11px] text-muted-foreground mt-1">
-                              Added {new Date(ip.createdAt).toLocaleString()}
+                              {t('security.added')} {new Date(ip.createdAt).toLocaleString()}
                             </div>
                           </div>
                           <button
@@ -227,7 +230,7 @@ export function SecuritySettingsSection({
                             onClick={() => onRemoveIP(ip.id)}
                             className="text-sm text-destructive border border-destructive px-2 py-1 rounded-md hover:bg-destructive/10"
                           >
-                            Remove
+                            {tc('remove')}
                           </button>
                         </div>
                       ))}
@@ -236,7 +239,7 @@ export function SecuritySettingsSection({
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Blocked Domains</p>
+                  <p className="text-xs text-muted-foreground">{t('security.blockedDomains')}</p>
                   <form
                     onSubmit={onAddDomain}
                     className="flex flex-col gap-2"
@@ -245,25 +248,25 @@ export function SecuritySettingsSection({
                       type="text"
                       value={newDomain}
                       onChange={(e) => setNewDomain(e.target.value)}
-                      placeholder="Domain (e.g., example.com)"
+                      placeholder={t('security.domainPlaceholder')}
                       className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
                     <input
                       type="text"
                       value={newDomainReason}
                       onChange={(e) => setNewDomainReason(e.target.value)}
-                      placeholder="Reason (optional)"
+                      placeholder={t('security.reasonPlaceholder')}
                       className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                     />
                     <button
                       type="submit"
                       className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md w-full sm:w-auto"
                     >
-                      Add
+                      {tc('add')}
                     </button>
                   </form>
                   {blockedDomains.length === 0 ? (
-                    <div className="text-xs text-muted-foreground">No blocked domains</div>
+                    <div className="text-xs text-muted-foreground">{t('security.noBlockedDomains')}</div>
                   ) : (
                     <div className="space-y-2">
                       {blockedDomains.map(domain => (
@@ -272,7 +275,7 @@ export function SecuritySettingsSection({
                             <div className="font-mono text-sm break-all">{domain.domain}</div>
                             {domain.reason && <div className="text-xs text-muted-foreground mt-1 break-words">{domain.reason}</div>}
                             <div className="text-[11px] text-muted-foreground mt-1">
-                              Added {new Date(domain.createdAt).toLocaleString()}
+                              {t('security.added')} {new Date(domain.createdAt).toLocaleString()}
                             </div>
                           </div>
                           <button
@@ -280,7 +283,7 @@ export function SecuritySettingsSection({
                             onClick={() => onRemoveDomain(domain.id)}
                             className="text-sm text-destructive border border-destructive px-2 py-1 rounded-md hover:bg-destructive/10"
                           >
-                            Remove
+                            {tc('remove')}
                           </button>
                         </div>
                       ))}
@@ -292,10 +295,10 @@ export function SecuritySettingsSection({
           </div>
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-            <Label className="text-base">Rate Limiting & Security</Label>
+            <Label className="text-base">{t('security.rateLimiting')}</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="ipRateLimit">IP Rate Limit</Label>
+                <Label htmlFor="ipRateLimit">{t('security.ipRateLimit')}</Label>
                 <Input
                   id="ipRateLimit"
                   type="number"
@@ -304,12 +307,12 @@ export function SecuritySettingsSection({
                   placeholder="1000"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Requests per minute per IP (default: 1000)
+                  {t('security.ipRateLimitHint')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sessionRateLimit">Admin Session Limit</Label>
+                <Label htmlFor="sessionRateLimit">{t('security.adminSessionLimit')}</Label>
                 <Input
                   id="sessionRateLimit"
                   type="number"
@@ -318,12 +321,12 @@ export function SecuritySettingsSection({
                   placeholder="600"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Requests per minute per admin session (default: 600)
+                  {t('security.adminSessionLimitHint')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="shareSessionRateLimit">Share Session Limit</Label>
+                <Label htmlFor="shareSessionRateLimit">{t('security.shareSessionLimit')}</Label>
                 <Input
                   id="shareSessionRateLimit"
                   type="number"
@@ -332,12 +335,12 @@ export function SecuritySettingsSection({
                   placeholder="300"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Requests per minute per share session (default: 300)
+                  {t('security.shareSessionLimitHint')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="passwordAttempts">Authentication Attempts</Label>
+                <Label htmlFor="passwordAttempts">{t('security.authAttempts')}</Label>
                 <Input
                   id="passwordAttempts"
                   type="number"
@@ -346,17 +349,17 @@ export function SecuritySettingsSection({
                   placeholder="5"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Maximum authentication attempts (password or OTP) before lockout
+                  {t('security.authAttemptsHint')}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-            <Label className="text-base">Upload Security</Label>
+            <Label className="text-base">{t('security.uploadSecurity')}</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="maxUploadSizeGB">Max Upload Size (GB)</Label>
+                <Label htmlFor="maxUploadSizeGB">{t('security.maxUploadSize')}</Label>
                 <Input
                   id="maxUploadSizeGB"
                   type="number"
@@ -367,12 +370,12 @@ export function SecuritySettingsSection({
                   placeholder="1"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Maximum size per upload via TUS (1-100 GB)
+                  {t('security.maxUploadSizeHint')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="maxCommentAttachments">Max Attachments per Comment</Label>
+                <Label htmlFor="maxCommentAttachments">{t('security.maxAttachments')}</Label>
                 <Input
                   id="maxCommentAttachments"
                   type="number"
@@ -383,7 +386,7 @@ export function SecuritySettingsSection({
                   placeholder="10"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Maximum files per comment attachment batch (1-50, default: 10)
+                  {t('security.maxAttachmentsHint')}
                 </p>
               </div>
             </div>
@@ -394,16 +397,16 @@ export function SecuritySettingsSection({
             <div>
               <Label className="text-base flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                Admin Session Timeout
+                {t('security.adminSessionTimeout')}
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Controls inactivity logout in the admin dashboard. Maximum is 24 hours.
+                {t('security.adminSessionTimeoutHint')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="adminSessionTimeoutValue">Timeout Value</Label>
+                <Label htmlFor="adminSessionTimeoutValue">{t('security.timeoutValue')}</Label>
                 <Input
                   id="adminSessionTimeoutValue"
                   type="number"
@@ -416,14 +419,14 @@ export function SecuritySettingsSection({
               </div>
 
               <div className="space-y-2">
-                <Label>Timeout Unit</Label>
+                <Label>{t('security.timeoutUnit')}</Label>
                 <Select value={adminSessionTimeoutUnit} onValueChange={setAdminSessionTimeoutUnit}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MINUTES">Minutes</SelectItem>
-                    <SelectItem value="HOURS">Hours</SelectItem>
+                    <SelectItem value="MINUTES">{t('security.minutes')}</SelectItem>
+                    <SelectItem value="HOURS">{t('security.hours')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -431,7 +434,7 @@ export function SecuritySettingsSection({
 
             <div className="p-3 bg-muted rounded-md">
               <p className="text-sm font-medium">
-                Current Setting: {formatDurationSetting(adminSessionTimeoutValue, adminSessionTimeoutUnit)}
+                {t('security.currentSetting')} {formatDurationSetting(adminSessionTimeoutValue, adminSessionTimeoutUnit)}
               </p>
               <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
                 {(() => {
@@ -439,15 +442,15 @@ export function SecuritySettingsSection({
                   const unit = adminSessionTimeoutUnit
                   const seconds = unit === 'HOURS' ? val * 60 * 60 : val * 60
                   if (seconds <= 15 * 60) {
-                    return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Short - strong security; sessions expire quickly</>
+                    return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> {t('security.shortSecurity')}</>
                   }
                   if (seconds <= 2 * 60 * 60) {
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Balanced - good for typical sessions</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.balanced')}</>
                   }
                   if (seconds <= 8 * 60 * 60) {
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for all-day sessions</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.longConvenient')}</>
                   }
-                  return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very long - consider the security trade-off</>
+                  return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.veryLong')}</>
                 })()}
               </p>
             </div>
@@ -458,16 +461,16 @@ export function SecuritySettingsSection({
             <div>
               <Label className="text-base flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                Client Session Timeout
+                {t('security.clientSessionTimeout')}
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Configure how long client share sessions stay active.
+                {t('security.clientSessionTimeoutHint')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sessionTimeoutValue">Timeout Value</Label>
+                <Label htmlFor="sessionTimeoutValue">{t('security.timeoutValue')}</Label>
                 <Input
                   id="sessionTimeoutValue"
                   type="number"
@@ -480,23 +483,23 @@ export function SecuritySettingsSection({
               </div>
 
               <div className="space-y-2">
-                <Label>Timeout Unit</Label>
+                <Label>{t('security.timeoutUnit')}</Label>
                 <Select value={sessionTimeoutUnit} onValueChange={setSessionTimeoutUnit}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MINUTES">Minutes</SelectItem>
-                    <SelectItem value="HOURS">Hours</SelectItem>
-                    <SelectItem value="DAYS">Days</SelectItem>
-                    <SelectItem value="WEEKS">Weeks</SelectItem>
+                    <SelectItem value="MINUTES">{t('security.minutes')}</SelectItem>
+                    <SelectItem value="HOURS">{t('security.hours')}</SelectItem>
+                    <SelectItem value="DAYS">{t('security.days')}</SelectItem>
+                    <SelectItem value="WEEKS">{t('security.weeks')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="shareTokenTtlSeconds">Share JWT Token Expiry (seconds)</Label>
+              <Label htmlFor="shareTokenTtlSeconds">{t('security.shareTokenExpiry')}</Label>
               <Input
                 id="shareTokenTtlSeconds"
                 type="number"
@@ -504,36 +507,36 @@ export function SecuritySettingsSection({
                 max="86400"
                 value={shareTokenTtlSeconds}
                 onChange={(e) => setShareTokenTtlSeconds(e.target.value)}
-                placeholder="Leave blank to use session timeout"
+                placeholder={t('security.leaveBlank')}
               />
               <p className="text-xs text-muted-foreground">
-                Override share JWT expiry (60-86400 seconds). Leave blank to use session timeout above. Default: session timeout.
+                {t('security.shareTokenOverride')}
               </p>
             </div>
 
             <div className="p-3 bg-muted rounded-md">
               <p className="text-sm font-medium">
-                Current Setting: {formatDurationSetting(sessionTimeoutValue, sessionTimeoutUnit)}
+                {t('security.currentSetting')} {formatDurationSetting(sessionTimeoutValue, sessionTimeoutUnit)}
               </p>
               <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
                 {(() => {
                   const val = parseInt(sessionTimeoutValue, 10) || 15
                   const unit = sessionTimeoutUnit
                   if (unit === 'MINUTES') {
-                    if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very short - sessions may expire while users are active</>
-                    if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> Short - strong security; sessions expire quickly</>
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for longer sessions</>
+                    if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.veryShort')}</>
+                    if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> {t('security.shortSecurity')}</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.longSessions')}</>
                   }
                   if (unit === 'HOURS') {
-                    if (val <= 2) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Balanced - good for typical sessions</>
-                    if (val <= 8) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> Long - convenient for all-day sessions</>
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Very long - consider the security trade-off</>
+                    if (val <= 2) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.balanced')}</>
+                    if (val <= 8) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.longConvenient')}</>
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.veryLong')}</>
                   }
                   if (unit === 'DAYS') {
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Extended - long-lived sessions; trusted environments only</>
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.extended')}</>
                   }
                   if (unit === 'WEEKS') {
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> Maximum - long-lived sessions; use with caution</>
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.maximum')}</>
                   }
                   return ''
                 })()}
@@ -542,13 +545,13 @@ export function SecuritySettingsSection({
           </div>
 
           <div className="space-y-4 border p-4 rounded-lg bg-muted/30">
-            <Label className="text-base">Logging & Monitoring</Label>
+            <Label className="text-base">{t('security.logging')}</Label>
 
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5 flex-1">
-                <Label htmlFor="trackAnalytics">Track Analytics</Label>
+                <Label htmlFor="trackAnalytics">{t('security.trackAnalytics')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Enable or disable analytics tracking for page visits and downloads
+                  {t('security.trackAnalyticsHint')}
                 </p>
               </div>
               <Switch
@@ -560,9 +563,9 @@ export function SecuritySettingsSection({
 
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5 flex-1">
-                <Label htmlFor="trackSecurityLogs">Track Security Logs</Label>
+                <Label htmlFor="trackSecurityLogs">{t('security.trackSecurityLogs')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Enable or disable security event logging (hotlink attempts, rate limits, suspicious activity)
+                  {t('security.trackSecurityLogsHint')}
                 </p>
               </div>
               <Switch
@@ -574,9 +577,9 @@ export function SecuritySettingsSection({
 
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5 flex-1">
-                <Label htmlFor="viewSecurityEvents">Show Security Dashboard</Label>
+                <Label htmlFor="viewSecurityEvents">{t('security.showSecurityDashboard')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Enable access to /admin/security page to view security events and logs (only visible when enabled)
+                  {t('security.showSecurityDashboardHint')}
                 </p>
               </div>
               <Switch

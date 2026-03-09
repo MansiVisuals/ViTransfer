@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,8 @@ import { generateSecurePassword } from '@/lib/password-utils'
 
 export default function NewProjectPage() {
   const router = useRouter()
+  const t = useTranslations('projects')
+  const tc = useTranslations('common')
   const [loading, setLoading] = useState(false)
   const [isShareOnly, setIsShareOnly] = useState(false)
   const [passwordProtected, setPasswordProtected] = useState(true)
@@ -99,7 +102,7 @@ export default function NewProjectPage() {
       const project = await apiPost('/api/projects', data)
       router.push(`/admin/projects/${project.id}`)
     } catch (error) {
-      alert('Failed to create project')
+      alert(t('failedToCreateProject'))
     } finally {
       setLoading(false)
     }
@@ -115,27 +118,27 @@ export default function NewProjectPage() {
         <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>Create New Project</CardTitle>
-            <CardDescription>Set up a new video project for your client</CardDescription>
+            <CardTitle>{t('createNew')}</CardTitle>
+            <CardDescription>{t('createDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title">Project Title</Label>
+                <Label htmlFor="title">{t('titleLabel')}</Label>
                 <Input
                   id="title"
                   name="title"
-                  placeholder="e.g., Video Project - Client Name"
+                  placeholder={t('titlePlaceholder')}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
+                <Label htmlFor="description">{t('descriptionOptional')}</Label>
                 <Textarea
                   id="description"
                   name="description"
-                  placeholder="e.g., Project details, deliverables, notes..."
+                  placeholder={t('descriptionPlaceholder')}
                   rows={3}
                 />
               </div>
@@ -158,7 +161,7 @@ export default function NewProjectPage() {
               <div className="space-y-3">
                 <Label htmlFor="dueDate" className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Due Date (Optional)
+                  {t('dueDateOptional')}
                 </Label>
                 <Input
                   id="dueDate"
@@ -168,19 +171,19 @@ export default function NewProjectPage() {
                 />
                 {dueDate && (
                   <div className="space-y-2">
-                    <Label htmlFor="dueReminder">Reminder</Label>
+                    <Label htmlFor="dueReminder">{t('reminder')}</Label>
                     <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="NONE">No Reminder</SelectItem>
-                        <SelectItem value="DAY_BEFORE">1 Day Before</SelectItem>
-                        <SelectItem value="WEEK_BEFORE">1 Week Before</SelectItem>
+                        <SelectItem value="NONE">{t('noReminder')}</SelectItem>
+                        <SelectItem value="DAY_BEFORE">{t('dayBefore')}</SelectItem>
+                        <SelectItem value="WEEK_BEFORE">{t('weekBefore')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Sends a notification reminder before the due date
+                      {t('reminderHint')}
                     </p>
                   </div>
                 )}
@@ -191,10 +194,10 @@ export default function NewProjectPage() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <Label htmlFor="passwordProtected" className="text-base font-semibold">
-                      Require Authentication (Recommended)
+                      {t('requireAuthRecommended')}
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      Secure by default. Clients must authenticate (password, email OTP, or both) to view and approve the project.
+                      {t('requireAuthDescriptionLong')}
                     </p>
                   </div>
                   <input
@@ -210,25 +213,25 @@ export default function NewProjectPage() {
                   <div className="space-y-4 pt-2 border-t">
                     {/* Authentication Method Selection */}
                     <div className="space-y-2">
-                      <Label>Authentication Method</Label>
+                      <Label>{t('authMethod')}</Label>
                       <Select value={authMode} onValueChange={(v) => setAuthMode(v as 'PASSWORD' | 'OTP' | 'BOTH')}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="PASSWORD">Password Only</SelectItem>
+                          <SelectItem value="PASSWORD">{t('passwordOnly')}</SelectItem>
                           <SelectItem value="OTP" disabled={!canUseOTP}>
-                            Email OTP Only {!canUseOTP ? '(requires SMTP & client email)' : ''}
+                            {t('otpOnly')} {!canUseOTP ? `(${t('requiresSMTPClient')})` : ''}
                           </SelectItem>
                           <SelectItem value="BOTH" disabled={!canUseOTP}>
-                            Both Password and OTP {!canUseOTP ? '(requires SMTP & client email)' : ''}
+                            {t('bothAuth')} {!canUseOTP ? `(${t('requiresSMTPClient')})` : ''}
                           </SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        {authMode === 'PASSWORD' && 'Clients must enter a password to access the project'}
-                        {authMode === 'OTP' && 'Clients receive a one-time code via email (must be a registered recipient)'}
-                        {authMode === 'BOTH' && 'Clients can choose between password or email OTP authentication'}
+                        {authMode === 'PASSWORD' && t('passwordDescriptionLong')}
+                        {authMode === 'OTP' && t('otpDescriptionLong')}
+                        {authMode === 'BOTH' && t('bothDescriptionLong')}
                       </p>
 
                       {/* Smart Recommendation */}
@@ -236,9 +239,9 @@ export default function NewProjectPage() {
                         <div className="flex items-start gap-2 p-3 bg-muted border border-border rounded-md">
                           <Mail className="w-4 h-4 text-primary mt-0.5" />
                           <div className="flex-1">
-                            <p className="text-sm font-medium">Consider Email OTP</p>
+                            <p className="text-sm font-medium">{t('considerOtp')}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              You&apos;ve provided a client email. Email OTP provides seamless authentication without sharing passwords.
+                              {t('considerOtpLong')}
                             </p>
                             <div className="flex gap-2 mt-2">
                               <Button
@@ -248,7 +251,7 @@ export default function NewProjectPage() {
                                 className="h-7 text-xs"
                                 onClick={() => setAuthMode('OTP')}
                               >
-                                OTP Only
+                                {t('otpOnlyShort')}
                               </Button>
                               <Button
                                 type="button"
@@ -257,7 +260,7 @@ export default function NewProjectPage() {
                                 className="h-7 text-xs"
                                 onClick={() => setAuthMode('BOTH')}
                               >
-                                Both Password + OTP
+                                {t('bothPasswordOtp')}
                               </Button>
                             </div>
                           </div>
@@ -268,7 +271,7 @@ export default function NewProjectPage() {
                         <div className="flex items-start gap-2 p-3 bg-warning-visible border border-warning-visible rounded-md">
                           <AlertCircle className="w-4 h-4 text-warning mt-0.5" />
                           <p className="text-xs text-warning">
-                            Configure SMTP in Settings to enable OTP authentication options
+                            {t('configureSMTPLong')}
                           </p>
                         </div>
                       )}
@@ -277,7 +280,7 @@ export default function NewProjectPage() {
                         <div className="flex items-start gap-2 p-3 bg-warning-visible border border-warning-visible rounded-md">
                           <AlertCircle className="w-4 h-4 text-warning mt-0.5" />
                           <p className="text-xs text-warning">
-                            Enter a client email address above to use OTP authentication
+                            {t('enterClientEmail')}
                           </p>
                         </div>
                       )}
@@ -286,7 +289,7 @@ export default function NewProjectPage() {
                     {/* Password Field (conditional) */}
                     {needsPassword && (
                       <div className="space-y-3">
-                        <Label htmlFor="sharePassword">Share Password</Label>
+                        <Label htmlFor="sharePassword">{t('sharePassword')}</Label>
                         <div className="flex gap-2">
                           <div className="relative flex-1">
                             <Input
@@ -310,7 +313,7 @@ export default function NewProjectPage() {
                             variant="outline"
                             size="icon"
                             onClick={handleGeneratePassword}
-                            title="Generate new password"
+                            title={t('generatePassword')}
                           >
                             <RefreshCw className="w-4 h-4" />
                           </Button>
@@ -319,7 +322,7 @@ export default function NewProjectPage() {
                             variant="outline"
                             size="icon"
                             onClick={handleCopyPassword}
-                            title="Copy password"
+                            title={t('copyPassword')}
                           >
                             {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
                           </Button>
@@ -328,8 +331,7 @@ export default function NewProjectPage() {
                           <SharePasswordRequirements password={sharePassword} />
                         )}
                         <p className="text-xs text-muted-foreground">
-                          <strong className="text-warning">Important:</strong> Save this password!
-                          You&apos;ll need to share it with your client so they can view and approve the project.
+                          {t('savePasswordWarningLong')}
                         </p>
                       </div>
                     )}
@@ -340,7 +342,7 @@ export default function NewProjectPage() {
                   <div className="flex items-start gap-2 p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
                     <span className="text-warning text-sm font-bold">!</span>
                     <p className="text-sm text-warning font-medium">
-                      Without authentication, anyone with the share link can view and approve your project. Not recommended for sensitive content.
+                      {t('noAuthWarningLong')}
                     </p>
                   </div>
                 )}
@@ -358,25 +360,25 @@ export default function NewProjectPage() {
                       className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                     />
                     <Label htmlFor="isShareOnly" className="font-normal cursor-pointer">
-                      Share Only
+                      {t('shareOnly')}
                     </Label>
                   </div>
                   <p className="text-xs text-muted-foreground ml-6">
-                    Create an approved project for simple video sharing. Disables feedback and revision tracking.
+                    {t('shareOnlyLong')}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2 border-t pt-4">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Additional options like revision tracking, comment restrictions, and feedback settings can be configured after project creation in Project Settings.
+                  {t('additionalOptionsLong')}
                 </p>
               </div>
 
               <div className="flex gap-3 pt-4">
                 <Button type="submit" variant="default" size="lg" disabled={loading}>
                   <Plus className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">{loading ? 'Creating...' : 'Create Project'}</span>
+                  <span className="hidden sm:inline">{loading ? tc('creating') : t('createProject')}</span>
                 </Button>
                 <Button
                   type="button"
@@ -386,7 +388,7 @@ export default function NewProjectPage() {
                   disabled={loading}
                 >
                   <X className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Cancel</span>
+                  <span className="hidden sm:inline">{tc('cancel')}</span>
                 </Button>
               </div>
             </form>

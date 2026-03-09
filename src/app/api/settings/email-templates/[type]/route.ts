@@ -5,12 +5,16 @@ import {
   getEmailTemplate,
   saveEmailTemplate,
   resetEmailTemplate,
-  getPlaceholdersForType,
+  getLocalizedPlaceholdersForType,
   getDefaultTemplate,
+  buildLocalizedDefaultTemplate,
+  loadEmailMessages,
+  getLocalizedTemplateMetadata,
   TEMPLATE_METADATA,
   EMAIL_TEMPLATE_TYPES,
   type EmailTemplateType,
 } from '@/lib/email-template-system'
+import { prisma } from '@/lib/db'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -50,22 +54,47 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const templateType = type as EmailTemplateType
 
   try {
-    const template = await getEmailTemplate(templateType)
+    // Get the configured language for localized display
+    const settings = await prisma.settings.findFirst({ select: { language: true } })
+    const locale = settings?.language || 'en'
+
+    const template = await getEmailTemplate(templateType, locale)
     const metadata = TEMPLATE_METADATA.find(m => m.type === templateType)
-    const defaultTemplate = getDefaultTemplate(templateType)
-    const placeholders = getPlaceholdersForType(templateType)
+    const placeholders = await getLocalizedPlaceholdersForType(templateType, locale)
+
+    // Get localized template name and description
+    const localizedMeta = await getLocalizedTemplateMetadata(templateType, locale)
+
+    // Get localized default content
+    let defaultSubject = ''
+    let defaultBodyContent = ''
+
+    if (locale !== 'en') {
+      const emailMessages = await loadEmailMessages(locale)
+      const localizedDefault = buildLocalizedDefaultTemplate(templateType, emailMessages)
+      if (localizedDefault) {
+        defaultSubject = localizedDefault.subject
+        defaultBodyContent = localizedDefault.bodyContent
+      }
+    }
+
+    if (!defaultSubject || !defaultBodyContent) {
+      const defaultTemplate = getDefaultTemplate(templateType)
+      defaultSubject = defaultSubject || defaultTemplate?.subject || ''
+      defaultBodyContent = defaultBodyContent || defaultTemplate?.bodyContent || ''
+    }
 
     return NextResponse.json({
       type: templateType,
-      name: metadata?.name || templateType,
-      description: metadata?.description || '',
+      name: localizedMeta.name,
+      description: localizedMeta.description,
       category: metadata?.category || 'client',
       subject: template.subject,
       bodyContent: template.bodyContent,
       isCustom: template.isCustom,
       placeholders,
-      defaultSubject: defaultTemplate?.subject || '',
-      defaultBodyContent: defaultTemplate?.bodyContent || '',
+      defaultSubject,
+      defaultBodyContent,
     })
   } catch (error) {
     console.error('[API] Failed to get email template:', error)
@@ -188,14 +217,34 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     await resetEmailTemplate(templateType)
 
-    // Get the default template to return
-    const defaultTemplate = getDefaultTemplate(templateType)
+    // Get the configured language to return localized defaults
+    const settings = await prisma.settings.findFirst({ select: { language: true } })
+    const locale = settings?.language || 'en'
+
+    // Try localized default first
+    let subject = ''
+    let bodyContent = ''
+
+    if (locale !== 'en') {
+      const emailMessages = await loadEmailMessages(locale)
+      const localizedTemplate = buildLocalizedDefaultTemplate(templateType, emailMessages)
+      if (localizedTemplate) {
+        subject = localizedTemplate.subject
+        bodyContent = localizedTemplate.bodyContent
+      }
+    }
+
+    if (!subject || !bodyContent) {
+      const defaultTemplate = getDefaultTemplate(templateType)
+      subject = subject || defaultTemplate?.subject || ''
+      bodyContent = bodyContent || defaultTemplate?.bodyContent || ''
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Template reset to default',
-      subject: defaultTemplate?.subject || '',
-      bodyContent: defaultTemplate?.bodyContent || '',
+      subject,
+      bodyContent,
     })
   } catch (error) {
     console.error('[API] Failed to reset email template:', error)

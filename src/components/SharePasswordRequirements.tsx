@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { Check, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface SharePasswordRequirementsProps {
   password: string
@@ -13,22 +14,24 @@ interface Requirement {
   test: (password: string) => boolean
 }
 
-const requirements: Requirement[] = [
-  {
-    label: 'At least 8 characters',
-    test: (pwd) => pwd.length >= 8,
-  },
-  {
-    label: 'One letter (A-Z or a-z)',
-    test: (pwd) => /[A-Za-z]/.test(pwd),
-  },
-  {
-    label: 'One number (0-9)',
-    test: (pwd) => /[0-9]/.test(pwd),
-  },
-]
-
 export function SharePasswordRequirements({ password, className = '' }: SharePasswordRequirementsProps) {
+  const t = useTranslations('auth')
+
+  const requirements: Requirement[] = [
+    {
+      label: t('sharePasswordMinChars'),
+      test: (pwd) => pwd.length >= 8,
+    },
+    {
+      label: t('sharePasswordLetter'),
+      test: (pwd) => /[A-Za-z]/.test(pwd),
+    },
+    {
+      label: t('sharePasswordNumber'),
+      test: (pwd) => /[0-9]/.test(pwd),
+    },
+  ]
+
   const results = useMemo(() => {
     return requirements.map((req) => ({
       ...req,
@@ -40,7 +43,7 @@ export function SharePasswordRequirements({ password, className = '' }: SharePas
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <p className="text-sm font-medium text-foreground">Password Requirements:</p>
+      <p className="text-sm font-medium text-foreground">{t('sharePasswordRequirements')}</p>
       <ul className="space-y-1">
         {results.map((result, index) => (
           <li
@@ -60,7 +63,7 @@ export function SharePasswordRequirements({ password, className = '' }: SharePas
       </ul>
       {allPassed && password.length > 0 && (
         <p className="text-sm text-success font-medium mt-2 flex items-center gap-1">
-          <Check className="w-4 h-4" /> Password meets all requirements
+          <Check className="w-4 h-4" /> {t('sharePasswordMeetsAll')}
         </p>
       )}
     </div>

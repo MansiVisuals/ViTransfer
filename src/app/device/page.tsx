@@ -12,10 +12,14 @@ import { startAuthentication } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { getAccessToken, setTokens } from '@/lib/token-store'
 import BrandLogo from '@/components/BrandLogo'
+import { useTranslations } from 'next-intl'
 
 type FlowStep = 'authenticate' | 'authorize' | 'success' | 'error'
 
 function DeviceAuthForm() {
+  const t = useTranslations('device')
+  const ta = useTranslations('auth')
+  const tc = useTranslations('common')
   const searchParams = useSearchParams()
   const codeFromUrl = searchParams?.get('code') || ''
 
@@ -51,7 +55,7 @@ function DeviceAuthForm() {
 
       if (!optionsRes.ok) {
         const data = await optionsRes.json()
-        throw new Error(data.error || 'Failed to generate passkey options')
+        throw new Error(data.error || ta('passkeyFailed'))
       }
 
       const { options, sessionId }: { options: PublicKeyCredentialRequestOptionsJSON; sessionId?: string } = await optionsRes.json()
@@ -67,7 +71,7 @@ function DeviceAuthForm() {
       const data = await verifyRes.json()
 
       if (!verifyRes.ok) {
-        throw new Error(data.error || 'PassKey authentication failed')
+        throw new Error(data.error || ta('passkeyFailed'))
       }
 
       if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
@@ -80,9 +84,9 @@ function DeviceAuthForm() {
       setStep('authorize')
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
-        setError('PassKey authentication cancelled')
+        setError(ta('passkeyCancelled'))
       } else {
-        setError(err.message || 'PassKey authentication failed')
+        setError(err.message || ta('passkeyFailed'))
       }
     } finally {
       setPasskeyLoading(false)
@@ -109,7 +113,7 @@ function DeviceAuthForm() {
           handlePasskeyLogin()
           return
         }
-        throw new Error(data.error || 'Login failed')
+        throw new Error(data.error || ta('loginFailed'))
       }
 
       if (data?.tokens?.accessToken && data?.tokens?.refreshToken) {
@@ -121,7 +125,7 @@ function DeviceAuthForm() {
 
       setStep('authorize')
     } catch (err: any) {
-      setError(err.message || 'An error occurred')
+      setError(err.message || tc('error'))
     } finally {
       setLoading(false)
     }
@@ -133,7 +137,7 @@ function DeviceAuthForm() {
 
     const code = userCode.toUpperCase().trim()
     if (!code || !/^[A-Z]{4}-[0-9]{4}$/.test(code)) {
-      setError('Invalid code format. Expected: ABCD-1234')
+      setError(t('invalidCodeFormat'))
       setAuthorizeLoading(false)
       return
     }
@@ -142,7 +146,7 @@ function DeviceAuthForm() {
       const accessToken = getAccessToken()
       if (!accessToken) {
         setStep('authenticate')
-        setError('Session expired. Please sign in again.')
+        setError(t('sessionExpired'))
         return
       }
 
@@ -160,15 +164,15 @@ function DeviceAuthForm() {
       if (!response.ok) {
         if (response.status === 401) {
           setStep('authenticate')
-          setError('Session expired. Please sign in again.')
+          setError(t('sessionExpired'))
           return
         }
-        throw new Error(data.error || 'Authorization failed')
+        throw new Error(data.error || t('authFailed'))
       }
 
       setStep('success')
     } catch (err: any) {
-      setError(err.message || 'Failed to authorize device')
+      setError(err.message || t('failedToAuthorize'))
     } finally {
       setAuthorizeLoading(false)
     }
@@ -181,10 +185,10 @@ function DeviceAuthForm() {
           <div className="text-center mb-8">
             <BrandLogo height={64} className="mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-foreground">
-              Authorize Workflow Integration
+              {t('authorizeTitle')}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Connect your workflow integration to ViTransfer
+              {t('authorizeDescription')}
             </p>
           </div>
 
@@ -194,10 +198,10 @@ function DeviceAuthForm() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <LogIn className="w-5 h-5" />
-                  Sign In
+                  {t('signInTitle')}
                 </CardTitle>
                 <CardDescription>
-                  Authenticate to authorize the workflow integration
+                  {t('signInDescription')}
                 </CardDescription>
               </CardHeader>
 
@@ -211,11 +215,11 @@ function DeviceAuthForm() {
 
                   <form onSubmit={handlePasswordLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email">Username or Email</Label>
+                      <Label htmlFor="email">{ta('usernameOrEmail')}</Label>
                       <Input
                         id="email"
                         type="text"
-                        placeholder="Enter your username or email"
+                        placeholder={ta('usernameOrEmailPlaceholder')}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -225,10 +229,10 @@ function DeviceAuthForm() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">{ta('password')}</Label>
                       <PasswordInput
                         id="password"
-                        placeholder="Enter your password"
+                        placeholder={ta('passwordPlaceholder')}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -245,7 +249,7 @@ function DeviceAuthForm() {
                       disabled={loading}
                     >
                       <LogIn className="w-4 h-4 mr-2" />
-                      {loading ? 'Signing in...' : 'Sign In'}
+                      {loading ? ta('signingIn') : ta('signIn')}
                     </Button>
                   </form>
 
@@ -254,7 +258,7 @@ function DeviceAuthForm() {
                       <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                      <span className="bg-card px-2 text-muted-foreground">{tc('or')}</span>
                     </div>
                   </div>
 
@@ -267,7 +271,7 @@ function DeviceAuthForm() {
                     onClick={handlePasskeyLogin}
                   >
                     <Fingerprint className="w-4 h-4 mr-2" />
-                    {passkeyLoading ? 'Authenticating...' : 'Use PassKey'}
+                    {passkeyLoading ? ta('authenticating') : ta('usePassKey')}
                   </Button>
                 </div>
               </CardContent>
@@ -280,10 +284,10 @@ function DeviceAuthForm() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Monitor className="w-5 h-5" />
-                  Authorize Device
+                  {t('authorizeDevice')}
                 </CardTitle>
                 <CardDescription>
-                  Confirm the code shown in your workflow integration
+                  {t('confirmCode')}
                 </CardDescription>
               </CardHeader>
 
@@ -296,11 +300,11 @@ function DeviceAuthForm() {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="userCode">Device Code</Label>
+                    <Label htmlFor="userCode">{t('deviceCode')}</Label>
                     <Input
                       id="userCode"
                       type="text"
-                      placeholder="ABCD-1234"
+                      placeholder={t('deviceCodePlaceholder')}
                       value={userCode}
                       onChange={(e) => setUserCode(e.target.value.toUpperCase())}
                       className="text-center text-2xl font-mono tracking-widest"
@@ -308,7 +312,7 @@ function DeviceAuthForm() {
                       required
                     />
                     <p className="text-xs text-muted-foreground text-center">
-                      Enter the code displayed in your workflow integration
+                      {t('deviceCodeHint')}
                     </p>
                   </div>
 
@@ -320,7 +324,7 @@ function DeviceAuthForm() {
                     disabled={authorizeLoading || !userCode}
                     onClick={handleAuthorize}
                   >
-                    {authorizeLoading ? 'Authorizing...' : 'Authorize Workflow Integration'}
+                    {authorizeLoading ? t('authorizing') : t('authorizeButton')}
                   </Button>
                 </div>
               </CardContent>
@@ -336,9 +340,9 @@ function DeviceAuthForm() {
                     <CheckCircle2 className="w-8 h-8 text-green-500" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Authorization Complete</h2>
+                    <h2 className="text-xl font-semibold text-foreground">{t('authComplete')}</h2>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Your workflow integration is now connected. You can close this window.
+                      {t('authCompleteDescription')}
                     </p>
                   </div>
                 </div>
@@ -355,16 +359,16 @@ function DeviceAuthForm() {
                     <XCircle className="w-8 h-8 text-destructive" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Authorization Failed</h2>
+                    <h2 className="text-xl font-semibold text-foreground">{t('authFailed')}</h2>
                     <p className="text-sm text-muted-foreground mt-2">
-                      {error || 'Something went wrong. Please try again from your workflow integration.'}
+                      {error || t('authFailedDescription')}
                     </p>
                   </div>
                   <Button
                     variant="outline"
                     onClick={() => { setStep('authenticate'); setError(''); }}
                   >
-                    Try Again
+                    {t('tryAgain')}
                   </Button>
                 </div>
               </CardContent>

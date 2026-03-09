@@ -1,6 +1,6 @@
 import { Comment } from '@prisma/client'
 import { prisma } from './db'
-import { sendCommentNotificationEmail, sendAdminCommentNotificationEmail, sendProjectApprovedEmail, sendAdminProjectApprovedEmail, getEmailSettings, sendEmail } from './email'
+import { sendCommentNotificationEmail, sendAdminCommentNotificationEmail, sendProjectApprovedEmail, sendAdminProjectApprovedEmail, getEmailSettings, sendEmail, getRecipientLocale } from './email'
 import { generateNotificationSummaryEmail, generateAdminSummaryEmail } from './email-templates'
 import { getProjectRecipients } from './recipients'
 import { generateShareUrl } from './url'
@@ -67,7 +67,7 @@ export async function sendImmediateNotification(context: NotificationContext, ta
     console.log(`[IMMEDIATE→CLIENT]   Video: ${videoName} (${versionLabel})`)
     console.log(`[IMMEDIATE→CLIENT]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
 
-    const emailPromises = recipients.map(recipient => {
+    const emailPromises = recipients.map(async (recipient) => {
       let unsubscribeUrl: string | undefined
       try {
         const token = generateRecipientUnsubscribeToken({
@@ -79,6 +79,9 @@ export async function sendImmediateNotification(context: NotificationContext, ta
       } catch {
         unsubscribeUrl = undefined
       }
+
+      // Resolve per-recipient locale
+      const recipientLocale = await getRecipientLocale(recipient.email!)
 
       return sendCommentNotificationEmail({
         clientEmail: recipient.email!,
@@ -94,6 +97,7 @@ export async function sendImmediateNotification(context: NotificationContext, ta
         shareUrl,
         unsubscribeUrl,
         attachmentNames,
+        locale: recipientLocale,
       }).then(result => {
         if (result.success) {
           console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
@@ -267,7 +271,7 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
   if (recipients.length > 0 && isComplete && approved) {
     console.log(`[IMMEDIATE→CLIENT] Sending complete project approval to ${recipients.length} recipient(s)`)
 
-    const emailPromises = recipients.map(recipient => {
+    const emailPromises = recipients.map(async (recipient) => {
       let unsubscribeUrl: string | undefined
       try {
         const token = generateRecipientUnsubscribeToken({
@@ -283,6 +287,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
       // Check if this recipient is the one who approved
       const isApprover = authorEmail && recipient.email?.toLowerCase() === authorEmail.toLowerCase()
 
+      // Resolve per-recipient locale
+      const recipientLocale = await getRecipientLocale(recipient.email!)
+
       return sendProjectApprovedEmail({
         clientEmail: recipient.email!,
         clientName: recipient.name || 'Client',
@@ -294,6 +301,7 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
         approverName: authorName || undefined,
         isApprover: isApprover || false,
         watermarkEnabled: project.watermarkEnabled ?? true,
+        locale: recipientLocale,
       }).then(result => {
         if (result.success) {
           console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)

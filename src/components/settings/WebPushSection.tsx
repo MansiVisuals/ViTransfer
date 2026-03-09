@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { apiFetch, apiPost, apiPatch } from '@/lib/api-client'
 import { NOTIFICATION_EVENT_TYPES, type NotificationEventType } from '@/lib/external-notifications/constants'
 import { Bell, BellOff, Send, Trash2, Smartphone, Monitor, Pencil, Check, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface PushSubscription {
   id: string
@@ -19,16 +20,19 @@ interface PushSubscription {
   endpoint: string
 }
 
-const EVENT_LABELS: Record<NotificationEventType, string> = {
-  SHARE_ACCESS: 'Share Page Access',
-  ADMIN_ACCESS: 'Admin Login',
-  CLIENT_COMMENT: 'New Comments',
-  VIDEO_APPROVAL: 'Video Approvals',
-  SECURITY_ALERT: 'Security Alerts',
-  DUE_DATE_REMINDER: 'Due Date Reminders',
+const EVENT_LABEL_KEYS: Record<NotificationEventType, string> = {
+  SHARE_ACCESS: 'sharePageAccess',
+  ADMIN_ACCESS: 'adminLogin',
+  CLIENT_COMMENT: 'newComments',
+  VIDEO_APPROVAL: 'videoApprovals',
+  SECURITY_ALERT: 'securityAlerts',
+  DUE_DATE_REMINDER: 'dueDateReminders',
 }
 
 export function WebPushSection({ active }: { active: boolean }) {
+  const t = useTranslations('settings.webPush')
+  const te = useTranslations('settings.externalNotifications')
+  const tc = useTranslations('common')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -53,7 +57,7 @@ export function WebPushSection({ active }: { active: boolean }) {
     try {
       const response = await apiFetch('/api/push/subscribe')
       if (!response.ok) {
-        throw new Error('Failed to load subscriptions')
+        throw new Error(t('failedToLoadSubs'))
       }
       const data = await response.json()
       setSubscriptions(data.subscriptions || [])
@@ -78,7 +82,7 @@ export function WebPushSection({ active }: { active: boolean }) {
         setCurrentSubscriptionId(null)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load subscriptions')
+      setError(err instanceof Error ? err.message : t('failedToLoadSubs'))
     } finally {
       setLoading(false)
     }
@@ -136,14 +140,14 @@ export function WebPushSection({ active }: { active: boolean }) {
       setPermissionState(permission)
 
       if (permission !== 'granted') {
-        setError('Notification permission denied. Please enable notifications in your browser settings.')
+        setError(t('permissionDenied'))
         return
       }
 
       // Get VAPID public key
       const vapidResponse = await apiFetch('/api/push/vapid-public-key')
       if (!vapidResponse.ok) {
-        throw new Error('Failed to get VAPID key')
+        throw new Error(t('failedVapid'))
       }
       const { publicKey } = await vapidResponse.json()
 
@@ -171,11 +175,11 @@ export function WebPushSection({ active }: { active: boolean }) {
       }
       setCurrentDeviceSubscribed(true)
       setCurrentSubscriptionId(subId)
-      setSuccess('Push notifications enabled for this device')
+      setSuccess(t('enabledSuccess'))
       await loadSubscriptions()
     } catch (err) {
       console.error('Subscribe error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to subscribe')
+      setError(err instanceof Error ? err.message : t('failedToSubscribe'))
     }
   }
 
@@ -202,10 +206,10 @@ export function WebPushSection({ active }: { active: boolean }) {
       localStorage.removeItem('vitransfer_push_subscription_id')
       setCurrentDeviceSubscribed(false)
       setCurrentSubscriptionId(null)
-      setSuccess('Push notifications disabled for this device')
+      setSuccess(t('disabledSuccess'))
       await loadSubscriptions()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to unsubscribe')
+      setError(err instanceof Error ? err.message : t('failedToUnsubscribe'))
     }
   }
 
@@ -222,7 +226,7 @@ export function WebPushSection({ active }: { active: boolean }) {
       }
       await loadSubscriptions()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove subscription')
+      setError(err instanceof Error ? err.message : t('failedToRemove'))
     }
   }
 
@@ -233,9 +237,9 @@ export function WebPushSection({ active }: { active: boolean }) {
     try {
       // apiPost returns parsed JSON directly, throws on error
       await apiPost('/api/push/test', { subscriptionId })
-      setSuccess('Test notification sent')
+      setSuccess(t('testSent'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send test')
+      setError(err instanceof Error ? err.message : t('failedToTest'))
     }
   }
 
@@ -257,7 +261,7 @@ export function WebPushSection({ active }: { active: boolean }) {
       })
       await loadSubscriptions()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update')
+      setError(err instanceof Error ? err.message : t('failedToUpdateSub'))
     }
   }
 
@@ -272,7 +276,7 @@ export function WebPushSection({ active }: { active: boolean }) {
       setEditingId(null)
       await loadSubscriptions()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update name')
+      setError(err instanceof Error ? err.message : t('failedToUpdateName'))
     }
   }
 
@@ -280,12 +284,12 @@ export function WebPushSection({ active }: { active: boolean }) {
   if (!isPushSupported) {
     return (
       <div className="text-sm text-muted-foreground">
-        <p>Push notifications are not supported in this browser.</p>
-        <p className="mt-2">Requirements:</p>
+        <p>{t('notSupported')}</p>
+        <p className="mt-2">{t('requirements')}</p>
         <ul className="list-disc list-inside mt-1 space-y-1">
-          <li>A modern browser (Chrome, Firefox, Edge, Safari 16+)</li>
-          <li>HTTPS connection (or localhost)</li>
-          <li>Service worker support</li>
+          <li>{t('modernBrowser')}</li>
+          <li>{t('httpsRequired')}</li>
+          <li>{t('serviceWorker')}</li>
         </ul>
       </div>
     )
@@ -315,13 +319,13 @@ export function WebPushSection({ active }: { active: boolean }) {
               <BellOff className="h-5 w-5 text-muted-foreground" />
             )}
             <div>
-              <h4 className="font-medium">This Device</h4>
+              <h4 className="font-medium">{t('thisDevice')}</h4>
               <p className="text-sm text-muted-foreground">
                 {currentDeviceSubscribed
-                  ? 'Push notifications are enabled'
+                  ? t('enabled')
                   : permissionState === 'denied'
-                    ? 'Notifications blocked in browser settings'
-                    : 'Enable push notifications for this browser'}
+                    ? t('blocked')
+                    : t('enablePrompt')}
               </p>
             </div>
           </div>
@@ -330,13 +334,13 @@ export function WebPushSection({ active }: { active: boolean }) {
             variant={currentDeviceSubscribed ? 'outline' : 'default'}
             disabled={permissionState === 'denied' && !currentDeviceSubscribed}
           >
-            {currentDeviceSubscribed ? 'Disable' : 'Enable'}
+            {currentDeviceSubscribed ? tc('disable') : tc('enable')}
           </Button>
         </div>
 
         {permissionState === 'denied' && !currentDeviceSubscribed && (
           <p className="text-xs text-amber-600 dark:text-amber-400">
-            To enable notifications, click the lock icon in your browser&apos;s address bar and allow notifications.
+            {t('enableInstructions')}
           </p>
         )}
       </div>
@@ -344,7 +348,7 @@ export function WebPushSection({ active }: { active: boolean }) {
       {/* Subscribed devices */}
       {subscriptions.length > 0 && (
         <div className="space-y-3">
-          <h4 className="font-medium text-sm">Subscribed Devices ({subscriptions.length})</h4>
+          <h4 className="font-medium text-sm">{t('subscribedDevices')} ({subscriptions.length})</h4>
           <div className="space-y-3">
             {subscriptions.map((sub) => (
               <div key={sub.id} className="p-4 border rounded-lg space-y-3">
@@ -384,7 +388,7 @@ export function WebPushSection({ active }: { active: boolean }) {
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="font-medium truncate">
-                            {sub.deviceName || 'Unknown Device'}
+                            {sub.deviceName || t('unknownDevice')}
                           </span>
                           <Button
                             size="icon"
@@ -399,13 +403,13 @@ export function WebPushSection({ active }: { active: boolean }) {
                           </Button>
                           {sub.id === currentSubscriptionId && (
                             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                              Current
+                              {t('current')}
                             </span>
                           )}
                         </div>
                       )}
                       <p className="text-xs text-muted-foreground truncate">
-                        Last used: {new Date(sub.lastUsedAt).toLocaleDateString()}
+                        {t('lastUsed')} {new Date(sub.lastUsedAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -415,7 +419,7 @@ export function WebPushSection({ active }: { active: boolean }) {
                       variant="ghost"
                       className="h-8 w-8"
                       onClick={() => handleTestNotification(sub.id)}
-                      title="Send test notification"
+                      title={t('sendTestTitle')}
                     >
                       <Send className="h-4 w-4" />
                     </Button>
@@ -424,7 +428,7 @@ export function WebPushSection({ active }: { active: boolean }) {
                       variant="ghost"
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => handleRemoveSubscription(sub.id)}
-                      title="Remove subscription"
+                      title={t('removeTitle')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -433,12 +437,12 @@ export function WebPushSection({ active }: { active: boolean }) {
 
                 {/* Event toggles */}
                 <div className="space-y-3 border-2 border-border p-4 rounded-lg bg-accent/5">
-                  <h4 className="font-semibold text-sm">Send Notifications For:</h4>
+                  <h4 className="font-semibold text-sm">{te('sendFor')}</h4>
                   <div className="space-y-3">
                     {NOTIFICATION_EVENT_TYPES.map((eventType) => (
                       <div key={eventType} className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <Label className="text-sm font-normal">{EVENT_LABELS[eventType]}</Label>
+                          <Label className="text-sm font-normal">{te(EVENT_LABEL_KEYS[eventType])}</Label>
                         </div>
                         <Switch
                           checked={sub.subscribedEvents.includes(eventType)}
@@ -460,15 +464,15 @@ export function WebPushSection({ active }: { active: boolean }) {
       {subscriptions.length === 0 && !loading && (
         <div className="text-center text-sm text-muted-foreground py-8">
           <BellOff className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No devices subscribed to push notifications.</p>
-          <p className="mt-1">Enable notifications on this device to get started.</p>
+          <p>{t('noDevices')}</p>
+          <p className="mt-1">{t('getStarted')}</p>
         </div>
       )}
 
       {/* Loading */}
       {loading && (
         <div className="text-center text-sm text-muted-foreground py-4">
-          Loading...
+          {tc('loading')}
         </div>
       )}
     </div>

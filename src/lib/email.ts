@@ -5,6 +5,7 @@ import { formatTimecodeDisplay, timecodeToSeekSeconds } from './timecode'
 import {
   getEmailTemplate,
   replacePlaceholders,
+  loadEmailMessages,
 } from './email-template-system'
 import { htmlToText } from 'html-to-text'
 
@@ -300,12 +301,14 @@ export function renderEmailButton({
   `.trim()
 }
 
-export function renderUnsubscribeSection(unsubscribeUrl: string, brand = EMAIL_BRAND): string {
+export function renderUnsubscribeSection(unsubscribeUrl: string, brand = EMAIL_BRAND, emailMessages?: Record<string, any>): string {
+  const buttonLabel = emailMessages?.common?.unsubscribeButton || 'Unsubscribe'
+  const noticeText = emailMessages?.common?.unsubscribeNotice || 'Stops email notifications only. Your share link still works.'
   return `
     <div style="margin: 28px 0 0; padding-top: 18px; border-top: 1px solid ${brand.border}; text-align: center;">
-      ${renderEmailButton({ href: unsubscribeUrl, label: 'Unsubscribe', variant: 'secondary', brand })}
+      ${renderEmailButton({ href: unsubscribeUrl, label: buttonLabel, variant: 'secondary', brand })}
       <p style="margin: 10px 0 0; font-size: 12px; color: ${brand.muted}; line-height: 1.5;">
-        Stops email notifications only. Your share link still works.
+        ${noticeText}
       </p>
     </div>
   `.trim()
@@ -537,6 +540,7 @@ interface EmailSettings {
   accentColor: string | null
   brandingLogoPath: string | null
   emailHeaderStyle: string
+  language: string
 }
 
 let cachedSettings: EmailSettings | null = null
@@ -583,6 +587,7 @@ export async function getEmailSettings(forceRefresh = false): Promise<EmailSetti
     accentColor: settings.accentColor,
     brandingLogoPath: settings.brandingLogoPath,
     emailHeaderStyle: (settings as { emailHeaderStyle?: string }).emailHeaderStyle || 'LOGO_AND_NAME',
+    language: (settings as { language?: string }).language || 'en',
   } : {
     smtpServer: null,
     smtpPort: null,
@@ -595,6 +600,7 @@ export async function getEmailSettings(forceRefresh = false): Promise<EmailSetti
     accentColor: null,
     brandingLogoPath: null,
     emailHeaderStyle: 'LOGO_AND_NAME',
+    language: 'en',
   }
   settingsCacheTime = now
 
@@ -612,6 +618,24 @@ export async function isSmtpConfigured(): Promise<boolean> {
     console.error('Error checking SMTP configuration:', error)
     return false
   }
+}
+
+/**
+ * Resolve the preferred locale for a recipient email.
+ * Checks ClientContact.language first, falls back to system language.
+ */
+export async function getRecipientLocale(recipientEmail: string): Promise<string> {
+  try {
+    const contact = await prisma.clientContact.findFirst({
+      where: { email: recipientEmail },
+      select: { language: true },
+    })
+    if (contact?.language) return contact.language
+  } catch {
+    // Fall through to system default
+  }
+  const settings = await getEmailSettings()
+  return settings.language || 'en'
 }
 
 /**
@@ -700,6 +724,7 @@ export async function sendNewVersionEmail({
   shareUrl,
   isPasswordProtected = false,
   unsubscribeUrl,
+  locale: localeOverride,
 }: {
   clientEmail: string
   clientName: string
@@ -709,15 +734,20 @@ export async function sendNewVersionEmail({
   shareUrl: string
   isPasswordProtected?: boolean
   unsubscribeUrl?: string
+  locale?: string
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('NEW_VERSION')
-  
+  // Use recipient locale override, fall back to system language
+  const locale = localeOverride || settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('NEW_VERSION', locale)
+
   // Build placeholder values (use both CLIENT_NAME and RECIPIENT_NAME for flexibility)
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
@@ -738,10 +768,12 @@ export async function sendNewVersionEmail({
 
   // Add password protected note if applicable
   if (isPasswordProtected) {
+    const protectedLabel = emailMessages.common?.protectedProject || 'Protected project:'
+    const protectedNotice = emailMessages.common?.protectedProjectNotice || 'Use the password sent separately to access this project.'
     bodyContent += `
       <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 10px; padding: 14px 16px; margin-bottom: 24px;">
         <div style="font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
-          <strong>Protected project:</strong> Use the password sent separately to access this project.
+          <strong>${protectedLabel}</strong> ${protectedNotice}
         </div>
       </div>
     `
@@ -749,13 +781,13 @@ export async function sendNewVersionEmail({
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
-    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
   const html = renderEmailShell({
     companyName,
-    title: 'New Version Available',
-    subtitle: 'Ready for your review',
+    title: emailMessages.newVersion?.title || 'New Version Available',
+    subtitle: emailMessages.newVersion?.subtitle || 'Ready for your review',
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
@@ -783,6 +815,7 @@ export async function sendProjectApprovedEmail({
   approverName,
   isApprover = false,
   watermarkEnabled = true,
+  locale: localeOverride,
 }: {
   clientEmail: string
   clientName: string
@@ -794,50 +827,53 @@ export async function sendProjectApprovedEmail({
   approverName?: string
   isApprover?: boolean
   watermarkEnabled?: boolean
+  locale?: string
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('PROJECT_APPROVED')
+  // Use recipient locale override, fall back to system language
+  const locale = localeOverride || settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+  const approvedMsg = emailMessages.projectApproved || {}
 
-  const statusTitle = isComplete ? 'Project Approved' : 'Deliverable Approved'
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('PROJECT_APPROVED', locale)
+
+  const statusTitle = isComplete
+    ? (approvedMsg.titleProject || 'Project Approved')
+    : (approvedMsg.titleDeliverable || 'Deliverable Approved')
   const statusMessage = isComplete
-    ? 'All deliverables are approved and ready to deliver'
-    : `${approvedVideos[0]?.name || 'The deliverable'} has been approved`
+    ? (approvedMsg.subtitleComplete || 'All deliverables are approved and ready to deliver')
+    : (approvedMsg.subtitlePartial || '{{VIDEO_NAME}} has been approved').replace('{{VIDEO_NAME}}', approvedVideos[0]?.name || 'The deliverable')
 
   const videoName = approvedVideos[0]?.name || 'The deliverable'
 
   // Build dynamic approval message based on context
   let approvalMessage: string
   if (isComplete) {
-    // Full project approval
     if (approverName && !isApprover) {
-      // Someone else from the company approved
-      approvalMessage = `<strong>${escapeHtml(approverName)}</strong> has approved all deliverables.`
+      approvalMessage = (approvedMsg.approverApprovedAll || '{{APPROVER_NAME}} has approved all deliverables.').replace('{{APPROVER_NAME}}', `<strong>${escapeHtml(approverName)}</strong>`)
     } else {
-      // Recipient approved or unknown approver
-      approvalMessage = `All deliverables have been approved.`
+      approvalMessage = approvedMsg.allApproved || 'All deliverables have been approved.'
     }
-    // Add download note based on watermark setting
     if (watermarkEnabled) {
-      approvalMessage += ` You can now download the final version without watermarks.`
+      approvalMessage += ` ${approvedMsg.downloadNoWatermarks || 'You can now download the final version without watermarks.'}`
     } else {
-      approvalMessage += ` The final files are now ready for download.`
+      approvalMessage += ` ${approvedMsg.filesReady || 'The final files are now ready for download.'}`
     }
   } else {
-    // Single video approval
     if (approverName && !isApprover) {
-      approvalMessage = `<strong>${escapeHtml(approverName)}</strong> has approved this deliverable.`
+      approvalMessage = (approvedMsg.approverApprovedOne || '{{APPROVER_NAME}} has approved this deliverable.').replace('{{APPROVER_NAME}}', `<strong>${escapeHtml(approverName)}</strong>`)
     } else {
-      approvalMessage = `This deliverable has been approved.`
+      approvalMessage = approvedMsg.oneApproved || 'This deliverable has been approved.'
     }
     if (watermarkEnabled) {
-      approvalMessage += ` You can now download the final version without watermarks.`
+      approvalMessage += ` ${approvedMsg.downloadNoWatermarks || 'You can now download the final version without watermarks.'}`
     } else {
-      approvalMessage += ` The final file is now ready for download.`
+      approvalMessage += ` ${approvedMsg.fileReady || 'The final file is now ready for download.'}`
     }
   }
 
@@ -860,7 +896,7 @@ export async function sendProjectApprovedEmail({
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
-    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
   const html = renderEmailShell({
@@ -897,6 +933,7 @@ export async function sendCommentNotificationEmail({
   shareUrl,
   unsubscribeUrl,
   attachmentNames,
+  locale: localeOverride,
 }: {
   clientEmail: string
   clientName: string
@@ -911,21 +948,27 @@ export async function sendCommentNotificationEmail({
   shareUrl: string
   unsubscribeUrl?: string
   attachmentNames?: string[]
+  locale?: string
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('COMMENT_NOTIFICATION')
+  // Use recipient locale override, fall back to system language
+  const locale = localeOverride || settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+  const attachmentsLabel = emailMessages.common?.attachmentsLabel || 'Attachments'
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('COMMENT_NOTIFICATION', locale)
 
   const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode, fps })
   const timecodeText = renderTimecodePill(timecode, tcLink, brand)
 
   // Build attachments HTML
   const attachmentsHtml = attachmentNames && attachmentNames.length > 0
-    ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">Attachments</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
+    ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">${attachmentsLabel}</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
     : ''
 
   // Build placeholder values
@@ -951,14 +994,15 @@ export async function sendCommentNotificationEmail({
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
-    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
+  const shellTitle = emailMessages.commentNotification?.title || 'New Comment'
   const html = renderEmailShell({
     companyName,
-    title: 'New Comment',
+    title: shellTitle,
     subtitle: `${videoName} in ${projectTitle}`,
-    preheader: `New comment on ${videoName} in ${projectTitle}`,
+    preheader: `${shellTitle}: ${videoName} in ${projectTitle}`,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
@@ -1009,8 +1053,13 @@ export async function sendAdminCommentNotificationEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('ADMIN_COMMENT_NOTIFICATION')
+  // Load locale-aware email messages
+  const locale = settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+  const attachmentsLabel = emailMessages.common?.attachmentsLabel || 'Attachments'
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('ADMIN_COMMENT_NOTIFICATION', locale)
 
   // Admin deep-links go to admin share page, not public share page
   const tcLink = projectId && settings.appDomain
@@ -1021,7 +1070,7 @@ export async function sendAdminCommentNotificationEmail({
 
   // Build attachments HTML
   const attachmentsHtml = attachmentNames && attachmentNames.length > 0
-    ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">Attachments</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
+    ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">${attachmentsLabel}</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
     : ''
 
   // Build placeholder values
@@ -1045,11 +1094,12 @@ export async function sendAdminCommentNotificationEmail({
   // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
+  const shellTitle = emailMessages.adminCommentNotification?.title || 'New Comment'
   const html = renderEmailShell({
     companyName,
-    title: 'New Comment',
+    title: shellTitle,
     subtitle: `${clientName} on ${videoName} in ${projectTitle}`,
-    preheader: `New comment from ${clientName} on ${projectTitle}`,
+    preheader: `${shellTitle}: ${clientName} on ${projectTitle}`,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
@@ -1102,15 +1152,27 @@ export async function sendAdminProjectApprovedEmail({
     throw new Error('App domain not configured. Please configure domain in Settings to enable email notifications.')
   }
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('ADMIN_PROJECT_APPROVED')
+  // Load locale-aware email messages
+  const locale = settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+  const adminApprovedMsg = emailMessages.adminProjectApproved || {}
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('ADMIN_PROJECT_APPROVED', locale)
 
   // Determine subject and title based on approval/unapproval and complete/partial
-  const action = isApproval ? 'Approved' : 'Unapproved'
-  const statusTitle = isComplete ? `All Deliverables ${action}` : `Deliverable ${action}`
+  const action = isApproval
+    ? (adminApprovedMsg.approved || 'Approved')
+    : (adminApprovedMsg.unapproved || 'Unapproved')
+  const actionLower = isApproval
+    ? (adminApprovedMsg.approvedAction || 'approved')
+    : (adminApprovedMsg.unapprovedAction || 'unapproved')
+  const statusTitle = isComplete
+    ? (adminApprovedMsg.titleAllAction || 'All Deliverables {{ACTION}}').replace('{{ACTION}}', action)
+    : (adminApprovedMsg.titleOneAction || 'Deliverable {{ACTION}}').replace('{{ACTION}}', action)
   const statusMessage = isComplete
-    ? `${clientName} has ${isApproval ? 'approved' : 'unapproved'} all deliverables for this project`
-    : `${clientName} has ${isApproval ? 'approved' : 'unapproved'} ${approvedVideos[0]?.name || 'a deliverable'}`
+    ? `${clientName} has ${actionLower} all deliverables for this project`
+    : `${clientName} has ${actionLower} ${approvedVideos[0]?.name || 'a deliverable'}`
 
   const videoName = approvedVideos[0]?.name || 'A deliverable'
 
@@ -1121,7 +1183,7 @@ export async function sendAdminProjectApprovedEmail({
     '{{PROJECT_TITLE}}': projectTitle,
     '{{VIDEO_NAME}}': videoName,
     '{{APPROVAL_STATUS}}': action,
-    '{{APPROVAL_ACTION}}': isApproval ? 'approved' : 'unapproved',
+    '{{APPROVAL_ACTION}}': actionLower,
     '{{ADMIN_URL}}': `${appDomain}/admin`,
     '{{COMPANY_NAME}}': companyName,
   }
@@ -1173,6 +1235,7 @@ export async function sendProjectGeneralNotificationEmail({
   readyVideos = [],
   isPasswordProtected = false,
   unsubscribeUrl,
+  locale: localeOverride,
 }: {
   clientEmail: string
   clientName: string
@@ -1182,19 +1245,25 @@ export async function sendProjectGeneralNotificationEmail({
   readyVideos?: Array<{ name: string; versionLabel: string }>
   isPasswordProtected?: boolean
   unsubscribeUrl?: string
+  locale?: string
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('PROJECT_GENERAL')
+  // Use recipient locale override, fall back to system language
+  const locale = localeOverride || settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('PROJECT_GENERAL', locale)
 
   // Build video list HTML
+  const readyToViewLabel = emailMessages.common?.readyToView || 'Ready to view'
   const videoListHtml = readyVideos.length > 0 ? `
     <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:16px; margin-bottom:24px;">
-      <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">Ready to view</div>
+      <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">${readyToViewLabel}</div>
       ${readyVideos.map(v => `
         <div style="font-size:15px; color:${brand.textSubtle}; padding:6px 0;">
           • ${escapeHtml(v.name)} <span style="color:${brand.accent}; font-weight:600;">${escapeHtml(v.versionLabel)}</span>
@@ -1203,9 +1272,11 @@ export async function sendProjectGeneralNotificationEmail({
     </div>
   ` : ''
 
+  const protectedLabel = emailMessages.common?.protectedProject || 'Protected project:'
+  const protectedNotice = emailMessages.common?.protectedProjectNotice || 'Use the password sent separately to access this project.'
   const passwordNotice = isPasswordProtected
     ? `<div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:14px 16px; font-size:14px; color:${brand.textSubtle}; margin:0 0 24px;">
-        <strong>Protected project:</strong> Use the password sent separately to access this project.
+        <strong>${protectedLabel}</strong> ${protectedNotice}
       </div>`
     : ''
 
@@ -1229,14 +1300,15 @@ export async function sendProjectGeneralNotificationEmail({
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
-    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
+  const shellTitle = emailMessages.projectGeneral?.title || 'Ready for Review'
   const html = renderEmailShell({
     companyName,
-    title: 'Ready for Review',
+    title: shellTitle,
     subtitle: projectTitle,
-    preheader: `Ready for review: ${projectTitle}`,
+    preheader: `${shellTitle}: ${projectTitle}`,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
@@ -1259,20 +1331,26 @@ export async function sendPasswordEmail({
   projectTitle,
   password,
   unsubscribeUrl,
+  locale: localeOverride,
 }: {
   clientEmail: string
   clientName: string
   projectTitle: string
   password: string
   unsubscribeUrl?: string
+  locale?: string
 }) {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('PASSWORD')
+  // Use recipient locale override, fall back to system language
+  const locale = localeOverride || settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('PASSWORD', locale)
 
   // Build placeholder values
   const placeholderValues: Record<string, string> = {
@@ -1291,14 +1369,15 @@ export async function sendPasswordEmail({
 
   // Add unsubscribe section if applicable
   if (unsubscribeUrl) {
-    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand)
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
+  const shellTitle = emailMessages.password?.title || 'Project Password'
   const html = renderEmailShell({
     companyName,
-    title: 'Project Password',
+    title: shellTitle,
     subtitle: projectTitle,
-    preheader: `Password for ${projectTitle}`,
+    preheader: `${shellTitle}: ${projectTitle}`,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
@@ -1329,8 +1408,12 @@ export async function sendPasswordResetEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('PASSWORD_RESET')
+  // Load locale-aware email messages
+  const locale = settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('PASSWORD_RESET', locale)
 
   // Build placeholder values
   const placeholderValues: Record<string, string> = {
@@ -1346,16 +1429,19 @@ export async function sendPasswordResetEmail({
   // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
+  const shellTitle = emailMessages.passwordReset?.title || 'Password Reset'
+  const shellSubtitle = emailMessages.passwordReset?.subtitle || 'Reset your admin account password'
+  const footerNote = (emailMessages.common?.automatedSecurityMessage || 'This is an automated security message from {{COMPANY_NAME}}').replace('{{COMPANY_NAME}}', companyName)
   const html = renderEmailShell({
     companyName,
-    title: 'Password Reset',
-    subtitle: 'Reset your admin account password',
-    preheader: 'Reset your password for ViTransfer',
+    title: shellTitle,
+    subtitle: shellSubtitle,
+    preheader: shellTitle,
     brand,
     brandingLogoUrl,
     emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
     bodyContent,
-    footerNote: `This is an automated security message from ${companyName}`,
+    footerNote,
   })
 
   return sendEmail({
@@ -1384,8 +1470,12 @@ export async function sendDueDateReminderEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Get custom template or use default
-  const template = await getEmailTemplate('DUE_DATE_REMINDER')
+  // Load locale-aware email messages
+  const locale = settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+
+  // Get custom template or use default (with locale for default templates)
+  const template = await getEmailTemplate('DUE_DATE_REMINDER', locale)
 
   const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
 
@@ -1405,9 +1495,10 @@ export async function sendDueDateReminderEmail({
   // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
+  const shellTitle = emailMessages.dueDateReminder?.title || 'Deadline Reminder'
   const html = renderEmailShell({
     companyName,
-    title: 'Deadline Reminder',
+    title: shellTitle,
     subtitle: `${projectTitle} is due ${reminderType}`,
     preheader: `${projectTitle} is due ${reminderType}`,
     brand,

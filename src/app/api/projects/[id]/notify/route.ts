@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail, isSmtpConfigured } from '@/lib/email'
+import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail, isSmtpConfigured, getRecipientLocale } from '@/lib/email'
 import { generateShareUrl } from '@/lib/url'
 import { requireApiAdmin } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
@@ -123,6 +123,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
 
         if (notifyEntireProject) {
+          // Resolve per-recipient locale
+          const recipientLocale = await getRecipientLocale(recipient.email!)
           return sendProjectGeneralNotificationEmail({
             clientEmail: recipient.email!,
             clientName: recipient.name || 'Client',
@@ -132,8 +134,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             readyVideos: project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
             isPasswordProtected,
             unsubscribeUrl,
+            locale: recipientLocale,
           })
         } else {
+          // Resolve per-recipient locale
+          const recipientLocale = await getRecipientLocale(recipient.email!)
           return sendNewVersionEmail({
             clientEmail: recipient.email!,
             clientName: recipient.name || 'Client',
@@ -143,6 +148,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             shareUrl,
             isPasswordProtected,
             unsubscribeUrl,
+            locale: recipientLocale,
           })
         }
       })
@@ -167,7 +173,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const passwordPromises = recipients
           .filter(recipient => recipient.email)
           .map(recipient =>
-            (() => {
+            (async () => {
               let unsubscribeUrl: string | undefined
               try {
                 const token = generateRecipientUnsubscribeToken({
@@ -180,12 +186,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 unsubscribeUrl = undefined
               }
 
+              // Resolve per-recipient locale
+              const recipientLocale = await getRecipientLocale(recipient.email!)
+
               return sendPasswordEmail({
               clientEmail: recipient.email!,
               clientName: recipient.name || 'Client',
               projectTitle: project.title,
               password: decryptedPassword,
                 unsubscribeUrl,
+                locale: recipientLocale,
               })
             })()
           )

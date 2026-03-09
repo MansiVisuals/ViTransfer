@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Video } from '@prisma/client'
 import { formatDuration, formatFileSize } from '@/lib/utils'
 import { Button } from './ui/button'
@@ -18,6 +19,7 @@ interface VideoListProps {
 }
 
 export default function VideoList({ videos: initialVideos, isAdmin = true, onRefresh }: VideoListProps) {
+  const t = useTranslations('videos')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -58,7 +60,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     // Prevent double-clicks during deletion
     if (deletingId) return
 
-    if (!confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
+    if (!confirm(t('deleteConfirm'))) {
       return
     }
 
@@ -76,7 +78,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       .catch(() => {
         // Restore video on error
         setVideos(initialVideos)
-        alert('Failed to delete video')
+        alert(t('failedToDelete'))
       })
       .finally(() => {
         setDeletingId(null)
@@ -87,8 +89,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     // Prevent double-clicks during approval toggle
     if (approvingId) return
 
-    const action = currentlyApproved ? 'unapprove' : 'approve'
-    if (!confirm(`Are you sure you want to ${action} this video?`)) {
+    if (!confirm(currentlyApproved ? t('confirmUnapproveVideo') : t('confirmApproveVideo'))) {
       return
     }
 
@@ -113,7 +114,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         setVideos(prev => prev.map(v =>
           v.id === videoId ? { ...v, approved: currentlyApproved } as Video : v
         ))
-        alert(`Failed to ${action} video`)
+        alert(currentlyApproved ? t('failedToUnapproveVideo') : t('failedToApproveVideo'))
       })
       .finally(() => {
         setApprovingId(null)
@@ -132,7 +133,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
   const handleSaveEdit = async (videoId: string) => {
     if (!editValue.trim()) {
-      alert('Version label cannot be empty')
+      alert(t('videoNameEmpty'))
       return
     }
 
@@ -159,7 +160,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       setShowReprocessModal(false)
       await onRefresh?.()
     } catch (error) {
-      alert('Failed to update version label')
+      alert(t('failedToUpdateName'))
     } finally {
       setSavingId(null)
     }
@@ -205,8 +206,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     })
       .then(async (response) => {
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Download failed' }))
-          throw new Error(errorData.error || 'Failed to generate download link')
+          const errorData = await response.json().catch(() => ({ error: t('downloadFailed') }))
+          throw new Error(errorData.error || t('failedToGenerateDownload'))
         }
         return response.json()
       })
@@ -215,7 +216,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       })
       .catch((error) => {
         console.error('Download error:', error)
-        alert(error instanceof Error ? error.message : 'Failed to generate download link')
+        alert(error instanceof Error ? error.message : t('failedToGenerateDownload'))
       })
       .finally(() => {
         setDownloadingId(null)
@@ -251,7 +252,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   const latestVideoId = sortedVideos[0]?.id
 
   if (videos.length === 0) {
-    return <p className="text-sm text-muted-foreground">No videos uploaded yet</p>
+    return <p className="text-sm text-muted-foreground">{t('noVideosYet')}</p>
   }
 
   // Render collapsed version row (compact)
@@ -267,12 +268,12 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       {video.status === 'PROCESSING' && (
         <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-primary-visible text-primary flex items-center gap-1">
           <div className="animate-spin rounded-full h-2 w-2 border-b border-primary"></div>
-          Processing
+          {t('processing')}
         </span>
       )}
       {video.status === 'ERROR' && (
         <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-destructive-visible text-destructive">
-          Error
+          {t('error')}
         </span>
       )}
       <span className="text-sm text-muted-foreground truncate flex-1">
@@ -284,7 +285,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
           size="icon"
           className="h-7 w-7"
           onClick={() => toggleVersion(video.id)}
-          title="Expand version"
+          title={t('expandVersion')}
         >
           <ChevronDown className="w-4 h-4" />
         </Button>
@@ -298,7 +299,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
               ? "h-7 w-7 text-warning hover:text-warning hover:bg-warning-visible"
               : "h-7 w-7 text-success hover:text-success hover:bg-success-visible"
             }
-            title={(video as any).approved ? "Unapprove" : "Approve"}
+            title={(video as any).approved ? t('unapprove') : t('approve')}
           >
             {(video as any).approved ? (
               <XCircle className="w-3.5 h-3.5" />
@@ -314,7 +315,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
             className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive-visible"
             onClick={() => handleDelete(video.id)}
             disabled={deletingId === video.id}
-            title="Delete"
+            title={t('deleteVideo')}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -346,7 +347,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
               <h4 className="font-medium truncate">{video.versionLabel}</h4>
               {isLatest && videos.length > 1 && (
                 <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                  Latest
+                  {t('latest')}
                 </span>
               )}
               {isAdmin && video.status === 'READY' && (
@@ -355,7 +356,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                   size="icon"
                   className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:bg-primary-visible hover:text-primary"
                   onClick={() => handleStartEdit(video.id, video.versionLabel)}
-                  title="Edit version label"
+                  title={t('editVersionLabel')}
                 >
                   <Pencil className="w-3 h-3" />
                 </Button>
@@ -373,7 +374,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => toggleVersion(video.id)}
-                title="Collapse version"
+                title={t('collapseVersion')}
               >
                 <ChevronUp className="w-4 h-4" />
               </Button>
@@ -403,7 +404,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                   ? "text-warning hover:text-warning hover:bg-warning-visible"
                   : "text-success hover:text-success hover:bg-success-visible"
                 }`}
-                title={(video as any).approved ? "Unapprove video" : "Approve video"}
+                title={(video as any).approved ? t('unapproveVideo') : t('approveVideo')}
               >
                 {(video as any).approved ? (
                   <XCircle className="w-4 h-4" />
@@ -418,7 +419,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 size="icon"
                 className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 onClick={() => setUploadingAssetsFor(uploadingAssetsFor === video.id ? null : video.id)}
-                title="Upload Assets"
+                title={t('uploadAssets')}
               >
                 <Upload className="w-4 h-4" />
               </Button>
@@ -430,7 +431,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
                 onClick={() => handleDownloadVideo(video.id)}
                 disabled={downloadingId === video.id}
-                title="Download Video"
+                title={t('downloadVideo')}
               >
                 <Download className="w-4 h-4" />
               </Button>
@@ -442,7 +443,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive-visible"
                 onClick={() => handleDelete(video.id)}
                 disabled={deletingId === video.id}
-                title="Delete video"
+                title={t('deleteVideo')}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -461,7 +462,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       {video.status === 'PROCESSING' && (
         <div className="space-y-1">
           <div className="flex justify-between text-xs">
-            <span>Processing previews...</span>
+            <span>{t('processingPreviews')}</span>
           </div>
           <div className="relative h-4 w-full overflow-hidden rounded-full bg-secondary">
             <div
@@ -483,21 +484,21 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       {video.status === 'READY' && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
           <div>
-            <p className="text-muted-foreground">Duration</p>
+            <p className="text-muted-foreground">{t('duration')}</p>
             <p className="font-medium">{formatDuration(video.duration)}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">FPS</p>
+            <p className="text-muted-foreground">{t('fps')}</p>
             <p className="font-medium">{video.fps ? `${video.fps.toFixed(2)}` : 'N/A'}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Resolution</p>
+            <p className="text-muted-foreground">{t('resolution')}</p>
             <p className="font-medium">
               {video.width}x{video.height}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Size</p>
+            <p className="text-muted-foreground">{t('size')}</p>
             <p className="font-medium">{formatFileSize(Number(video.originalFileSize))}</p>
           </div>
         </div>
@@ -507,7 +508,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       {isAdmin && uploadingAssetsFor === video.id && video.status === 'READY' && (
         <div className="mt-4 pt-4 border-t space-y-4">
           <div>
-            <h5 className="text-sm font-medium mb-3">Upload Additional Assets</h5>
+            <h5 className="text-sm font-medium mb-3">{t('uploadAdditionalAssets')}</h5>
             <VideoAssetUploadQueue
               videoId={video.id}
               maxConcurrent={3}
@@ -546,8 +547,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         <div className="flex items-center justify-between pb-2 border-b">
           <span className="text-sm text-muted-foreground">
             {expandedVersions.size === videos.length
-              ? `Showing all ${videos.length} versions`
-              : `${videos.length - expandedVersions.size} older ${videos.length - expandedVersions.size === 1 ? 'version' : 'versions'} collapsed`
+              ? `${t('showingAll')} ${videos.length} ${t('versions')}`
+              : `${videos.length - expandedVersions.size} ${t('older')} ${t('versionsCollapsed')}`
             }
           </span>
           <Button
@@ -559,12 +560,12 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
             {showAllVersions ? (
               <>
                 <EyeOff className="w-3 h-3 mr-1" />
-                Collapse older
+                {t('collapseOlder')}
               </>
             ) : (
               <>
                 <Eye className="w-3 h-3 mr-1" />
-                Show all {videos.length} versions
+                {t('showAll')} {videos.length} {t('versions')}
               </>
             )}
           </Button>
@@ -593,8 +594,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         onSaveAndReprocess={() => saveVersionLabel(true)}
         saving={savingId !== null}
         reprocessing={reprocessing}
-        title="Version Label Changed"
-        description="Version labels appear in watermarks. The change will only apply to newly uploaded videos."
+        title={t('versionLabelChanged')}
+        description={t('versionLabelWarning')}
         isSingleVideo={true}
       />
     </div>

@@ -5,6 +5,7 @@ import { Comment, Video } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { CheckCircle2, MessageSquare, ChevronDown, ChevronUp, PanelRightClose } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import MessageBubble from './MessageBubble'
 import CommentInput from './CommentInput'
@@ -72,6 +73,8 @@ export default function CommentSection({
   showToggleButton = false,
   onMobileExpandedChange,
 }: CommentSectionProps) {
+  const t = useTranslations('comments')
+  const tCommon = useTranslations('common')
   const [isMobileCollapsed, setIsMobileCollapsed] = useState(initialMobileCollapsed)
   const {
     comments,
@@ -287,10 +290,10 @@ export default function CommentSection({
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffMins < 1) return t('justNow')
+    if (diffMins < 60) return `${diffMins}${t('minutesAgo')}`
+    if (diffHours < 24) return `${diffHours}${t('hoursAgo')}`
+    if (diffDays < 7) return `${diffDays}${t('daysAgo')}`
     return formatDate(date)
   }
 
@@ -331,7 +334,7 @@ export default function CommentSection({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-foreground flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Feedback & Discussion
+            {t('feedbackAndDiscussion')}
           </CardTitle>
           {showToggleButton && onToggleVisibility && (
             <Button
@@ -339,7 +342,7 @@ export default function CommentSection({
               size="sm"
               onClick={onToggleVisibility}
               className="hidden lg:flex h-8 px-2"
-              title="Hide feedback section"
+              title={t('hideFeedback')}
             >
               <PanelRightClose className="w-4 h-4" />
             </Button>
@@ -348,8 +351,8 @@ export default function CommentSection({
         {selectedVideoId && currentVideo && !isAdminView && (
           <p className="text-xs text-muted-foreground mt-1">
             {commentsDisabled
-              ? 'Watching approved version'
-              : `Currently viewing: ${currentVideo.versionLabel}`}
+              ? t('watchingApprovedVersion')
+              : `${t('currentlyViewing')} ${currentVideo.versionLabel}`}
           </p>
         )}
       </CardHeader>
@@ -362,14 +365,14 @@ export default function CommentSection({
               <CheckCircle2 className="w-8 h-8 text-success flex-shrink-0" />
               <div>
                 <h3 className="text-foreground font-medium">
-                  {isApproved ? 'Project Approved' : 'Video Approved'}
+                  {isApproved ? t('projectApproved') : t('videoApproved')}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {isApproved
-                    ? 'The final version is ready for download without watermarks.'
+                    ? t('approvedDownloadReady')
                     : approvedVideo
-                    ? `${approvedVideo.versionLabel} of this video has been approved and is ready for download.`
-                    : 'A version of this video has been approved and is ready for download.'}
+                    ? t('versionApprovedDownload', { versionLabel: approvedVideo.versionLabel })
+                    : t('aVersionApprovedDownload')}
                 </p>
               </div>
             </div>
@@ -436,7 +439,7 @@ export default function CommentSection({
           >
             <span className="text-sm font-medium flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Feedback & Discussion ({sortedComments.length})
+              {t('feedbackAndDiscussion')} ({sortedComments.length})
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">
@@ -459,7 +462,7 @@ export default function CommentSection({
           {sortedComments.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+              <p className="text-muted-foreground">{t('noMessages')}</p>
             </div>
           ) : (
             <>

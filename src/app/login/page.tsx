@@ -2,6 +2,7 @@
 
 import { useState, Suspense, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,8 @@ import { setTokens, clearTokens } from '@/lib/token-store'
 import BrandLogo from '@/components/BrandLogo'
 
 function LoginForm() {
+  const t = useTranslations('auth')
+  const tc = useTranslations('common')
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawReturnUrl = searchParams?.get('returnUrl') || '/admin/projects'
@@ -87,7 +90,7 @@ function LoginForm() {
         const data = await verifyRes.json()
 
         if (!verifyRes.ok) {
-          setError(data.error || 'PassKey authentication failed')
+          setError(data.error || t('passkeyFailed'))
           setPasskeyLoading(false)
           return
         }
@@ -158,7 +161,7 @@ function LoginForm() {
       const data = await verifyRes.json()
 
       if (!verifyRes.ok) {
-        setError(data.error || 'PassKey authentication failed')
+        setError(data.error || t('passkeyFailed'))
         setPasskeyLoading(false)
         return
       }
@@ -181,9 +184,9 @@ function LoginForm() {
 
       // Show generic error to prevent information disclosure
       if (err.name === 'NotAllowedError') {
-        setError('PassKey authentication cancelled')
+        setError(t('passkeyCancelled'))
       } else {
-        setError('PassKey authentication failed. Please check your configuration.')
+        setError(t('passkeyFailedConfig'))
       }
       setPasskeyLoading(false)
     }
@@ -212,7 +215,7 @@ function LoginForm() {
           return
         }
         
-        setError(data.error || 'Login failed')
+        setError(data.error || t('loginFailed'))
         setLoading(false)
         return
       }
@@ -230,7 +233,7 @@ function LoginForm() {
       router.push(returnUrl)
       router.refresh()
     } catch (err) {
-      setError('An error occurred. Please try again.')
+      setError(tc('errorTryAgain'))
       setLoading(false)
     }
   }
@@ -242,10 +245,10 @@ function LoginForm() {
         <div className="text-center mb-8">
           <BrandLogo height={64} className="mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-foreground">
-            ViTransfer
+            {tc('viTransfer')}
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Video Review, Feedback & Deliverables
+            {tc('videoReviewTagline')}
           </p>
         </div>
 
@@ -253,10 +256,10 @@ function LoginForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5" />
-              Admin Login
+              {t('adminLogin')}
             </CardTitle>
             <CardDescription>
-              Sign in to access the admin dashboard
+              {t('signInDescription')}
             </CardDescription>
           </CardHeader>
 
@@ -265,7 +268,7 @@ function LoginForm() {
               {sessionExpired && (
                 <div className="p-3 bg-warning-visible border-2 border-warning-visible rounded-lg">
                   <p className="text-sm text-warning font-medium">
-                    Your session has expired due to inactivity. Please log in again.
+                    {t('sessionExpired')}
                   </p>
                 </div>
               )}
@@ -277,11 +280,11 @@ function LoginForm() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Username or Email</Label>
+                <Label htmlFor="email">{t('usernameOrEmail')}</Label>
                 <Input
                   id="email"
                   type="text"
-                  placeholder="Enter your username or email"
+                  placeholder={t('usernameOrEmailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -292,10 +295,10 @@ function LoginForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('password')}</Label>
                 <PasswordInput
                   id="password"
-                  placeholder="Enter your password"
+                  placeholder={t('passwordPlaceholder')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -307,7 +310,7 @@ function LoginForm() {
                     href="/forgot-password"
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Forgot password?
+                    {t('forgotPassword')}
                   </Link>
                 </div>
               </div>
@@ -320,7 +323,7 @@ function LoginForm() {
                 disabled={loading}
               >
                 <LogIn className="w-4 h-4 mr-2" />
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? t('signingIn') : t('signIn')}
               </Button>
 
               <div className="relative my-4">
@@ -328,7 +331,7 @@ function LoginForm() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                  <span className="bg-card px-2 text-muted-foreground">{tc('or')}</span>
                 </div>
               </div>
 
@@ -341,7 +344,7 @@ function LoginForm() {
                 onClick={handlePasskeyLogin}
               >
                 <Fingerprint className="w-4 h-4 mr-2" />
-                {passkeyLoading ? 'Authenticating...' : 'Use PassKey'}
+                {passkeyLoading ? t('authenticating') : t('usePassKey')}
               </Button>
             </form>
           </CardContent>

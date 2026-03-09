@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Comment } from '@prisma/client'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
@@ -111,6 +112,9 @@ export default function CommentInput({
   showShortcutsButton = false,
   onShowShortcuts,
 }: CommentInputProps) {
+  const t = useTranslations('comments')
+  const tCommon = useTranslations('common')
+
   if (commentsDisabled) return null
 
   // Check if name selection is required but not provided
@@ -158,7 +162,7 @@ export default function CommentInput({
       {currentVideoRestricted && restrictionMessage && (
         <div className="mb-3 p-3 bg-warning-visible border-2 border-warning-visible rounded-lg">
           <p className="text-sm text-warning font-medium flex items-center gap-2">
-            <span className="font-semibold">Comments Restricted</span>
+            <span className="font-semibold">{t('commentsRestricted')}</span>
           </p>
           <p className="text-xs text-warning font-medium mt-1">
             {restrictionMessage}
@@ -170,10 +174,10 @@ export default function CommentInput({
       {replyingToComment && (
         <div className="mb-3 p-3 bg-muted/30 border border-border rounded-lg flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
-            <InitialsAvatar name={replyingToComment.authorName || 'Anonymous'} size="sm" />
+            <InitialsAvatar name={replyingToComment.authorName || t('anonymous')} size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-xs text-foreground font-semibold mb-1 truncate">
-                Replying to {replyingToComment.authorName || 'Anonymous'}
+                {t('replyingTo')} {replyingToComment.authorName || t('anonymous')}
               </p>
               <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
                 {replyingToComment.content}
@@ -184,7 +188,7 @@ export default function CommentInput({
             onClick={onCancelReply}
             className="text-xs text-muted-foreground hover:text-foreground font-medium flex-shrink-0 px-2 py-1 rounded hover:bg-muted transition-colors"
           >
-            Cancel
+            {tCommon('cancel')}
           </button>
         </div>
       )}
@@ -207,22 +211,22 @@ export default function CommentInput({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a name..." />
+                  <SelectValue placeholder={t('selectName')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Select a name...</SelectItem>
+                  <SelectItem value="none">{t('selectName')}</SelectItem>
                   {namedRecipients.map((recipient) => (
                     <SelectItem key={recipient.id} value={recipient.id}>
                       {recipient.name}
                     </SelectItem>
                   ))}
-                  <SelectItem value="custom">Custom Name</SelectItem>
+                  <SelectItem value="custom">{t('customName')}</SelectItem>
                 </SelectContent>
               </Select>
 
               {nameSource === 'custom' && (
                 <Input
-                  placeholder="Enter your name"
+                  placeholder={t('enterYourName')}
                   value={authorName}
                   onChange={(e) => onAuthorNameChange(e.target.value)}
                   className="text-sm"
@@ -232,7 +236,7 @@ export default function CommentInput({
             </>
           ) : (
             <Input
-              placeholder="Your name (optional)"
+              placeholder={t('yourNameOptional')}
               value={authorName}
               onChange={(e) => onAuthorNameChange(e.target.value)}
               className="text-sm"
@@ -247,7 +251,7 @@ export default function CommentInput({
           <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border border-border rounded-md">
             <InitialsAvatar name={authorName} size="sm" />
             <span className="text-sm text-foreground font-medium">
-              Commenting as <span className="font-semibold">{authorName}</span>
+              {t('commentingAs')} <span className="font-semibold">{authorName}</span>
             </span>
           </div>
         </div>
@@ -268,7 +272,7 @@ export default function CommentInput({
                     type="button"
                     onClick={onClearTimecodeEnd}
                     className="ml-0.5 hover:opacity-70 transition-opacity"
-                    title="Clear end timecode"
+                    title={t('clearEndTimecode')}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -283,9 +287,9 @@ export default function CommentInput({
               variant="outline"
               size="sm"
               className="h-7 text-xs px-2"
-              title="Set end timecode at current playback position"
+              title={t('setOutPoint')}
             >
-              Set Out Point
+              {t('setOutPoint')}
             </Button>
           )}
           <Button
@@ -294,7 +298,7 @@ export default function CommentInput({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            title="Clear timestamp"
+            title={t('clearTimestamp')}
           >
             <X className="w-4 h-4" />
           </Button>
@@ -309,13 +313,13 @@ export default function CommentInput({
             <div className="mb-2">
               <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded-md text-xs text-blue-600 dark:text-blue-400">
                 <Pencil className="w-3 h-3" />
-                Drawing attached
+                {t('drawingAttached')}
                 {onClearAnnotation && (
                   <button
                     type="button"
                     onClick={onClearAnnotation}
                     className="ml-0.5 hover:opacity-70 transition-opacity"
-                    title="Remove drawing"
+                    title={t('removeDrawing')}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -350,7 +354,7 @@ export default function CommentInput({
 
           <div className="flex flex-col gap-2">
             <Textarea
-              placeholder="Type your message..."
+              placeholder={t('typeMessage')}
               value={newComment}
               onChange={(e) => onCommentChange(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -366,7 +370,7 @@ export default function CommentInput({
                     variant={pendingAnnotation ? 'default' : 'outline'}
                     size="icon"
                     className="h-8 w-8 flex-shrink-0"
-                    title="Draw on video"
+                    title={t('drawOnVideo')}
                     disabled={loading}
                   >
                     <Pencil className="w-4 h-4" />
@@ -402,12 +406,12 @@ export default function CommentInput({
 
           {isNameRequired ? (
             <p className="text-xs text-warning mt-2">
-              Please select your name from the dropdown above before sending
+              {t('selectNameFirst')}
             </p>
           ) : (
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
-                Press Enter to send & Shift+Enter for new line
+                {t('enterToSend')}
               </p>
               {showShortcutsButton && onShowShortcuts && (
                 <Button
@@ -418,7 +422,7 @@ export default function CommentInput({
                   className="self-start sm:self-auto hidden lg:inline-flex"
                 >
                   <Keyboard className="w-4 h-4 lg:mr-2" />
-                  <span className="hidden lg:inline">Shortcuts</span>
+                  <span className="hidden lg:inline">{t('shortcuts')}</span>
                 </Button>
               )}
             </div>

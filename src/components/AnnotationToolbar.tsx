@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Pencil, Undo2, Check, X, Minus, Plus, ChevronUp, ChevronDown } from 'lucide-react'
 import { AnnotationColor, ANNOTATION_COLORS, MIN_STROKE_WIDTH, MAX_STROKE_WIDTH } from '@/types/annotations'
 
@@ -57,6 +58,8 @@ export default function AnnotationToolbar({
   onDone,
   onCancel,
 }: AnnotationToolbarProps) {
+  const t = useTranslations('controls')
+  const tCommon = useTranslations('common')
   const [minimized, setMinimized] = useState(false)
   const currentStepIndex = closestStepIndex(strokeWidth)
 
@@ -92,7 +95,7 @@ export default function AnnotationToolbar({
         type="button"
         onClick={() => setMinimized(false)}
         className="absolute top-3 left-3 z-30 flex items-center gap-1.5 bg-black/85 backdrop-blur-sm rounded-lg px-2.5 py-1.5 shadow-2xl border border-white/10 text-white/80 hover:text-white transition-colors"
-        title="Show drawing tools"
+        title={t('showDrawingTools')}
       >
         <Pencil className="w-3.5 h-3.5" />
         <ChevronDown className="w-3 h-3" />
@@ -130,7 +133,7 @@ export default function AnnotationToolbar({
         <div className="w-px h-5 sm:h-6 bg-white/20 mx-0.5 sm:mx-1" />
 
         {/* Stroke Width */}
-        <div className="flex items-center gap-0.5" title="Stroke thickness">
+        <div className="flex items-center gap-0.5" title={t('strokeThickness')}>
           <button
             type="button"
             onClick={decreaseWidth}
@@ -170,7 +173,7 @@ export default function AnnotationToolbar({
         <div className="w-px h-5 sm:h-6 bg-white/20 mx-0.5 sm:mx-1" />
 
         {/* Opacity */}
-        <div className="flex items-center gap-0.5" title="Opacity">
+        <div className="flex items-center gap-0.5" title={t('opacity')}>
           <button
             type="button"
             onClick={decreaseOpacity}
@@ -208,7 +211,7 @@ export default function AnnotationToolbar({
           type="button"
           onClick={() => setMinimized(true)}
           className="p-1 sm:p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          title="Hide toolbar"
+          title={t('hideToolbar')}
         >
           <ChevronUp className="w-3.5 h-3.5" />
         </button>
@@ -226,10 +229,10 @@ export default function AnnotationToolbar({
               ? 'text-white/60 hover:text-white hover:bg-white/10'
               : 'text-white/20 cursor-not-allowed'
           }`}
-          title="Undo"
+          title={t('undo')}
         >
           <Undo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="text-xs">Undo</span>
+          <span className="text-xs">{t('undo')}</span>
         </button>
 
         {/* Separator */}
@@ -240,10 +243,10 @@ export default function AnnotationToolbar({
           type="button"
           onClick={onCancel}
           className="p-1.5 sm:p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1"
-          title="Cancel"
+          title={tCommon('cancel')}
         >
           <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="text-xs">Cancel</span>
+          <span className="text-xs">{tCommon('cancel')}</span>
         </button>
 
         {/* Separator */}
@@ -259,10 +262,10 @@ export default function AnnotationToolbar({
               ? 'text-green-400 hover:text-green-300 hover:bg-green-500/20'
               : 'text-white/20 cursor-not-allowed'
           }`}
-          title="Save annotation"
+          title={t('saveAnnotation')}
         >
           <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="text-xs">Done</span>
+          <span className="text-xs">{tCommon('done')}</span>
         </button>
       </div>
     </div>

@@ -2,8 +2,10 @@
 
 import { Moon, Sun } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 
 export default function ThemeToggle() {
+  const t = useTranslations('controls')
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [mounted, setMounted] = useState(false)
 
@@ -116,7 +118,7 @@ export default function ThemeToggle() {
     return (
       <button
         className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
-        aria-label="Toggle theme"
+        aria-label={t('toggleTheme')}
       >
         <div className="h-5 w-5" />
       </button>
@@ -127,8 +129,8 @@ export default function ThemeToggle() {
     <button
       onClick={toggleTheme}
       className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
-      aria-label="Toggle theme"
-      title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+      aria-label={t('toggleTheme')}
+      title={theme === 'light' ? t('switchToDark') : t('switchToLight')}
     >
       {theme === 'light' ? (
         <Moon className="h-5 w-5 text-foreground" />

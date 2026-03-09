@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Funnel } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 interface FilterOption {
   value: string
@@ -23,6 +24,7 @@ interface FilterDropdownProps {
 }
 
 export default function FilterDropdown({ groups }: FilterDropdownProps) {
+  const t = useTranslations('common')
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -53,10 +55,10 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
         className={cn(
           isFiltering && 'text-primary border-primary'
         )}
-        title="Filter"
+        title={t('filter')}
       >
         <Funnel className={cn('w-4 h-4', isFiltering && 'fill-primary')} />
-        <span className="hidden sm:inline ml-2">Filter</span>
+        <span className="hidden sm:inline ml-2">{t('filter')}</span>
         {isFiltering && (
           <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full font-medium">
             {groups.reduce((sum, g) => sum + g.selected.size, 0)}
@@ -107,7 +109,7 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
                     onChange={toggleAll}
                     className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
                   />
-                  <span className="text-xs font-medium">All</span>
+                  <span className="text-xs font-medium">{t('all')}</span>
                 </label>
 
                 {group.options.map((option) => (

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -29,6 +30,8 @@ interface RecipientManagerProps {
 }
 
 export function RecipientManager({ projectId, companyId, onError, onRecipientsChange }: RecipientManagerProps) {
+  const t = useTranslations('recipients')
+  const tc = useTranslations('common')
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -110,12 +113,12 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
 
   const addRecipient = async () => {
     if (!newEmail && !newName) {
-      onError('Please enter at least a name or email address')
+      onError(t('enterNameOrEmail'))
       return
     }
 
     if (newEmail && !newEmail.includes('@')) {
-      onError('Please enter a valid email address')
+      onError(t('invalidEmail'))
       return
     }
 
@@ -131,12 +134,12 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
       setShowAddForm(false)
       await loadRecipients()
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to add recipient')
+      onError(error instanceof Error ? error.message : t('failedToAdd'))
     }
   }
 
   const deleteRecipient = async (recipientId: string) => {
-    if (!confirm('Are you sure you want to remove this recipient?')) {
+    if (!confirm(t('removeConfirm'))) {
       return
     }
 
@@ -144,7 +147,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
       await apiDelete(`/api/projects/${projectId}/recipients/${recipientId}`)
       await loadRecipients()
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to delete recipient')
+      onError(error instanceof Error ? error.message : t('failedToDelete'))
     }
   }
 
@@ -153,7 +156,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
       await apiPatch(`/api/projects/${projectId}/recipients/${recipientId}`, { isPrimary: true })
       await loadRecipients()
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to set primary recipient')
+      onError(error instanceof Error ? error.message : t('failedToSetPrimary'))
     }
   }
 
@@ -162,7 +165,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
       await apiPatch(`/api/projects/${projectId}/recipients/${recipientId}`, { receiveNotifications: !currentValue })
       await loadRecipients()
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to update notification settings')
+      onError(error instanceof Error ? error.message : t('failedToUpdateNotifications'))
     }
   }
 
@@ -182,12 +185,12 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
     if (!editingId) return
 
     if (!editEmail && !editName) {
-      onError('Please enter at least a name or email address')
+      onError(t('enterNameOrEmail'))
       return
     }
 
     if (editEmail && !editEmail.includes('@')) {
-      onError('Please enter a valid email address')
+      onError(t('invalidEmail'))
       return
     }
 
@@ -200,14 +203,14 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
       cancelEdit()
       await loadRecipients()
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to update recipient')
+      onError(error instanceof Error ? error.message : t('failedToUpdate'))
     }
   }
 
   if (loading) {
     return (
       <div className="text-sm text-muted-foreground py-4 text-center">
-        Loading recipients...
+        {t('loadingRecipients')}
       </div>
     )
   }
@@ -216,9 +219,9 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <Label>Recipients</Label>
+          <Label>{t('title')}</Label>
           <p className="text-xs text-muted-foreground mt-1">
-            Manage who receives project notifications and updates
+            {t('description')}
           </p>
         </div>
         <Button
@@ -229,13 +232,13 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
           disabled={showAddForm}
         >
           <Plus className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">Add Recipient</span>
+          <span className="hidden sm:inline">{t('addRecipient')}</span>
         </Button>
       </div>
 
       {recipients.length === 0 && !showAddForm ? (
         <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
-          No recipients added yet. Click &quot;Add Recipient&quot; to add one.
+          {t('noRecipients')} &quot;{t('addRecipient')}&quot; {t('toAddOne')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -244,33 +247,33 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
               {editingId === recipient.id ? (
                 <div className="p-4 space-y-3">
                   <div className="space-y-2">
-                    <Label htmlFor={`edit-name-${recipient.id}`}>Client Name</Label>
+                    <Label htmlFor={`edit-name-${recipient.id}`}>{t('clientName')}</Label>
                     <Input
                       id={`edit-name-${recipient.id}`}
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      placeholder="John Doe or Company Name"
+                      placeholder={t('clientNamePlaceholder')}
                       autoFocus
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`edit-email-${recipient.id}`}>Client Email</Label>
+                    <Label htmlFor={`edit-email-${recipient.id}`}>{t('clientEmail')}</Label>
                     <Input
                       id={`edit-email-${recipient.id}`}
                       type="email"
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
-                      placeholder="email@example.com"
+                      placeholder={t('clientEmailPlaceholder')}
                     />
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" onClick={saveEdit} size="sm">
                       <Check className="w-4 h-4 mr-2" />
-                      Save
+                      {tc('save')}
                     </Button>
                     <Button type="button" variant="outline" size="sm" onClick={cancelEdit}>
-                      Cancel
+                      {tc('cancel')}
                     </Button>
                   </div>
                 </div>
@@ -280,17 +283,17 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <span className="text-sm font-medium truncate">
-                        {recipient.name || recipient.email || 'No contact info'}
+                        {recipient.name || recipient.email || t('clientName')}
                       </span>
                       {recipient.isPrimary && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
                           <Star className="w-3 h-3 mr-1" />
-                          Primary
+                          {t('primary')}
                         </span>
                       )}
                       {recipient.email && !recipient.receiveNotifications && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
-                          Unsubscribed
+                          {t('unsubscribed')}
                         </span>
                       )}
                     </div>
@@ -307,7 +310,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                         variant="ghost"
                         size="sm"
                         onClick={() => setPrimary(recipient.id!)}
-                        title="Set as primary"
+                        title={t('setAsPrimary')}
                       >
                         <Star className="w-4 h-4" />
                       </Button>
@@ -318,7 +321,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                         variant={recipient.receiveNotifications ? "ghost" : "outline"}
                         size="sm"
                         onClick={() => toggleNotifications(recipient.id!, recipient.receiveNotifications)}
-                        title={recipient.receiveNotifications ? "Notifications enabled" : "Notifications disabled"}
+                        title={recipient.receiveNotifications ? t('notificationsEnabled') : t('notificationsDisabled')}
                         className={!recipient.receiveNotifications ? "text-muted-foreground" : ""}
                       >
                         {recipient.receiveNotifications ? (
@@ -333,7 +336,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                       variant="outline"
                       size="sm"
                       onClick={() => startEdit(recipient)}
-                      title="Edit recipient"
+                      title={t('editRecipient')}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -342,7 +345,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                       variant="ghost"
                       size="sm"
                       onClick={() => deleteRecipient(recipient.id!)}
-                      title="Remove recipient"
+                      title={t('removeRecipient')}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -356,7 +359,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
           {showAddForm && (
             <div className="p-4 border-2 border-dashed rounded-lg space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="newRecipientName">Client Name</Label>
+                <Label htmlFor="newRecipientName">{t('clientName')}</Label>
                 <div className="relative" ref={nameInputRef}>
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   <Input
@@ -374,7 +377,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                         setShowContactDropdown(true)
                       }
                     }}
-                    placeholder={companyId ? "Start typing to search contacts..." : "John Doe"}
+                    placeholder={companyId ? t('clientNamePlaceholder') : t('clientNamePlaceholder')}
                     className="pl-9"
                     autoFocus
                     autoComplete="off"
@@ -405,18 +408,18 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                 </div>
                 {companyId && companyContacts.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Type to search {companyContacts.length} contact{companyContacts.length !== 1 ? 's' : ''} from this company
+                    {t('searchCompanyContacts', { count: companyContacts.length })}
                   </p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="newRecipientEmail">Client Email</Label>
+                <Label htmlFor="newRecipientEmail">{t('clientEmail')}</Label>
                 <Input
                   id="newRecipientEmail"
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="email@example.com"
+                  placeholder={t('clientEmailPlaceholder')}
                 />
               </div>
               <div className="flex gap-2">
@@ -427,7 +430,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                   disabled={!newEmail && !newName}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Add
+                  {tc('add')}
                 </Button>
                 <Button
                   type="button"
@@ -439,7 +442,7 @@ export function RecipientManager({ projectId, companyId, onError, onRecipientsCh
                     setNewName('')
                   }}
                 >
-                  Cancel
+                  {tc('cancel')}
                 </Button>
               </div>
             </div>

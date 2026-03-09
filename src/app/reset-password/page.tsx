@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,8 @@ import BrandLogo from '@/components/BrandLogo'
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
 export default function ResetPasswordPage() {
+  const t = useTranslations('auth')
+  const tc = useTranslations('common')
   const router = useRouter()
   const [token, setToken] = useState('')
   const [password, setPassword] = useState('')
@@ -30,7 +33,7 @@ export default function ResetPasswordPage() {
       setToken(tokenFromHash)
     } else {
       setStatus('error')
-      setMessage('Invalid or missing reset token. Please request a new password reset link.')
+      setMessage(t('invalidToken'))
     }
   }, [])
 
@@ -39,13 +42,13 @@ export default function ResetPasswordPage() {
     
     if (password !== confirmPassword) {
       setStatus('error')
-      setMessage('Passwords do not match.')
+      setMessage(t('passwordsMismatch'))
       return
     }
 
     if (password.length < 12) {
       setStatus('error')
-      setMessage('Password must be at least 12 characters long.')
+      setMessage(t('passwordTooShort'))
       return
     }
 
@@ -63,7 +66,7 @@ export default function ResetPasswordPage() {
 
       if (res.ok) {
         setStatus('success')
-        setMessage(data.message || 'Password has been reset successfully.')
+        setMessage(data.message || t('passwordResetSuccess'))
         setPassword('')
         setConfirmPassword('')
         
@@ -73,11 +76,11 @@ export default function ResetPasswordPage() {
         }, 2000)
       } else {
         setStatus('error')
-        setMessage(data.error || 'Failed to reset password. Please try again or request a new reset link.')
+        setMessage(data.error || t('resetFailed'))
       }
     } catch (error) {
       setStatus('error')
-      setMessage('Unable to process your request. Please try again.')
+      setMessage(t('unableToProcess'))
     }
   }
 
@@ -87,18 +90,18 @@ export default function ResetPasswordPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <BrandLogo height={64} className="mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-foreground">ViTransfer</h1>
-            <p className="text-sm text-muted-foreground mt-2">Video Review, Feedback & Deliverables</p>
+            <h1 className="text-3xl font-bold text-foreground">{tc('viTransfer')}</h1>
+            <p className="text-sm text-muted-foreground mt-2">{tc('videoReviewTagline')}</p>
           </div>
 
           <Card className="border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="w-5 h-5" />
-                Reset Password
+                {t('resetPassword')}
               </CardTitle>
               <CardDescription>
-                Create a new password for your account.
+                {t('resetPasswordDescription')}
               </CardDescription>
             </CardHeader>
 
@@ -113,7 +116,7 @@ export default function ResetPasswordPage() {
                   </div>
                   <div className="text-center pt-4">
                     <Link href="/forgot-password" className="inline-flex items-center text-sm text-primary hover:underline">
-                      Request a new reset link
+                      {t('requestNewLink')}
                     </Link>
                   </div>
                 </div>
@@ -126,7 +129,7 @@ export default function ResetPasswordPage() {
                         {message}
                       </p>
                       <p className="text-xs text-success mt-1">
-                        Redirecting to login page...
+                        {t('redirectingToLogin')}
                       </p>
                     </div>
                   )}
@@ -141,12 +144,12 @@ export default function ResetPasswordPage() {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="password">New Password</Label>
+                    <Label htmlFor="password">{t('newPassword')}</Label>
                     <div className="relative">
                       <Input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter new password"
+                        placeholder={t('newPasswordPlaceholder')}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -165,17 +168,17 @@ export default function ResetPasswordPage() {
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Must be at least 12 characters with uppercase, lowercase, number, and special character.
+                      {t('passwordHint')}
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
                     <div className="relative">
                       <Input
                         id="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Confirm new password"
+                        placeholder={t('confirmPasswordPlaceholder')}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
@@ -200,14 +203,14 @@ export default function ResetPasswordPage() {
                     disabled={status === 'loading' || status === 'success' || !token}
                   >
                     <Lock className="w-4 h-4 mr-2" />
-                    {status === 'loading' ? 'Resetting...' : 'Reset Password'}
+                    {status === 'loading' ? t('resetting') : t('resetPassword')}
                   </Button>
 
                   {status !== 'success' && (
                     <div className="text-center pt-4">
                       <Link href="/login" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
                         <ArrowLeft className="w-4 h-4 mr-1" />
-                        Back to Login
+                        {t('backToLogin')}
                       </Link>
                     </div>
                   )}

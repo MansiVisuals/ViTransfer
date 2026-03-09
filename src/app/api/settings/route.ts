@@ -101,6 +101,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const {
+      language,
       defaultTheme,
       accentColor,
       companyName,
@@ -126,6 +127,17 @@ export async function PATCH(request: NextRequest) {
       emailHeaderStyle,
       maxCommentAttachments,
     } = body
+
+    // SECURITY: Validate language setting
+    if (language !== undefined) {
+      const validLanguages = ['en', 'nl']
+      if (typeof language !== 'string' || !validLanguages.includes(language)) {
+        return NextResponse.json(
+          { error: 'Invalid language code.' },
+          { status: 400 }
+        )
+      }
+    }
 
     // SECURITY: Validate theme setting
     if (defaultTheme !== undefined) {
@@ -292,6 +304,7 @@ export async function PATCH(request: NextRequest) {
 
     // Build update data (only include password if it should be updated)
     const updateData: any = {
+      language,
       defaultTheme,
       accentColor,
       companyName,

@@ -3,6 +3,7 @@
 import { Label } from './ui/label'
 import { Input } from './ui/input'
 import { Zap, Clock, Calendar, CalendarDays, Check } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface ScheduleSelectorProps {
   schedule: string
@@ -15,41 +16,21 @@ interface ScheduleSelectorProps {
   description?: string
 }
 
-const scheduleOptions = [
-  {
-    value: 'IMMEDIATE',
-    title: 'Immediate',
-    description: 'Send instantly when activity occurs',
-    icon: Zap
-  },
-  {
-    value: 'HOURLY',
-    title: 'Hourly',
-    description: 'Every hour at :00 (10:00, 11:00, etc.). Approvals are always sent immediately.',
-    icon: Clock
-  },
-  {
-    value: 'DAILY',
-    title: 'Daily',
-    description: 'Once per day at your chosen time. Approvals are always sent immediately.',
-    icon: Calendar
-  },
-  {
-    value: 'WEEKLY',
-    title: 'Weekly',
-    description: 'Once per week on your chosen day. Approvals are always sent immediately.',
-    icon: CalendarDays
-  }
+const SCHEDULE_OPTION_KEYS = [
+  { value: 'IMMEDIATE', titleKey: 'immediate', descriptionKey: 'immediateHint', icon: Zap },
+  { value: 'HOURLY', titleKey: 'hourly', descriptionKey: 'hourlyHint', icon: Clock },
+  { value: 'DAILY', titleKey: 'daily', descriptionKey: 'dailyHint', icon: Calendar },
+  { value: 'WEEKLY', titleKey: 'weekly', descriptionKey: 'weeklyHint', icon: CalendarDays },
 ]
 
-const daysOfWeek = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' }
+const DAY_KEYS = [
+  { value: 0, key: 'sunday', shortKey: 'sun' },
+  { value: 1, key: 'monday', shortKey: 'mon' },
+  { value: 2, key: 'tuesday', shortKey: 'tue' },
+  { value: 3, key: 'wednesday', shortKey: 'wed' },
+  { value: 4, key: 'thursday', shortKey: 'thu' },
+  { value: 5, key: 'friday', shortKey: 'fri' },
+  { value: 6, key: 'saturday', shortKey: 'sat' },
 ]
 
 export function ScheduleSelector({
@@ -59,19 +40,23 @@ export function ScheduleSelector({
   onScheduleChange,
   onTimeChange,
   onDayChange,
-  label = "Notification Schedule",
-  description = "Configure when to receive email notifications"
+  label,
+  description,
 }: ScheduleSelectorProps) {
+  const t = useTranslations('settings.schedule')
+  const effectiveLabel = label ?? t('title')
+  const effectiveDescription = description ?? t('description')
+
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="text-sm font-medium mb-1">{label}</h4>
-        <p className="text-xs text-muted-foreground mb-4">{description}</p>
+        <h4 className="text-sm font-medium mb-1">{effectiveLabel}</h4>
+        <p className="text-xs text-muted-foreground mb-4">{effectiveDescription}</p>
       </div>
 
       {/* Schedule Options - Card Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {scheduleOptions.map((option) => {
+        {SCHEDULE_OPTION_KEYS.map((option) => {
           const IconComponent = option.icon
           return (
             <button
@@ -91,9 +76,9 @@ export function ScheduleSelector({
                   <IconComponent className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm mb-1">{option.title}</div>
+                  <div className="font-semibold text-sm mb-1">{t(option.titleKey)}</div>
                   <div className="text-xs text-muted-foreground leading-relaxed">
-                    {option.description}
+                    {t(option.descriptionKey)}
                   </div>
                 </div>
                 {schedule === option.value && (
@@ -110,7 +95,7 @@ export function ScheduleSelector({
       {/* Daily Time Picker */}
       {schedule === 'DAILY' && (
         <div className="space-y-2 pt-2">
-          <Label htmlFor="time" className="text-sm font-medium">Send time</Label>
+          <Label htmlFor="time" className="text-sm font-medium">{t('sendTime')}</Label>
           <Input
             type="text"
             id="time"
@@ -139,7 +124,7 @@ export function ScheduleSelector({
             className="font-mono text-base"
           />
           <p className="text-xs text-muted-foreground">
-            24-hour format (e.g., 09:00, 16:00, 18:30)
+            {t('sendTimeHint')}
           </p>
         </div>
       )}
@@ -148,9 +133,9 @@ export function ScheduleSelector({
       {schedule === 'WEEKLY' && (
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Send day</Label>
+            <Label className="text-sm font-medium">{t('sendDay')}</Label>
             <div className="grid grid-cols-7 gap-2">
-              {daysOfWeek.map((d) => (
+              {DAY_KEYS.map((d) => (
                 <button
                   key={d.value}
                   type="button"
@@ -163,14 +148,14 @@ export function ScheduleSelector({
                     }
                   `}
                 >
-                  {d.label.slice(0, 3)}
+                  {t(d.shortKey)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="time" className="text-sm font-medium">Send time</Label>
+            <Label htmlFor="time" className="text-sm font-medium">{t('sendTime')}</Label>
             <Input
               type="text"
               id="time"
@@ -199,7 +184,7 @@ export function ScheduleSelector({
               className="font-mono text-base"
             />
             <p className="text-xs text-muted-foreground">
-              24-hour format (e.g., 09:00, 16:00, 18:30)
+              {t('sendTimeHint')}
             </p>
           </div>
         </div>

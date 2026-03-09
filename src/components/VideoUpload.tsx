@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -28,6 +29,8 @@ interface VideoUploadProps {
 }
 
 export default function VideoUpload({ projectId, videoName, onUploadComplete, initialFile }: VideoUploadProps) {
+  const t = useTranslations('videos')
+  const tc = useTranslations('common')
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadRef = useRef<tus.Upload | null>(null)
@@ -70,7 +73,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
   async function validateVideoFile(file: File): Promise<{ valid: boolean; error?: string }> {
     // Check file size is not zero
     if (file.size === 0) {
-      return { valid: false, error: 'File is empty' }
+      return { valid: false, error: t('fileEmpty') }
     }
 
     // Read first 12 bytes to check for MP4/MOV signature
@@ -92,7 +95,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
       // MP4 files start with: 00 00 00 XX 66 74 79 70 (ftyp atom)
       // where XX is the size of the atom (typically 18-20 bytes)
       if (headerBytes.length < 12) {
-        return { valid: false, error: 'File is too small to be a valid video' }
+        return { valid: false, error: t('fileTooSmall') }
       }
 
       // Check for ftyp atom at position 4-8
@@ -117,10 +120,10 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
 
       return {
         valid: false,
-        error: 'File does not appear to be a valid MP4/MOV video. Please ensure you are uploading an unencrypted, standard MP4 video file.'
+        error: t('invalidVideo')
       }
     } catch (err) {
-      return { valid: false, error: 'Failed to read file. Please try again.' }
+      return { valid: false, error: t('failedToRead') }
     }
   }
 
@@ -129,7 +132,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
 
     // Validate video name is provided
     if (!videoName || !videoName.trim()) {
-      setError('Video name is required')
+      setError(t('videoNameRequired'))
       return
     }
 
@@ -275,7 +278,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
           if (canResumeExisting && (statusCode === 404 || statusCode === 410)) {
             clearUploadMetadata(file)
             clearTUSFingerprint(file)
-            errorMessage = 'Upload session expired. Please restart the upload.'
+            errorMessage = t('uploadExpired')
           } else if (createdVideoRecord && videoIdRef.current) {
             // Only clean up DB record if we created it in this attempt
             try {
@@ -380,7 +383,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
       if (droppedFile.type.startsWith('video/')) {
         setFile(droppedFile)
       } else {
-        setError('Please drop a video file')
+        setError(t('dropVideoHere'))
       }
     }
   }
@@ -407,19 +410,19 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
 
       {/* Version Label */}
       <div className="space-y-2">
-        <Label htmlFor="versionLabel">Version Label (Optional)</Label>
+        <Label htmlFor="versionLabel">{t('versionLabel')}</Label>
         <Input
           id="versionLabel"
           value={versionLabel}
           onChange={(e) => setVersionLabel(e.target.value)}
-          placeholder="Leave empty for auto-generated label (v1, v2, etc.)"
+          placeholder={t('versionLabelPlaceholder')}
           disabled={uploading}
         />
       </div>
 
       {/* File Selection */}
       <div className="space-y-2">
-        <Label htmlFor="file">Video File (Original)</Label>
+        <Label htmlFor="file">{t('videoFile')}</Label>
         <div className="flex items-center gap-2">
           <Input
             ref={fileInputRef}
@@ -438,12 +441,12 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
             className="w-full"
           >
             <Upload className="w-4 h-4 mr-2" />
-            {file ? 'Change File' : 'Drag & Drop or Click to Choose'}
+            {file ? t('changeFile') : t('dragDropOrClick')}
           </Button>
         </div>
         {file && (
           <p className="text-sm text-muted-foreground">
-            Selected: {file.name} ({formatFileSize(file.size)})
+            {t('selected')} {file.name} ({formatFileSize(file.size)})
           </p>
         )}
       </div>
@@ -453,7 +456,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
-              {paused ? 'Paused' : 'Uploading...'}
+              {paused ? t('paused') : t('uploading')}
             </span>
             <span className="font-medium">{progress}%</span>
           </div>
@@ -470,9 +473,9 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
           </div>
           {uploadSpeed > 0 && (
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Speed: {uploadSpeed} MB/s</span>
+              <span>{t('speed')} {uploadSpeed} MB/s</span>
               <span>
-                {progress < 100 && !paused && `Estimated: ${Math.ceil((file!.size / (1024 * 1024)) / uploadSpeed - (file!.size * progress / 100 / (1024 * 1024)) / uploadSpeed)} seconds`}
+                {progress < 100 && !paused && `${t('estimated')} ${Math.ceil((file!.size / (1024 * 1024)) / uploadSpeed - (file!.size * progress / 100 / (1024 * 1024)) / uploadSpeed)} ${t('seconds')}`}
               </span>
             </div>
           )}
@@ -488,12 +491,12 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
               {paused ? (
                 <>
                   <Play className="w-4 h-4 mr-2" />
-                  Resume
+                  {t('resume')}
                 </>
               ) : (
                 <>
                   <Pause className="w-4 h-4 mr-2" />
-                  Pause
+                  {t('pause')}
                 </>
               )}
             </Button>
@@ -505,7 +508,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
               className="flex-1"
             >
               <X className="w-4 h-4 mr-2" />
-              Cancel
+              {tc('cancel')}
             </Button>
           </div>
         </div>
@@ -517,12 +520,11 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         disabled={!file || uploading}
         className="w-full"
       >
-        {uploading ? 'Uploading...' : 'Upload Video'}
+        {uploading ? t('uploading') : t('uploadVideo')}
       </Button>
 
       <p className="text-xs text-muted-foreground">
-        Upload the original file without watermark. Preview versions will be generated
-        automatically. Upload can be paused and resumed if interrupted.
+        {t('uploadInfo')}
       </p>
     </div>
   )

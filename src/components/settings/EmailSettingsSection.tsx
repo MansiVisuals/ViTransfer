@@ -5,6 +5,7 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { Send, Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 export interface EmailSettingsContentProps {
   // SMTP Settings
@@ -69,46 +70,47 @@ export function EmailSettingsContent({
   adminNotificationDay,
   setAdminNotificationDay,
 }: EmailSettingsContentProps) {
+  const t = useTranslations('settings')
   return (
     <div className="space-y-4">
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-          <Label className="text-base">SMTP Configuration</Label>
+          <Label className="text-base">{t('email.smtpConfig')}</Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="smtpServer">SMTP Server</Label>
+            <Label htmlFor="smtpServer">{t('email.smtpServer')}</Label>
             <Input
               id="smtpServer"
               type="text"
               value={smtpServer}
               onChange={(e) => setSmtpServer(e.target.value)}
-              placeholder="e.g., smtp.provider.com"
+              placeholder={t('email.smtpServerPlaceholder')}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="smtpPort">Port</Label>
+            <Label htmlFor="smtpPort">{t('email.port')}</Label>
             <Input
               id="smtpPort"
               type="number"
               value={smtpPort}
               onChange={(e) => setSmtpPort(e.target.value)}
-              placeholder="587"
+              placeholder={t('email.portPlaceholder')}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="smtpFromAddress">From Email Address</Label>
+          <Label htmlFor="smtpFromAddress">{t('email.fromEmail')}</Label>
           <Input
             id="smtpFromAddress"
             type="email"
             value={smtpFromAddress}
             onChange={(e) => setSmtpFromAddress(e.target.value)}
-            placeholder="e.g., email@yourdomain.com"
+            placeholder={t('email.fromEmailPlaceholder')}
           />
         </div>
 
         <div className="space-y-2">
-          <Label>Security / Encryption</Label>
+          <Label>{t('email.security')}</Label>
           <div className="space-y-3 p-4 bg-muted/50 rounded-md border border-border">
             <label className="flex items-start gap-3 cursor-pointer group">
               <input
@@ -121,10 +123,10 @@ export function EmailSettingsContent({
               />
               <div className="flex-1">
                 <div className="font-medium text-sm group-hover:text-primary transition-colors">
-                  STARTTLS (Recommended)
+                  {t('email.starttls')}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Port 587 recommended. Most secure option for modern email providers.
+                  {t('email.starttlsHint')}
                 </div>
               </div>
             </label>
@@ -140,10 +142,10 @@ export function EmailSettingsContent({
               />
               <div className="flex-1">
                 <div className="font-medium text-sm group-hover:text-primary transition-colors">
-                  TLS/SSL
+                  {t('email.tls')}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Port 465 recommended. Legacy secure connection method.
+                  {t('email.tlsHint')}
                 </div>
               </div>
             </label>
@@ -159,10 +161,10 @@ export function EmailSettingsContent({
               />
               <div className="flex-1">
                 <div className="font-medium text-sm group-hover:text-primary transition-colors">
-                  None
+                  {t('email.noEncryption')}
                 </div>
                 <div className="text-xs text-destructive mt-1">
-                  Port 25 or custom. Not recommended - credentials sent unencrypted.
+                  {t('email.noEncryptionHint')}
                 </div>
               </div>
             </label>
@@ -170,45 +172,45 @@ export function EmailSettingsContent({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="smtpUsername">SMTP Username</Label>
+          <Label htmlFor="smtpUsername">{t('email.smtpUsername')}</Label>
           <Input
             id="smtpUsername"
             type="text"
             value={smtpUsername}
             onChange={(e) => setSmtpUsername(e.target.value)}
-            placeholder="SMTP username"
+            placeholder={t('email.smtpUsernamePlaceholder')}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="smtpPassword">SMTP Password</Label>
+          <Label htmlFor="smtpPassword">{t('email.smtpPassword')}</Label>
           <PasswordInput
             id="smtpPassword"
             value={smtpPassword}
             onChange={(e) => setSmtpPassword(e.target.value)}
-            placeholder="SMTP password or app password"
+            placeholder={t('email.smtpPasswordPlaceholder')}
             showToggle={false}
           />
           <p className="text-xs text-muted-foreground">
-            For iCloud or Gmail, use an App Specific Password. For other providers, use your SMTP password.
+            {t('email.smtpPasswordHint')}
           </p>
         </div>
         </div>
 
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-          <Label className="text-base">Test Email Configuration</Label>
+          <Label className="text-base">{t('email.testConfig')}</Label>
           <p className="text-xs text-muted-foreground">
-            Test your email configuration with the current form values before saving. This helps ensure your settings are correct.
+            {t('email.testConfigHint')}
           </p>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="testEmailAddress">Test Email Address</Label>
+              <Label htmlFor="testEmailAddress">{t('email.testEmail')}</Label>
               <Input
                 id="testEmailAddress"
                 type="email"
                 value={testEmailAddress}
                 onChange={(e) => setTestEmailAddress(e.target.value)}
-                placeholder="Enter email to receive test"
+                placeholder={t('email.testEmailPlaceholder')}
               />
             </div>
 
@@ -223,12 +225,12 @@ export function EmailSettingsContent({
               {testEmailSending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending Test Email...
+                  {t('email.sendingTest')}
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
-                  Send Test Email
+                  {t('email.sendTest')}
                 </>
               )}
             </Button>
@@ -253,8 +255,8 @@ export function EmailSettingsContent({
             onScheduleChange={setAdminNotificationSchedule}
             onTimeChange={setAdminNotificationTime}
             onDayChange={setAdminNotificationDay}
-            label="Admin Notification Schedule"
-            description="Configure when you receive summaries of client comments across all projects. Note: Approval emails are always sent immediately."
+            label={t('email.adminSchedule')}
+            description={t('email.adminScheduleHint')}
           />
         </div>
     </div>
@@ -262,11 +264,12 @@ export function EmailSettingsContent({
 }
 
 export function EmailSettingsSection({ show, setShow, ...contentProps }: EmailSettingsSectionProps) {
+  const t = useTranslations('settings')
   return (
     <CollapsibleSection
       className="border-border"
-      title="Email / SMTP"
-      description="Configure SMTP settings and notification schedules"
+      title={t('email.title')}
+      description={t('email.description')}
       open={show}
       onOpenChange={setShow}
       contentClassName="space-y-4 border-t pt-4"

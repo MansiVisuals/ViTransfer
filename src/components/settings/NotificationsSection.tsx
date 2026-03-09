@@ -5,6 +5,7 @@ import { EmailSettingsContent, type EmailSettingsContentProps } from '@/componen
 import { ExternalNotificationsContent } from '@/components/settings/ExternalNotificationsSection'
 import { WebPushSection } from '@/components/settings/WebPushSection'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface NotificationsSectionProps extends EmailSettingsContentProps {
   show: boolean
@@ -13,19 +14,20 @@ interface NotificationsSectionProps extends EmailSettingsContentProps {
 
 export function NotificationsSection({ show, setShow, ...emailProps }: NotificationsSectionProps) {
   const [activeTab, setActiveTab] = useState<'email' | 'external' | 'browser'>('email')
+  const t = useTranslations('settings')
 
   return (
     <CollapsibleSection
       className="border-border"
-      title="Email & Push Notifications"
-      description="Configure email and push notification destinations"
+      title={t('notifications.title')}
+      description={t('notifications.description')}
       open={show}
       onOpenChange={setShow}
       contentClassName="space-y-6 border-t pt-6"
     >
           <div
             role="tablist"
-            aria-label="Notification settings"
+            aria-label={t('notifications.title')}
             className="inline-flex w-full gap-2"
           >
             <button
@@ -41,7 +43,7 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
               ].join(' ')}
               onClick={() => setActiveTab('email')}
             >
-              Email
+              {t('notifications.emailTab')}
             </button>
             <button
               type="button"
@@ -56,7 +58,7 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
               ].join(' ')}
               onClick={() => setActiveTab('external')}
             >
-              Push Services
+              {t('notifications.pushTab')}
             </button>
             <button
               type="button"
@@ -71,14 +73,14 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
               ].join(' ')}
               onClick={() => setActiveTab('browser')}
             >
-              Browser Push
+              {t('notifications.browserPushTab')}
             </button>
           </div>
 
           {activeTab === 'email' && (
             <div id="notifications-tabpanel-email" role="tabpanel" className="space-y-4">
               <div className="text-xs text-muted-foreground">
-                SMTP configuration, test email, and admin summary schedule.
+                {t('notifications.emailDescription')}
               </div>
               <EmailSettingsContent {...emailProps} />
             </div>
@@ -86,7 +88,7 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
           {activeTab === 'external' && (
             <div id="notifications-tabpanel-external" role="tabpanel" className="space-y-4">
               <div className="text-xs text-muted-foreground">
-                Send push notifications to Gotify, ntfy, Pushover, or Telegram.
+                {t('notifications.pushDescription')}
               </div>
               <ExternalNotificationsContent active={show && activeTab === 'external'} showIntro={false} />
             </div>
@@ -94,7 +96,7 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
           {activeTab === 'browser' && (
             <div id="notifications-tabpanel-browser" role="tabpanel" className="space-y-4">
               <div className="text-xs text-muted-foreground">
-                Receive push notifications directly in your browser. Works across all your devices.
+                {t('notifications.browserPushDescription')}
               </div>
               <WebPushSection active={show && activeTab === 'browser'} />
             </div>

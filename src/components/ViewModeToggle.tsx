@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { LayoutGrid, Table2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useTranslations } from 'next-intl'
 
 export type ViewMode = 'grid' | 'table'
 
@@ -13,6 +14,7 @@ interface ViewModeToggleProps {
 }
 
 export default function ViewModeToggle({ value, onChange, className }: ViewModeToggleProps) {
+  const t = useTranslations('controls')
   return (
     <div className={cn('inline-flex items-center rounded-md border bg-card p-0.5', className)}>
       <Button
@@ -25,10 +27,10 @@ export default function ViewModeToggle({ value, onChange, className }: ViewModeT
           'h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground',
           value === 'grid' && 'bg-accent text-foreground'
         )}
-        title="Grid view"
+        title={t('gridView')}
       >
         <LayoutGrid className="h-4 w-4" />
-        <span className="sr-only">Grid view</span>
+        <span className="sr-only">{t('gridView')}</span>
       </Button>
       <Button
         type="button"
@@ -40,10 +42,10 @@ export default function ViewModeToggle({ value, onChange, className }: ViewModeT
           'h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground',
           value === 'table' && 'bg-accent text-foreground'
         )}
-        title="Table view"
+        title={t('tableView')}
       >
         <Table2 className="h-4 w-4" />
-        <span className="sr-only">Table view</span>
+        <span className="sr-only">{t('tableView')}</span>
       </Button>
     </div>
   )

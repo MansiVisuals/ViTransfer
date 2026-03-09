@@ -20,6 +20,7 @@ import { sanitizeSlug, generateSecurePassword } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
 import { ArrowLeft, Save, RefreshCw, Copy, Check, Calendar } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 // Client-safe slug generation using Web Crypto API
 function generateRandomSlug(): string {
@@ -75,6 +76,8 @@ interface Project {
 export default function ProjectSettingsPage() {
   const params = useParams()
   const router = useRouter()
+  const t = useTranslations('projects')
+  const tc = useTranslations('common')
   const projectId = params?.id as string
 
   const [project, setProject] = useState<Project | null>(null)
@@ -165,7 +168,7 @@ export default function ProjectSettingsPage() {
       try {
         const response = await apiFetch(`/api/projects/${projectId}`)
         if (!response.ok) {
-          throw new Error('Failed to load project')
+          throw new Error(t('failedToLoad'))
         }
         const data = await response.json()
         setProject(data)
@@ -227,7 +230,7 @@ export default function ProjectSettingsPage() {
         // Mark initial load as complete
         setInitialLoadComplete(true)
       } catch (err) {
-        setError('Failed to load project settings')
+        setError(t('failedToLoadSettings'))
       } finally {
         setLoading(false)
       }
@@ -255,20 +258,20 @@ export default function ProjectSettingsPage() {
       const sanitizedSlug = sanitizeSlug(slug)
 
       if (!sanitizedSlug) {
-        setError('Share link cannot be empty')
+        setError(t('shareLinkEmpty'))
         setSaving(false)
         return
       }
 
       // Validate OTP requirements
       if ((authMode === 'OTP' || authMode === 'BOTH') && !smtpConfigured) {
-        setError('OTP authentication requires SMTP configuration. Please configure email settings first.')
+        setError(t('otpRequiresSMTP'))
         setSaving(false)
         return
       }
 
       if ((authMode === 'OTP' || authMode === 'BOTH') && !hasRecipientWithEmail) {
-        setError('OTP authentication requires at least one recipient with an email address. Please add recipients first.')
+        setError(t('otpRequiresRecipients'))
         setSaving(false)
         return
       }
@@ -278,7 +281,7 @@ export default function ProjectSettingsPage() {
 
       // Validate: maxRevisions must be at least 1
       if (enableRevisions && finalMaxRevisions < 1) {
-        setError('Maximum revisions must be at least 1')
+        setError(t('maxRevisionsMinError'))
         setSaving(false)
         return
       }
@@ -331,7 +334,7 @@ export default function ProjectSettingsPage() {
       // Otherwise save normally
       await saveSettings(updates)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      setError(err instanceof Error ? err.message : t('failedToSave'))
       setSaving(false)
     }
   }
@@ -383,7 +386,7 @@ export default function ProjectSettingsPage() {
       setShowReprocessModal(false)
       setPendingUpdates(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      setError(err instanceof Error ? err.message : t('failedToSave'))
     } finally {
       setSaving(false)
     }
@@ -404,7 +407,7 @@ export default function ProjectSettingsPage() {
   if (loading) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{tc('loading')}</p>
       </div>
     )
   }
@@ -412,7 +415,7 @@ export default function ProjectSettingsPage() {
   if (!project) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Project not found</p>
+        <p className="text-muted-foreground">{t('projectNotFound')}</p>
       </div>
     )
   }
@@ -427,19 +430,19 @@ export default function ProjectSettingsPage() {
               <Link href={`/admin/projects/${projectId}`}>
                 <Button variant="ghost" size="default" className="justify-start px-3">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Back to Project</span>
-                  <span className="sm:hidden">Back</span>
+                  <span className="hidden sm:inline">{t('backToProject')}</span>
+                  <span className="sm:hidden">{tc('back')}</span>
                 </Button>
               </Link>
               <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold">Project Settings</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold">{t('projectSettings')}</h1>
                 <p className="text-sm sm:text-base text-muted-foreground mt-1 truncate">{project.title}</p>
               </div>
             </div>
 
             <Button onClick={handleSave} variant="default" disabled={saving} size="lg" className="w-full sm:w-auto">
               <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? tc('saving') : tc('saveChanges')}
             </Button>
           </div>
         </div>
@@ -452,7 +455,7 @@ export default function ProjectSettingsPage() {
 
         {success && (
           <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-success-visible border-2 border-success-visible rounded-lg">
-            <p className="text-xs sm:text-sm text-success font-medium">Settings saved successfully!</p>
+            <p className="text-xs sm:text-sm text-success font-medium">{t('settingsSaved')}</p>
           </div>
         )}
 
@@ -460,38 +463,38 @@ export default function ProjectSettingsPage() {
 	          {/* Project Details */}
 	          <CollapsibleSection
 	            className="border-border"
-	            title="Project Details"
-	            description="Basic project information and client details"
+	            title={t('projectDetails')}
+	            description={t('projectDetailsDescription')}
 	            open={showProjectDetails}
 	            onOpenChange={setShowProjectDetails}
 	            contentClassName="space-y-4 border-t pt-4"
 	          >
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="space-y-2">
-	                  <Label htmlFor="title">Project Title</Label>
+	                  <Label htmlFor="title">{t('titleLabel')}</Label>
 	                  <Input
                     id="title"
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., Brand Video Project"
+                    placeholder={t('titlePlaceholderShort')}
                   />
                   <p className="text-xs text-muted-foreground">
-                    The name of this project as shown to clients and in the admin panel
+                    {t('titleHint')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Project Description</Label>
+                  <Label htmlFor="description">{t('descriptionLabel')}</Label>
                   <Textarea
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="e.g., Marketing video for Q4 campaign"
+                    placeholder={t('descriptionPlaceholderShort')}
                     rows={3}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Optional description to help identify and organize this project
+                    {t('descriptionHint')}
                   </p>
                 </div>
               </div>
@@ -499,9 +502,9 @@ export default function ProjectSettingsPage() {
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="useCustomSlug">Custom Link</Label>
+                    <Label htmlFor="useCustomSlug">{t('customLink')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Use a custom share link instead of auto-generated from project title
+                      {t('customLinkDescription')}
                     </p>
                   </div>
                   <Switch
@@ -512,7 +515,7 @@ export default function ProjectSettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="slug">Share Link</Label>
+                  <Label htmlFor="slug">{t('shareLink')}</Label>
                   <div className="flex gap-2 items-center">
                     <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                       /share/
@@ -524,7 +527,7 @@ export default function ProjectSettingsPage() {
                           type="text"
                           value={customSlugValue}
                           onChange={(e) => setCustomSlugValue(e.target.value)}
-                          placeholder="e.g., custom-link-name"
+                          placeholder={t('shareLinkPlaceholder')}
                           className="flex-1"
                         />
                         <Button
@@ -532,7 +535,7 @@ export default function ProjectSettingsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setCustomSlugValue(generateRandomSlug())}
-                          title="Generate random URL"
+                          title={t('generateRandomURL')}
                           className="h-10 w-10 p-0 flex-shrink-0"
                         >
                           <RefreshCw className="w-4 h-4" />
@@ -550,13 +553,13 @@ export default function ProjectSettingsPage() {
                   </div>
                   {useCustomSlug && customSlugValue && customSlugValue !== sanitizedSlug && (
                     <p className="text-xs text-warning">
-                      Will be saved as: <span className="font-mono font-semibold">{sanitizedSlug}</span>
+                      {t('willBeSavedAs')} <span className="font-mono font-semibold">{sanitizedSlug}</span>
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
 	                    {useCustomSlug
-	                      ? 'Custom share link. Only lowercase letters, numbers, and hyphens allowed.'
-	                      : 'Auto-generated from project title. Enable "Custom Link" to set your own.'}
+	                      ? t('customSlugHint')
+	                      : t('autoSlugHint')}
 	                  </p>
 	                </div>
 	              </div>
@@ -564,9 +567,9 @@ export default function ProjectSettingsPage() {
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="enableRevisions">Enable Revision Tracking</Label>
+                    <Label htmlFor="enableRevisions">{t('enableRevisionTracking')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Track and limit the number of video revisions
+                      {t('enableRevisionTrackingDescription')}
                     </p>
                   </div>
                   <Switch
@@ -578,7 +581,7 @@ export default function ProjectSettingsPage() {
 
                 {enableRevisions && (
                   <div className="space-y-2">
-                    <Label htmlFor="maxRevisions">Maximum Revisions</Label>
+                    <Label htmlFor="maxRevisions">{t('maxRevisions')}</Label>
                     <Input
                       id="maxRevisions"
                       type="number"
@@ -606,7 +609,7 @@ export default function ProjectSettingsPage() {
                       }}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Must be at least 1. Applies to each video group independently.
+                      {t('maxRevisionsHint')}
                     </p>
                   </div>
                 )}
@@ -615,7 +618,7 @@ export default function ProjectSettingsPage() {
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <Label htmlFor="dueDate" className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Due Date
+                  {t('dueDateLabel')}
                 </Label>
                 <Input
                   id="dueDate"
@@ -624,24 +627,24 @@ export default function ProjectSettingsPage() {
                   onChange={(e) => setDueDate(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Optional deadline for this project. Shown on the calendar view.
+                  {t('dueDateHint')}
                 </p>
 
                 {dueDate && (
                   <div className="space-y-2 pt-2">
-                    <Label htmlFor="dueReminder">Reminder</Label>
+                    <Label htmlFor="dueReminder">{t('reminder')}</Label>
                     <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="NONE">No Reminder</SelectItem>
-                        <SelectItem value="DAY_BEFORE">1 Day Before</SelectItem>
-                        <SelectItem value="WEEK_BEFORE">1 Week Before</SelectItem>
+                        <SelectItem value="NONE">{t('noReminder')}</SelectItem>
+                        <SelectItem value="DAY_BEFORE">{t('dayBefore')}</SelectItem>
+                        <SelectItem value="WEEK_BEFORE">{t('weekBefore')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Sends a notification reminder before the due date
+                      {t('reminderHint')}
                     </p>
                   </div>
                 )}
@@ -654,7 +657,7 @@ export default function ProjectSettingsPage() {
                     className="text-xs text-muted-foreground"
                     onClick={() => { setDueDate(''); setDueReminder('NONE') }}
                   >
-                    Clear due date
+                    {t('clearDueDate')}
                   </Button>
                 )}
               </div>
@@ -663,8 +666,8 @@ export default function ProjectSettingsPage() {
 	          {/* Client Information & Notifications */}
 	          <CollapsibleSection
 	            className="border-border"
-	            title="Client Information & Notifications"
-	            description="Manage client company, recipients and notification settings"
+	            title={t('clientInfoNotifications')}
+	            description={t('clientInfoNotificationsDescription')}
 	            open={showClientInfo}
 	            onOpenChange={setShowClientInfo}
 	            contentClassName="space-y-6 border-t pt-4"
@@ -672,7 +675,7 @@ export default function ProjectSettingsPage() {
               {/* Company/Brand Selection */}
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Company/Brand Name</Label>
+                  <Label htmlFor="companyName">{t('companyBrandName')}</Label>
                   <CompanyNameInput
                     value={companyName}
                     selectedId={clientCompanyId}
@@ -682,7 +685,7 @@ export default function ProjectSettingsPage() {
                     }}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Start typing to search your client directory or enter a custom company name
+                    {t('companyBrandNameHint')}
                   </p>
                 </div>
               </div>
@@ -705,8 +708,8 @@ export default function ProjectSettingsPage() {
                   onScheduleChange={setClientNotificationSchedule}
                   onTimeChange={setClientNotificationTime}
                   onDayChange={setClientNotificationDay}
-                  label="Client Notification Schedule"
-	                  description="Configure when clients receive summaries of your replies for this project. Note: Approval emails are always sent immediately."
+                  label={t('clientNotificationSchedule')}
+	                  description={t('clientNotificationScheduleDescription')}
 	                />
 	              </div>
 	          </CollapsibleSection>
@@ -714,8 +717,8 @@ export default function ProjectSettingsPage() {
 	          {/* Client Share Page */}
 	          <CollapsibleSection
 	            className="border-border"
-	            title="Client Share Page"
-	            description="Control client access, downloads, and approval permissions"
+	            title={t('clientSharePage')}
+	            description={t('clientSharePageDescription')}
 	            open={showClientSharePage}
 	            onOpenChange={setShowClientSharePage}
 	            contentClassName="space-y-6 border-t pt-4"
@@ -723,9 +726,9 @@ export default function ProjectSettingsPage() {
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="clientCanApprove">Allow Client Approval</Label>
+                    <Label htmlFor="clientCanApprove">{t('allowClientApproval')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Allow clients to approve videos. When disabled, only admins can approve videos.
+                      {t('allowClientApprovalDescription')}
                     </p>
                   </div>
                   <Switch
@@ -737,9 +740,9 @@ export default function ProjectSettingsPage() {
 
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="allowAssetDownload">Allow Asset Downloads</Label>
+                    <Label htmlFor="allowAssetDownload">{t('allowAssetDownloads')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Allow clients to download project assets when the video is approved
+                      {t('allowAssetDownloadsDescription')}
                     </p>
                   </div>
                   <Switch
@@ -751,9 +754,9 @@ export default function ProjectSettingsPage() {
 
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="allowClientAssetUpload">Allow Client File Attachments</Label>
+                    <Label htmlFor="allowClientAssetUpload">{t('allowClientFileAttachments')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Allow clients to attach files (images, documents, audio) to their comments
+                      {t('allowClientFileAttachmentsDescription')}
                     </p>
                   </div>
                   <Switch
@@ -767,11 +770,9 @@ export default function ProjectSettingsPage() {
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="usePreviewForApprovedPlayback">Use Preview for Approved Playback</Label>
+                    <Label htmlFor="usePreviewForApprovedPlayback">{t('usePreviewForApproved')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      After approval, play the browser-compatible preview instead of the original file.
-                      Useful when originals use codecs browsers cannot play (ProRes, PCM audio).
-                      Downloads always provide the original file.
+                      {t('usePreviewForApprovedDescription')}
                     </p>
                   </div>
                   <Switch
@@ -782,7 +783,7 @@ export default function ProjectSettingsPage() {
                 </div>
                 {usePreviewForApprovedPlayback && watermarkEnabled && (
                   <p className="text-xs text-muted-foreground italic">
-                    A clean preview without watermarks will be generated when videos are approved.
+                    {t('cleanPreviewHint')}
                   </p>
                 )}
               </div>
@@ -790,9 +791,9 @@ export default function ProjectSettingsPage() {
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="flex items-center justify-between gap-4">
 	                  <div className="space-y-0.5 flex-1">
-	                    <Label htmlFor="hideFeedback">Hide Feedback Section</Label>
+	                    <Label htmlFor="hideFeedback">{t('hideFeedbackSection')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Completely hide the Feedback & Discussion window from clients
+                      {t('hideFeedbackSectionDescription')}
                     </p>
                   </div>
                   <Switch
@@ -804,9 +805,9 @@ export default function ProjectSettingsPage() {
 
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="restrictComments">Restrict Comments to Latest Version</Label>
+                    <Label htmlFor="restrictComments">{t('restrictCommentsLatest')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Only allow feedback on the most recent video version
+                      {t('restrictCommentsLatestDescription')}
                     </p>
                   </div>
                   <Switch
@@ -817,18 +818,18 @@ export default function ProjectSettingsPage() {
                 </div>
 
                 <div className="space-y-2 pt-2 mt-2 border-t border-border">
-                  <Label>Comment Timestamp Display</Label>
+                  <Label>{t('commentTimestampDisplay')}</Label>
                   <Select value={timestampDisplay} onValueChange={(v) => setTimestampDisplay(v as 'AUTO' | 'TIMECODE')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TIMECODE">Timecode (HH:MM:SS:FF)</SelectItem>
-                      <SelectItem value="AUTO">Simple Time (MM:SS / HH:MM:SS)</SelectItem>
+                      <SelectItem value="TIMECODE">{t('timecodeFormat')}</SelectItem>
+                      <SelectItem value="AUTO">{t('simpleTimeFormat')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Controls how timestamps appear in comment badges on the share page.
+                    {t('commentTimestampDisplayHint')}
 	                  </p>
 	                </div>
 	              </div>
@@ -837,27 +838,26 @@ export default function ProjectSettingsPage() {
 	          {/* Video Processing Settings */}
 	          <CollapsibleSection
 	            className="border-border"
-	            title="Video Processing"
-	            description="Configure how videos are processed and displayed"
+	            title={t('videoProcessing')}
+	            description={t('videoProcessingDescription')}
 	            open={showVideoProcessing}
 	            onOpenChange={setShowVideoProcessing}
 	            contentClassName="space-y-6 border-t pt-4"
 	          >
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="space-y-2">
-	                  <Label>Preview Resolution</Label>
+	                  <Label>{t('previewResolution')}</Label>
 	                  <Select value={previewResolution} onValueChange={setPreviewResolution}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="720p">720p (1280x720 or 720x1280 for vertical)</SelectItem>
-                      <SelectItem value="1080p">1080p (1920x1080 or 1080x1920 for vertical)</SelectItem>
+                      <SelectItem value="720p">{t('resolution720p')}</SelectItem>
+                      <SelectItem value="1080p">{t('resolution1080p')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Higher resolutions take longer to process and use more storage.
-                    Vertical videos automatically adjust dimensions while maintaining aspect ratio.
+                    {t('previewResolutionHint')}
                   </p>
                 </div>
               </div>
@@ -865,9 +865,9 @@ export default function ProjectSettingsPage() {
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="watermarkEnabled">Enable Watermarks</Label>
+                    <Label htmlFor="watermarkEnabled">{t('enableWatermarks')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Add watermarks to processed videos
+                      {t('enableWatermarksDescription')}
                     </p>
                   </div>
                   <Switch
@@ -881,9 +881,9 @@ export default function ProjectSettingsPage() {
                   <>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="customWatermark">Custom Watermark Text</Label>
+                        <Label htmlFor="customWatermark">{t('customWatermarkText')}</Label>
                         <p className="text-xs text-muted-foreground">
-                          Override default watermark format
+                          {t('customWatermarkTextDescription')}
                         </p>
                       </div>
                       <Switch
@@ -898,14 +898,14 @@ export default function ProjectSettingsPage() {
                         <Input
                           value={watermarkText}
                           onChange={(e) => setWatermarkText(e.target.value)}
-                          placeholder="e.g., CONFIDENTIAL, DRAFT, REVIEW COPY"
+                          placeholder={t('watermarkPlaceholder')}
                           className="font-mono"
                           maxLength={100}
                         />
                         <p className="text-xs text-muted-foreground">
-                          Leave empty to use default format: PREVIEW-{project?.title}-[version]
+                          {t('watermarkDefaultHint', { title: project?.title })}
                           <br />
-                          <span className="text-warning">Only letters, numbers, spaces, and these characters: - _ . ( )</span>
+                          <span className="text-warning">{t('watermarkAllowedChars')}</span>
                         </p>
                       </div>
                     )}
@@ -917,44 +917,44 @@ export default function ProjectSettingsPage() {
 	          {/* Security Settings */}
 	          <CollapsibleSection
 	            className="border-border"
-	            title="Security"
-	            description="Password protection for the share page"
+	            title={t('security')}
+	            description={t('securityDescription')}
 	            open={showSecurity}
 	            onOpenChange={setShowSecurity}
 	            contentClassName="space-y-4 border-t pt-4"
 	          >
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="space-y-2">
-	                  <Label>Authentication Method</Label>
+	                  <Label>{t('authMethod')}</Label>
 	                  <Select value={authMode} onValueChange={setAuthMode}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PASSWORD">Password Only</SelectItem>
+                      <SelectItem value="PASSWORD">{t('passwordOnly')}</SelectItem>
                       <SelectItem value="OTP" disabled={!smtpConfigured || !hasRecipientWithEmail}>
-                        Email OTP Only {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
+                        {t('otpOnly')} {!smtpConfigured || !hasRecipientWithEmail ? t('requiresSMTP') : ''}
                       </SelectItem>
                       <SelectItem value="BOTH" disabled={!smtpConfigured || !hasRecipientWithEmail}>
-                        Both Password and OTP {!smtpConfigured || !hasRecipientWithEmail ? '(requires SMTP & recipients)' : ''}
+                        {t('bothAuth')} {!smtpConfigured || !hasRecipientWithEmail ? t('requiresSMTP') : ''}
                       </SelectItem>
-                      <SelectItem value="NONE">No Authentication</SelectItem>
+                      <SelectItem value="NONE">{t('noAuth')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {authMode === 'PASSWORD' && 'Clients must enter a password to access the project'}
-                    {authMode === 'OTP' && 'Clients receive a one-time code via email (must be a registered recipient)'}
-                    {authMode === 'BOTH' && 'Clients can choose between password or email OTP authentication'}
-                    {authMode === 'NONE' && 'Anyone with the share link can access the project'}
+                    {authMode === 'PASSWORD' && t('passwordDescriptionLong')}
+                    {authMode === 'OTP' && t('otpDescriptionLong')}
+                    {authMode === 'BOTH' && t('bothDescriptionLong')}
+                    {authMode === 'NONE' && t('noAuthDescription')}
                   </p>
                   {!smtpConfigured && authMode !== 'NONE' && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Configure SMTP in Settings to enable OTP authentication options
+                      {t('configureSMTPLong')}
                     </p>
                   )}
                   {smtpConfigured && !hasRecipientWithEmail && authMode !== 'NONE' && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Add at least one recipient with an email address to enable OTP authentication options
+                      {t('addRecipientForOtp')}
                     </p>
                   )}
                 </div>
@@ -963,7 +963,7 @@ export default function ProjectSettingsPage() {
                   <div className="flex items-start gap-2 p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
                     <span className="text-warning text-sm font-bold">!</span>
                     <p className="text-sm text-warning font-medium">
-                      Without authentication, anyone with the share link can access your project. {guestMode ? 'Guest mode limits access to videos only.' : 'Full access allows comments and approvals from anyone.'}
+                      {guestMode ? t('noAuthWarningGuest') : t('noAuthWarningFull')}
                     </p>
                   </div>
                 )}
@@ -972,9 +972,9 @@ export default function ProjectSettingsPage() {
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="guestMode">Guest Mode</Label>
+                    <Label htmlFor="guestMode">{t('guestMode')}</Label>
                     <p className="text-xs text-muted-foreground">
-                      Limit access to videos only (no comments, approval, or project details)
+                      {t('guestModeDescription')}
                     </p>
                   </div>
                   <Switch
@@ -988,7 +988,7 @@ export default function ProjectSettingsPage() {
                   <div className="flex items-start gap-2 p-3 bg-primary-visible border border-primary-visible rounded-md">
                     <span className="text-primary text-sm font-bold">i</span>
                     <p className="text-sm text-primary">
-                      <strong>Recommended:</strong> Enable Guest Mode for better security. Without it, anyone with the link can comment and approve videos.
+                      <strong>{t('recommended')}:</strong> {t('guestModeRecommendation')}
                     </p>
                   </div>
                 )}
@@ -996,9 +996,9 @@ export default function ProjectSettingsPage() {
                 {guestMode && (
                   <div className="flex items-center justify-between gap-4 pt-2 mt-2 border-t border-border">
                     <div className="space-y-0.5 flex-1">
-                      <Label htmlFor="guestLatestOnly">Restrict to Latest Version</Label>
+                      <Label htmlFor="guestLatestOnly">{t('restrictToLatestVersion')}</Label>
                       <p className="text-xs text-muted-foreground">
-                        Guests can only view the latest version of each video
+                        {t('restrictToLatestVersionDescription')}
                       </p>
                     </div>
                     <Switch
@@ -1013,7 +1013,7 @@ export default function ProjectSettingsPage() {
                   <div className="flex items-start gap-2 p-2 bg-warning-visible/50 border border-warning-visible rounded-md">
                     <span className="text-warning text-xs font-bold">!</span>
                     <p className="text-xs text-warning font-medium">
-                      Guest mode is recommended with no authentication to prevent unauthorized comments and approvals.
+                      {t('guestModeRecommendedWarning')}
                     </p>
                   </div>
                 )}
@@ -1022,13 +1022,13 @@ export default function ProjectSettingsPage() {
               {(authMode === 'PASSWORD' || authMode === 'BOTH') && (
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Share Page Password</Label>
+                  <Label htmlFor="password">{t('sharePagePassword')}</Label>
                   <div className="flex gap-2 w-full">
                     <PasswordInput
                       id="password"
                       value={sharePassword}
                       onChange={(e) => setSharePassword(e.target.value)}
-                      placeholder="Enter password for share page"
+                      placeholder={t('enterPassword')}
                       className="flex-1"
                     />
                     <Button
@@ -1036,7 +1036,7 @@ export default function ProjectSettingsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSharePassword(generateSecurePassword())}
-                      title="Generate random password"
+                      title={t('generatePassword')}
                       className="h-10 w-10 p-0 flex-shrink-0"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -1047,7 +1047,7 @@ export default function ProjectSettingsPage() {
                         variant="outline"
                         size="sm"
                         onClick={copyPassword}
-                        title={copiedPassword ? 'Copied!' : 'Copy password'}
+                        title={copiedPassword ? tc('copied') : t('copyPassword')}
                         className="h-10 w-10 p-0 flex-shrink-0"
                       >
                         {copiedPassword ? (
@@ -1062,7 +1062,7 @@ export default function ProjectSettingsPage() {
                     <SharePasswordRequirements password={sharePassword} />
                   )}
                   <p className="text-xs text-muted-foreground">
-	                    Clients will need this password to access the share page
+	                    {t('sharePagePasswordHint')}
 	                  </p>
 	                </div>
 	              </div>
@@ -1081,7 +1081,7 @@ export default function ProjectSettingsPage() {
         {/* Success notification at bottom */}
         {success && (
           <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-success-visible border-2 border-success-visible rounded-lg">
-            <p className="text-xs sm:text-sm text-success font-medium">Settings saved successfully!</p>
+            <p className="text-xs sm:text-sm text-success font-medium">{t('settingsSaved')}</p>
           </div>
         )}
 
@@ -1089,7 +1089,7 @@ export default function ProjectSettingsPage() {
         <div className="mt-6 sm:mt-8 pb-20 lg:pb-24 flex justify-end">
           <Button onClick={handleSave} variant="default" disabled={saving} size="lg" className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? tc('saving') : tc('saveChanges')}
           </Button>
         </div>
 

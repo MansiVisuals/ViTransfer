@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { FolderKanban, Plus, Video, Eye, Download, EyeOff, RefreshCw, Copy, Check, Mail, AlertCircle } from 'lucide-react'
 import ProjectsList from '@/components/ProjectsList'
 import { apiFetch, apiPost } from '@/lib/api-client'
+import { useTranslations } from 'next-intl'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { ClientSelector } from '@/components/ClientSelector'
 import { generateSecurePassword } from '@/lib/password-utils'
@@ -24,6 +25,8 @@ interface AnalyticsOverview {
 }
 
 export default function AdminPage() {
+  const t = useTranslations('projects')
+  const tc = useTranslations('common')
   const router = useRouter()
   const [projects, setProjects] = useState<any[] | null>(null)
   const [analyticsData, setAnalyticsData] = useState<any[] | null>(null)
@@ -145,14 +148,14 @@ export default function AdminPage() {
   // Create project
   async function handleCreateProject() {
     if (!projectTitle.trim()) {
-      setFormError('Project title is required')
+      setFormError(t('titleRequired2'))
       return
     }
 
     // Client-side validation for password modes
     const needsPasswordForMode = passwordProtected && (authMode === 'PASSWORD' || authMode === 'BOTH')
     if (needsPasswordForMode && !sharePassword.trim()) {
-      setFormError('Password is required for password authentication mode')
+      setFormError(t('passwordRequired'))
       return
     }
 
@@ -183,9 +186,9 @@ export default function AdminPage() {
       router.push(`/admin/projects/${project.id}`)
     } catch (error) {
       if (error instanceof Error) {
-        setFormError(error.message || 'Failed to create project')
+        setFormError(error.message || t('failedToCreateProject'))
       } else {
-        setFormError('Failed to create project')
+        setFormError(t('failedToCreateProject'))
       }
     } finally {
       setCreating(false)
@@ -204,10 +207,10 @@ export default function AdminPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FolderKanban className="w-5 h-5 text-primary" />
-              Create New Project
+              {t('createNew')}
             </DialogTitle>
             <DialogDescription>
-              Set up a new video project for your client
+              {t('createDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4 py-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
@@ -220,10 +223,10 @@ export default function AdminPage() {
 
             {/* Project Title */}
             <div className="space-y-2">
-              <Label htmlFor="projectTitle">Project Title *</Label>
+              <Label htmlFor="projectTitle">{t('titleRequired')}</Label>
               <Input
                 id="projectTitle"
-                placeholder="e.g., Video Project - Client Name"
+                placeholder={t('titlePlaceholder')}
                 value={projectTitle}
                 onChange={(e) => setProjectTitle(e.target.value)}
                 autoComplete="off"
@@ -235,10 +238,10 @@ export default function AdminPage() {
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="projectDescription">Description (Optional)</Label>
+              <Label htmlFor="projectDescription">{t('descriptionOptional')}</Label>
               <Textarea
                 id="projectDescription"
-                placeholder="e.g., Project details, deliverables, notes..."
+                placeholder={t('descriptionPlaceholder')}
                 value={projectDescription}
                 onChange={(e) => setProjectDescription(e.target.value)}
                 rows={2}
@@ -264,10 +267,10 @@ export default function AdminPage() {
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <Label htmlFor="passwordProtected" className="text-sm font-semibold">
-                    Require Authentication
+                    {t('requireAuth')}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Clients must authenticate to view and approve.
+                    {t('requireAuthDescription')}
                   </p>
                 </div>
                 <input
@@ -283,25 +286,25 @@ export default function AdminPage() {
                 <div className="space-y-3 pt-2 border-t">
                   {/* Authentication Method */}
                   <div className="space-y-2">
-                    <Label>Authentication Method</Label>
+                    <Label>{t('authMethod')}</Label>
                     <Select value={authMode} onValueChange={(v) => setAuthMode(v as 'PASSWORD' | 'OTP' | 'BOTH')}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PASSWORD">Password Only</SelectItem>
+                        <SelectItem value="PASSWORD">{t('passwordOnly')}</SelectItem>
                         <SelectItem value="OTP" disabled={!canUseOTP}>
-                          Email OTP Only {!canUseOTP ? '(requires SMTP & email)' : ''}
+                          {t('otpOnly')} {!canUseOTP ? t('requiresSMTP') : ''}
                         </SelectItem>
                         <SelectItem value="BOTH" disabled={!canUseOTP}>
-                          Both Password and OTP {!canUseOTP ? '(requires SMTP & email)' : ''}
+                          {t('bothAuth')} {!canUseOTP ? t('requiresSMTP') : ''}
                         </SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {authMode === 'PASSWORD' && 'Clients must enter a password to access'}
-                      {authMode === 'OTP' && 'Clients receive a one-time code via email'}
-                      {authMode === 'BOTH' && 'Clients can choose password or email OTP'}
+                      {authMode === 'PASSWORD' && t('passwordDescription')}
+                      {authMode === 'OTP' && t('otpDescription')}
+                      {authMode === 'BOTH' && t('bothDescription')}
                     </p>
 
                     {/* Smart Recommendation */}
@@ -309,9 +312,9 @@ export default function AdminPage() {
                       <div className="flex items-start gap-2 p-2 bg-muted border border-border rounded-md">
                         <Mail className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium">Consider Email OTP</p>
+                          <p className="text-xs font-medium">{t('considerOtp')}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            No password sharing needed.
+                            {t('considerOtpDescription')}
                           </p>
                           <div className="flex flex-wrap gap-2 mt-1.5">
                             <Button
@@ -321,7 +324,7 @@ export default function AdminPage() {
                               className="h-6 text-xs px-2"
                               onClick={() => setAuthMode('OTP')}
                             >
-                              OTP Only
+                              {t('otpOnlyShort')}
                             </Button>
                             <Button
                               type="button"
@@ -330,7 +333,7 @@ export default function AdminPage() {
                               className="h-6 text-xs px-2"
                               onClick={() => setAuthMode('BOTH')}
                             >
-                              Both
+                              {t('bothShort')}
                             </Button>
                           </div>
                         </div>
@@ -341,7 +344,7 @@ export default function AdminPage() {
                       <div className="flex items-start gap-2 p-2 bg-warning-visible border border-warning-visible rounded-md">
                         <AlertCircle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
                         <p className="text-xs text-warning">
-                          Configure SMTP in Settings for OTP options
+                          {t('configureSMTP')}
                         </p>
                       </div>
                     )}
@@ -350,7 +353,7 @@ export default function AdminPage() {
                   {/* Password Field */}
                   {needsPassword && (
                     <div className="space-y-2">
-                      <Label htmlFor="sharePassword">Share Password</Label>
+                      <Label htmlFor="sharePassword">{t('sharePassword')}</Label>
                       <div className="flex gap-2">
                         <div className="relative flex-1 min-w-0">
                           <Input
@@ -373,7 +376,7 @@ export default function AdminPage() {
                           variant="outline"
                           size="icon"
                           onClick={handleGeneratePassword}
-                          title="Generate new password"
+                          title={t('generatePassword')}
                           className="flex-shrink-0"
                         >
                           <RefreshCw className="w-4 h-4" />
@@ -383,7 +386,7 @@ export default function AdminPage() {
                           variant="outline"
                           size="icon"
                           onClick={handleCopyPassword}
-                          title="Copy password"
+                          title={t('copyPassword')}
                           className="flex-shrink-0"
                         >
                           {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
@@ -393,7 +396,7 @@ export default function AdminPage() {
                         <SharePasswordRequirements password={sharePassword} />
                       )}
                       <p className="text-xs text-muted-foreground">
-                        <strong className="text-warning">Important:</strong> Save this password to share with your client.
+                        {t('savePasswordWarning')}
                       </p>
                     </div>
                   )}
@@ -404,7 +407,7 @@ export default function AdminPage() {
                 <div className="flex items-start gap-2 p-2 bg-warning-visible border-2 border-warning-visible rounded-md">
                   <span className="text-warning text-sm font-bold">!</span>
                   <p className="text-xs text-warning font-medium">
-                    Anyone with the link can view and approve without authentication.
+                    {t('noAuthWarning')}
                   </p>
                 </div>
               )}
@@ -421,25 +424,25 @@ export default function AdminPage() {
                   className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 <Label htmlFor="isShareOnly" className="font-normal cursor-pointer">
-                  Share Only
+                  {t('shareOnly')}
                 </Label>
               </div>
               <p className="text-xs text-muted-foreground ml-6">
-                Pre-approved project for simple video sharing. Disables feedback.
+                {t('shareOnlyDescription')}
               </p>
             </div>
 
             <p className="text-xs text-muted-foreground border-t pt-3">
-              Additional options can be configured in Project Settings after creation.
+              {t('additionalOptions')}
             </p>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={creating}>Cancel</Button>
+              <Button variant="outline" disabled={creating}>{tc('cancel')}</Button>
             </DialogClose>
             <Button onClick={handleCreateProject} disabled={creating}>
               <Plus className="w-4 h-4 mr-2" />
-              {creating ? 'Creating...' : 'Create Project'}
+              {creating ? tc('creating') : t('createProject')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -466,7 +469,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading projects...</p>
+        <p className="text-muted-foreground">{t('loadingProjects')}</p>
       </div>
     )
   }
@@ -479,16 +482,16 @@ export default function AdminPage() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                 <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
-                Projects Dashboard
+                {t('dashboard')}
               </h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage video projects and deliverables</p>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">{t('dashboardDescription')}</p>
             </div>
             <Button variant="default" size="default" onClick={openNewProjectModal}>
               <Plus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">New Project</span>
+              <span className="hidden sm:inline">{t('newProject')}</span>
             </Button>
           </div>
-          <div className="text-muted-foreground">No projects found.</div>
+          <div className="text-muted-foreground">{t('noProjects')}</div>
         </div>
         {renderNewProjectModal()}
       </div>
@@ -502,13 +505,13 @@ export default function AdminPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
               <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
-              Projects Dashboard
+              {t('dashboard')}
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage video projects and deliverables</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">{t('dashboardDescription')}</p>
           </div>
           <Button variant="default" size="default" onClick={openNewProjectModal}>
             <Plus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">New Project</span>
+            <span className="hidden sm:inline">{t('newProject')}</span>
           </Button>
         </div>
 
@@ -521,7 +524,7 @@ export default function AdminPage() {
                   <FolderKanban className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Projects</p>
+                  <p className="text-xs text-muted-foreground">{t('projectsCount')}</p>
                   <p className="text-base font-semibold tabular-nums">{analytics.totalProjects.toLocaleString()}</p>
                 </div>
               </div>
@@ -530,7 +533,7 @@ export default function AdminPage() {
                   <Video className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Videos</p>
+                  <p className="text-xs text-muted-foreground">{t('videos')}</p>
                   <p className="text-base font-semibold tabular-nums">{analytics.totalVideos.toLocaleString()}</p>
                 </div>
               </div>
@@ -539,7 +542,7 @@ export default function AdminPage() {
                   <Eye className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Visits</p>
+                  <p className="text-xs text-muted-foreground">{t('visits')}</p>
                   <p className="text-base font-semibold tabular-nums">{analytics.totalVisits.toLocaleString()}</p>
                 </div>
               </div>
@@ -548,7 +551,7 @@ export default function AdminPage() {
                   <Download className={metricIconClassName} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Downloads</p>
+                  <p className="text-xs text-muted-foreground">{t('downloads')}</p>
                   <p className="text-base font-semibold tabular-nums">{analytics.totalDownloads.toLocaleString()}</p>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
+import { SUPPORTED_LOCALES } from '@/i18n/locale'
 
 interface RouteParams {
   params: Promise<{ id: string; contactId: string }>
@@ -30,7 +31,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { id, contactId } = await params
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
-    const { name, email } = parsed.data
+    const { name, email, language } = parsed.data
 
     // Verify contact exists and belongs to this company
     const existingContact = await prisma.clientContact.findFirst({
@@ -44,7 +45,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
     }
 
-    const updateData: { name?: string; email?: string | null } = {}
+    const updateData: { name?: string; email?: string | null; language?: string | null } = {}
 
     if (name !== undefined) {
       if (typeof name !== 'string' || name.trim().length === 0) {
@@ -63,6 +64,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
       }
       updateData.email = trimmedEmail
+    }
+
+    if (language !== undefined) {
+      const contactLanguage = language?.trim() || null
+      if (contactLanguage && !SUPPORTED_LOCALES.includes(contactLanguage as any)) {
+        return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
+      }
+      updateData.language = contactLanguage
     }
 
     const contact = await prisma.clientContact.update({

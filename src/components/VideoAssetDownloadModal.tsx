@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Download, FileIcon, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
@@ -35,6 +36,8 @@ export function VideoAssetDownloadModal({
   shareToken = null,
   isAdmin = false,
 }: VideoAssetDownloadModalProps) {
+  const t = useTranslations('videos')
+  const tc = useTranslations('common')
   const [assets, setAssets] = useState<VideoAsset[]>([])
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -51,13 +54,13 @@ export function VideoAssetDownloadModal({
         headers,
       })
       if (!response.ok) {
-        throw new Error('Failed to fetch assets')
+        throw new Error(t('failedToFetchAssets'))
       }
 
       const data = await response.json()
       setAssets(data.assets)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load assets')
+      setError(err instanceof Error ? err.message : t('failedToLoadAssets'))
     } finally {
       setLoading(false)
     }
@@ -98,14 +101,14 @@ export function VideoAssetDownloadModal({
       })
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Failed to generate download link' }))
-        throw new Error(data.error || 'Failed to generate download link')
+        const data = await response.json().catch(() => ({ error: t('failedToGenerateDownload') }))
+        throw new Error(data.error || t('failedToGenerateDownload'))
       }
 
       const { url: downloadUrl } = await response.json()
       triggerDownload(downloadUrl)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Download failed')
+      setError(err instanceof Error ? err.message : t('downloadFailed'))
     }
   }
 
@@ -120,14 +123,14 @@ export function VideoAssetDownloadModal({
       })
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Failed to generate download link' }))
-        throw new Error(data.error || 'Failed to generate download link')
+        const data = await response.json().catch(() => ({ error: t('failedToGenerateDownload') }))
+        throw new Error(data.error || t('failedToGenerateDownload'))
       }
 
       const { url: downloadUrl } = await response.json()
       triggerDownload(downloadUrl)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Download failed')
+      setError(err instanceof Error ? err.message : t('downloadFailed'))
     }
   }
 
@@ -152,7 +155,7 @@ export function VideoAssetDownloadModal({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Download failed')
+        throw new Error(data.error || t('downloadFailed'))
       }
 
       const { url: downloadUrl } = await response.json()
@@ -165,7 +168,7 @@ export function VideoAssetDownloadModal({
         onClose()
       }, 500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Download failed')
+      setError(err instanceof Error ? err.message : t('downloadFailed'))
     } finally {
       setDownloading(false)
     }
@@ -176,7 +179,7 @@ export function VideoAssetDownloadModal({
   }
 
   const getCategoryLabel = (category: string | null) => {
-    if (!category) return 'Other'
+    if (!category) return t('other')
     return category.charAt(0).toUpperCase() + category.slice(1)
   }
 
@@ -199,7 +202,7 @@ export function VideoAssetDownloadModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="w-5 h-5 text-primary" />
-            Download Options
+            {t('downloadOptions')}
           </DialogTitle>
           <DialogDescription>
             {videoName} - {versionLabel}
@@ -209,7 +212,7 @@ export function VideoAssetDownloadModal({
         <div className="flex-1 overflow-y-auto space-y-6 py-4">
           {/* Quick actions */}
           <div className="space-y-3">
-            <h3 className="font-medium text-sm">Quick Download</h3>
+            <h3 className="font-medium text-sm">{t('quickDownload')}</h3>
             <button
               onClick={downloadVideoOnly}
               className="w-full p-4 border-2 border-border rounded-lg hover:border-primary transition-colors text-left"
@@ -217,9 +220,9 @@ export function VideoAssetDownloadModal({
               <div className="flex items-center gap-3">
                 <Download className="h-5 w-5 text-primary flex-shrink-0" />
                 <div>
-                  <p className="font-medium">Download Video Only</p>
+                  <p className="font-medium">{t('downloadVideoOnly')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Download the approved video file
+                    {t('downloadVideoDescription')}
                   </p>
                 </div>
               </div>
@@ -233,20 +236,20 @@ export function VideoAssetDownloadModal({
             </div>
           ) : assets.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No additional assets available for this video
+              {t('noAdditionalAssets')}
             </div>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-sm">
-                  Additional Assets ({assets.length})
+                  {t('additionalAssets')} ({assets.length})
                 </h3>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={selectAll}
                 >
-                  {selectedAssets.size === assets.length ? 'Deselect All' : 'Select All'}
+                  {selectedAssets.size === assets.length ? tc('deselectAll') : tc('selectAll')}
                 </Button>
               </div>
 
@@ -275,7 +278,7 @@ export function VideoAssetDownloadModal({
                       variant="ghost"
                       size="icon"
                       onClick={() => downloadSingleAsset(asset.id)}
-                      title="Download this file"
+                      title={t('downloadThisFile')}
                     >
                       <Download className="h-4 w-4" />
                     </Button>
@@ -293,12 +296,12 @@ export function VideoAssetDownloadModal({
                   {downloading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Preparing download...
+                      {t('preparingDownload')}
                     </>
                   ) : (
                     <>
                       <Download className="h-4 w-4 mr-2" />
-                      Download {selectedAssets.size} selected as ZIP
+                      {tc('download')} {selectedAssets.size} {t('downloadSelectedZip')}
                     </>
                   )}
                 </Button>

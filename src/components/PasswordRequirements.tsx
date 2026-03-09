@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { Check, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface PasswordRequirementsProps {
   password: string
@@ -13,30 +14,32 @@ interface Requirement {
   test: (password: string) => boolean
 }
 
-const requirements: Requirement[] = [
-  {
-    label: 'At least 12 characters',
-    test: (pwd) => pwd.length >= 12,
-  },
-  {
-    label: 'One uppercase letter (A-Z)',
-    test: (pwd) => /[A-Z]/.test(pwd),
-  },
-  {
-    label: 'One lowercase letter (a-z)',
-    test: (pwd) => /[a-z]/.test(pwd),
-  },
-  {
-    label: 'One number (0-9)',
-    test: (pwd) => /[0-9]/.test(pwd),
-  },
-  {
-    label: 'One special character (!@#$%^&*...)',
-    test: (pwd) => /[^A-Za-z0-9]/.test(pwd),
-  },
-]
-
 export function PasswordRequirements({ password, className = '' }: PasswordRequirementsProps) {
+  const t = useTranslations('auth')
+
+  const requirements: Requirement[] = [
+    {
+      label: t('passwordMinChars'),
+      test: (pwd) => pwd.length >= 12,
+    },
+    {
+      label: t('passwordUppercase'),
+      test: (pwd) => /[A-Z]/.test(pwd),
+    },
+    {
+      label: t('passwordLowercase'),
+      test: (pwd) => /[a-z]/.test(pwd),
+    },
+    {
+      label: t('passwordNumber'),
+      test: (pwd) => /[0-9]/.test(pwd),
+    },
+    {
+      label: t('passwordSpecial'),
+      test: (pwd) => /[^A-Za-z0-9]/.test(pwd),
+    },
+  ]
+
   const results = useMemo(() => {
     return requirements.map((req) => ({
       ...req,
@@ -48,7 +51,7 @@ export function PasswordRequirements({ password, className = '' }: PasswordRequi
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <p className="text-sm font-medium text-foreground">Password Requirements:</p>
+      <p className="text-sm font-medium text-foreground">{t('passwordRequirements')}</p>
       <ul className="space-y-1">
         {results.map((result, index) => (
           <li
@@ -68,7 +71,7 @@ export function PasswordRequirements({ password, className = '' }: PasswordRequi
       </ul>
       {allPassed && password.length > 0 && (
         <p className="text-sm text-success font-medium mt-2 flex items-center gap-1">
-          <Check className="w-4 h-4" /> Password meets all requirements
+          <Check className="w-4 h-4" /> {t('passwordMeetsAll')}
         </p>
       )}
     </div>

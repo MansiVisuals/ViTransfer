@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import fs from 'fs'
 import { createReadStream } from 'fs'
 export const runtime = 'nodejs'
@@ -14,11 +15,15 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   // Rate limiting: 30 downloads per minute
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many download requests. Please slow down.'
+    message: videoMessages.tooManyDirectDownloadRequests || 'Too many download requests. Please slow down.'
   }, 'video-download')
 
   if (rateLimitResult) {
@@ -35,7 +40,7 @@ export async function GET(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     // SECURITY: Verify user has access to this project (admin OR valid share session)
@@ -44,16 +49,16 @@ export async function GET(
       requiredPermission: 'download',
     })
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
     if (!accessCheck.isAdmin) {
       if (!video.project.allowAssetDownload) {
-        return NextResponse.json({ error: 'Downloads are disabled for this project' }, { status: 403 })
+        return NextResponse.json({ error: videoMessages.downloadsDisabledForProject || 'Downloads are disabled for this project' }, { status: 403 })
       }
 
       if (!video.approved) {
-        return NextResponse.json({ error: 'Downloads available after approval' }, { status: 403 })
+        return NextResponse.json({ error: videoMessages.downloadsAvailableAfterApproval || 'Downloads available after approval' }, { status: 403 })
       }
     }
 
@@ -66,7 +71,7 @@ export async function GET(
     }
 
     if (!filePath) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.fileNotFound || 'File not found' }, { status: 404 })
     }
 
     // Get the full file path
@@ -75,7 +80,7 @@ export async function GET(
     // Check if file exists and get stats
     const stat = await fs.promises.stat(fullPath)
     if (!stat.isFile()) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.fileNotFound || 'File not found' }, { status: 404 })
     }
 
     // Use the original filename from the database, guard against missing values
@@ -112,7 +117,7 @@ export async function GET(
   } catch (error) {
     console.error('Download error:', error)
     return NextResponse.json(
-      { error: 'Failed to download file' },
+      { error: videoMessages.failedToDownloadVideoFile || 'Failed to download file' },
       { status: 500 }
     )
   }

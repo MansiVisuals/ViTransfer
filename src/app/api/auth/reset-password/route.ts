@@ -7,6 +7,7 @@ import { invalidateAdminSessions } from '@/lib/session-invalidation'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import crypto from 'crypto'
 
 export const runtime = 'nodejs'
@@ -26,11 +27,15 @@ export const dynamic = 'force-dynamic'
  * - Logs security event
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   // Rate limiting: 5 requests per 15 minutes
   const rateLimitResult = await rateLimit(request, {
     windowMs: 15 * 60 * 1000,
     maxRequests: 5,
-    message: 'Too many password reset attempts. Please try again later.',
+    message: authMessages.tooManyPasswordResetAttempts || 'Too many password reset attempts. Please try again later.',
   }, 'reset-password')
 
   if (rateLimitResult) {
@@ -53,14 +58,14 @@ export async function POST(request: NextRequest) {
 
     if (!token || token.length === 0) {
       return NextResponse.json(
-        { error: 'Reset token is required' },
+        { error: authMessages.resetTokenRequired || 'Reset token is required' },
         { status: 400 }
       )
     }
 
     if (!newPassword || newPassword.length === 0) {
       return NextResponse.json(
-        { error: 'New password is required' },
+        { error: authMessages.newPasswordRequired || 'New password is required' },
         { status: 400 }
       )
     }
@@ -87,7 +92,7 @@ export async function POST(request: NextRequest) {
         },
       })
       return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
+        { error: authMessages.invalidOrExpiredResetToken || 'Invalid or expired reset token' },
         { status: 400 }
       )
     }
@@ -110,7 +115,7 @@ export async function POST(request: NextRequest) {
         },
       })
       return NextResponse.json(
-        { error: 'This reset link has already been used. Please request a new one.' },
+        { error: authMessages.resetLinkAlreadyUsed || 'This reset link has already been used. Please request a new one.' },
         { status: 400 }
       )
     }
@@ -127,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: authMessages.userNotFound || 'User not found' },
         { status: 404 }
       )
     }
@@ -145,7 +150,7 @@ export async function POST(request: NextRequest) {
         },
       })
       return NextResponse.json(
-        { error: 'Invalid reset token' },
+        { error: authMessages.invalidResetToken || 'Invalid reset token' },
         { status: 400 }
       )
     }
@@ -182,12 +187,12 @@ export async function POST(request: NextRequest) {
     // Return generic success message (no user-specific information)
     return NextResponse.json({
       success: true,
-      message: 'Password has been reset successfully',
+      message: authMessages.passwordResetCompleted || 'Password has been reset successfully',
     })
   } catch (error) {
     console.error('[PASSWORD_RESET] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to reset password' },
+      { error: authMessages.failedToResetPasswordApi || 'Failed to reset password' },
       { status: 500 }
     )
   }

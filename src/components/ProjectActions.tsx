@@ -120,12 +120,12 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
 
     // Validation
     if (notificationType === 'specific-video' && !selectedVideoId) {
-      setMessage({ type: 'error', text: 'Please select a video and version' })
+      setMessage({ type: 'error', text: t('selectVideoAndVersion') })
       return
     }
 
     setLoading(true)
-    setMessage({ type: 'success', text: 'Sending notification...' })
+    setMessage({ type: 'success', text: t('sendingNotificationProgress') })
 
     // Send notification in background without blocking UI
     apiPost(`/api/projects/${project.id}/notify`, {
@@ -134,13 +134,13 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
       sendPasswordSeparately: isPasswordProtected && sendPasswordSeparately
     })
       .then((data) => {
-        setMessage({ type: 'success', text: data.message || 'Notification sent successfully!' })
+        setMessage({ type: 'success', text: data.message || t('notificationSentSuccessfully') })
         setSelectedVideoName('')
         setSelectedVideoId('')
         setSendPasswordSeparately(false)
       })
       .catch((error) => {
-        setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Failed to send notification' })
+        setMessage({ type: 'error', text: error instanceof Error ? error.message : t('failedToSendNotification') })
       })
       .finally(() => {
         setLoading(false)

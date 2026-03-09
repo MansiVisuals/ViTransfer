@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -16,6 +17,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -26,7 +31,7 @@ export async function POST(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 20,
-    message: 'Too many requests. Please slow down.'
+    message: projectMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'admin-unapprove')
 
   if (rateLimitResult) {
@@ -55,7 +60,7 @@ export async function POST(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
     let unapprovedCount = 0
@@ -92,7 +97,7 @@ export async function POST(
   } catch (error) {
     console.error('Error unapproving project:', error)
     return NextResponse.json(
-      { error: 'Failed to unapprove project' },
+      { error: projectMessages.failedToUnapproveProjectApi || 'Failed to unapprove project' },
       { status: 500 }
     )
   }

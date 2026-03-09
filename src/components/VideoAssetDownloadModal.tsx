@@ -64,7 +64,7 @@ export function VideoAssetDownloadModal({
     } finally {
       setLoading(false)
     }
-  }, [videoId, shareToken, isAdmin])
+  }, [videoId, shareToken, isAdmin, t])
 
   useEffect(() => {
     if (isOpen) {

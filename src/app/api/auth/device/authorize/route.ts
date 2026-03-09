@@ -7,6 +7,7 @@ import { getCurrentUserFromRequest } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 /**
  * POST /api/auth/device/authorize
@@ -19,12 +20,15 @@ import { getClientIpAddress } from '@/lib/utils'
  */
 export async function POST(request: NextRequest) {
   const ipAddress = getClientIpAddress(request)
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
 
   // Rate limit: 20 requests per 10 minutes
   const rateLimitResult = await rateLimit(request, {
     windowMs: 10 * 60 * 1000,
     maxRequests: 20,
-    message: 'Too many authorization attempts.',
+    message: authMessages.tooManyAuthorizationAttempts || 'Too many authorization attempts.',
   }, 'device-authorize')
 
   if (rateLimitResult) {
@@ -43,7 +47,7 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUserFromRequest(request)
     if (!user) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: authMessages.authenticationRequired || 'Authentication required' },
         { status: 401 }
       )
     }
@@ -53,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (!userCode || typeof userCode !== 'string') {
       return NextResponse.json(
-        { error: 'User code is required' },
+        { error: authMessages.userCodeRequired || 'User code is required' },
         { status: 400 }
       )
     }
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Validate format: XXXX-XXXX
     if (!/^[A-Z]{4}-[0-9]{4}$/.test(normalizedCode)) {
       return NextResponse.json(
-        { error: 'Invalid user code format. Expected: ABCD-1234' },
+        { error: authMessages.invalidUserCodeFormat || 'Invalid user code format. Expected: ABCD-1234' },
         { status: 400 }
       )
     }
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
         wasBlocked: false,
       })
       return NextResponse.json(
-        { error: result.error || 'Authorization failed' },
+        { error: result.error || authMessages.authorizationFailed || 'Authorization failed' },
         { status: 400 }
       )
     }
@@ -107,7 +111,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Device Authorize] Error authorizing device:', error)
     return NextResponse.json(
-      { error: 'Failed to authorize device' },
+      { error: authMessages.failedToAuthorizeDevice || 'Failed to authorize device' },
       { status: 500 }
     )
   }

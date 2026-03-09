@@ -8,6 +8,32 @@
 
 import { prisma } from './db'
 
+function getEmailTemplateLocaleDefaults(messages: Record<string, any>) {
+  const common = messages.common || {}
+
+  return {
+    common: {
+      greeting: common.greeting || 'Hi <strong>{{RECIPIENT_NAME}}</strong>,',
+      questionsFooter: common.questionsFooter || 'Questions? Simply reply to this email.',
+      projectLabel: common.projectLabel || 'Project',
+      deliverableLabel: common.deliverableLabel || 'Deliverable',
+      deliverablesLabel: common.deliverablesLabel || 'Deliverables',
+      passwordLabel: common.passwordLabel || 'Password',
+      securityNoticeLabel: common.securityNoticeLabel || 'Security Notice',
+      dueDateLabel: common.dueDateLabel || 'Due Date',
+    },
+    newVersion: messages.newVersion || {},
+    projectApproved: messages.projectApproved || {},
+    commentNotification: messages.commentNotification || {},
+    adminCommentNotification: messages.adminCommentNotification || {},
+    adminProjectApproved: messages.adminProjectApproved || {},
+    projectGeneral: messages.projectGeneral || {},
+    password: messages.password || {},
+    passwordReset: messages.passwordReset || {},
+    dueDateReminder: messages.dueDateReminder || {},
+  }
+}
+
 // Template type constants
 export const EMAIL_TEMPLATE_TYPES = {
   NEW_VERSION: 'NEW_VERSION',
@@ -528,22 +554,23 @@ export function buildLocalizedDefaultTemplate(
   type: EmailTemplateType,
   messages: Record<string, any>
 ): DefaultTemplate | undefined {
-  const common = messages.common || {}
-  const greeting = common.greeting || 'Hi <strong>{{RECIPIENT_NAME}}</strong>,'
-  const questionsFooter = common.questionsFooter || 'Questions? Simply reply to this email.'
-  const projectLabel = common.projectLabel || 'Project'
-  const deliverableLabel = common.deliverableLabel || 'Deliverable'
-  const deliverablesLabel = common.deliverablesLabel || 'Deliverables'
-  const passwordLabel = common.passwordLabel || 'Password'
-  const securityNoticeLabel = common.securityNoticeLabel || 'Security Notice'
-  const dueDateLabel = common.dueDateLabel || 'Due Date'
+  const defaults = getEmailTemplateLocaleDefaults(messages)
+  const { common } = defaults
+  const greeting = common.greeting
+  const questionsFooter = common.questionsFooter
+  const projectLabel = common.projectLabel
+  const deliverableLabel = common.deliverableLabel
+  const deliverablesLabel = common.deliverablesLabel
+  const passwordLabel = common.passwordLabel
+  const securityNoticeLabel = common.securityNoticeLabel
+  const dueDateLabel = common.dueDateLabel
 
   const meta = TEMPLATE_METADATA.find(m => m.type === type)
   if (!meta) return undefined
 
   switch (type) {
     case 'NEW_VERSION': {
-      const t = messages.newVersion || {}
+      const t = defaults.newVersion
       return {
         type: 'NEW_VERSION',
         name: meta.name,
@@ -576,7 +603,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'PROJECT_APPROVED': {
-      const t = messages.projectApproved || {}
+      const t = defaults.projectApproved
       return {
         type: 'PROJECT_APPROVED',
         name: meta.name,
@@ -607,7 +634,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'COMMENT_NOTIFICATION': {
-      const t = messages.commentNotification || {}
+      const t = defaults.commentNotification
       return {
         type: 'COMMENT_NOTIFICATION',
         name: meta.name,
@@ -638,7 +665,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'ADMIN_COMMENT_NOTIFICATION': {
-      const t = messages.adminCommentNotification || {}
+      const t = defaults.adminCommentNotification
       return {
         type: 'ADMIN_COMMENT_NOTIFICATION',
         name: meta.name,
@@ -661,7 +688,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'ADMIN_PROJECT_APPROVED': {
-      const t = messages.adminProjectApproved || {}
+      const t = defaults.adminProjectApproved
       return {
         type: 'ADMIN_PROJECT_APPROVED',
         name: meta.name,
@@ -684,7 +711,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'PROJECT_GENERAL': {
-      const t = messages.projectGeneral || {}
+      const t = defaults.projectGeneral
       return {
         type: 'PROJECT_GENERAL',
         name: meta.name,
@@ -718,7 +745,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'PASSWORD': {
-      const t = messages.password || {}
+      const t = defaults.password
       return {
         type: 'PASSWORD',
         name: meta.name,
@@ -743,7 +770,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'PASSWORD_RESET': {
-      const t = messages.passwordReset || {}
+      const t = defaults.passwordReset
       return {
         type: 'PASSWORD_RESET',
         name: meta.name,
@@ -776,7 +803,7 @@ export function buildLocalizedDefaultTemplate(
       }
     }
     case 'DUE_DATE_REMINDER': {
-      const t = messages.dueDateReminder || {}
+      const t = defaults.dueDateReminder
       return {
         type: 'DUE_DATE_REMINDER',
         name: meta.name,

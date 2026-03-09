@@ -4,6 +4,7 @@ import { deleteFile } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
 import { getAutoApproveProject } from '@/lib/settings'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -14,6 +15,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -24,7 +29,7 @@ export async function GET(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 120, // Allow 2 requests per second for polling
-    message: 'Too many video status requests. Please slow down.',
+    message: videoMessages.tooManyVideoStatusRequests || 'Too many video status requests. Please slow down.',
   }, 'video-status')
   if (rateLimitResult) return rateLimitResult
 
@@ -46,14 +51,14 @@ export async function GET(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     return NextResponse.json(video)
   } catch (error) {
     console.error('Error fetching video status:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch video status' },
+      { error: videoMessages.failedToFetchVideoStatus || 'Failed to fetch video status' },
       { status: 500 }
     )
   }
@@ -118,6 +123,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -128,7 +137,7 @@ export async function PATCH(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many video update requests. Please slow down.',
+    message: videoMessages.tooManyVideoUpdateRequests || 'Too many video update requests. Please slow down.',
   }, 'video-update')
   if (rateLimitResult) return rateLimitResult
 
@@ -140,21 +149,21 @@ export async function PATCH(
     // Validate inputs
     if (approved !== undefined && typeof approved !== 'boolean') {
       return NextResponse.json(
-        { error: 'Invalid request: approved must be a boolean' },
+        { error: videoMessages.invalidApprovedBoolean || 'Invalid request: approved must be a boolean' },
         { status: 400 }
       )
     }
 
     if (name !== undefined && (!name || typeof name !== 'string' || name.trim().length === 0)) {
       return NextResponse.json(
-        { error: 'Invalid request: name must be a non-empty string' },
+        { error: videoMessages.invalidName || 'Invalid request: name must be a non-empty string' },
         { status: 400 }
       )
     }
 
     if (versionLabel !== undefined && (!versionLabel || typeof versionLabel !== 'string' || versionLabel.trim().length === 0)) {
       return NextResponse.json(
-        { error: 'Invalid request: versionLabel must be a non-empty string' },
+        { error: videoMessages.invalidVersionLabel || 'Invalid request: versionLabel must be a non-empty string' },
         { status: 400 }
       )
     }
@@ -162,7 +171,7 @@ export async function PATCH(
     // At least one field must be provided
     if (approved === undefined && name === undefined && versionLabel === undefined) {
       return NextResponse.json(
-        { error: 'Invalid request: at least one field must be provided' },
+        { error: videoMessages.invalidUpdateRequest || 'Invalid request: at least one field must be provided' },
         { status: 400 }
       )
     }
@@ -174,7 +183,7 @@ export async function PATCH(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     // If approving this video, unapprove all other versions of the SAME video
@@ -228,7 +237,7 @@ export async function PATCH(
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to update video approval' },
+      { error: videoMessages.failedToUpdateVideoApproval || 'Failed to update video approval' },
       { status: 500 }
     )
   }
@@ -238,6 +247,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -247,7 +260,7 @@ export async function DELETE(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many video delete requests. Please slow down.',
+    message: videoMessages.tooManyVideoDeleteRequests || 'Too many video delete requests. Please slow down.',
   }, 'video-delete')
   if (rateLimitResult) return rateLimitResult
 
@@ -262,7 +275,7 @@ export async function DELETE(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     // Delete all associated files from storage
@@ -326,11 +339,11 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Video and all related files deleted successfully',
+      message: videoMessages.videoDeletedSuccessfully || 'Video and all related files deleted successfully',
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to delete video' },
+      { error: videoMessages.failedToDeleteVideoApi || 'Failed to delete video' },
       { status: 500 }
     )
   }

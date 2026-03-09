@@ -6,6 +6,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { isSmtpConfigured } from '@/lib/email'
 import { getFilePath } from '@/lib/storage'
 import { flushPendingAdminNotifications } from '@/lib/notifications'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import fs from 'fs/promises'
 export const runtime = 'nodejs'
 
@@ -15,6 +16,10 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -25,7 +30,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000, // 1 minute
     maxRequests: 120,
-    message: 'Too many requests. Please slow down.'
+    message: settingsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'settings-read', authResult.id)
   if (rateLimitResult) return rateLimitResult
 
@@ -75,13 +80,17 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching settings:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch settings' },
+      { error: settingsMessages.failedToFetchSettings || 'Failed to fetch settings' },
       { status: 500 }
     )
   }
 }
 
 export async function PATCH(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -95,7 +104,7 @@ export async function PATCH(request: NextRequest) {
     const bodyKeys = Object.keys(body)
     if (bodyKeys.some(k => k === '__proto__' || k === 'constructor' || k === 'prototype')) {
       return NextResponse.json(
-        { error: 'Invalid request body' },
+        { error: settingsMessages.invalidRequestBody || 'Invalid request body' },
         { status: 400 }
       )
     }
@@ -133,7 +142,7 @@ export async function PATCH(request: NextRequest) {
       const validLanguages = ['en', 'nl']
       if (typeof language !== 'string' || !validLanguages.includes(language)) {
         return NextResponse.json(
-          { error: 'Invalid language code.' },
+          { error: settingsMessages.invalidLanguageCode || 'Invalid language code.' },
           { status: 400 }
         )
       }
@@ -144,7 +153,7 @@ export async function PATCH(request: NextRequest) {
       const validThemes = ['auto', 'light', 'dark']
       if (!validThemes.includes(defaultTheme)) {
         return NextResponse.json(
-          { error: 'Invalid theme. Must be auto, light, or dark.' },
+          { error: settingsMessages.invalidThemeMustBeAutoLightDark || 'Invalid theme. Must be auto, light, or dark.' },
           { status: 400 }
         )
       }
@@ -155,7 +164,7 @@ export async function PATCH(request: NextRequest) {
       const validColors = ['blue', 'purple', 'green', 'orange', 'red', 'pink', 'teal', 'amber', 'stone', 'gold']
       if (!validColors.includes(accentColor)) {
         return NextResponse.json(
-          { error: 'Invalid accent color.' },
+          { error: settingsMessages.invalidAccentColor || 'Invalid accent color.' },
           { status: 400 }
         )
       }
@@ -166,7 +175,7 @@ export async function PATCH(request: NextRequest) {
       const validStyles = ['NONE', 'LOGO_ONLY', 'NAME_ONLY', 'LOGO_AND_NAME']
       if (!validStyles.includes(emailHeaderStyle)) {
         return NextResponse.json(
-          { error: 'Invalid email header style. Must be NONE, LOGO_ONLY, NAME_ONLY, or LOGO_AND_NAME.' },
+          { error: settingsMessages.invalidEmailHeaderStyle || 'Invalid email header style. Must be NONE, LOGO_ONLY, NAME_ONLY, or LOGO_AND_NAME.' },
           { status: 400 }
         )
       }
@@ -174,7 +183,7 @@ export async function PATCH(request: NextRequest) {
 
     if (brandingLogoPath !== undefined && brandingLogoPath !== null && typeof brandingLogoPath !== 'string') {
       return NextResponse.json(
-        { error: 'Invalid branding logo path.' },
+        { error: settingsMessages.invalidBrandingLogoPath || 'Invalid branding logo path.' },
         { status: 400 }
       )
     }
@@ -184,7 +193,7 @@ export async function PATCH(request: NextRequest) {
       const validSchedules = ['IMMEDIATE', 'HOURLY', 'DAILY', 'WEEKLY']
       if (!validSchedules.includes(adminNotificationSchedule)) {
         return NextResponse.json(
-          { error: 'Invalid notification schedule. Must be IMMEDIATE, HOURLY, DAILY, or WEEKLY.' },
+          { error: settingsMessages.invalidNotificationSchedule || 'Invalid notification schedule. Must be IMMEDIATE, HOURLY, DAILY, or WEEKLY.' },
           { status: 400 }
         )
       }
@@ -195,7 +204,7 @@ export async function PATCH(request: NextRequest) {
       const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/
       if (!timeRegex.test(adminNotificationTime)) {
         return NextResponse.json(
-          { error: 'Invalid time format. Must be HH:MM (24-hour format).' },
+          { error: settingsMessages.invalidTimeFormat || 'Invalid time format. Must be HH:MM (24-hour format).' },
           { status: 400 }
         )
       }
@@ -205,7 +214,7 @@ export async function PATCH(request: NextRequest) {
     if (adminNotificationDay !== undefined && adminNotificationDay !== null) {
       if (!Number.isInteger(adminNotificationDay) || adminNotificationDay < 0 || adminNotificationDay > 6) {
         return NextResponse.json(
-          { error: 'Invalid day. Must be 0-6 (Sunday-Saturday).' },
+          { error: settingsMessages.invalidDayMustBeZeroToSix || 'Invalid day. Must be 0-6 (Sunday-Saturday).' },
           { status: 400 }
         )
       }
@@ -219,8 +228,8 @@ export async function PATCH(request: NextRequest) {
         const uniqueInvalid = [...new Set(invalidChars)].join(', ')
         return NextResponse.json(
           {
-            error: 'Invalid characters in watermark text',
-            details: `Watermark text contains invalid characters: ${uniqueInvalid}. Only letters, numbers, spaces, and these characters are allowed: - _ . ( )`
+            error: settingsMessages.invalidWatermarkCharacters || 'Invalid characters in watermark text',
+            details: (settingsMessages.invalidWatermarkCharactersDetails || 'Watermark text contains invalid characters: {invalid}. Only letters, numbers, spaces, and these characters are allowed: - _ . ( )').replace('{invalid}', uniqueInvalid)
           },
           { status: 400 }
         )
@@ -230,8 +239,8 @@ export async function PATCH(request: NextRequest) {
       if (defaultWatermarkText.length > 100) {
         return NextResponse.json(
           {
-            error: 'Watermark text too long',
-            details: 'Watermark text must be 100 characters or less'
+            error: settingsMessages.watermarkTextTooLong || 'Watermark text too long',
+            details: settingsMessages.watermarkTextTooLongDetails || 'Watermark text must be 100 characters or less'
           },
           { status: 400 }
         )
@@ -242,7 +251,7 @@ export async function PATCH(request: NextRequest) {
       const valid = ['TIMECODE', 'AUTO']
       if (!valid.includes(defaultTimestampDisplay)) {
         return NextResponse.json(
-          { error: 'Invalid timestamp display. Must be TIMECODE or AUTO.' },
+          { error: settingsMessages.invalidTimestampDisplay || 'Invalid timestamp display. Must be TIMECODE or AUTO.' },
           { status: 400 }
         )
       }
@@ -252,7 +261,7 @@ export async function PATCH(request: NextRequest) {
       const parsed = Number(maxUploadSizeGB)
       if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
         return NextResponse.json(
-          { error: 'Max upload size must be an integer between 1 and 100 GB.' },
+          { error: settingsMessages.maxUploadSizeMustBeIntegerBetween1And100Gb || 'Max upload size must be an integer between 1 and 100 GB.' },
           { status: 400 }
         )
       }
@@ -262,7 +271,7 @@ export async function PATCH(request: NextRequest) {
       const parsed = Number(maxCommentAttachments)
       if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
         return NextResponse.json(
-          { error: 'Max comment attachments must be an integer between 1 and 50.' },
+          { error: settingsMessages.maxCommentAttachmentsMustBeIntegerBetween1And50 || 'Max comment attachments must be an integer between 1 and 50.' },
           { status: 400 }
         )
       }
@@ -405,7 +414,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Error updating settings:', error)
     return NextResponse.json(
-      { error: 'Failed to update settings' },
+      { error: settingsMessages.failedToUpdateSettings || 'Failed to update settings' },
       { status: 500 }
     )
   }

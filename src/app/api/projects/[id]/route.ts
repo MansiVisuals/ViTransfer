@@ -10,12 +10,17 @@ import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { updateProjectSchema } from '@/lib/validation'
 import { syncCompanyToDirectory } from '@/lib/client-directory-sync'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -26,7 +31,7 @@ export async function GET(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: projectMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'project-read')
 
   if (rateLimitResult) {
@@ -79,7 +84,7 @@ export async function GET(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
     // Check SMTP configuration status
@@ -112,7 +117,7 @@ export async function GET(
     return NextResponse.json(projectData)
   } catch (error) {
     return NextResponse.json(
-      { error: 'Unable to process request' },
+      { error: projectMessages.unableToProcessRequest || 'Unable to process request' },
       { status: 500 }
     )
   }
@@ -122,6 +127,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -132,7 +141,7 @@ export async function PATCH(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many project update requests. Please slow down.',
+    message: projectMessages.tooManyProjectUpdateRequests || 'Too many project update requests. Please slow down.',
   }, 'project-update')
   if (rateLimitResult) return rateLimitResult
 
@@ -163,7 +172,7 @@ export async function PATCH(
       
       if (existingProject) {
         return NextResponse.json(
-          { error: 'This share link is already in use. Please choose a different one.' },
+          { error: projectMessages.shareLinkAlreadyInUse || 'This share link is already in use. Please choose a different one.' },
           { status: 409 }
         )
       }
@@ -177,7 +186,7 @@ export async function PATCH(
       // Validate companyName (CRLF protection)
       if (validatedBody.companyName && /[\r\n]/.test(validatedBody.companyName)) {
         return NextResponse.json(
-          { error: 'Company name cannot contain line breaks' },
+          { error: projectMessages.companyNameCannotContainLineBreaks || 'Company name cannot contain line breaks' },
           { status: 400 }
         )
       }
@@ -242,8 +251,8 @@ export async function PATCH(
           const uniqueInvalid = [...new Set(invalidChars)].join(', ')
           return NextResponse.json(
             {
-              error: 'Invalid characters in watermark text',
-              details: `Watermark text contains invalid characters: ${uniqueInvalid}. Only letters, numbers, spaces, and these characters are allowed: - _ . ( )`
+              error: projectMessages.invalidWatermarkCharacters || 'Invalid characters in watermark text',
+              details: (projectMessages.invalidWatermarkCharactersDetails || 'Watermark text contains invalid characters: {chars}. Only letters, numbers, spaces, and these characters are allowed: - _ . ( )').replace('{chars}', uniqueInvalid)
             },
             { status: 400 }
           )
@@ -253,8 +262,8 @@ export async function PATCH(
         if (validatedBody.watermarkText.length > 100) {
           return NextResponse.json(
             {
-              error: 'Watermark text too long',
-              details: 'Watermark text must be 100 characters or less'
+              error: projectMessages.watermarkTextTooLong || 'Watermark text too long',
+              details: projectMessages.watermarkTextTooLongDetails || 'Watermark text must be 100 characters or less'
             },
             { status: 400 }
           )
@@ -296,7 +305,7 @@ export async function PATCH(
       })
 
       if (!currentProject) {
-        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+        return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
       }
 
       // Handle password update - only update if actually changed
@@ -337,13 +346,13 @@ export async function PATCH(
 
           if (!currentPassword) {
             return NextResponse.json(
-              { error: 'Password authentication mode requires a password' },
+                { error: projectMessages.passwordAuthRequiresPassword || 'Password authentication mode requires a password' },
               { status: 400 }
             )
           }
         } else if ((newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH') && (!newPassword || newPassword === '')) {
           return NextResponse.json(
-            { error: 'Password authentication mode requires a password' },
+              { error: projectMessages.passwordAuthRequiresPassword || 'Password authentication mode requires a password' },
             { status: 400 }
           )
         }
@@ -380,7 +389,7 @@ export async function PATCH(
       if ((currentProject?.authMode === 'PASSWORD' || currentProject?.authMode === 'BOTH') &&
           (validatedBody.sharePassword === null || validatedBody.sharePassword === '')) {
         return NextResponse.json(
-          { error: 'Cannot remove password when using password authentication mode. Switch to "No Authentication" first.' },
+          { error: projectMessages.cannotRemovePasswordWhilePasswordAuth || 'Cannot remove password when using password authentication mode. Switch to "No Authentication" first.' },
           { status: 400 }
         )
       }
@@ -459,7 +468,7 @@ export async function PATCH(
     return NextResponse.json(project)
   } catch (error) {
     return NextResponse.json(
-      { error: 'Operation failed' },
+      { error: projectMessages.operationFailed || 'Operation failed' },
       { status: 500 }
     )
   }
@@ -469,6 +478,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -478,7 +491,7 @@ export async function DELETE(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 20,
-    message: 'Too many project delete requests. Please slow down.',
+    message: projectMessages.tooManyProjectDeleteRequests || 'Too many project delete requests. Please slow down.',
   }, 'project-delete')
   if (rateLimitResult) return rateLimitResult
 
@@ -493,7 +506,7 @@ export async function DELETE(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
     // Delete all video files from storage
@@ -546,11 +559,11 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Project and all related files deleted successfully'
+      message: projectMessages.projectDeletedSuccessfully || 'Project and all related files deleted successfully'
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Operation failed' },
+      { error: projectMessages.operationFailed || 'Operation failed' },
       { status: 500 }
     )
   }

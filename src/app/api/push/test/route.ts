@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { sendTestNotification } from '@/lib/push-notifications'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,10 @@ export const dynamic = 'force-dynamic'
  * Send a test push notification to a specific subscription
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const webPushMessages = messages?.settings?.webPush || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -19,7 +24,7 @@ export async function POST(request: NextRequest) {
   // Rate limit: 10 test notifications per minute per admin
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 1000, maxRequests: 10, message: 'Too many test notifications. Please wait.' },
+    { windowMs: 60 * 1000, maxRequests: 10, message: webPushMessages.tooManyTestNotifications || 'Too many test notifications. Please wait.' },
     'push-test',
     authResult.id
   )
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     if (!subscriptionId) {
       return NextResponse.json(
-        { error: 'Missing subscriptionId' },
+        { error: webPushMessages.missingSubscriptionId || 'Missing subscriptionId' },
         { status: 400 }
       )
     }
@@ -42,14 +47,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
     } else {
       return NextResponse.json(
-        { error: result.error || 'Failed to send test notification' },
+        { error: result.error || webPushMessages.failedToSendTestNotification || 'Failed to send test notification' },
         { status: 500 }
       )
     }
   } catch (error) {
     console.error('[API] Failed to send test notification:', error)
     return NextResponse.json(
-      { error: 'Failed to send test notification' },
+      { error: webPushMessages.failedToSendTestNotification || 'Failed to send test notification' },
       { status: 500 }
     )
   }

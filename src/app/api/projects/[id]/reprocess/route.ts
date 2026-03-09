@@ -4,6 +4,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { getVideoQueue } from '@/lib/queue'
 import { deleteFile } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -18,6 +19,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   // Check authentication - only admins can reprocess
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -28,7 +33,7 @@ export async function POST(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
-    message: 'Too many reprocess requests. Please slow down.',
+    message: projectMessages.tooManyReprocessRequests || 'Too many reprocess requests. Please slow down.',
   }, 'project-reprocess')
   if (rateLimitResult) return rateLimitResult
 
@@ -50,7 +55,7 @@ export async function POST(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
     // Filter videos: only READY or ERROR status
@@ -65,7 +70,7 @@ export async function POST(
 
     if (videosToReprocess.length === 0) {
       return NextResponse.json({
-        error: 'No videos available for reprocessing',
+        error: projectMessages.noVideosAvailableForReprocessing || 'No videos available for reprocessing',
       }, { status: 400 })
     }
 
@@ -130,7 +135,7 @@ export async function POST(
   } catch (error) {
     console.error('Error reprocessing videos:', error)
     return NextResponse.json(
-      { error: 'Failed to reprocess videos' },
+      { error: projectMessages.failedToReprocessVideos || 'Failed to reprocess videos' },
       { status: 500 }
     )
   }

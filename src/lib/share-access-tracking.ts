@@ -4,6 +4,7 @@ import { getSecuritySettings } from './video-access'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { generateShareUrl, getAppUrl } from '@/lib/url'
 import { getClientIpAddress } from '@/lib/utils'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export async function trackSharePageAccess(params: {
   projectId: string
@@ -45,17 +46,33 @@ export async function trackSharePageAccess(params: {
     })
     .catch(() => null)
 
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const notificationsText = messages?.notificationsText
+
   void enqueueExternalNotification({
     eventType: 'SHARE_ACCESS',
-    title: `Share Link Opened: ${project?.title || 'Unknown Project'}`,
+    title: (notificationsText?.shareLinkOpenedTitle || 'Share Link Opened: {projectTitle}')
+      .replace('{projectTitle}', project?.title || notificationsText?.unknownProject || 'Unknown Project'),
     body: await (async () => {
       const shareUrl = project?.slug ? await generateShareUrl(project.slug, request).catch(() => '') : ''
       const baseUrl = await getAppUrl(request).catch(() => '')
+      const person = email || notificationsText?.someone || 'Someone'
+      const projectTitle = project?.title || notificationsText?.unknownProject || 'Unknown Project'
 
       return [
-        `${email || 'Someone'} opened ${project?.title || 'a project'}`,
-        `Method: ${accessMethod}`,
-        shareUrl ? `Link: ${shareUrl}` : baseUrl ? `Link: ${baseUrl}` : null,
+        project?.title
+          ? (notificationsText?.openedProject || '{person} opened {projectTitle}')
+              .replace('{person}', person)
+              .replace('{projectTitle}', projectTitle)
+          : (notificationsText?.openedAProject || '{person} opened a project')
+              .replace('{person}', person),
+        (notificationsText?.method || 'Method: {method}').replace('{method}', accessMethod),
+        shareUrl
+          ? (notificationsText?.link || 'Link: {url}').replace('{url}', shareUrl)
+          : baseUrl
+            ? (notificationsText?.link || 'Link: {url}').replace('{url}', baseUrl)
+            : null,
       ]
         .filter(Boolean)
         .join('\n')

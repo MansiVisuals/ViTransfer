@@ -50,7 +50,7 @@ export async function enqueueExternalNotification(job: ExtendedNotificationJob):
         if (commentMatch) pushData.content = commentMatch[1].trim()
       }
 
-      const payload = createNotificationPayload(eventType, {
+      const payload = await createNotificationPayload(eventType, {
         projectTitle: pushData.projectTitle,
         videoName: pushData.videoName,
         authorName: pushData.authorName,

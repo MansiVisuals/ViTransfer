@@ -2,15 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyRecipientUnsubscribeToken } from '@/lib/unsubscribe'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const unsubscribeMessages = messages?.unsubscribe || {}
+
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many requests. Please slow down.',
+    message: unsubscribeMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
   }, 'unsubscribe')
   if (rateLimitResult) return rateLimitResult
 

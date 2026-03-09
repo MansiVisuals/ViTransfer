@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -16,6 +17,10 @@ export const dynamic = 'force-dynamic'
  * ADMIN ONLY - requires authentication
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const securityMessages = messages?.security || {}
+
   // Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -26,7 +31,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000, // 1 minute
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: securityMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'security-events-read')
   if (rateLimitResult) return rateLimitResult
 
@@ -39,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     if (!settings?.viewSecurityEvents) {
       return NextResponse.json(
-        { error: 'Security events dashboard is disabled' },
+        { error: securityMessages.securityEventsDashboardDisabled || 'Security events dashboard is disabled' },
         { status: 403 }
       )
     }
@@ -109,7 +114,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching security events:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch security events' },
+      { error: securityMessages.failedToFetchSecurityEvents || 'Failed to fetch security events' },
       { status: 500 }
     )
   }
@@ -122,6 +127,10 @@ export async function GET(request: NextRequest) {
  * ADMIN ONLY - requires authentication
  */
 export async function DELETE(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const securityMessages = messages?.security || {}
+
   // Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -134,7 +143,7 @@ export async function DELETE(request: NextRequest) {
 
     if (olderThan === undefined || olderThan === null || olderThan < 0) {
       return NextResponse.json(
-        { error: 'olderThan must be 0 or greater (0 = delete all)' },
+        { error: securityMessages.olderThanMustBeZeroOrGreater || 'olderThan must be 0 or greater (0 = delete all)' },
         { status: 400 }
       )
     }
@@ -145,7 +154,7 @@ export async function DELETE(request: NextRequest) {
     if (olderThan === 0) {
       // Delete all events
       result = await prisma.securityEvent.deleteMany({})
-      message = `Deleted all ${result.count} security events`
+  message = (securityMessages.deletedAllSecurityEvents || 'Deleted all {count} security events').replace('{count}', String(result.count))
     } else {
       // Delete events older than specified days
       const cutoffDate = new Date()
@@ -158,7 +167,7 @@ export async function DELETE(request: NextRequest) {
           }
         }
       })
-      message = `Deleted ${result.count} events older than ${olderThan} days`
+  message = (securityMessages.deletedEventsOlderThanDays || 'Deleted {count} events older than {days} days').replace('{count}', String(result.count)).replace('{days}', String(olderThan))
     }
 
     return NextResponse.json({
@@ -169,7 +178,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Error deleting security events:', error)
     return NextResponse.json(
-      { error: 'Failed to delete security events' },
+      { error: securityMessages.failedToDeleteSecurityEventsApi || 'Failed to delete security events' },
       { status: 500 }
     )
   }

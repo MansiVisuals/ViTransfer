@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
       setStatus('error')
       setMessage(t('invalidToken'))
     }
-  }, [])
+  }, [t])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

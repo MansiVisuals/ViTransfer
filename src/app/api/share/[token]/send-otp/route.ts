@@ -1,3 +1,5 @@
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { getRecipientLocale } from '@/lib/email'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import {
@@ -25,6 +27,11 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const configuredLocale = await getConfiguredLocale()
+    const messages = await loadLocaleMessages(configuredLocale)
+  const shareMessages = messages?.share || {}
+  const notificationsText = messages?.notificationsText || {}
+
     const { token } = await params
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
@@ -32,7 +39,7 @@ export async function POST(
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json(
-        { error: 'Email is required' },
+  { error: shareMessages.emailRequired || 'Email is required' },
         { status: 400 }
       )
     }
@@ -40,7 +47,7 @@ export async function POST(
     // SECURITY: Validate email length to prevent DoS
     if (email.length > 255) {
       return NextResponse.json(
-        { error: 'Invalid email' },
+  { error: shareMessages.invalidEmail || 'Invalid email' },
         { status: 400 }
       )
     }
@@ -49,7 +56,7 @@ export async function POST(
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
+  { error: shareMessages.invalidEmail || 'Invalid email format' },
         { status: 400 }
       )
     }
@@ -58,7 +65,7 @@ export async function POST(
     const smtpConfigured = await isSmtpConfigured()
     if (!smtpConfigured) {
       return NextResponse.json(
-        { error: 'Email service not configured. Please contact the administrator.' },
+  { error: shareMessages.emailServiceUnavailable || 'Email service not configured. Please contact the administrator.' },
         { status: 503 }
       )
     }
@@ -75,7 +82,7 @@ export async function POST(
 
     if (!project) {
       return NextResponse.json(
-        { error: 'Access denied' },
+  { error: shareMessages.accessDenied || 'Access denied' },
         { status: 403 }
       )
     }
@@ -83,7 +90,7 @@ export async function POST(
     // Check if OTP is enabled for this project
     if (project.authMode !== 'OTP' && project.authMode !== 'BOTH') {
       return NextResponse.json(
-        { error: 'OTP authentication not enabled for this project' },
+        { error: shareMessages.otpNotEnabled || 'OTP authentication not enabled for this project' },
         { status: 403 }
       )
     }
@@ -110,7 +117,7 @@ export async function POST(
 
       return NextResponse.json(
         {
-          error: 'Too many requests. Please try again later.',
+          error: shareMessages.tooManyRequests || 'Too many requests. Please try again later.',
           retryAfter: rateLimitCheck.retryAfter,
         },
         {
@@ -146,15 +153,17 @@ export async function POST(
 
       void enqueueExternalNotification({
         eventType: 'SHARE_ACCESS',
-        title: `Unauthorized Access Attempt: ${project.title}`,
+        title: (shareMessages.unauthorizedOtpRequestTitle || 'Unauthorized Access Attempt: {projectTitle}').replace('{projectTitle}', project.title),
         body: await (async () => {
           const baseUrl = await getAppUrl(request).catch(() => '')
           const link = baseUrl ? `${baseUrl}/share/${token}` : null
+          const requestBody = (shareMessages.unauthorizedOtpRequestBody || '{email} requested access but is not a registered recipient')
+            .replace('{email}', email)
 
           return [
-            `${email} requested access (not a registered recipient)`,
-            'Method: OTP',
-            link ? `Link: ${link}` : null,
+            requestBody,
+            (notificationsText.method || 'Method: {method}').replace('{method}', shareMessages.otpMethod || 'OTP'),
+            link ? (notificationsText.link || 'Link: {url}').replace('{url}', link) : null,
           ]
             .filter(Boolean)
             .join('\n')
@@ -164,8 +173,8 @@ export async function POST(
           projectTitle: project.title,
           projectId: project.id,
           email,
-          title: `Unauthorized Access Attempt: ${project.title}`,
-          body: `${email} requested access (not a registered recipient)`,
+          title: (shareMessages.unauthorizedOtpRequestTitle || 'Unauthorized Access Attempt: {projectTitle}').replace('{projectTitle}', project.title),
+          body: (shareMessages.unauthorizedOtpRequestBody || '{email} requested access but is not a registered recipient').replace('{email}', email),
         },
       }).catch(() => {})
 
@@ -182,7 +191,7 @@ export async function POST(
       // Return success message without actually sending OTP
       return NextResponse.json({
         success: true,
-        message: 'If your email is registered for this project, you will receive a verification code shortly',
+        message: shareMessages.otpRequestSubmitted || 'If your email is registered for this project, you will receive a verification code shortly',
       })
     }
 
@@ -219,11 +228,12 @@ export async function POST(
 
     // Send OTP email
     try {
-      await sendOTPEmail(email, project.title, code, unsubscribeUrl)
+      const recipientLocale = await getRecipientLocale(email)
+      await sendOTPEmail(email, project.title, code, unsubscribeUrl, recipientLocale)
     } catch (error) {
       console.error('Error sending OTP email:', error)
       return NextResponse.json(
-        { error: 'Failed to send verification code. Please try again.' },
+        { error: shareMessages.failedToSendCode || 'Failed to send verification code. Please try again.' },
         { status: 500 }
       )
     }
@@ -244,12 +254,15 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'If your email is registered for this project, you will receive a verification code shortly',
+      message: shareMessages.otpRequestSubmitted || 'If your email is registered for this project, you will receive a verification code shortly',
     })
   } catch (error) {
     console.error('Error sending OTP:', error)
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const shareMessages = messages?.share || {}
     return NextResponse.json(
-      { error: 'Failed to send verification code' },
+      { error: shareMessages.failedToSendCodeShort || 'Failed to send verification code' },
       { status: 500 }
     )
   }

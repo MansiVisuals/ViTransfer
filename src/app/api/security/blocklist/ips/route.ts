@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateBlocklistCache } from '@/lib/video-access'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,10 @@ export const dynamic = 'force-dynamic'
  * ADMIN ONLY
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching blocked IPs:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch blocked IPs' },
+      { error: settingsMessages.failedToFetchBlockedIps || 'Failed to fetch blocked IPs' },
       { status: 500 }
     )
   }
@@ -43,6 +48,10 @@ export async function GET(request: NextRequest) {
  * ADMIN ONLY
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -54,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     if (!ipAddress || typeof ipAddress !== 'string') {
       return NextResponse.json(
-        { error: 'IP address is required' },
+        { error: settingsMessages.ipAddressRequired || 'IP address is required' },
         { status: 400 }
       )
     }
@@ -63,7 +72,7 @@ export async function POST(request: NextRequest) {
     const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/
     if (!ipPattern.test(ipAddress)) {
       return NextResponse.json(
-        { error: 'Invalid IP address format' },
+        { error: settingsMessages.invalidIpAddressFormat || 'Invalid IP address format' },
         { status: 400 }
       )
     }
@@ -75,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { error: 'IP address already blocked' },
+        { error: settingsMessages.ipAddressAlreadyBlocked || 'IP address already blocked' },
         { status: 409 }
       )
     }
@@ -98,7 +107,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error blocking IP:', error)
     return NextResponse.json(
-      { error: 'Failed to block IP address' },
+      { error: settingsMessages.failedToBlockIP || 'Failed to block IP address' },
       { status: 500 }
     )
   }
@@ -111,6 +120,10 @@ export async function POST(request: NextRequest) {
  * ADMIN ONLY
  */
 export async function DELETE(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -122,7 +135,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json(
-        { error: 'ID is required' },
+        { error: settingsMessages.idRequired || 'ID is required' },
         { status: 400 }
       )
     }
@@ -136,12 +149,12 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'IP address unblocked successfully',
+      message: settingsMessages.ipAddressUnblockedSuccessfully || 'IP address unblocked successfully',
     })
   } catch (error) {
     console.error('Error unblocking IP:', error)
     return NextResponse.json(
-      { error: 'Failed to unblock IP address' },
+      { error: settingsMessages.failedToUnblockIpAddress || 'Failed to unblock IP address' },
       { status: 500 }
     )
   }

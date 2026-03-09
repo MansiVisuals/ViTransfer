@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { getPasskeyConfigStatus } from '@/lib/settings'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -22,6 +23,10 @@ export const runtime = 'nodejs'
  * - config?: { domain, httpsEnabled, isLocalhost }
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     // Require admin authentication
     const user = await requireApiAdmin(request)
@@ -31,7 +36,7 @@ export async function GET(request: NextRequest) {
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: 60,
-      message: 'Too many requests. Please slow down.'
+      message: authMessages.tooManyPasskeyRequests || 'Too many requests. Please slow down.'
     }, 'passkey-status')
 
     if (rateLimitResult) {
@@ -48,7 +53,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         available: false,
-        reason: 'Failed to check passkey configuration',
+        reason: authMessages.failedToCheckPasskeyConfiguration || 'Failed to check passkey configuration',
       },
       { status: 500 }
     )

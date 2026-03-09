@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { generatePasskeyRegistrationOptions } from '@/lib/passkey'
 import { isPasskeyConfigured } from '@/lib/settings'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -22,6 +23,10 @@ export const runtime = 'nodejs'
  * - PublicKeyCredentialCreationOptions for browser
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     // Require admin authentication
     const user = await requireApiAdmin(request)
@@ -32,8 +37,7 @@ export async function POST(request: NextRequest) {
     if (!configured) {
       return NextResponse.json(
         {
-          error:
-            'PassKey authentication is not configured. Please set your domain in Settings first.',
+          error: authMessages.passkeyRegistrationNotConfigured || 'PassKey authentication is not configured. Please set your domain in Settings first.',
         },
         { status: 503 }
       )
@@ -52,7 +56,7 @@ export async function POST(request: NextRequest) {
         error:
           error instanceof Error && error.message.includes('PASSKEY_CONFIG_ERROR')
             ? error.message.replace('PASSKEY_CONFIG_ERROR: ', '')
-            : 'Failed to generate PassKey registration options',
+            : (authMessages.failedToGeneratePasskeyRegistrationOptions || 'Failed to generate PassKey registration options'),
       },
       { status: 500 }
     )

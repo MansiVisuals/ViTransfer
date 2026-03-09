@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyOTP, verifyRecipientEmail } from '@/lib/otp'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { getMaxAuthAttempts } from '@/lib/settings'
@@ -37,6 +38,11 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const configuredLocale = await getConfiguredLocale()
+    const messages = await loadLocaleMessages(configuredLocale)
+  const shareMessages = messages?.share || {}
+  const notificationsText = messages?.notificationsText || {}
+
     const { token } = await params
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
@@ -44,14 +50,14 @@ export async function POST(
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: shareMessages.emailRequired || 'Email is required' },
         { status: 400 }
       )
     }
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json(
-        { error: 'Verification code is required' },
+        { error: shareMessages.verificationCodeRequired || 'Verification code is required' },
         { status: 400 }
       )
     }
@@ -59,14 +65,14 @@ export async function POST(
     // SECURITY: Validate input lengths to prevent DoS
     if (email.length > 255) {
       return NextResponse.json(
-        { error: 'Invalid email' },
+        { error: shareMessages.invalidEmail || 'Invalid email' },
         { status: 400 }
       )
     }
 
     if (code.length > 10) {
       return NextResponse.json(
-        { error: 'Invalid code' },
+        { error: shareMessages.invalidCode || 'Invalid code' },
         { status: 400 }
       )
     }
@@ -74,7 +80,7 @@ export async function POST(
     // Validate code is numeric
     if (!/^\d+$/.test(code.trim())) {
       return NextResponse.json(
-        { error: 'Invalid code' },
+        { error: shareMessages.invalidCode || 'Invalid code' },
         { status: 400 }
       )
     }
@@ -112,7 +118,7 @@ export async function POST(
         })
 
         return NextResponse.json(
-          { error: 'Too many failed attempts. Please try again later.', retryAfter },
+          { error: shareMessages.tooManyFailedAttempts || 'Too many failed attempts. Please try again later.', retryAfter },
           { status: 429, headers: { 'Retry-After': String(retryAfter) } }
         )
       }
@@ -130,7 +136,7 @@ export async function POST(
 
     if (!project) {
       return NextResponse.json(
-        { error: 'Access denied' },
+  { error: shareMessages.accessDenied || 'Access denied' },
         { status: 403 }
       )
     }
@@ -138,7 +144,7 @@ export async function POST(
     // Check if OTP is enabled for this project
     if (project.authMode !== 'OTP' && project.authMode !== 'BOTH') {
       return NextResponse.json(
-        { error: 'OTP authentication not enabled for this project' },
+        { error: shareMessages.otpNotEnabled || 'OTP authentication not enabled for this project' },
         { status: 403 }
       )
     }
@@ -149,7 +155,7 @@ export async function POST(
       // SECURITY: Don't reveal if email is valid - return generic error
       // This prevents email enumeration attacks
       return NextResponse.json(
-        { error: 'Invalid or expired code' },
+        { error: shareMessages.invalidCode || 'Invalid or expired code' },
         { status: 403 }
       )
     }
@@ -208,15 +214,19 @@ export async function POST(
       if (count >= MAX_FAILED_ATTEMPTS) {
         void enqueueExternalNotification({
           eventType: 'SECURITY_ALERT',
-          title: 'Security Alert',
-          body: `OTP verification locked out on ${project.title} for ${email}`,
+          title: notificationsText.securityAlertTitle || 'Security Alert',
+          body: (shareMessages.otpVerificationLockoutBody || 'OTP verification locked out on {projectTitle} for {email}')
+            .replace('{projectTitle}', project.title)
+            .replace('{email}', email),
           notifyType: 'failure',
           pushData: {
             projectTitle: project.title,
             projectId: project.id,
             email,
-            title: 'Security Alert',
-            body: `OTP verification locked out on ${project.title} for ${email}`,
+            title: notificationsText.securityAlertTitle || 'Security Alert',
+            body: (shareMessages.otpVerificationLockoutBody || 'OTP verification locked out on {projectTitle} for {email}')
+              .replace('{projectTitle}', project.title)
+              .replace('{email}', email),
           },
         }).catch(() => {})
       }
@@ -225,7 +235,7 @@ export async function POST(
       // Don't reveal specific details like attempts remaining
       return NextResponse.json(
         {
-          error: 'Invalid or expired code',
+          error: shareMessages.invalidCode || 'Invalid or expired code',
         },
         { status: 403 }
       )
@@ -282,8 +292,11 @@ export async function POST(
     return NextResponse.json({ success: true, shareToken })
   } catch (error) {
     console.error('Error verifying OTP:', error)
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const shareMessages = messages?.share || {}
     return NextResponse.json(
-      { error: 'Failed to verify code' },
+      { error: shareMessages.failedToSendCodeShort || 'Failed to verify code' },
       { status: 500 }
     )
   }

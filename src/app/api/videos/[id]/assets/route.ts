@@ -5,17 +5,18 @@ import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile } from '@/lib/file-validation'
 import { z } from 'zod'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
 
 
-const createAssetSchema = z.object({
+const createAssetSchema = (videoMessages: Record<string, string>) => z.object({
   fileName: z.string().min(1).max(255),
   fileSize: z.union([z.number(), z.string()])
     .transform(val => Number(val))
     .refine(val => Number.isFinite(val) && Number.isInteger(val) && val > 0 && val <= Number.MAX_SAFE_INTEGER, {
-      message: 'fileSize must be a positive integer',
+      message: videoMessages.fileSizeMustBePositiveInteger || 'fileSize must be a positive integer',
     }),
   category: z.string().max(100).nullable().optional(),
   mimeType: z.string().max(255).optional(),
@@ -26,6 +27,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+  const assetSchema = createAssetSchema(videoMessages)
+
   const { id: videoId } = await params
 
   // Rate limiting
@@ -34,7 +40,7 @@ export async function GET(
     {
       windowMs: 60 * 1000,
       maxRequests: 60,
-      message: 'Too many requests. Please slow down.',
+  message: videoMessages.tooManyAssetListRequests || 'Too many requests. Please slow down.',
     },
     'video-assets-list'
   )
@@ -50,7 +56,7 @@ export async function GET(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     const project = video.project
@@ -61,20 +67,20 @@ export async function GET(
       requiredPermission: 'download',
     })
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
     // For non-admins, check if asset downloads are allowed
     if (!accessCheck.isAdmin && !project.allowAssetDownload) {
       return NextResponse.json(
-        { error: 'Asset downloads are not allowed for this project' },
+        { error: videoMessages.assetDownloadsNotAllowedProject || 'Asset downloads are not allowed for this project' },
         { status: 403 }
       )
     }
 
     if (!accessCheck.isAdmin && !video.approved) {
       return NextResponse.json(
-        { error: 'Assets are only available for approved videos' },
+        { error: videoMessages.assetsApprovedOnly || 'Assets are only available for approved videos' },
         { status: 403 }
       )
     }
@@ -118,7 +124,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching video assets:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch video assets' },
+      { error: videoMessages.failedToFetchVideoAssets || 'Failed to fetch video assets' },
       { status: 500 }
     )
   }
@@ -129,6 +135,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+  const assetSchema = createAssetSchema(videoMessages)
+
   const { id: videoId } = await params
 
   // Authentication
@@ -143,7 +154,7 @@ export async function POST(
     {
       windowMs: 60 * 1000,
       maxRequests: 50,
-      message: 'Too many upload requests. Please slow down.',
+  message: videoMessages.tooManyAssetUploadRequests || 'Too many upload requests. Please slow down.',
     },
     'video-assets-create'
   )
@@ -159,18 +170,18 @@ export async function POST(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     // Get current user for tracking
     const currentUser = await getCurrentUserFromRequest(request)
     if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 401 })
     }
 
     // Parse request body
     const body = await request.json()
-    const parsed = createAssetSchema.safeParse(body)
+  const parsed = assetSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
     }
@@ -180,7 +191,7 @@ export async function POST(
     // Validate required fields
     if (!fileName || !fileSize) {
       return NextResponse.json(
-        { error: 'fileName and fileSize are required' },
+        { error: videoMessages.fileNameAndFileSizeRequired || 'fileName and fileSize are required' },
         { status: 400 }
       )
     }
@@ -224,7 +235,7 @@ export async function POST(
   } catch (error) {
     console.error('Error creating video asset:', error)
     return NextResponse.json(
-      { error: 'Failed to create video asset' },
+      { error: videoMessages.failedToCreateVideoAsset || 'Failed to create video asset' },
       { status: 500 }
     )
   }

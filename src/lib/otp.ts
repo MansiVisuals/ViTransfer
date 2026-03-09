@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { prisma } from './db'
 import { renderUnsubscribeSection, sendEmail, escapeHtml, getEmailSettings, renderEmailShell, getEmailBrand } from './email'
 import { getRedis } from './redis'
+import { loadLocaleMessages } from '@/i18n/locale'
 
 // OTP Configuration
 const OTP_LENGTH = 6
@@ -190,24 +191,39 @@ export async function sendOTPEmail(
   email: string,
   projectTitle: string,
   code: string,
-  unsubscribeUrl?: string
+  unsubscribeUrl?: string,
+  locale: string = 'en'
 ): Promise<void> {
   const settings = await getEmailSettings()
   const companyName = settings.companyName || 'ViTransfer'
   const brand = getEmailBrand(settings.accentColor)
+  const messages = await loadLocaleMessages(locale)
+  const otpMessages = messages?.shareOtpEmail || {}
 
   // SECURITY: Escape HTML to prevent XSS
   const safeProjectTitle = escapeHtml(projectTitle)
-  const subject = `Your verification code for ${safeProjectTitle}`
+  const subject = (otpMessages.subject || 'Your verification code for {projectTitle}')
+    .replace('{projectTitle}', safeProjectTitle)
+  const title = otpMessages.title || 'Verification Code'
+  const preheader = (otpMessages.preheader || 'Your verification code for {projectTitle}')
+    .replace('{projectTitle}', projectTitle)
+  const intro = (otpMessages.intro || 'Your verification code for <strong>{projectTitle}</strong> is:')
+    .replace('{projectTitle}', safeProjectTitle)
+  const expiry = (otpMessages.expiry || 'This code will expire in {minutes} minutes.')
+    .replace('{minutes}', String(OTP_EXPIRY_MINUTES))
+  const ignoreNotice = otpMessages.ignoreNotice || "If you didn't request this code, please ignore this email."
+  const textIntro = (otpMessages.textIntro || 'Your verification code for {projectTitle} is:')
+    .replace('{projectTitle}', projectTitle)
+  const textIgnoreNotice = otpMessages.textIgnoreNotice || "If you didn't request this code, you can safely ignore this email."
 
   const html = renderEmailShell({
     companyName,
-    title: 'Verification Code',
-    preheader: `Your verification code for ${projectTitle}`,
+    title,
+    preheader,
     brand,
     bodyContent: `
       <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.textSubtle}; line-height: 1.5;">
-        Your verification code for <strong>${safeProjectTitle}</strong> is:
+        ${intro}
       </p>
 
       <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 12px; padding: 26px; text-align: center; margin-bottom: 24px;">
@@ -217,24 +233,24 @@ export async function sendOTPEmail(
       </div>
 
       <p style="margin: 0 0 10px 0; font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
-        This code will expire in ${OTP_EXPIRY_MINUTES} minutes.
+        ${expiry}
       </p>
 
       <p style="margin: 0; font-size: 13px; color: ${brand.muted}; line-height: 1.5;">
-        If you didn't request this code, please ignore this email.
+        ${ignoreNotice}
       </p>
       ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
     `,
   })
 
   const text = `
-Your verification code for ${projectTitle} is:
+${textIntro}
 
 ${code}
 
-This code will expire in ${OTP_EXPIRY_MINUTES} minutes.
+${expiry}
 
-If you didn't request this code, you can safely ignore this email.
+${textIgnoreNotice}
   `.trim()
 
   await sendEmail({
@@ -265,7 +281,6 @@ export async function verifyOTP(
 
   // Get max attempts from security settings
   const maxAttempts = await getMaxPasswordAttempts()
-
   const data = await redis.get(otpKey)
 
   if (!data) {
@@ -287,11 +302,10 @@ export async function verifyOTP(
     }
   }
 
-  // Check if email matches (case-insensitive)
   if (otpData.email.toLowerCase() !== email.toLowerCase().trim()) {
     return {
       success: false,
-      error: 'Invalid code',
+      error: 'Invalid or expired code',
     }
   }
 
@@ -304,7 +318,6 @@ export async function verifyOTP(
     }
   }
 
-  // Verify code using constant-time comparison
   const isValid = constantTimeCompare(code.trim(), otpData.code)
 
   if (!isValid) {

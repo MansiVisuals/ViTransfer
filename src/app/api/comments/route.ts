@@ -6,6 +6,7 @@ import { validateRequest, createCommentSchema, safeParseBody } from '@/lib/valid
 import { getPrimaryRecipient } from '@/lib/recipients'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import {
 
   validateCommentPermissions,
@@ -26,11 +27,16 @@ export const dynamic = 'force-dynamic'
  * Fetch all comments for a project
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const commentsMessages = messages?.comments || {}
+  const shareMessages = messages?.share || {}
+
   // Rate limiting: 60 requests per minute
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: shareMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'comments-read')
 
   if (rateLimitResult) {
@@ -43,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     if (!projectId) {
       return NextResponse.json(
-        { error: 'Project ID is required' },
+        { error: commentsMessages.projectIdRequired || 'Project ID is required' },
         { status: 400 }
       )
     }
@@ -63,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     if (!project) {
       return NextResponse.json(
-        { error: 'Access denied' },
+        { error: shareMessages.accessDenied || 'Access denied' },
         { status: 403 }
       )
     }
@@ -149,16 +155,21 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+    return NextResponse.json({ error: commentsMessages.operationFailed || 'Operation failed' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const commentsMessages = messages?.comments || {}
+  const shareMessages = messages?.share || {}
+
   // Rate limiting to prevent comment spam
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
-    message: 'Too many comments. Please slow down.'
+    message: commentsMessages.tooManyComments || 'Too many comments. Please slow down.'
   }, 'comments-create')
 
   if (rateLimitResult) {
@@ -209,7 +220,7 @@ export async function POST(request: NextRequest) {
       const maxAttachments = globalSettings?.maxCommentAttachments ?? 10
       if (assetIds.length > maxAttachments) {
         return NextResponse.json(
-          { error: `Too many attachments. Maximum allowed: ${maxAttachments}` },
+          { error: (commentsMessages.tooManyAttachments || 'Too many attachments. Maximum allowed: {maxAttachments}').replace('{maxAttachments}', String(maxAttachments)) },
           { status: 400 }
         )
       }
@@ -241,7 +252,7 @@ export async function POST(request: NextRequest) {
 
     if (!project) {
       return NextResponse.json(
-        { error: 'Access denied' },
+        { error: shareMessages.accessDenied || 'Access denied' },
         { status: 403 }
       )
     }
@@ -254,7 +265,7 @@ export async function POST(request: NextRequest) {
 
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse || NextResponse.json(
-        { error: 'Unable to process request' },
+        { error: shareMessages.unableToProcessRequest || 'Unable to process request' },
         { status: 400 }
       )
     }
@@ -288,7 +299,7 @@ export async function POST(request: NextRequest) {
 
     if (!video || video.projectId !== projectId) {
       return NextResponse.json(
-        { error: 'Video does not belong to this project' },
+        { error: commentsMessages.videoDoesNotBelongToProject || 'Video does not belong to this project' },
         { status: 400 }
       )
     }
@@ -351,7 +362,7 @@ export async function POST(request: NextRequest) {
 
       if (assets.length !== assetIds.length) {
         return NextResponse.json(
-          { error: 'One or more attachments are invalid or no longer available. Please attach the file again.' },
+          { error: commentsMessages.invalidAttachments || 'One or more attachments are invalid or no longer available. Please attach the file again.' },
           { status: 400 }
         )
       }
@@ -391,6 +402,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+    return NextResponse.json({ error: commentsMessages.operationFailed || 'Operation failed' }, { status: 500 })
   }
 }

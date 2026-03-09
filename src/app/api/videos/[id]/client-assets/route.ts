@@ -4,6 +4,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
 import { initStorage, deleteFile } from '@/lib/storage'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 // POST /api/videos/[id]/client-assets - Create a client asset record (JSON)
@@ -12,6 +13,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videosMessages = messages?.videos || {}
+
   const { id: videoId } = await params
 
   const rateLimitResult = await rateLimit(
@@ -19,7 +24,7 @@ export async function POST(
     {
       windowMs: 60 * 1000,
       maxRequests: 60,
-      message: 'Too many requests. Please slow down.',
+      message: videosMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'client-asset-create'
   )
@@ -33,7 +38,7 @@ export async function POST(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
     }
 
     const project = video.project
@@ -41,7 +46,7 @@ export async function POST(
     // Check if client asset upload is enabled for this project
     if (!project.allowClientAssetUpload) {
       return NextResponse.json(
-        { error: 'File attachments are not enabled for this project' },
+        { error: videosMessages.fileAttachmentsNotEnabledForProject || 'File attachments are not enabled for this project' },
         { status: 403 }
       )
     }
@@ -59,7 +64,7 @@ export async function POST(
     )
 
     if (!accessCheck.authorized) {
-      return accessCheck.errorResponse || NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
     // Parse JSON body
@@ -67,11 +72,11 @@ export async function POST(
     const { fileName, fileSize, category: requestedCategory, authorName, authorEmail } = body
 
     if (!fileName || typeof fileName !== 'string') {
-      return NextResponse.json({ error: 'fileName is required' }, { status: 400 })
+      return NextResponse.json({ error: videosMessages.fileNameRequired || 'fileName is required' }, { status: 400 })
     }
 
     if (!fileSize || typeof fileSize !== 'number' || fileSize <= 0) {
-      return NextResponse.json({ error: 'Valid fileSize is required' }, { status: 400 })
+      return NextResponse.json({ error: videosMessages.validFileSizeRequired || 'Valid fileSize is required' }, { status: 400 })
     }
 
     // Enforce global maxUploadSizeGB limit
@@ -82,7 +87,7 @@ export async function POST(
     const maxBytes = (settings?.maxUploadSizeGB || 1) * 1024 * 1024 * 1024
     if (fileSize > maxBytes) {
       return NextResponse.json(
-        { error: `File exceeds maximum upload size of ${settings?.maxUploadSizeGB || 1} GB` },
+        { error: (videosMessages.fileExceedsMaximumUploadSizeGb || 'File exceeds maximum upload size of {size} GB').replace('{size}', String(settings?.maxUploadSizeGB || 1)) },
         { status: 400 }
       )
     }
@@ -90,7 +95,7 @@ export async function POST(
     // Check for suspicious filename
     if (isSuspiciousFilename(fileName)) {
       return NextResponse.json(
-        { error: 'File type not allowed' },
+        { error: videosMessages.fileTypeNotAllowed || 'File type not allowed' },
         { status: 400 }
       )
     }
@@ -104,7 +109,7 @@ export async function POST(
 
     if (!assetValidation.valid) {
       return NextResponse.json(
-        { error: assetValidation.error || 'Invalid file type' },
+        { error: assetValidation.error || videosMessages.invalidFileType || 'Invalid file type' },
         { status: 400 }
       )
     }
@@ -139,7 +144,7 @@ export async function POST(
   } catch (error) {
     console.error('Error creating client asset record:', error)
     return NextResponse.json(
-      { error: 'Failed to create asset record' },
+      { error: videosMessages.failedToCreateAssetRecord || 'Failed to create asset record' },
       { status: 500 }
     )
   }
@@ -150,6 +155,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videosMessages = messages?.videos || {}
+
   const { id: videoId } = await params
 
   // Rate limiting
@@ -158,7 +167,7 @@ export async function GET(
     {
       windowMs: 60 * 1000,
       maxRequests: 60,
-      message: 'Too many requests. Please slow down.',
+      message: videosMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'client-asset-list'
   )
@@ -171,7 +180,7 @@ export async function GET(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
     }
 
     const project = video.project
@@ -185,7 +194,7 @@ export async function GET(
     )
 
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
     const assets = await prisma.videoAsset.findMany({
@@ -211,7 +220,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching client assets:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch client assets' },
+      { error: videosMessages.failedToFetchClientAssets || 'Failed to fetch client assets' },
       { status: 500 }
     )
   }
@@ -222,6 +231,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videosMessages = messages?.videos || {}
+
   const { id: videoId } = await params
 
   const rateLimitResult = await rateLimit(
@@ -229,7 +242,7 @@ export async function DELETE(
     {
       windowMs: 60 * 1000,
       maxRequests: 30,
-      message: 'Too many requests. Please slow down.',
+      message: videosMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'client-asset-delete'
   )
@@ -239,7 +252,7 @@ export async function DELETE(
     const { searchParams } = new URL(request.url)
     const assetId = searchParams.get('assetId')
     if (!assetId) {
-      return NextResponse.json({ error: 'Asset ID is required' }, { status: 400 })
+      return NextResponse.json({ error: videosMessages.assetIdRequired || 'Asset ID is required' }, { status: 400 })
     }
 
     const video = await prisma.video.findUnique({
@@ -248,7 +261,7 @@ export async function DELETE(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
     }
 
     const project = video.project
@@ -265,7 +278,7 @@ export async function DELETE(
     )
 
     if (!accessCheck.authorized) {
-      return accessCheck.errorResponse || NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
     const asset = await prisma.videoAsset.findFirst({
@@ -282,7 +295,7 @@ export async function DELETE(
     })
 
     if (!asset) {
-      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 })
+      return NextResponse.json({ error: videosMessages.attachmentNotFound || 'Attachment not found' }, { status: 404 })
     }
 
     await prisma.videoAsset.delete({ where: { id: asset.id } })
@@ -296,7 +309,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting client asset:', error)
     return NextResponse.json(
-      { error: 'Failed to delete attachment' },
+      { error: videosMessages.failedToDeleteAttachment || 'Failed to delete attachment' },
       { status: 500 }
     )
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { generateVideoAccessToken } from '@/lib/video-access'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 /**
  * Generate a temporary download token for video downloads (admins and share users)
@@ -11,6 +12,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   try {
     const { id: videoId } = await params
 
@@ -21,7 +26,7 @@ export async function POST(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     // Verify user has access to this project
@@ -37,21 +42,21 @@ export async function POST(
     )
 
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
     // Check download permissions for non-admins
     if (!accessCheck.isAdmin) {
       if (!video.project.allowAssetDownload) {
         return NextResponse.json(
-          { error: 'Downloads are disabled for this project' },
+          { error: videoMessages.downloadsDisabledForProject || 'Downloads are disabled for this project' },
           { status: 403 }
         )
       }
 
       if (!video.approved) {
         return NextResponse.json(
-          { error: 'Downloads available after approval' },
+          { error: videoMessages.downloadsAvailableAfterApproval || 'Downloads available after approval' },
           { status: 403 }
         )
       }
@@ -74,7 +79,7 @@ export async function POST(
   } catch (error) {
     console.error('Download token generation error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate download link' },
+      { error: videoMessages.failedToGenerateDownloadLink || 'Failed to generate download link' },
       { status: 500 }
     )
   }

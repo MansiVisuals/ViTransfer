@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { generateICalFeed } from '@/lib/ical'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const calendarMessages = messages?.calendar || {}
+
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
-    message: 'Too many requests. Please slow down.'
+    message: calendarMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'calendar-feed')
   if (rateLimitResult) return rateLimitResult
 
@@ -17,7 +22,7 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('token')
 
     if (!token || token.length < 32) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      return NextResponse.json({ error: calendarMessages.notFound || 'Not found' }, { status: 404 })
     }
 
     const calendarToken = await prisma.calendarToken.findUnique({
@@ -25,7 +30,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!calendarToken) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      return NextResponse.json({ error: calendarMessages.notFound || 'Not found' }, { status: 404 })
     }
 
     const settings = await prisma.settings.findUnique({
@@ -65,6 +70,6 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch {
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+    return NextResponse.json({ error: calendarMessages.operationFailed || 'Operation failed' }, { status: 500 })
   }
 }

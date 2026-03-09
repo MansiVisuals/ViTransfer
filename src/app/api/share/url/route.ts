@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateShareUrl } from '@/lib/url'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
 
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const shareMessages = messages?.share || {}
+
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -18,7 +23,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: shareMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'share-url-gen')
 
   if (rateLimitResult) {
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest) {
     const slug = searchParams.get('slug')
 
     if (!slug) {
-      return NextResponse.json({ error: 'Slug is required' }, { status: 400 })
+      return NextResponse.json({ error: shareMessages.slugRequired || 'Slug is required' }, { status: 400 })
     }
 
     const shareUrl = await generateShareUrl(slug, request)
@@ -39,7 +44,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error generating share URL:', error)
     return NextResponse.json(
-      { error: 'Failed to generate share URL' },
+      { error: shareMessages.failedToGenerateShareUrl || 'Failed to generate share URL' },
       { status: 500 }
     )
   }

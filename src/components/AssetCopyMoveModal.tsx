@@ -83,7 +83,7 @@ export function AssetCopyMoveModal({
     } finally {
       setLoading(false)
     }
-  }, [currentVideoId, projectId])
+  }, [currentVideoId, projectId, t])
 
   useEffect(() => {
     if (isOpen) {

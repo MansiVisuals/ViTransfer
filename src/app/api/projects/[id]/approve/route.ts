@@ -5,6 +5,7 @@ import { handleApprovalNotification } from '@/lib/notifications'
 import { getAutoApproveProject } from '@/lib/settings'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -18,11 +19,15 @@ const approveSchema = z.object({
 })
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   // Rate limiting: 20 approval actions per minute
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 20,
-    message: 'Too many approval requests. Please slow down.'
+    message: projectMessages.tooManyApprovalRequests || 'Too many approval requests. Please slow down.'
   }, 'project-approve')
 
   if (rateLimitResult) {
@@ -53,7 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
     // Verify project access using dual auth pattern (clients can approve via share link)
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (!accessCheck.authorized) {
       return NextResponse.json({
-        error: 'Password required to approve this project'
+        error: projectMessages.passwordRequiredToApproveProject || 'Password required to approve this project'
       }, { status: 401 })
     }
 
@@ -72,19 +77,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // If clientCanApprove is false, only admins can approve
     if (!accessCheck.isAdmin && project.clientCanApprove === false) {
       return NextResponse.json({
-        error: 'Only administrators can approve videos for this project'
+        error: projectMessages.onlyAdminsCanApproveProject || 'Only administrators can approve videos for this project'
       }, { status: 403 })
     }
 
     if (project.status === 'APPROVED') {
-      return NextResponse.json({ error: 'Project already approved' }, { status: 400 })
+      return NextResponse.json({ error: projectMessages.projectAlreadyApproved || 'Project already approved' }, { status: 400 })
     }
 
     // Find the selected video
     const selectedVideo = project.videos.find(v => v.id === selectedVideoId)
 
     if (!selectedVideo) {
-      return NextResponse.json({ error: 'Selected video not found' }, { status: 404 })
+      return NextResponse.json({ error: projectMessages.selectedVideoNotFound || 'Selected video not found' }, { status: 404 })
     }
 
     // IMPORTANT: When approving a video, unapprove all other versions of the SAME video
@@ -223,6 +228,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[APPROVAL] ERROR in approval route:', error)
-    return NextResponse.json({ error: 'Failed to approve project' }, { status: 500 })
+    return NextResponse.json({ error: projectMessages.failedToApproveProjectApi || 'Failed to approve project' }, { status: 500 })
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -12,6 +13,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; assetId: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   // 1. AUTHENTICATION
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -24,7 +29,7 @@ export async function POST(
     {
       windowMs: 60 * 1000,
       maxRequests: 30,
-      message: 'Too many thumbnail update requests. Please slow down.',
+  message: videoMessages.tooManyThumbnailUpdateRequests || 'Too many thumbnail update requests. Please slow down.',
     },
     'set-asset-thumbnail'
   )
@@ -43,7 +48,7 @@ export async function POST(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     // If action is 'remove', revert to system-generated thumbnail
@@ -60,7 +65,7 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        message: 'Reverted to system-generated thumbnail',
+        message: videoMessages.thumbnailReverted || 'Reverted to system-generated thumbnail',
       })
     }
 
@@ -71,7 +76,7 @@ export async function POST(
 
     if (!asset || asset.videoId !== videoId) {
       return NextResponse.json(
-        { error: 'Asset not found or does not belong to this video' },
+        { error: videoMessages.assetNotFoundForVideo || 'Asset not found or does not belong to this video' },
         { status: 404 }
       )
     }
@@ -80,7 +85,7 @@ export async function POST(
     const imageTypes = ['image/jpeg', 'image/png', 'image/jpg']
     if (!imageTypes.includes(asset.fileType.toLowerCase())) {
       return NextResponse.json(
-        { error: 'Only JPG and PNG images can be set as thumbnails' },
+        { error: videoMessages.invalidThumbnailFileType || 'Only JPG and PNG images can be set as thumbnails' },
         { status: 400 }
       )
     }
@@ -95,12 +100,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Thumbnail updated successfully',
+      message: videoMessages.thumbnailUpdated || 'Thumbnail updated successfully',
     })
   } catch (error) {
     console.error('Error setting asset as thumbnail:', error)
     return NextResponse.json(
-      { error: 'Failed to set thumbnail' },
+      { error: videoMessages.failedToSetThumbnailApi || 'Failed to set thumbnail' },
       { status: 500 }
     )
   }

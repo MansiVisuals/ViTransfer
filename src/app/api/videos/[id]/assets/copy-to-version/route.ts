@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -18,6 +19,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   // 1. AUTHENTICATION
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -30,7 +35,7 @@ export async function POST(
     {
       windowMs: 60 * 1000,
       maxRequests: 20,
-      message: 'Too many asset copy requests. Please slow down.',
+      message: videoMessages.tooManyAssetCopyRequests || 'Too many asset copy requests. Please slow down.',
     },
     'copy-assets-to-version'
   )
@@ -55,7 +60,7 @@ export async function POST(
     })
 
     if (!sourceVideo) {
-      return NextResponse.json({ error: 'Source video not found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.sourceVideoNotFound || 'Source video not found' }, { status: 404 })
     }
 
     // Verify target video exists and is in same project
@@ -64,12 +69,12 @@ export async function POST(
     })
 
     if (!targetVideo) {
-      return NextResponse.json({ error: 'Target video not found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.targetVideoNotFound || 'Target video not found' }, { status: 404 })
     }
 
     if (sourceVideo.projectId !== targetVideo.projectId) {
       return NextResponse.json(
-        { error: 'Cannot copy assets between different projects' },
+        { error: videoMessages.cannotCopyAssetsBetweenProjects || 'Cannot copy assets between different projects' },
         { status: 400 }
       )
     }
@@ -83,7 +88,7 @@ export async function POST(
     })
 
     if (assets.length === 0) {
-      return NextResponse.json({ error: 'No valid assets found' }, { status: 404 })
+      return NextResponse.json({ error: videoMessages.noValidAssetsFound || 'No valid assets found' }, { status: 404 })
     }
 
     // Copy assets to target video (create new asset records pointing to same storage)
@@ -107,13 +112,13 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Successfully copied ${copiedAssets.length} asset(s) to target version`,
+      message: videoMessages.assetsCopiedSuccessfully || `Successfully copied ${copiedAssets.length} asset(s) to target version`,
       copiedCount: copiedAssets.length,
     })
   } catch (error) {
     console.error('Error copying assets to version:', error)
     return NextResponse.json(
-      { error: 'Failed to copy assets' },
+      { error: videoMessages.failedToCopyAssetsApi || 'Failed to copy assets' },
       { status: 500 }
     )
   }

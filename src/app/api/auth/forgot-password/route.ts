@@ -6,6 +6,7 @@ import { sendPasswordResetEmail } from '@/lib/email'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getAppDomain } from '@/lib/url'
 import { getClientIpAddress } from '@/lib/utils'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,11 +24,15 @@ export const dynamic = 'force-dynamic'
  * - Silently handles missing SMTP configuration (no information leak)
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   // Strict rate limiting: 3 requests per 15 minutes
   const rateLimitResult = await rateLimit(request, {
     windowMs: 15 * 60 * 1000,
     maxRequests: 3,
-    message: 'Too many password reset requests. Please try again later.',
+    message: authMessages.tooManyPasswordResetRequests || 'Too many password reset requests. Please try again later.',
   }, 'forgot-password')
 
   if (rateLimitResult) {
@@ -41,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Always return success to prevent email enumeration
     const successResponse = NextResponse.json({
       success: true,
-      message: 'If an account exists with this email, you will receive password reset instructions.',
+      message: authMessages.passwordResetEmailSentGeneric || 'If an account exists with this email, you will receive password reset instructions.',
     })
 
     if (!email || email.length === 0) {
@@ -163,7 +168,7 @@ export async function POST(request: NextRequest) {
     // Return success even on error to prevent info leak
     return NextResponse.json({
       success: true,
-      message: 'If an account exists with this email, you will receive password reset instructions.',
+      message: authMessages.passwordResetEmailSentGeneric || 'If an account exists with this email, you will receive password reset instructions.',
     })
   }
 }

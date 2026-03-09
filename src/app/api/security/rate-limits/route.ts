@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { getRateLimitedEntries, clearRateLimitByKey, clearAllRateLimits } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,10 @@ export const dynamic = 'force-dynamic'
  * ADMIN ONLY
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const securityMessages = messages?.security || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -27,7 +32,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching rate limit entries:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch rate limit entries' },
+      { error: securityMessages.failedToFetchRateLimitEntries || 'Failed to fetch rate limit entries' },
       { status: 500 }
     )
   }
@@ -40,6 +45,10 @@ export async function GET(request: NextRequest) {
  * ADMIN ONLY
  */
 export async function DELETE(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const securityMessages = messages?.security || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -54,14 +63,14 @@ export async function DELETE(request: NextRequest) {
       const cleared = await clearAllRateLimits()
       return NextResponse.json({
         success: true,
-        message: `Cleared ${cleared} rate limit ${cleared === 1 ? 'entry' : 'entries'}`,
+        message: (securityMessages.clearedRateLimitEntries || 'Cleared {count} rate limit {entryLabel}').replace('{count}', String(cleared)).replace('{entryLabel}', cleared === 1 ? (securityMessages.rateLimitEntrySingular || 'entry') : (securityMessages.rateLimitEntryPlural || 'entries')),
         cleared,
       })
     }
 
     if (!key || typeof key !== 'string') {
       return NextResponse.json(
-        { error: 'Rate limit key is required' },
+        { error: securityMessages.rateLimitKeyRequired || 'Rate limit key is required' },
         { status: 400 }
       )
     }
@@ -70,7 +79,7 @@ export async function DELETE(request: NextRequest) {
 
     if (deleted === -1) {
       return NextResponse.json(
-        { error: 'Failed to clear rate limit entry (Redis error)' },
+        { error: securityMessages.failedToClearRateLimitEntryRedisError || 'Failed to clear rate limit entry (Redis error)' },
         { status: 500 }
       )
     }
@@ -78,20 +87,20 @@ export async function DELETE(request: NextRequest) {
     if (deleted === 0) {
       return NextResponse.json({
         success: true,
-        message: 'Rate limit key was already expired or not found',
+        message: securityMessages.rateLimitKeyExpiredOrNotFound || 'Rate limit key was already expired or not found',
         deleted: 0,
       })
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Rate limit entry cleared successfully',
+      message: securityMessages.rateLimitEntryClearedSuccessfully || 'Rate limit entry cleared successfully',
       deleted,
     })
   } catch (error) {
     console.error('Error clearing rate limit:', error)
     return NextResponse.json(
-      { error: 'Failed to clear rate limit' },
+      { error: securityMessages.failedToClearRateLimit || 'Failed to clear rate limit' },
       { status: 500 }
     )
   }

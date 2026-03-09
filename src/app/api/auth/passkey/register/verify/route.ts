@@ -3,6 +3,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { verifyPasskeyRegistration } from '@/lib/passkey'
 import { getClientIpAddress } from '@/lib/utils'
 import type { RegistrationResponseJSON } from '@simplewebauthn/browser'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -28,6 +29,10 @@ export const runtime = 'nodejs'
  * - { success: false, error: string } on failure
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     // Require admin authentication
     const user = await requireApiAdmin(request)
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (!response || !response.id) {
       return NextResponse.json(
-        { success: false, error: 'Invalid registration response' },
+        { success: false, error: authMessages.invalidRegistrationResponse || 'Invalid registration response' },
         { status: 400 }
       )
     }
@@ -73,7 +78,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to verify PassKey registration',
+        error: authMessages.failedToVerifyPasskeyRegistration || 'Failed to verify PassKey registration',
       },
       { status: 500 }
     )

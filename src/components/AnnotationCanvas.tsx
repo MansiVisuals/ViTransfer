@@ -89,15 +89,30 @@ export default function AnnotationCanvas({
 }: AnnotationCanvasProps) {
   const isDrawing = useRef(false)
   const [rect, setRect] = useState<{ offsetX: number; offsetY: number; width: number; height: number } | null>(null)
+  const [fallbackSize, setFallbackSize] = useState<{ width: number; height: number } | null>(null)
 
   // Calculate video rect on mount and on resize
   useEffect(() => {
     const recalc = () => {
       const video = videoRef.current
       const container = containerRef.current
-      if (!video || !container) return
+      if (!container) return
+
+      const nextFallbackSize = {
+        width: container.clientWidth,
+        height: container.clientHeight,
+      }
+      setFallbackSize(
+        nextFallbackSize.width && nextFallbackSize.height ? nextFallbackSize : null
+      )
+
+      if (!video) {
+        setRect(null)
+        return
+      }
+
       const r = getVideoRect(video, container)
-      if (r) setRect(r)
+      setRect(r)
     }
 
     // Initial calc
@@ -178,10 +193,8 @@ export default function AnnotationCanvas({
 
   if (!renderWidth || !renderHeight) {
     // Fallback: cover the full container so user can at least draw
-    const container = containerRef.current
-    if (!container) return null
-    const w = container.clientWidth
-    const h = container.clientHeight
+    const w = fallbackSize?.width || 0
+    const h = fallbackSize?.height || 0
     if (!w || !h) return null
 
     return (

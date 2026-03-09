@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { getRateLimitSettings } from '@/lib/settings'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -25,13 +26,16 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const shareMessages = messages?.share
     const { ipRateLimit } = await getRateLimitSettings()
 
     // Rate limiting to prevent scraping
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: ipRateLimit ? Math.max(1, Math.min(ipRateLimit, 1000)) : 30,
-      message: 'Too many requests. Please slow down.'
+      message: shareMessages?.tooManyRequests || 'Too many requests. Please slow down.'
     }, `share-comments:${token}`)
 
     if (rateLimitResult) return rateLimitResult
@@ -50,7 +54,7 @@ export async function GET(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     // SECURITY: If feedback is hidden, return empty array (don't expose comments)
@@ -133,6 +137,8 @@ export async function GET(
     return NextResponse.json(sanitizedComments)
   } catch (error) {
     console.error('Error fetching comments:', error)
-    return NextResponse.json({ error: 'Unable to process request' }, { status: 500 })
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    return NextResponse.json({ error: messages?.share?.unableToProcessRequest || 'Unable to process request' }, { status: 500 })
   }
 }

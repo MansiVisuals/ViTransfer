@@ -5,6 +5,7 @@ import { hashPassword, validatePassword, verifyPassword } from '@/lib/encryption
 import { revokeAllUserTokens } from '@/lib/token-revocation'
 import { invalidateAdminSessions } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -17,6 +18,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const usersMessages = messages?.users || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -26,7 +31,7 @@ export async function GET(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: usersMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'user-read')
 
   if (rateLimitResult) {
@@ -51,7 +56,7 @@ export async function GET(
 
     if (!user) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: usersMessages.userNotFound || 'User not found' },
         { status: 404 }
       )
     }
@@ -61,7 +66,7 @@ export async function GET(
     console.error('Error fetching user:', error)
     // SECURITY: Generic message
     return NextResponse.json(
-      { error: 'Unable to process request' },
+      { error: usersMessages.unableToProcessRequest || 'Unable to process request' },
       { status: 500 }
     )
   }
@@ -72,6 +77,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const usersMessages = messages?.users || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -99,7 +108,7 @@ export async function PATCH(
 
       if (existingUser) {
         return NextResponse.json(
-          { error: 'Email already taken' },
+          { error: usersMessages.emailAlreadyTaken || 'Email already taken' },
           { status: 409 }
         )
       }
@@ -118,7 +127,7 @@ export async function PATCH(
 
       if (existingUsername) {
         return NextResponse.json(
-          { error: 'Username already taken' },
+          { error: usersMessages.usernameAlreadyTaken || 'Username already taken' },
           { status: 409 }
         )
       }
@@ -134,7 +143,7 @@ export async function PATCH(
       // Validate role
       if (role !== 'ADMIN' && role !== 'USER') {
         return NextResponse.json(
-          { error: 'Invalid role. Must be ADMIN or USER' },
+          { error: usersMessages.invalidRoleAdminOrUser || 'Invalid role. Must be ADMIN or USER' },
           { status: 400 }
         )
       }
@@ -159,7 +168,7 @@ export async function PATCH(
       // SECURITY: Verify old password before allowing password change
       if (!oldPassword || oldPassword.trim() === '') {
         return NextResponse.json(
-          { error: 'Current password is required to change password' },
+          { error: usersMessages.currentPasswordRequiredToChangePassword || 'Current password is required to change password' },
           { status: 400 }
         )
       }
@@ -172,7 +181,7 @@ export async function PATCH(
 
       if (!userWithPassword) {
         return NextResponse.json(
-          { error: 'User not found' },
+          { error: usersMessages.userNotFound || 'User not found' },
           { status: 404 }
         )
       }
@@ -181,7 +190,7 @@ export async function PATCH(
       const isOldPasswordValid = await verifyPassword(oldPassword, userWithPassword.password)
       if (!isOldPasswordValid) {
         return NextResponse.json(
-          { error: 'Current password is incorrect' },
+          { error: usersMessages.currentPasswordIncorrect || 'Current password is incorrect' },
           { status: 401 }
         )
       }
@@ -190,7 +199,7 @@ export async function PATCH(
       const passwordValidation = validatePassword(password)
       if (!passwordValidation.isValid) {
         return NextResponse.json(
-          { error: 'Password does not meet requirements', details: passwordValidation.errors },
+          { error: usersMessages.passwordDoesNotMeetRequirements || 'Password does not meet requirements', details: passwordValidation.errors },
           { status: 400 }
         )
       }
@@ -227,7 +236,7 @@ export async function PATCH(
         await revokeAllUserTokens(user.id)
       }
 
-      securityMessage = 'All sessions have been invalidated - user will need to log in again.'
+      securityMessage = usersMessages.allSessionsInvalidatedUserMustLoginAgain || 'All sessions have been invalidated - user will need to log in again.'
     }
 
     if (roleChanged) {
@@ -235,26 +244,26 @@ export async function PATCH(
         // User's own role is changing - revoke sessions to refresh permissions on next login
         await revokeAllUserTokens(user.id)
         securityMessage = securityMessage
-          ? `${securityMessage} Role updated - please log in again to refresh permissions.`
-          : 'Role updated - please log in again to refresh permissions.'
+          ? `${securityMessage} ${usersMessages.roleUpdatedLoginAgainToRefreshPermissions || 'Role updated - please log in again to refresh permissions.'}`
+          : (usersMessages.roleUpdatedLoginAgainToRefreshPermissions || 'Role updated - please log in again to refresh permissions.')
       } else {
         // Another admin is changing this user's role - revoke all their sessions
         await revokeAllUserTokens(user.id)
         securityMessage = securityMessage
-          ? `${securityMessage} Role changed - user will need to log in again.`
-          : 'Role changed - user will need to log in again to reflect new permissions.'
+          ? `${securityMessage} ${usersMessages.roleChangedUserMustLoginAgain || 'Role changed - user will need to log in again.'}`
+          : (usersMessages.roleChangedUserMustLoginAgainToReflectPermissions || 'Role changed - user will need to log in again to reflect new permissions.')
       }
     }
 
     return NextResponse.json({
       user,
-      message: securityMessage || 'User updated successfully'
+      message: securityMessage || usersMessages.userUpdatedSuccessfully || 'User updated successfully'
     })
   } catch (error) {
     console.error('Error updating user:', error)
     // SECURITY: Generic message
     return NextResponse.json(
-      { error: 'Operation failed' },
+      { error: usersMessages.operationFailed || 'Operation failed' },
       { status: 500 }
     )
   }
@@ -265,6 +274,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const usersMessages = messages?.users || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -278,7 +291,7 @@ export async function DELETE(
     // Prevent deleting yourself
     if (currentUser.id === id) {
       return NextResponse.json(
-        { error: 'Cannot delete your own account' },
+        { error: usersMessages.cannotDeleteOwnAccount || 'Cannot delete your own account' },
         { status: 400 }
       )
     }
@@ -290,7 +303,7 @@ export async function DELETE(
 
     if (!user) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: usersMessages.userNotFound || 'User not found' },
         { status: 404 }
       )
     }
@@ -309,7 +322,7 @@ export async function DELETE(
     console.error('Error deleting user:', error)
     // SECURITY: Generic message
     return NextResponse.json(
-      { error: 'Operation failed' },
+      { error: usersMessages.operationFailed || 'Operation failed' },
       { status: 500 }
     )
   }

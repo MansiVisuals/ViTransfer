@@ -7,6 +7,7 @@ import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getAuthContext } from '@/lib/auth'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -80,6 +81,10 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const locale = await getConfiguredLocale()
+    const messages = await loadLocaleMessages(locale)
+    const shareMessages = messages?.share || {}
+
     const { token } = await params
     const { searchParams } = new URL(request.url)
     const isDownload = searchParams.get('download') === 'true'
@@ -90,7 +95,7 @@ export async function GET(
     const ipRateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: securitySettings.ipRateLimit,
-      message: 'Too many requests from your network. Please slow down and try again later.'
+      message: shareMessages.tooManyNetworkRequests || 'Too many requests from your network. Please slow down and try again later.'
     }, 'content-stream-ip')
 
     if (ipRateLimitResult) {
@@ -113,7 +118,7 @@ export async function GET(
     const rawTokenData = await redis.get(tokenKey)
 
     if (!rawTokenData) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     const preliminaryTokenData = JSON.parse(rawTokenData)
@@ -132,12 +137,12 @@ export async function GET(
       })
 
       if (!project) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
       }
     }
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 401 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 401 })
     }
 
     // Session-based rate limiting using lightweight INCR to avoid heavy payloads per chunk
@@ -158,14 +163,14 @@ export async function GET(
       })
 
       return NextResponse.json({
-        error: 'Video streaming rate limit exceeded. Please wait a moment.'
+        error: shareMessages.videoStreamingRateLimitExceeded || 'Video streaming rate limit exceeded. Please wait a moment.'
       }, { status: 429, headers: { 'Retry-After': '60' } })
     }
 
     const verifiedToken = await verifyVideoAccessToken(token, request, sessionId)
 
     if (!verifiedToken) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     const hotlinkCheck = await detectHotlinking(
@@ -190,7 +195,7 @@ export async function GET(
         })
         
         return NextResponse.json({
-          error: 'Access denied'
+          error: shareMessages.accessDenied || 'Access denied'
         }, { status: 403 })
       }
     }
@@ -201,7 +206,7 @@ export async function GET(
     })
 
     if (!video || video.projectId !== verifiedToken.projectId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 404 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
     }
 
     const originalPath = video.originalStoragePath
@@ -216,17 +221,17 @@ export async function GET(
       })
 
       if (!asset || asset.videoId !== video.id) {
-        return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  return NextResponse.json({ error: shareMessages.assetNotFound || 'Asset not found' }, { status: 404 })
       }
 
       // Check permissions (skip for admins and client-uploaded comment attachments)
       if (!isAdminRequest && asset.uploadedBy !== 'client') {
         if (!video.project.allowAssetDownload) {
-          return NextResponse.json({ error: 'Asset downloads not allowed' }, { status: 403 })
+          return NextResponse.json({ error: shareMessages.assetDownloadsNotAllowed || 'Asset downloads not allowed' }, { status: 403 })
         }
 
         if (!video.approved) {
-          return NextResponse.json({ error: 'Assets only available for approved videos' }, { status: 403 })
+          return NextResponse.json({ error: shareMessages.assetsOnlyAvailableForApprovedVideos || 'Assets only available for approved videos' }, { status: 403 })
         }
       }
 
@@ -256,19 +261,19 @@ export async function GET(
     }
 
     if (!filePath) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 404 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
     }
     
     const fullPath = getFilePath(filePath)
     
     if (!existsSync(fullPath)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 404 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
     }
 
     const stat = statSync(fullPath)
 
     if (isDownload && verifiedToken.quality === 'thumbnail') {
-      return NextResponse.json({ error: 'Thumbnails cannot be downloaded directly' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.thumbnailsCannotBeDownloaded || 'Thumbnails cannot be downloaded directly' }, { status: 403 })
     }
 
     const range = request.headers.get('range')
@@ -420,6 +425,9 @@ export async function GET(
     // Stream errors are technical issues, not security events
     console.error('[STREAM] Video streaming error:', error)
 
-    return NextResponse.json({ error: 'Failed to stream video' }, { status: 500 })
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const shareMessages = messages?.share || {}
+    return NextResponse.json({ error: shareMessages.failedToStreamVideo || 'Failed to stream video' }, { status: 500 })
   }
 }

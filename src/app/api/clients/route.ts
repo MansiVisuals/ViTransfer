@@ -4,9 +4,14 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 // GET /api/clients - List all client companies with contacts
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const clientsMessages = messages?.clients || {}
+
   // 1. AUTHENTICATION
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -17,7 +22,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: clientsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'clients-list')
   if (rateLimitResult) return rateLimitResult
 
@@ -48,12 +53,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ companies })
   } catch (error) {
     console.error('Failed to fetch clients:', error)
-    return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 })
+    return NextResponse.json({ error: clientsMessages.failedToFetchClients || 'Failed to fetch clients' }, { status: 500 })
   }
 }
 
 // POST /api/clients - Create a new client company
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const clientsMessages = messages?.clients || {}
+
   // 1. AUTHENTICATION
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -64,7 +73,7 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many requests. Please slow down.'
+    message: clientsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'clients-create')
   if (rateLimitResult) return rateLimitResult
 
@@ -75,14 +84,14 @@ export async function POST(request: NextRequest) {
     const { name } = parsed.data
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
+      return NextResponse.json({ error: clientsMessages.companyNameRequired || 'Company name is required' }, { status: 400 })
     }
 
     const trimmedName = sanitizeText(name)
 
     // Validate AFTER sanitization — XSS payloads may sanitize to empty string
     if (trimmedName.length === 0) {
-      return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
+      return NextResponse.json({ error: clientsMessages.companyNameRequired || 'Company name is required' }, { status: 400 })
     }
 
     // Check for duplicate
@@ -91,7 +100,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (existing) {
-      return NextResponse.json({ error: 'A company with this name already exists' }, { status: 409 })
+      return NextResponse.json({ error: clientsMessages.companyNameAlreadyExists || 'A company with this name already exists' }, { status: 409 })
     }
 
     const company = await prisma.clientCompany.create({
@@ -105,6 +114,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ company }, { status: 201 })
   } catch (error) {
     console.error('Failed to create client company:', error)
-    return NextResponse.json({ error: 'Failed to create client company' }, { status: 500 })
+    return NextResponse.json({ error: clientsMessages.failedToCreateClientCompany || 'Failed to create client company' }, { status: 500 })
   }
 }

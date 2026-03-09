@@ -72,7 +72,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (templates.length === 0) {
@@ -188,7 +188,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
     } catch (err) {
       console.error('Reset error:', err)
     }
-  }, [selectedTemplate])
+  }, [selectedTemplate, t])
 
   // Copy placeholder to clipboard
   const handleCopyPlaceholder = useCallback((placeholder: string) => {

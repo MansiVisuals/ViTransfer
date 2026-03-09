@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateUploadedFile } from '@/lib/file-validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -12,6 +13,10 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -22,7 +27,7 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 50,
-    message: 'Too many video uploads. Please try again later.'
+    message: videoMessages.tooManyVideoUploads || 'Too many video uploads. Please try again later.'
   }, 'upload-video')
   if (rateLimitResult) return rateLimitResult
 
@@ -32,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!name || !name.trim()) {
-      return NextResponse.json({ error: 'Video name is required' }, { status: 400 })
+  return NextResponse.json({ error: videoMessages.videoNameRequired || 'Video name is required' }, { status: 400 })
     }
 
     const videoName = name.trim()
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
     // Calculate next version number for this specific video name
@@ -77,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       if (existingVersionCount >= project.maxRevisions) {
         return NextResponse.json(
-          { error: `Maximum revisions (${project.maxRevisions}) exceeded for this video` },
+          { error: (videoMessages.maxRevisionsExceeded || 'Maximum revisions ({maxRevisions}) exceeded for this video').replace('{maxRevisions}', String(project.maxRevisions)) },
           { status: 400 }
         )
       }
@@ -106,6 +111,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error creating video:', error)
-    return NextResponse.json({ error: 'Failed to create video' }, { status: 500 })
+    return NextResponse.json({ error: videoMessages.failedToCreateVideo || 'Failed to create video' }, { status: 500 })
   }
 }

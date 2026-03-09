@@ -124,7 +124,7 @@ function LoginForm() {
       // Abort any pending conditional UI request
       conditionalAbortController.current?.abort()
     }
-  }, [router, returnUrl])
+  }, [router, returnUrl, t])
 
   async function handlePasskeyLogin() {
     setError('')

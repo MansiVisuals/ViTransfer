@@ -126,7 +126,7 @@ export default function CommentAttachmentButton({
       })
       return [...prev, ...newItems]
     })
-  }, [])
+  }, [MAX_FILES])
 
   const removeFile = useCallback((id: string) => {
     // Abort any in-progress TUS upload

@@ -153,7 +153,7 @@ export default function VideoPlayer({
     return () => {
       window.removeEventListener('enterDrawingMode' as any, handleEnterDrawing as EventListener)
     }
-  }, [selectedVideo?.fps, annotationDrawing.reset])
+  }, [selectedVideo?.fps, annotationDrawing])
 
   const handleDrawingDone = useCallback(() => {
     const data = annotationDrawing.getAnnotationData()

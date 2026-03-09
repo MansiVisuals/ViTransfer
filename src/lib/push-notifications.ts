@@ -2,6 +2,23 @@ import webpush from 'web-push'
 import { prisma } from '@/lib/db'
 import { encrypt, decrypt } from '@/lib/encryption'
 import type { NotificationEventType } from '@/lib/external-notifications/constants'
+import { loadLocaleMessages } from '@/i18n/locale'
+
+async function getPushLocaleText() {
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'default' },
+    select: { language: true },
+  })
+
+  const locale = settings?.language || 'en'
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+
+  return {
+    auth: messages?.auth || {},
+    webPush: messages?.push?.webPush || {},
+    notificationsText: messages?.notificationsText || {},
+  }
+}
 
 /**
  * Get VAPID subject from app domain or fallback
@@ -264,18 +281,21 @@ export async function sendPushNotifications(
 export async function sendTestNotification(
   subscriptionId: string
 ): Promise<{ success: boolean; error?: string }> {
+  const { webPush } = await getPushLocaleText()
+
   const subscription = await prisma.pushSubscription.findUnique({
     where: { id: subscriptionId },
     select: { endpoint: true, p256dh: true, auth: true, deviceName: true },
   })
 
   if (!subscription) {
-    return { success: false, error: 'Subscription not found' }
+    return { success: false, error: webPush.subscriptionNotFound || 'Subscription not found' }
   }
 
   const payload: PushNotificationPayload = {
-    title: 'ViTransfer Test',
-    body: `Test notification for ${subscription.deviceName || 'this device'}`,
+    title: webPush.testTitle || 'ViTransfer Test',
+    body: (webPush.testBodyForDevice || 'Test notification for {device}')
+      .replace('{device}', subscription.deviceName || webPush.thisDevice || 'this device'),
     icon: '/brand/icon-192.svg',
     badge: '/brand/icon-192.svg',
     tag: 'test',
@@ -288,7 +308,7 @@ export async function sendTestNotification(
 /**
  * Map notification event types to user-friendly titles and create payloads
  */
-export function createNotificationPayload(
+export async function createNotificationPayload(
   eventType: NotificationEventType,
   data: {
     projectTitle?: string
@@ -301,7 +321,9 @@ export function createNotificationPayload(
     body?: string
     notifyType?: string
   }
-): PushNotificationPayload {
+): Promise<PushNotificationPayload> {
+  const { auth, webPush, notificationsText } = await getPushLocaleText()
+
   const basePayload = {
     icon: '/brand/icon-192.svg',
     badge: '/brand/icon-192.svg',
@@ -313,50 +335,50 @@ export function createNotificationPayload(
     case 'ADMIN_ACCESS':
       return {
         ...basePayload,
-        title: data.title || 'Admin Login',
-        body: data.body || `${data.email || 'Someone'} logged in`,
+        title: data.title || auth.adminLogin || 'Admin Login',
+        body: data.body || `${data.email || auth.someoneLabel || 'Someone'} ${auth.loggedInShort || 'logged in'}`,
       }
 
     case 'SHARE_ACCESS':
       return {
         ...basePayload,
-        title: data.title || 'Share Link Opened',
-        body: data.body || `${data.email || 'Someone'} opened ${data.projectTitle || 'a project'}`,
+        title: data.title || notificationsText.shareLinkOpenedShortTitle || 'Share Link Opened',
+        body: data.body || `${data.email || notificationsText.someone || auth.someoneLabel || 'Someone'} ${(notificationsText.openedProjectShort || 'opened {projectTitle}').replace('{projectTitle}', data.projectTitle || notificationsText.aProject || 'a project')}`,
       }
 
     case 'CLIENT_COMMENT':
       return {
         ...basePayload,
-        title: 'New Comment',
-        body: `${data.authorName || 'Someone'} on ${data.videoName || data.projectTitle || 'a video'}${data.content ? `: "${data.content.slice(0, 50)}${data.content.length > 50 ? '...' : ''}"` : ''}`,
+        title: webPush.newCommentTitle || 'New Comment',
+        body: `${data.authorName || notificationsText.someone || auth.someoneLabel || 'Someone'} ${webPush.onLabel || 'on'} ${data.videoName || data.projectTitle || webPush.aVideo || 'a video'}${data.content ? `: "${data.content.slice(0, 50)}${data.content.length > 50 ? '...' : ''}"` : ''}`,
       }
 
     case 'VIDEO_APPROVAL':
       return {
         ...basePayload,
-        title: 'Video Approved',
-        body: `${data.authorName || 'A client'} approved ${data.videoName || 'a video'} in ${data.projectTitle || 'a project'}`,
+        title: webPush.videoApprovedTitle || 'Video Approved',
+        body: `${data.authorName || webPush.aClient || 'A client'} ${webPush.approvedLabel || 'approved'} ${data.videoName || webPush.aVideo || 'a video'} ${webPush.inLabel || 'in'} ${data.projectTitle || webPush.aProject || 'a project'}`,
       }
 
     case 'SECURITY_ALERT':
       return {
         ...basePayload,
-        title: data.title || 'Security Alert',
-        body: data.body || 'A security event occurred',
+        title: data.title || auth.securityAlertTitle || 'Security Alert',
+        body: data.body || webPush.securityEventOccurred || 'A security event occurred',
       }
 
     case 'DUE_DATE_REMINDER':
       return {
         ...basePayload,
-        title: data.title || 'Deadline Reminder',
-        body: data.body || `${data.projectTitle || 'A project'} deadline is approaching`,
+        title: data.title || webPush.deadlineReminderTitle || 'Deadline Reminder',
+        body: data.body || `${data.projectTitle || webPush.aProjectCapitalized || 'A project'} ${webPush.deadlineApproaching || 'deadline is approaching'}`,
       }
 
     default:
       return {
         ...basePayload,
-        title: 'ViTransfer Notification',
-        body: 'You have a new notification',
+        title: webPush.defaultNotificationTitle || 'ViTransfer Notification',
+        body: webPush.defaultNotificationBody || 'You have a new notification',
       }
   }
 }

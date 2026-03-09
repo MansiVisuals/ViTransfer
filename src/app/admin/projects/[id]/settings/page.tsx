@@ -237,7 +237,7 @@ export default function ProjectSettingsPage() {
     }
 
     loadProject()
-  }, [projectId])
+  }, [projectId, t])
 
   // Track if initial load is complete
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)

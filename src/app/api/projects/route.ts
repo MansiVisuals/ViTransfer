@@ -5,6 +5,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { encrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { createProjectSchema, validateRequest } from '@/lib/validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -14,6 +15,10 @@ export const dynamic = 'force-dynamic'
 
 // GET /api/projects - List all projects
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -23,7 +28,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 100,
-    message: 'Too many requests. Please slow down.'
+    message: projectMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'admin-projects-list')
 
   if (rateLimitResult) {
@@ -82,13 +87,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ projects })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Unable to process request' },
+      { error: projectMessages.unableToProcessRequest || 'Unable to process request' },
       { status: 500 }
     )
   }
 }
 
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const projectMessages = messages?.projects || {}
+
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -100,7 +109,7 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 20,
-    message: 'Too many projects created. Please try again later.'
+    message: projectMessages.tooManyProjectsCreated || 'Too many projects created. Please try again later.'
   }, 'create-project')
   if (rateLimitResult) return rateLimitResult
 
@@ -141,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (resolvedAuthMode === 'PASSWORD' || resolvedAuthMode === 'BOTH') {
       if (!trimmedPassword) {
         return NextResponse.json(
-          { error: 'Password authentication mode requires a share password.' },
+          { error: projectMessages.passwordAuthRequiresSharePassword || 'Password authentication mode requires a share password.' },
           { status: 400 }
         )
       }
@@ -220,7 +229,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API] Project creation error:', error)
     return NextResponse.json(
-      { error: 'Failed to create project' },
+      { error: projectMessages.failedToCreateProjectApi || 'Failed to create project' },
       { status: 500 }
     )
   }

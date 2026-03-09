@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { generateVideoAccessToken } from '@/lib/video-access'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 /**
  * Generate a temporary download token for asset downloads (admins and share users)
@@ -12,6 +13,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string; assetId: string }> }
 ) {
   try {
+    const locale = await getConfiguredLocale()
+    const messages = await loadLocaleMessages(locale)
+    const videoMessages = messages?.videos || {}
+
     const { id: videoId, assetId } = await params
 
     // Get asset with video and project info
@@ -27,7 +32,7 @@ export async function POST(
     })
 
     if (!asset || asset.videoId !== videoId) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  return NextResponse.json({ error: messages?.share?.assetNotFound || 'Asset not found' }, { status: 404 })
     }
 
     const project = asset.video.project
@@ -48,7 +53,7 @@ export async function POST(
     )
 
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
     // Check download permissions for non-admins (non-client assets only)
@@ -56,14 +61,14 @@ export async function POST(
     if (!accessCheck.isAdmin && !isClientAsset) {
       if (!project.allowAssetDownload) {
         return NextResponse.json(
-          { error: 'Asset downloads are not allowed for this project' },
+          { error: videoMessages.assetDownloadsNotAllowedProject || 'Asset downloads are not allowed for this project' },
           { status: 403 }
         )
       }
 
       if (!asset.video.approved) {
         return NextResponse.json(
-          { error: 'Assets are only available for approved videos' },
+          { error: videoMessages.assetsApprovedOnly || 'Assets are only available for approved videos' },
           { status: 403 }
         )
       }
@@ -85,8 +90,11 @@ export async function POST(
     })
   } catch (error) {
     console.error('Asset download token generation error:', error)
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const videoMessages = messages?.videos || {}
     return NextResponse.json(
-      { error: 'Failed to generate download link' },
+      { error: videoMessages.failedToGenerateDownloadLink || 'Failed to generate download link' },
       { status: 500 }
     )
   }

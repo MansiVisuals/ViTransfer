@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const analyticsMessages = messages?.analytics || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -20,7 +25,7 @@ export async function GET(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 100,
-    message: 'Too many requests. Please slow down.'
+    message: analyticsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'admin-analytics-detail')
 
   if (rateLimitResult) {
@@ -73,7 +78,7 @@ export async function GET(
 
     if (!project) {
       return NextResponse.json(
-        { error: 'Project not found' },
+        { error: analyticsMessages.projectNotFound || 'Project not found' },
         { status: 404 }
       )
     }
@@ -192,7 +197,7 @@ export async function GET(
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Unable to process request' },
+      { error: analyticsMessages.unableToProcessRequest || 'Unable to process request' },
       { status: 500 }
     )
   }

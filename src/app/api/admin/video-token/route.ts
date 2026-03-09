@@ -3,6 +3,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { generateVideoAccessToken } from '@/lib/video-access'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,6 +15,10 @@ export const dynamic = 'force-dynamic'
  * Admins bypass normal share authentication but still need tokens for content delivery
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videosMessages = messages?.videos || {}
+
   // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -24,7 +29,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 200,
-    message: 'Too many token generation requests. Please slow down.'
+    message: videosMessages.tooManyTokenGenerationRequests || 'Too many token generation requests. Please slow down.'
   }, 'admin-video-token')
 
   if (rateLimitResult) {
@@ -40,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     if (!videoId || !projectId || !quality || !sessionId) {
       return NextResponse.json(
-        { error: 'Missing required parameters' },
+        { error: videosMessages.missingRequiredParameters || 'Missing required parameters' },
         { status: 400 }
       )
     }
@@ -53,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     if (!video || video.projectId !== projectId) {
       return NextResponse.json(
-        { error: 'Video not found or does not belong to project' },
+        { error: videosMessages.videoNotFoundOrDoesNotBelongToProject || 'Video not found or does not belong to project' },
         { status: 404 }
       )
     }
@@ -71,7 +76,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[API] Failed to generate admin video token:', error)
     return NextResponse.json(
-      { error: 'Failed to generate token' },
+      { error: videosMessages.failedToGenerateToken || 'Failed to generate token' },
       { status: 500 }
     )
   }

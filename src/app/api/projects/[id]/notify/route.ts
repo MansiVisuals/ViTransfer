@@ -7,6 +7,7 @@ import { decrypt } from '@/lib/encryption'
 import { getProjectRecipients } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '@/lib/unsubscribe'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -15,6 +16,10 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const locale = await getConfiguredLocale()
+    const messages = await loadLocaleMessages(locale)
+    const projectMessages = messages?.projects || {}
+
     // Require admin
     const authResult = await requireApiAdmin(request)
     if (authResult instanceof Response) {
@@ -25,7 +30,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: 20,
-      message: 'Too many notification requests. Please slow down.',
+      message: projectMessages.tooManyNotificationRequests || 'Too many notification requests. Please slow down.',
     }, 'project-notify')
     if (rateLimitResult) return rateLimitResult
 
@@ -33,7 +38,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const smtpConfigured = await isSmtpConfigured()
     if (!smtpConfigured) {
       return NextResponse.json(
-        { error: 'Email notifications are not available. Please configure SMTP settings in the admin panel.' },
+        { error: projectMessages.emailNotificationsUnavailable || 'Email notifications are not available. Please configure SMTP settings in the admin panel.' },
         { status: 400 }
       )
     }
@@ -64,14 +69,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  return NextResponse.json({ error: projectMessages.projectNotFound || 'Project not found' }, { status: 404 })
     }
 
     // Get recipients
     const recipients = await getProjectRecipients(projectId)
 
     if (recipients.length === 0) {
-      return NextResponse.json({ error: 'No recipients configured for this project' }, { status: 400 })
+  return NextResponse.json({ error: projectMessages.noRecipientsConfigured || 'No recipients configured for this project' }, { status: 400 })
     }
 
     // Generate share URL
@@ -82,7 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     let video = null
     if (!notifyEntireProject) {
       if (!videoId) {
-        return NextResponse.json({ error: 'videoId is required for specific video notification' }, { status: 400 })
+  return NextResponse.json({ error: projectMessages.videoIdRequiredForNotification || 'videoId is required for specific video notification' }, { status: 400 })
       }
 
       video = await prisma.video.findUnique({
@@ -95,12 +100,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
 
       if (!video) {
-        return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: messages?.share?.videoNotFound || 'Video not found' }, { status: 404 })
       }
 
       if (video.status !== 'READY') {
         return NextResponse.json(
-          { error: 'Video is not ready yet. Please wait for processing to complete.' },
+          { error: projectMessages.videoNotReady || 'Video is not ready yet. Please wait for processing to complete.' },
           { status: 400 }
         )
       }
@@ -217,21 +222,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return names.slice(0, -1).join(', ') + ' & ' + names[names.length - 1]
       }
 
-      let message = `Sent email to ${formatRecipientList(successfulRecipients)}.`
+      const sentEmailTo = messages?.projects?.sentEmailTo || 'Sent email to {recipients}.'
+      const passwordSentTo = messages?.projects?.passwordSentTo || 'Password sent to {recipients}.'
+
+      let message = sentEmailTo.replace('{recipients}', formatRecipientList(successfulRecipients))
       if (sendPasswordSeparately && isPasswordProtected && passwordSuccessCount > 0) {
-        message += ` Password sent to ${formatRecipientList(successfulPasswordRecipients)}.`
+        message += ` ${passwordSentTo.replace('{recipients}', formatRecipientList(successfulPasswordRecipients))}`
       }
       return NextResponse.json({ success: true, message })
     } else {
       return NextResponse.json(
-        { error: 'Failed to send emails to any recipients' },
+        { error: projectMessages.failedToSendEmails || 'Failed to send emails to any recipients' },
         { status: 500 }
       )
     }
   } catch (error) {
     console.error('Notify error:', error)
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const projectMessages = messages?.projects || {}
     return NextResponse.json(
-      { error: 'Failed to send notification' },
+      { error: projectMessages.failedToSendNotification || 'Failed to send notification' },
       { status: 500 }
     )
   }

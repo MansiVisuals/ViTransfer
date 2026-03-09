@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { parseBearerToken, revokePresentedTokens } from '@/lib/auth'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -16,11 +17,15 @@ export const dynamic = 'force-dynamic'
  * - X-Refresh-Token: Bearer <refreshToken> OR JSON body { refreshToken }
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: 60,
-      message: 'Too many logout attempts. Please try again later.'
+      message: authMessages.tooManyLogoutAttempts || 'Too many logout attempts. Please try again later.'
     }, 'logout')
     if (rateLimitResult) return rateLimitResult
 

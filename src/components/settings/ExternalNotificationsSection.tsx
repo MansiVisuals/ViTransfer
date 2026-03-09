@@ -91,7 +91,7 @@ export function ExternalNotificationsContent({ active, showIntro = true }: { act
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (active) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { deletePasskey, updatePasskeyName } from '@/lib/passkey'
 import { invalidateAdminSessions, clearPasskeyChallenges } from '@/lib/session-invalidation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -22,6 +23,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     // Require admin authentication
     const user = await requireApiAdmin(request)
@@ -30,7 +35,7 @@ export async function DELETE(
     const { id: credentialId } = await params
 
     if (!credentialId) {
-      return NextResponse.json({ error: 'Credential ID required' }, { status: 400 })
+      return NextResponse.json({ error: authMessages.credentialIdRequired || 'Credential ID required' }, { status: 400 })
     }
 
     // Get userId from query params (optional - defaults to current user)
@@ -42,7 +47,7 @@ export async function DELETE(
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error || 'Failed to delete passkey' },
+        { error: result.error || authMessages.failedToDeletePasskeyApi || 'Failed to delete passkey' },
         { status: 400 }
       )
     }
@@ -57,7 +62,7 @@ export async function DELETE(
   } catch (error) {
     console.error('[PASSKEY] Delete error:', error)
 
-    return NextResponse.json({ error: 'Failed to delete passkey' }, { status: 500 })
+    return NextResponse.json({ error: authMessages.failedToDeletePasskeyApi || 'Failed to delete passkey' }, { status: 500 })
   }
 }
 
@@ -78,6 +83,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     // Require admin authentication
     const user = await requireApiAdmin(request)
@@ -86,7 +95,7 @@ export async function PATCH(
     const { id: credentialId } = await params
 
     if (!credentialId) {
-      return NextResponse.json({ error: 'Credential ID required' }, { status: 400 })
+      return NextResponse.json({ error: authMessages.credentialIdRequired || 'Credential ID required' }, { status: 400 })
     }
 
     // Parse request body
@@ -95,7 +104,7 @@ export async function PATCH(
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Valid name required' },
+        { error: authMessages.validPasskeyNameRequired || 'Valid name required' },
         { status: 400 }
       )
     }
@@ -103,7 +112,7 @@ export async function PATCH(
     // Limit name length
     if (name.length > 100) {
       return NextResponse.json(
-        { error: 'Name too long (max 100 characters)' },
+        { error: authMessages.passkeyNameTooLong || 'Name too long (max 100 characters)' },
         { status: 400 }
       )
     }
@@ -113,7 +122,7 @@ export async function PATCH(
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error || 'Failed to update passkey name' },
+        { error: result.error || authMessages.failedToUpdatePasskeyName || 'Failed to update passkey name' },
         { status: 400 }
       )
     }
@@ -123,7 +132,7 @@ export async function PATCH(
     console.error('[PASSKEY] Update name error:', error)
 
     return NextResponse.json(
-      { error: 'Failed to update passkey name' },
+      { error: authMessages.failedToUpdatePasskeyName || 'Failed to update passkey name' },
       { status: 500 }
     )
   }

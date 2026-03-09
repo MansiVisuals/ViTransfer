@@ -8,6 +8,7 @@ import { prisma } from '@/lib/db'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { safeParseBody } from '@/lib/validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 // Valid client IDs for workflow integrations
 const VALID_CLIENT_IDS = [
@@ -26,12 +27,15 @@ const VALID_CLIENT_IDS = [
  */
 export async function POST(request: NextRequest) {
   const ipAddress = getClientIpAddress(request)
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
 
   // Rate limit: 10 requests per 10 minutes per IP
   const rateLimitResult = await rateLimit(request, {
     windowMs: 10 * 60 * 1000,
     maxRequests: 10,
-    message: 'Too many device code requests. Please try again later.',
+    message: authMessages.tooManyDeviceCodeRequests || 'Too many device code requests. Please try again later.',
   }, 'device-code')
 
   if (rateLimitResult) {
@@ -52,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     if (!clientId || !VALID_CLIENT_IDS.includes(clientId)) {
       return NextResponse.json(
-        { error: 'Invalid client_id' },
+        { error: authMessages.invalidClientId || 'Invalid client_id' },
         { status: 400 }
       )
     }
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     if (!settings?.appDomain) {
       return NextResponse.json(
-        { error: 'Server not configured. Application domain must be set in Settings.' },
+        { error: authMessages.serverNotConfiguredAppDomainRequired || 'Server not configured. Application domain must be set in Settings.' },
         { status: 503 }
       )
     }
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[Device Code] Error issuing device code:', error)
     return NextResponse.json(
-      { error: 'Failed to issue device code' },
+      { error: authMessages.failedToIssueDeviceCode || 'Failed to issue device code' },
       { status: 500 }
     )
   }

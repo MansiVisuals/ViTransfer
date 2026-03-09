@@ -6,6 +6,7 @@ import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import crypto from 'crypto'
 import { z } from 'zod'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 
@@ -21,13 +22,17 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   const { id: videoId } = await params
 
   // Rate limit ZIP token generation
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
-    message: 'Too many asset download requests. Please slow down.',
+  message: videoMessages.tooManyAssetZipTokenRequests || 'Too many asset download requests. Please slow down.',
   }, `asset-zip-token:${videoId}`)
   if (rateLimitResult) return rateLimitResult
 
@@ -47,7 +52,7 @@ export async function POST(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     const project = video.project
@@ -65,21 +70,21 @@ export async function POST(
     )
 
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
     // For non-admins, verify asset download settings and video approval
     if (!accessCheck.isAdmin) {
       if (!project.allowAssetDownload) {
         return NextResponse.json(
-          { error: 'Asset downloads are not allowed for this project' },
+          { error: videoMessages.assetDownloadsNotAllowedProject || 'Asset downloads are not allowed for this project' },
           { status: 403 }
         )
       }
 
       if (!video.approved) {
         return NextResponse.json(
-          { error: 'Assets are only available for approved videos' },
+          { error: videoMessages.assetsApprovedOnly || 'Assets are only available for approved videos' },
           { status: 403 }
         )
       }
@@ -94,11 +99,11 @@ export async function POST(
     })
 
     if (assets.length === 0) {
-      return NextResponse.json({ error: 'No valid assets found' }, { status: 404 })
+  return NextResponse.json({ error: messages?.share?.noValidAssetsFound || 'No valid assets found' }, { status: 404 })
     }
 
     if (assets.length !== assetIds.length) {
-      return NextResponse.json({ error: 'Some assets are invalid' }, { status: 400 })
+  return NextResponse.json({ error: videoMessages.someAssetsInvalid || 'Some assets are invalid' }, { status: 400 })
     }
 
     // Generate secure token
@@ -136,7 +141,7 @@ export async function POST(
   } catch (error) {
     console.error('ZIP download token generation error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate download link' },
+      { error: videoMessages.failedToGenerateDownloadLink || 'Failed to generate download link' },
       { status: 500 }
     )
   }

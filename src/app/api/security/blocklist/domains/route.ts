@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateBlocklistCache } from '@/lib/video-access'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,10 @@ export const dynamic = 'force-dynamic'
  * ADMIN ONLY
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching blocked domains:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch blocked domains' },
+      { error: settingsMessages.failedToFetchBlockedDomains || 'Failed to fetch blocked domains' },
       { status: 500 }
     )
   }
@@ -43,6 +48,10 @@ export async function GET(request: NextRequest) {
  * ADMIN ONLY
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -54,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     if (!domain || typeof domain !== 'string') {
       return NextResponse.json(
-        { error: 'Domain is required' },
+        { error: settingsMessages.domainRequired || 'Domain is required' },
         { status: 400 }
       )
     }
@@ -63,7 +72,7 @@ export async function POST(request: NextRequest) {
     const domainPattern = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/
     if (!domainPattern.test(domain)) {
       return NextResponse.json(
-        { error: 'Invalid domain format' },
+        { error: settingsMessages.invalidDomainFormat || 'Invalid domain format' },
         { status: 400 }
       )
     }
@@ -78,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { error: 'Domain already blocked' },
+        { error: settingsMessages.domainAlreadyBlocked || 'Domain already blocked' },
         { status: 409 }
       )
     }
@@ -101,7 +110,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error blocking domain:', error)
     return NextResponse.json(
-      { error: 'Failed to block domain' },
+      { error: settingsMessages.failedToBlockDomain || 'Failed to block domain' },
       { status: 500 }
     )
   }
@@ -114,6 +123,10 @@ export async function POST(request: NextRequest) {
  * ADMIN ONLY
  */
 export async function DELETE(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -125,7 +138,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json(
-        { error: 'ID is required' },
+        { error: settingsMessages.idRequired || 'ID is required' },
         { status: 400 }
       )
     }
@@ -139,12 +152,12 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Domain unblocked successfully',
+      message: settingsMessages.domainUnblockedSuccessfully || 'Domain unblocked successfully',
     })
   } catch (error) {
     console.error('Error unblocking domain:', error)
     return NextResponse.json(
-      { error: 'Failed to unblock domain' },
+      { error: settingsMessages.failedToUnblockDomain || 'Failed to unblock domain' },
       { status: 500 }
     )
   }

@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 // POST /api/clients/backfill - Backfill client directory from existing projects
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const clientsMessages = messages?.clients || {}
+
   // 1. AUTHENTICATION
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -15,7 +20,7 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 5,
-    message: 'Too many requests. Please slow down.'
+    message: clientsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'clients-backfill')
   if (rateLimitResult) return rateLimitResult
 
@@ -110,10 +115,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       stats,
-      message: `Backfill complete: ${stats.companiesCreated} companies created, ${stats.contactsCreated} contacts created, ${stats.projectsLinked} projects linked, ${stats.skipped} skipped`
+      message: (clientsMessages.backfillCompleteSummary || 'Backfill complete: {companiesCreated} companies created, {contactsCreated} contacts created, {projectsLinked} projects linked, {skipped} skipped')
+        .replace('{companiesCreated}', String(stats.companiesCreated))
+        .replace('{contactsCreated}', String(stats.contactsCreated))
+        .replace('{projectsLinked}', String(stats.projectsLinked))
+        .replace('{skipped}', String(stats.skipped))
     })
   } catch (error) {
     console.error('Failed to backfill client directory:', error)
-    return NextResponse.json({ error: 'Failed to backfill client directory' }, { status: 500 })
+    return NextResponse.json({ error: clientsMessages.failedToBackfillClientDirectory || 'Failed to backfill client directory' }, { status: 500 })
   }
 }

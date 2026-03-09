@@ -6,6 +6,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import archiver from 'archiver'
 import { Readable } from 'stream'
 import { z } from 'zod'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -20,13 +21,17 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   const { id: videoId } = await params
 
   // Guard against abuse of heavy zip creation
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
-    message: 'Too many asset downloads. Please slow down.',
+  message: videoMessages.tooManyAssetZipRequests || 'Too many asset downloads. Please slow down.',
   }, `asset-zip:${videoId}`)
   if (rateLimitResult) return rateLimitResult
 
@@ -48,7 +53,7 @@ export async function POST(
     })
 
     if (!video) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
     const project = video.project
@@ -59,7 +64,7 @@ export async function POST(
       requiredPermission: 'download',
     })
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
     // For non-admins, verify asset download settings and video approval
@@ -67,7 +72,7 @@ export async function POST(
       // Check if project allows asset downloads
       if (!project.allowAssetDownload) {
         return NextResponse.json(
-          { error: 'Asset downloads are not allowed for this project' },
+          { error: videoMessages.assetDownloadsNotAllowedProject || 'Asset downloads are not allowed for this project' },
           { status: 403 }
         )
       }
@@ -75,7 +80,7 @@ export async function POST(
       // Check if video is approved (assets only available for approved videos)
       if (!video.approved) {
         return NextResponse.json(
-          { error: 'Assets are only available for approved videos' },
+          { error: videoMessages.assetsApprovedOnly || 'Assets are only available for approved videos' },
           { status: 403 }
         )
       }
@@ -90,7 +95,7 @@ export async function POST(
     })
 
     if (assets.length === 0) {
-      return NextResponse.json({ error: 'No valid assets found' }, { status: 404 })
+  return NextResponse.json({ error: messages?.share?.noValidAssetsFound || 'No valid assets found' }, { status: 404 })
     }
 
     // Create zip archive
@@ -136,7 +141,7 @@ export async function POST(
   } catch (error) {
     console.error('Error creating asset zip:', error)
     return NextResponse.json(
-      { error: 'Failed to create asset archive' },
+      { error: videoMessages.failedToCreateAssetArchive || 'Failed to create asset archive' },
       { status: 500 }
     )
   }

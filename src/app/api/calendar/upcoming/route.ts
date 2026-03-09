@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const calendarMessages = messages?.calendar || {}
+
   const authResult = await requireApiAdmin(request)
-  if (authResult instanceof Response) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (authResult instanceof Response) return NextResponse.json({ error: calendarMessages.notFound || 'Not found' }, { status: 404 })
 
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: calendarMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'calendar-upcoming')
   if (rateLimitResult) return rateLimitResult
 
@@ -40,6 +45,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ projects: upcoming })
   } catch {
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+    return NextResponse.json({ error: calendarMessages.operationFailed || 'Operation failed' }, { status: 500 })
   }
 }

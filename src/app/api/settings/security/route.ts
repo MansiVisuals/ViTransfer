@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateAllShareSessions, clearAllRateLimits } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 function adminTimeoutSeconds(value: number, unit: string): number | null {
@@ -47,6 +48,10 @@ function hasPasswordAttemptsChanged(current: any, newAttempts?: string): boolean
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsSecurityMessages = messages?.settings?.security || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -56,7 +61,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
-    message: 'Too many requests. Please slow down.'
+    message: settingsSecurityMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'security-settings-read')
 
   if (rateLimitResult) {
@@ -80,13 +85,17 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching security settings:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch security settings' },
+      { error: settingsSecurityMessages.failedToFetchSecuritySettings || 'Failed to fetch security settings' },
       { status: 500 }
     )
   }
 }
 
 export async function PATCH(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsSecurityMessages = messages?.settings?.security || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -117,7 +126,7 @@ export async function PATCH(request: NextRequest) {
       const timeoutVal = parseInt(sessionTimeoutValue, 10)
       if (isNaN(timeoutVal) || timeoutVal <= 0) {
         return NextResponse.json(
-          { error: 'Session timeout value must be a positive number' },
+          { error: settingsSecurityMessages.sessionTimeoutValueMustBePositive || 'Session timeout value must be a positive number' },
           { status: 400 }
         )
       }
@@ -127,7 +136,7 @@ export async function PATCH(request: NextRequest) {
       const timeoutVal = parseInt(adminSessionTimeoutValue, 10)
       if (isNaN(timeoutVal) || timeoutVal <= 0) {
         return NextResponse.json(
-          { error: 'Admin session timeout value must be a positive number' },
+          { error: settingsSecurityMessages.adminSessionTimeoutValueMustBePositive || 'Admin session timeout value must be a positive number' },
           { status: 400 }
         )
       }
@@ -136,7 +145,7 @@ export async function PATCH(request: NextRequest) {
     if (adminSessionTimeoutUnit !== undefined && adminSessionTimeoutUnit !== null) {
       if (adminSessionTimeoutUnit !== 'MINUTES' && adminSessionTimeoutUnit !== 'HOURS') {
         return NextResponse.json(
-          { error: 'Admin session timeout unit must be MINUTES or HOURS' },
+          { error: settingsSecurityMessages.adminSessionTimeoutUnitMustBeMinutesOrHours || 'Admin session timeout unit must be MINUTES or HOURS' },
           { status: 400 }
         )
       }
@@ -146,7 +155,7 @@ export async function PATCH(request: NextRequest) {
       const attemptsVal = parseInt(passwordAttempts, 10)
       if (isNaN(attemptsVal) || attemptsVal <= 0 || attemptsVal > 100) {
         return NextResponse.json(
-          { error: 'Password attempts must be between 1 and 100' },
+          { error: settingsSecurityMessages.passwordAttemptsMustBeBetween1And100 || 'Password attempts must be between 1 and 100' },
           { status: 400 }
         )
       }
@@ -156,7 +165,7 @@ export async function PATCH(request: NextRequest) {
       const val = parseInt(shareSessionRateLimit, 10)
       if (isNaN(val) || val <= 0 || val > 2000) {
         return NextResponse.json(
-          { error: 'Share session rate limit must be between 1 and 2000 requests per window' },
+          { error: settingsSecurityMessages.shareSessionRateLimitMustBeBetween1And2000 || 'Share session rate limit must be between 1 and 2000 requests per window' },
           { status: 400 }
         )
       }
@@ -166,7 +175,7 @@ export async function PATCH(request: NextRequest) {
       const val = parseInt(shareTokenTtlSeconds, 10)
       if (isNaN(val) || val <= 60 || val > 24 * 60 * 60) {
         return NextResponse.json(
-          { error: 'Share token TTL must be between 60 seconds and 86400 seconds' },
+          { error: settingsSecurityMessages.shareTokenTtlMustBeBetween60And86400 || 'Share token TTL must be between 60 seconds and 86400 seconds' },
           { status: 400 }
         )
       }
@@ -190,13 +199,13 @@ export async function PATCH(request: NextRequest) {
       const seconds = adminTimeoutSeconds(mergedValue, mergedUnit)
       if (!seconds) {
         return NextResponse.json(
-          { error: 'Admin session timeout must be a positive number in minutes or hours' },
+          { error: settingsSecurityMessages.adminSessionTimeoutMustBePositiveMinutesOrHours || 'Admin session timeout must be a positive number in minutes or hours' },
           { status: 400 }
         )
       }
       if (seconds > 24 * 60 * 60) {
         return NextResponse.json(
-          { error: 'Admin session timeout must be 24 hours or less' },
+          { error: settingsSecurityMessages.adminSessionTimeoutMustBe24HoursOrLess || 'Admin session timeout must be 24 hours or less' },
           { status: 400 }
         )
       }
@@ -292,7 +301,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Error updating security settings:', error)
     return NextResponse.json(
-      { error: 'Failed to update security settings' },
+      { error: settingsSecurityMessages.failedToUpdateSecuritySettings || 'Failed to update security settings' },
       { status: 500 }
     )
   }

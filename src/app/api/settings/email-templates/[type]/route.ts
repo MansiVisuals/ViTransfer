@@ -15,6 +15,7 @@ import {
   type EmailTemplateType,
 } from '@/lib/email-template-system'
 import { prisma } from '@/lib/db'
+import { loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,20 +34,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return authResult
   }
 
+  const { type } = await params
+
+  const settings = await prisma.settings.findFirst({ select: { language: true } })
+  const locale = settings?.language || 'en'
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const templateMessages = messages?.settings?.emailTemplates
+
   // Rate limit
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 1000, maxRequests: 60, message: 'Too many requests. Please slow down.' },
+    { windowMs: 60 * 1000, maxRequests: 60, message: templateMessages?.tooManyRequestsSlowDown || 'Too many requests. Please slow down.' },
     'email-template-get'
   )
   if (rateLimitResult) return rateLimitResult
 
-  const { type } = await params
-
   // Validate template type
   if (!Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
     return NextResponse.json(
-      { error: 'Invalid template type' },
+      { error: templateMessages?.invalidTemplateType || 'Invalid template type' },
       { status: 400 }
     )
   }
@@ -55,9 +61,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   try {
     // Get the configured language for localized display
-    const settings = await prisma.settings.findFirst({ select: { language: true } })
-    const locale = settings?.language || 'en'
-
     const template = await getEmailTemplate(templateType, locale)
     const metadata = TEMPLATE_METADATA.find(m => m.type === templateType)
     const placeholders = await getLocalizedPlaceholdersForType(templateType, locale)
@@ -99,7 +102,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('[API] Failed to get email template:', error)
     return NextResponse.json(
-      { error: 'Failed to load email template' },
+      { error: templateMessages?.failedToLoad || 'Failed to load email template' },
       { status: 500 }
     )
   }
@@ -115,20 +118,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return authResult
   }
 
+  const { type } = await params
+  const settings = await prisma.settings.findFirst({ select: { language: true } })
+  const locale = settings?.language || 'en'
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const templateMessages = messages?.settings?.emailTemplates
+
   // Rate limit
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 1000, maxRequests: 30, message: 'Too many updates. Please slow down.' },
+    { windowMs: 60 * 1000, maxRequests: 30, message: templateMessages?.tooManyUpdatesSlowDown || 'Too many updates. Please slow down.' },
     'email-template-update'
   )
   if (rateLimitResult) return rateLimitResult
 
-  const { type } = await params
-
   // Validate template type
   if (!Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
     return NextResponse.json(
-      { error: 'Invalid template type' },
+      { error: templateMessages?.invalidTemplateType || 'Invalid template type' },
       { status: 400 }
     )
   }
@@ -141,14 +148,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (!subject || typeof subject !== 'string') {
       return NextResponse.json(
-        { error: 'Subject is required' },
+        { error: templateMessages?.subjectRequired || 'Subject is required' },
         { status: 400 }
       )
     }
 
     if (!bodyContent || typeof bodyContent !== 'string') {
       return NextResponse.json(
-        { error: 'Body content is required' },
+        { error: templateMessages?.bodyContentRequired || 'Body content is required' },
         { status: 400 }
       )
     }
@@ -156,7 +163,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Basic validation - subject shouldn't be too long
     if (subject.length > 200) {
       return NextResponse.json(
-        { error: 'Subject is too long (max 200 characters)' },
+        { error: templateMessages?.subjectTooLong || 'Subject is too long (max 200 characters)' },
         { status: 400 }
       )
     }
@@ -164,7 +171,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Body content shouldn't be too large
     if (bodyContent.length > 50000) {
       return NextResponse.json(
-        { error: 'Body content is too large (max 50KB)' },
+        { error: templateMessages?.bodyContentTooLarge || 'Body content is too large (max 50KB)' },
         { status: 400 }
       )
     }
@@ -173,12 +180,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      message: 'Template saved successfully',
+      message: templateMessages?.templateSavedSuccessfully || 'Template saved successfully',
     })
   } catch (error) {
     console.error('[API] Failed to save email template:', error)
     return NextResponse.json(
-      { error: 'Failed to save email template' },
+      { error: templateMessages?.failedToSaveTemplate || 'Failed to save email template' },
       { status: 500 }
     )
   }
@@ -194,20 +201,24 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return authResult
   }
 
+  const { type } = await params
+  const settings = await prisma.settings.findFirst({ select: { language: true } })
+  const locale = settings?.language || 'en'
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const templateMessages = messages?.settings?.emailTemplates
+
   // Rate limit
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 1000, maxRequests: 30, message: 'Too many requests. Please slow down.' },
+    { windowMs: 60 * 1000, maxRequests: 30, message: templateMessages?.tooManyRequestsSlowDown || 'Too many requests. Please slow down.' },
     'email-template-reset'
   )
   if (rateLimitResult) return rateLimitResult
 
-  const { type } = await params
-
   // Validate template type
   if (!Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
     return NextResponse.json(
-      { error: 'Invalid template type' },
+      { error: templateMessages?.invalidTemplateType || 'Invalid template type' },
       { status: 400 }
     )
   }
@@ -218,9 +229,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     await resetEmailTemplate(templateType)
 
     // Get the configured language to return localized defaults
-    const settings = await prisma.settings.findFirst({ select: { language: true } })
-    const locale = settings?.language || 'en'
-
     // Try localized default first
     let subject = ''
     let bodyContent = ''
@@ -242,14 +250,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      message: 'Template reset to default',
+      message: templateMessages?.templateResetToDefault || 'Template reset to default',
       subject,
       bodyContent,
     })
   } catch (error) {
     console.error('[API] Failed to reset email template:', error)
     return NextResponse.json(
-      { error: 'Failed to reset email template' },
+      { error: templateMessages?.failedToResetTemplate || 'Failed to reset email template' },
       { status: 500 }
     )
   }

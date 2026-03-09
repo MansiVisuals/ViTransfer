@@ -86,7 +86,7 @@ export function WebPushSection({ active }: { active: boolean }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   // Check notification permission and listen for changes
   useEffect(() => {

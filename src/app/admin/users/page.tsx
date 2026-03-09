@@ -87,7 +87,7 @@ export default function UsersPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   const fetchLoggedInUser = useCallback(async () => {
     try {

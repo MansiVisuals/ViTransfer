@@ -8,6 +8,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { trackSharePageAccess } from '@/lib/share-access-tracking'
 import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -21,13 +22,16 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const shareMessages = messages?.share
     const { ipRateLimit } = await getRateLimitSettings()
     const shareTtlSeconds = await getShareTokenTtlSeconds()
 
     const rateLimitResult = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
       maxRequests: ipRateLimit || 100,
-      message: 'Too many requests. Please try again later.'
+      message: shareMessages?.tooManyRequestsGeneric || 'Too many requests. Please try again later.'
     }, `share-access:${token}`)
     if (rateLimitResult) return rateLimitResult
 
@@ -46,7 +50,7 @@ export async function GET(
       // SECURITY: Return same response shape as auth-required projects
       // to prevent project enumeration via status code differences
       return NextResponse.json({
-        error: 'Authentication required',
+        error: shareMessages?.authenticationRequired || 'Authentication required',
         authMode: 'PASSWORD',
         guestMode: false,
       }, { status: 401 })
@@ -67,7 +71,7 @@ export async function GET(
       if (!isAdmin) {
         // Token was sent but invalid/revoked - force re-authentication
         return NextResponse.json({
-          error: 'Session expired or invalid. Please authenticate again.',
+          error: shareMessages?.sessionExpiredOrInvalid || 'Session expired or invalid. Please authenticate again.',
           requiresPassword: true,
           authMode: projectMeta.authMode || 'PASSWORD',
           guestMode: projectMeta.guestMode || false
@@ -83,14 +87,14 @@ export async function GET(
     )
 
     if (!project) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     const accessCheck = await verifyProjectAccess(request, projectMeta.id, projectMeta.sharePassword, projectMeta.authMode)
 
     if (!accessCheck.authorized) {
       return NextResponse.json({
-        error: 'Authentication required',
+        error: shareMessages?.authenticationRequired || 'Authentication required',
         requiresPassword: true,
         authMode: project.authMode || 'PASSWORD',
         guestMode: project.guestMode || false
@@ -130,7 +134,7 @@ export async function GET(
     // This applies to ALL authModes - guest restrictions are independent of auth requirements
     if (projectMeta.guestMode && !isAdmin && !hasShareSession && !isGuest) {
       return NextResponse.json({
-        error: 'Guest entry required',
+        error: shareMessages?.guestEntryRequired || 'Guest entry required',
         requiresPassword: false,
         authMode: projectMeta.authMode,
         guestMode: true
@@ -333,7 +337,7 @@ export async function GET(
     return NextResponse.json(responseBody)
   } catch (error) {
     return NextResponse.json({
-      error: 'Unable to process request'
+      error: (await loadLocaleMessages(await getConfiguredLocale().catch(() => 'en')).catch(() => null))?.share?.unableToProcessRequest || 'Unable to process request'
     }, { status: 500 })
   }
 }

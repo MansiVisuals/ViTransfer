@@ -8,6 +8,7 @@ import { logSecurityEvent, trackVideoAccess } from '@/lib/video-access'
 import archiver from 'archiver'
 import { Readable } from 'stream'
 import crypto from 'crypto'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -46,13 +47,17 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const locale = await getConfiguredLocale()
+    const messages = await loadLocaleMessages(locale)
+    const shareMessages = messages?.share || {}
+
     const { token } = await params
 
     // Rate limit by IP
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: 30,
-      message: 'Too many download requests. Please slow down.',
+      message: shareMessages.tooManyRequestsGeneric || 'Too many download requests. Please slow down.',
     }, 'zip-download-ip')
 
     if (rateLimitResult) {
@@ -74,7 +79,7 @@ export async function GET(
     if (!rawTokenData) {
       // Invalid/expired download token - not a security event, just expired link
       console.warn('[DOWNLOAD] Invalid or expired zip download token')
-      return NextResponse.json({ error: 'Invalid or expired download link' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
 
     const tokenData = JSON.parse(rawTokenData)
@@ -98,7 +103,7 @@ export async function GET(
         details: { reason: 'zip-token-fingerprint-mismatch' },
         wasBlocked: true,
       })
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     // Get video with project
@@ -108,7 +113,7 @@ export async function GET(
     })
 
     if (!video || video.projectId !== projectId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     // Get all requested assets
@@ -120,14 +125,14 @@ export async function GET(
     })
 
     if (assets.length === 0) {
-      return NextResponse.json({ error: 'No valid assets found' }, { status: 404 })
+  return NextResponse.json({ error: shareMessages.noValidAssetsFound || 'No valid assets found' }, { status: 404 })
     }
 
     // Atomically consume token after all authorization checks pass.
     // This prevents invalid requesters from burning the token and avoids replay races.
     const consumed = await consumeTokenAtomically(redis, tokenKey, rawTokenData)
     if (!consumed) {
-      return NextResponse.json({ error: 'Invalid or expired download link' }, { status: 403 })
+  return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
 
     // Track download analytics (sessionId check handles admin filtering automatically)
@@ -166,7 +171,7 @@ export async function GET(
     }
 
     if (appendedCount === 0) {
-      return NextResponse.json({ error: 'No downloadable assets available' }, { status: 404 })
+  return NextResponse.json({ error: shareMessages.noDownloadableAssetsAvailable || 'No downloadable assets available' }, { status: 404 })
     }
 
     // Finalize archive (must be called before streaming)
@@ -193,6 +198,9 @@ export async function GET(
   } catch (error) {
     // Download errors are technical issues, not security events
     console.error('[DOWNLOAD] ZIP download error:', error)
-    return NextResponse.json({ error: 'Download failed' }, { status: 500 })
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const shareMessages = messages?.share || {}
+    return NextResponse.json({ error: shareMessages.downloadFailed || 'Download failed' }, { status: 500 })
   }
 }

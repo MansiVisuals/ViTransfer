@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { NOTIFICATION_EVENT_TYPES } from '@/lib/external-notifications/constants'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,10 @@ export const dynamic = 'force-dynamic'
  * List all push subscriptions for the current admin user
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const webPushMessages = messages?.settings?.webPush || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -42,7 +47,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[API] Failed to list push subscriptions:', error)
     return NextResponse.json(
-      { error: 'Failed to list subscriptions' },
+      { error: webPushMessages.failedToLoadSubs || 'Failed to list subscriptions' },
       { status: 500 }
     )
   }
@@ -53,6 +58,10 @@ export async function GET(request: NextRequest) {
  * Subscribe the browser to push notifications
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const webPushMessages = messages?.settings?.webPush || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -61,7 +70,7 @@ export async function POST(request: NextRequest) {
   // Rate limit: 20 subscription attempts per hour per admin
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 60 * 1000, maxRequests: 20, message: 'Too many subscription attempts. Please wait.' },
+    { windowMs: 60 * 60 * 1000, maxRequests: 20, message: webPushMessages.tooManySubscriptionAttempts || 'Too many subscription attempts. Please wait.' },
     'push-subscribe',
     authResult.id
   )
@@ -74,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
       return NextResponse.json(
-        { error: 'Missing required subscription fields' },
+        { error: webPushMessages.missingRequiredSubscriptionFields || 'Missing required subscription fields' },
         { status: 400 }
       )
     }
@@ -84,7 +93,7 @@ export async function POST(request: NextRequest) {
       new URL(endpoint)
     } catch {
       return NextResponse.json(
-        { error: 'Invalid endpoint URL' },
+        { error: webPushMessages.invalidEndpointUrl || 'Invalid endpoint URL' },
         { status: 400 }
       )
     }
@@ -107,7 +116,7 @@ export async function POST(request: NextRequest) {
     if (existing && existing.userId !== authResult.id) {
       // Device belongs to another admin - don't transfer, show friendly message
       return NextResponse.json(
-        { error: 'This device is already registered for push notifications by another admin.' },
+        { error: webPushMessages.deviceAlreadyRegisteredByAnotherAdmin || 'This device is already registered for push notifications by another admin.' },
         { status: 409 } // Conflict
       )
     }
@@ -142,7 +151,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API] Failed to create push subscription:', error)
     return NextResponse.json(
-      { error: 'Failed to subscribe' },
+      { error: webPushMessages.failedToSubscribe || 'Failed to subscribe' },
       { status: 500 }
     )
   }
@@ -153,6 +162,10 @@ export async function POST(request: NextRequest) {
  * Update subscription settings (e.g., subscribed events)
  */
 export async function PATCH(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const webPushMessages = messages?.settings?.webPush || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -161,7 +174,7 @@ export async function PATCH(request: NextRequest) {
   // Rate limit: 60 updates per hour per admin
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 60 * 1000, maxRequests: 60, message: 'Too many updates. Please wait.' },
+    { windowMs: 60 * 60 * 1000, maxRequests: 60, message: webPushMessages.tooManySubscriptionUpdates || 'Too many updates. Please wait.' },
     'push-update',
     authResult.id
   )
@@ -173,7 +186,7 @@ export async function PATCH(request: NextRequest) {
 
     if (!subscriptionId) {
       return NextResponse.json(
-        { error: 'Missing subscriptionId' },
+        { error: webPushMessages.missingSubscriptionId || 'Missing subscriptionId' },
         { status: 400 }
       )
     }
@@ -188,7 +201,7 @@ export async function PATCH(request: NextRequest) {
 
     if (!existing) {
       return NextResponse.json(
-        { error: 'Subscription not found' },
+        { error: webPushMessages.subscriptionNotFound || 'Subscription not found' },
         { status: 404 }
       )
     }
@@ -223,7 +236,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('[API] Failed to update push subscription:', error)
     return NextResponse.json(
-      { error: 'Failed to update subscription' },
+      { error: webPushMessages.failedToUpdateSub || 'Failed to update subscription' },
       { status: 500 }
     )
   }

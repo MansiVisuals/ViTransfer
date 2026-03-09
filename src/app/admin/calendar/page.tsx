@@ -247,7 +247,7 @@ export default function CalendarPage() {
                 className={`min-h-[120px] border-r border-b border-border p-1.5 ${today ? 'bg-primary/5' : ''}`}
               >
                 <div className={`text-xs mb-1 ${today ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
-                  <span className="block">{day.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                  <span className="block">{[t('sun'), t('mon'), t('tue'), t('wed'), t('thu'), t('fri'), t('sat')][day.getDay()]}</span>
                   <span className="text-sm font-semibold">{day.getDate()}</span>
                 </div>
                 <div className="space-y-0.5">

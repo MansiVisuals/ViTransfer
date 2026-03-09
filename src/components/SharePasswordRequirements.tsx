@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import { Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
@@ -9,35 +8,23 @@ interface SharePasswordRequirementsProps {
   className?: string
 }
 
-interface Requirement {
-  label: string
-  test: (password: string) => boolean
-}
-
 export function SharePasswordRequirements({ password, className = '' }: SharePasswordRequirementsProps) {
   const t = useTranslations('auth')
 
-  const requirements: Requirement[] = [
+  const results = [
     {
       label: t('sharePasswordMinChars'),
-      test: (pwd) => pwd.length >= 8,
+      passed: password.length >= 8,
     },
     {
       label: t('sharePasswordLetter'),
-      test: (pwd) => /[A-Za-z]/.test(pwd),
+      passed: /[A-Za-z]/.test(password),
     },
     {
       label: t('sharePasswordNumber'),
-      test: (pwd) => /[0-9]/.test(pwd),
+      passed: /[0-9]/.test(password),
     },
   ]
-
-  const results = useMemo(() => {
-    return requirements.map((req) => ({
-      ...req,
-      passed: req.test(password),
-    }))
-  }, [password])
 
   const allPassed = results.every((r) => r.passed)
 

@@ -260,7 +260,7 @@ export default function GlobalSettingsPage() {
     } finally {
       setLogoUploading(false)
     }
-  }, [])
+  }, [t])
 
   // Stage logo removal for save
   const handleLogoRemove = useCallback(async () => {
@@ -297,7 +297,7 @@ export default function GlobalSettingsPage() {
     }
 
     loadSettings()
-  }, [applySecuritySettingsToForm, applySettingsToForm])
+  }, [applySecuritySettingsToForm, applySettingsToForm, t])
 
   const loadBlocklists = async () => {
     setBlocklistsLoading(true)

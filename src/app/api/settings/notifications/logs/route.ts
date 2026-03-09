@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+  const notificationsMessages = settingsMessages.notifications || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) return authResult
 
@@ -15,7 +21,7 @@ export async function GET(request: NextRequest) {
     {
       windowMs: 60 * 1000,
       maxRequests: 120,
-      message: 'Too many requests. Please slow down.',
+      message: notificationsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'settings-notifications-logs',
     authResult.id
@@ -57,7 +63,7 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error('Error fetching notification logs:', error)
-    return NextResponse.json({ error: 'Failed to fetch notification logs' }, { status: 500 })
+    return NextResponse.json({ error: notificationsMessages.failedToFetchNotificationLogs || 'Failed to fetch notification logs' }, { status: 500 })
   }
 }
 

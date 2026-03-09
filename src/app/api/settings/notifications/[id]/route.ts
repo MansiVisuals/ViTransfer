@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { decrypt, encrypt } from '@/lib/encryption'
 import { NOTIFICATION_EVENT_TYPES } from '@/lib/external-notifications/constants'
 import { updateNotificationDestinationSchema } from '@/lib/validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -22,6 +23,11 @@ function buildSubscriptionUpdates(input?: Record<string, boolean> | null) {
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+  const notificationsMessages = settingsMessages.notifications || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) return authResult
 
@@ -30,7 +36,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     {
       windowMs: 60 * 1000,
       maxRequests: 60,
-      message: 'Too many requests. Please slow down.',
+      message: notificationsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'settings-notifications-update',
     authResult.id
@@ -46,7 +52,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     })
 
     if (!existing) {
-      return NextResponse.json({ error: 'Notification destination not found' }, { status: 404 })
+      return NextResponse.json({ error: notificationsMessages.notificationDestinationNotFound || 'Notification destination not found' }, { status: 404 })
     }
 
     const json = await request.json()
@@ -54,7 +60,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
     if (parsed.provider !== existing.provider) {
       return NextResponse.json(
-        { error: 'Changing notification provider is not supported. Create a new destination instead.' },
+        { error: notificationsMessages.changingNotificationProviderNotSupported || 'Changing notification provider is not supported. Create a new destination instead.' },
         { status: 400 }
       )
     }
@@ -145,11 +151,16 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
-    return NextResponse.json({ error: 'Failed to update notification destination' }, { status: 500 })
+    return NextResponse.json({ error: notificationsMessages.failedToUpdateNotificationDestination || 'Failed to update notification destination' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+  const notificationsMessages = settingsMessages.notifications || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) return authResult
 
@@ -158,7 +169,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     {
       windowMs: 60 * 1000,
       maxRequests: 20,
-      message: 'Too many requests. Please slow down.',
+      message: notificationsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'settings-notifications-delete',
     authResult.id
@@ -171,6 +182,6 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     await prisma.notificationDestination.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete notification destination' }, { status: 500 })
+    return NextResponse.json({ error: notificationsMessages.failedToDeleteNotificationDestination || 'Failed to delete notification destination' }, { status: 500 })
   }
 }

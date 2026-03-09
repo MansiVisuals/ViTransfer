@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -10,11 +11,15 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   // Rate limiting: 120 requests per minute (session checks are frequent)
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 120,
-    message: 'Too many requests. Please slow down.'
+    message: authMessages.tooManySessionRequests || 'Too many requests. Please slow down.'
   }, 'session-check')
 
   if (rateLimitResult) {
@@ -57,7 +62,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Session check error:', error)
     return NextResponse.json(
-      { error: 'An error occurred checking session' },
+      { error: authMessages.errorOccurredCheckingSession || 'An error occurred checking session' },
       { status: 500 }
     )
   }

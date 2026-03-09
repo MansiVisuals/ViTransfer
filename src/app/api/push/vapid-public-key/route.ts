@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getVapidPublicKey } from '@/lib/push-notifications'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,10 +12,14 @@ export const dynamic = 'force-dynamic'
  * This endpoint is public - anyone can request the public key
  */
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const webPushMessages = messages?.settings?.webPush || {}
+
   // Rate limit: 30 requests per minute per IP (public endpoint)
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 1000, maxRequests: 30, message: 'Too many requests. Please wait.' },
+    { windowMs: 60 * 1000, maxRequests: 30, message: webPushMessages.tooManyVapidKeyRequests || 'Too many requests. Please wait.' },
     'vapid-key'
   )
   if (rateLimitResult) return rateLimitResult
@@ -25,7 +30,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[API] Failed to get VAPID public key:', error)
     return NextResponse.json(
-      { error: 'Failed to get VAPID public key' },
+      { error: webPushMessages.failedToGetVapidKey || 'Failed to get VAPID public key' },
       { status: 500 }
     )
   }

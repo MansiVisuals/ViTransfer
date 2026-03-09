@@ -6,6 +6,7 @@ import { getFilePath, deleteFile, sanitizeFilenameForHeader } from '@/lib/storag
 import { verifyProjectAccess } from '@/lib/project-access'
 import { createReadStream } from 'fs'
 import fs from 'fs'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -16,6 +17,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; assetId: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   const { id: videoId, assetId } = await params
 
   // Rate limiting
@@ -24,7 +29,7 @@ export async function GET(
     {
       windowMs: 60 * 1000,
       maxRequests: 30,
-      message: 'Too many download requests. Please slow down.',
+  message: videoMessages.tooManyAssetDownloadRequests || 'Too many download requests. Please slow down.',
     },
     'video-asset-download'
   )
@@ -44,7 +49,7 @@ export async function GET(
     })
 
     if (!asset || asset.videoId !== videoId) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  return NextResponse.json({ error: messages?.share?.assetNotFound || 'Asset not found' }, { status: 404 })
     }
 
     const project = asset.video.project
@@ -55,7 +60,7 @@ export async function GET(
       requiredPermission: 'download',
     })
     if (!accessCheck.authorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
     // For non-admins, verify asset download settings and video approval
@@ -63,7 +68,7 @@ export async function GET(
       // Check if project allows asset downloads
       if (!project.allowAssetDownload) {
         return NextResponse.json(
-          { error: 'Asset downloads are not allowed for this project' },
+          { error: videoMessages.assetDownloadsNotAllowedProject || 'Asset downloads are not allowed for this project' },
           { status: 403 }
         )
       }
@@ -71,7 +76,7 @@ export async function GET(
       // Check if video is approved (assets only available for approved videos)
       if (!asset.video.approved) {
         return NextResponse.json(
-          { error: 'Assets are only available for approved videos' },
+          { error: videoMessages.assetsApprovedOnly || 'Assets are only available for approved videos' },
           { status: 403 }
         )
       }
@@ -81,7 +86,7 @@ export async function GET(
     const fullPath = getFilePath(asset.storagePath)
     const stat = await fs.promises.stat(fullPath)
     if (!stat.isFile()) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+  return NextResponse.json({ error: videoMessages.fileNotFound || 'File not found' }, { status: 404 })
     }
 
     const sanitizedFilename = sanitizeFilenameForHeader(asset.fileName)
@@ -113,7 +118,7 @@ export async function GET(
   } catch (error) {
     console.error('Error downloading asset:', error)
     return NextResponse.json(
-      { error: 'Failed to download asset' },
+      { error: videoMessages.failedToDownloadAsset || 'Failed to download asset' },
       { status: 500 }
     )
   }
@@ -124,6 +129,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; assetId: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const videoMessages = messages?.videos || {}
+
   const { id: videoId, assetId } = await params
 
   // Authentication - admin only
@@ -138,7 +147,7 @@ export async function DELETE(
     {
       windowMs: 60 * 1000,
       maxRequests: 20,
-      message: 'Too many delete requests. Please slow down.',
+  message: videoMessages.tooManyAssetDeleteRequests || 'Too many delete requests. Please slow down.',
     },
     'video-asset-delete'
   )
@@ -154,7 +163,7 @@ export async function DELETE(
     })
 
     if (!asset || asset.videoId !== videoId) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  return NextResponse.json({ error: messages?.share?.assetNotFound || 'Asset not found' }, { status: 404 })
     }
 
     // Check if this asset is being used as the video's thumbnail
@@ -194,7 +203,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting asset:', error)
     return NextResponse.json(
-      { error: 'Failed to delete asset' },
+      { error: videoMessages.failedToDeleteAssetApi || 'Failed to delete asset' },
       { status: 500 }
     )
   }

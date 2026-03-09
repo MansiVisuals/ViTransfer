@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import { Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
@@ -9,43 +8,31 @@ interface PasswordRequirementsProps {
   className?: string
 }
 
-interface Requirement {
-  label: string
-  test: (password: string) => boolean
-}
-
 export function PasswordRequirements({ password, className = '' }: PasswordRequirementsProps) {
   const t = useTranslations('auth')
 
-  const requirements: Requirement[] = [
+  const results = [
     {
       label: t('passwordMinChars'),
-      test: (pwd) => pwd.length >= 12,
+      passed: password.length >= 12,
     },
     {
       label: t('passwordUppercase'),
-      test: (pwd) => /[A-Z]/.test(pwd),
+      passed: /[A-Z]/.test(password),
     },
     {
       label: t('passwordLowercase'),
-      test: (pwd) => /[a-z]/.test(pwd),
+      passed: /[a-z]/.test(password),
     },
     {
       label: t('passwordNumber'),
-      test: (pwd) => /[0-9]/.test(pwd),
+      passed: /[0-9]/.test(password),
     },
     {
       label: t('passwordSpecial'),
-      test: (pwd) => /[^A-Za-z0-9]/.test(pwd),
+      passed: /[^A-Za-z0-9]/.test(password),
     },
   ]
-
-  const results = useMemo(() => {
-    return requirements.map((req) => ({
-      ...req,
-      passed: req.test(password),
-    }))
-  }, [password])
 
   const allPassed = results.every((r) => r.passed)
 

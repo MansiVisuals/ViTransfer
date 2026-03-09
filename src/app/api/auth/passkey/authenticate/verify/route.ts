@@ -7,6 +7,7 @@ import { issueAdminTokens } from '@/lib/auth'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { getAppUrl } from '@/lib/url'
 import { safeParseBody } from '@/lib/validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -35,6 +36,10 @@ export const runtime = 'nodejs'
  * - { success: false, error: string } on failure
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     // Parse request body
     const parsed = await safeParseBody(request)
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     if (!response || !response.id) {
       return NextResponse.json(
-        { success: false, error: 'Invalid authentication response' },
+        { success: false, error: authMessages.invalidAuthenticationResponse || 'Invalid authentication response' },
         { status: 400 }
       )
     }
@@ -57,7 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Too many failed login attempts. Please try again later.',
+          error: authMessages.tooManyFailedLoginAttemptsGeneric || 'Too many failed login attempts. Please try again later.',
           retryAfter: rateLimitCheck.retryAfter,
         },
         {
@@ -83,20 +88,20 @@ export async function POST(request: NextRequest) {
         // Lockout just triggered — send SECURITY_ALERT (not ADMIN_ACCESS)
         void enqueueExternalNotification({
           eventType: 'SECURITY_ALERT',
-          title: 'Security Alert',
-          body: 'Admin login locked out after too many failed attempts',
+          title: authMessages.securityAlertTitle || 'Security Alert',
+          body: authMessages.adminLoginLockedOutAfterTooManyAttempts || 'Admin login locked out after too many failed attempts',
           notifyType: 'failure',
           pushData: {
             ip: ipAddress,
-            title: 'Security Alert',
-            body: 'Admin login locked out after too many failed attempts',
+            title: authMessages.securityAlertTitle || 'Security Alert',
+            body: authMessages.adminLoginLockedOutAfterTooManyAttempts || 'Admin login locked out after too many failed attempts',
           },
         }).catch(() => {})
       } else {
         // Normal failed attempt — send ADMIN_ACCESS warning
         void enqueueExternalNotification({
           eventType: 'ADMIN_ACCESS',
-          title: 'Failed Login Attempt',
+          title: authMessages.failedLoginAttemptTitle || 'Failed Login Attempt',
           body: await (async () => {
             const baseUrl = await getAppUrl(request).catch(() => '')
             const fallbackLink = baseUrl ? `${baseUrl}/login` : null
@@ -115,19 +120,19 @@ export async function POST(request: NextRequest) {
               }
             })()
 
-            return ['Someone tried to log in via passkey', link ? `Link: ${link}` : null].filter(Boolean).join('\n')
+            return [authMessages.someoneTriedToLogInViaPasskey || 'Someone tried to log in via passkey', link ? `Link: ${link}` : null].filter(Boolean).join('\n')
           })(),
           notifyType: 'warning',
           pushData: {
             ip: ipAddress,
-            title: 'Failed Login Attempt',
-            body: 'Someone tried to log in via passkey',
+            title: authMessages.failedLoginAttemptTitle || 'Failed Login Attempt',
+            body: authMessages.someoneTriedToLogInViaPasskey || 'Someone tried to log in via passkey',
           },
         }).catch(() => {})
       }
 
       return NextResponse.json(
-        { success: false, error: result.error || 'Authentication failed' },
+        { success: false, error: result.error || authMessages.authenticationFailed || 'Authentication failed' },
         { status: 401 }
       )
     }
@@ -140,14 +145,16 @@ export async function POST(request: NextRequest) {
 
     void enqueueExternalNotification({
       eventType: 'ADMIN_ACCESS',
-      title: 'Admin Login',
-      body: `${result.user.name || result.user.email} logged in via passkey`,
+      title: authMessages.adminLogin || 'Admin Login',
+      body: authMessages.userLoggedInViaPasskey?.replace('{user}', result.user.name || result.user.email)
+        || `${result.user.name || result.user.email} logged in via passkey`,
       notifyType: 'info',
       pushData: {
         email: result.user.email,
         ip: ipAddress,
-        title: 'Admin Login',
-        body: `${result.user.name || result.user.email} logged in via passkey`,
+        title: authMessages.adminLogin || 'Admin Login',
+        body: authMessages.userLoggedInViaPasskey?.replace('{user}', result.user.name || result.user.email)
+          || `${result.user.name || result.user.email} logged in via passkey`,
       },
     }).catch(() => {})
 
@@ -173,7 +180,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to verify PassKey authentication',
+        error: authMessages.failedToVerifyPasskeyAuthentication || 'Failed to verify PassKey authentication',
       },
       { status: 500 }
     )

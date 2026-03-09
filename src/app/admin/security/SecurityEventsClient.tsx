@@ -150,9 +150,9 @@ export default function SecurityEventsClient() {
     } finally {
       setLoading(false)
     }
-  }, [pagination.page, pagination.limit, typeFilter, severityFilter, stats.length, SEVERITY_OPTIONS.length])
+  }, [pagination.page, pagination.limit, typeFilter, severityFilter, stats.length, SEVERITY_OPTIONS.length, t])
 
-  const loadRateLimits = async () => {
+  const loadRateLimits = useCallback(async () => {
     try {
       const response = await apiFetch('/api/security/rate-limits')
       if (!response.ok) throw new Error(t('failedToLoadRateLimits'))
@@ -162,7 +162,7 @@ export default function SecurityEventsClient() {
     } catch (error) {
       console.error('Error loading rate limits:', error)
     }
-  }
+  }, [t])
 
   const handleUnblockRateLimit = async (key: string) => {
     if (!confirm(t('unblockConfirm'))) {
@@ -213,12 +213,12 @@ export default function SecurityEventsClient() {
     if (showRateLimitsModal) {
       loadRateLimits()
     }
-  }, [showRateLimitsModal])
+  }, [showRateLimitsModal, loadRateLimits])
 
   // Prime rate limit data so counts show immediately
   useEffect(() => {
     loadRateLimits()
-  }, [])
+  }, [loadRateLimits])
 
   const toggleDetails = (eventId: string) => {
     setExpandedDetails(prev => {

@@ -4,6 +4,7 @@ import { testEmailConnection } from '@/lib/email'
 import { emailSchema } from '@/lib/validation'
 import { prisma } from '@/lib/db'
 import { decrypt } from '@/lib/encryption'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -12,6 +13,11 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+  const emailMessages = settingsMessages.email || {}
+
   try {
     // SECURITY: Require admin authentication
     const authResult = await requireApiAdmin(request)
@@ -23,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (!testEmail) {
       return NextResponse.json(
-        { error: 'Test email address is required' },
+        { error: emailMessages.testEmailAddressRequired || 'Test email address is required' },
         { status: 400 }
       )
     }
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest) {
     const parsed = emailSchema.safeParse(testEmail)
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid email address format' },
+        { error: emailMessages.invalidEmailAddressFormat || 'Invalid email address format' },
         { status: 400 }
       )
     }
@@ -55,11 +61,11 @@ export async function POST(request: NextRequest) {
 
     // Provide generic error messages without exposing config details
     if (error.message?.includes('SMTP settings are not configured')) {
-      errorMessage = 'SMTP settings are not configured. Please configure email settings first.'
+      errorMessage = emailMessages.smtpSettingsNotConfigured || 'SMTP settings are not configured. Please configure email settings first.'
     } else if (error.code === 'EAUTH') {
-      errorMessage = 'Authentication failed. Please check your SMTP credentials.'
+      errorMessage = emailMessages.smtpAuthenticationFailed || 'Authentication failed. Please check your SMTP credentials.'
     } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
-      errorMessage = 'Could not connect to SMTP server. Please check your settings.'
+      errorMessage = emailMessages.couldNotConnectToSmtpServer || 'Could not connect to SMTP server. Please check your settings.'
     }
 
     return NextResponse.json(

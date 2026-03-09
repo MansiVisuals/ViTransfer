@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { hashPassword, validatePassword } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -12,6 +13,10 @@ export const dynamic = 'force-dynamic'
 
 // GET /api/users - List all users
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const usersMessages = messages?.users || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -21,7 +26,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 100,
-    message: 'Too many requests. Please slow down.'
+    message: usersMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'admin-users-list')
 
   if (rateLimitResult) {
@@ -48,7 +53,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Unable to process request' },
+      { error: usersMessages.unableToProcessRequest || 'Unable to process request' },
       { status: 500 }
     )
   }
@@ -56,6 +61,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/users - Create a new admin user
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const usersMessages = messages?.users || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -65,7 +74,7 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
-    message: 'Too many user creation requests. Please slow down.'
+    message: usersMessages.tooManyUserCreationRequests || 'Too many user creation requests. Please slow down.'
   }, 'admin-users-create')
 
   if (rateLimitResult) {
@@ -79,7 +88,7 @@ export async function POST(request: NextRequest) {
     // Validation
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: usersMessages.emailAndPasswordRequired || 'Email and password are required' },
         { status: 400 }
       )
     }
@@ -88,7 +97,7 @@ export async function POST(request: NextRequest) {
     const passwordValidation = validatePassword(password)
     if (!passwordValidation.isValid) {
       return NextResponse.json(
-        { error: 'Password does not meet requirements', details: passwordValidation.errors },
+        { error: usersMessages.passwordDoesNotMeetRequirements || 'Password does not meet requirements', details: passwordValidation.errors },
         { status: 400 }
       )
     }
@@ -100,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
+        { error: usersMessages.userWithEmailAlreadyExists || 'User with this email already exists' },
         { status: 409 }
       )
     }
@@ -113,7 +122,7 @@ export async function POST(request: NextRequest) {
 
       if (existingUsername) {
         return NextResponse.json(
-          { error: 'Username already taken' },
+          { error: usersMessages.usernameAlreadyTaken || 'Username already taken' },
           { status: 409 }
         )
       }
@@ -145,7 +154,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ user }, { status: 201 })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Operation failed' },
+      { error: usersMessages.operationFailed || 'Operation failed' },
       { status: 500 }
     )
   }

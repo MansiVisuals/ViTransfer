@@ -7,6 +7,7 @@ import { getClientIpAddress } from '@/lib/utils'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { getAppUrl } from '@/lib/url'
 import { prisma } from '@/lib/db'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import crypto from 'crypto'
 export const runtime = 'nodejs'
 
@@ -35,6 +36,10 @@ export const dynamic = 'force-dynamic'
  * - 6 attempts allows for typos while preventing automated attacks
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
@@ -72,7 +77,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          error: 'Too many failed login attempts for this account. Please try again later.',
+          error: authMessages.tooManyFailedLoginAttempts || 'Too many failed login attempts for this account. Please try again later.',
           retryAfter: rateLimitCheck.retryAfter
         },
         {
@@ -107,21 +112,23 @@ export async function POST(request: NextRequest) {
         // Lockout just triggered — send SECURITY_ALERT (not ADMIN_ACCESS)
         void enqueueExternalNotification({
           eventType: 'SECURITY_ALERT',
-          title: 'Security Alert',
-          body: `Admin login locked out for ${email} after too many failed attempts`,
+          title: authMessages.securityAlertTitle || 'Security Alert',
+          body: authMessages.adminLoginLockedOutForEmailAfterTooManyAttempts?.replace('{email}', email)
+            || `Admin login locked out for ${email} after too many failed attempts`,
           notifyType: 'failure',
           pushData: {
             email,
             ip: ipAddress,
-            title: 'Security Alert',
-            body: `Admin login locked out for ${email} after too many failed attempts`,
+            title: authMessages.securityAlertTitle || 'Security Alert',
+            body: authMessages.adminLoginLockedOutForEmailAfterTooManyAttempts?.replace('{email}', email)
+              || `Admin login locked out for ${email} after too many failed attempts`,
           },
         }).catch(() => {})
       } else {
         // Normal failed attempt — send ADMIN_ACCESS warning
         void enqueueExternalNotification({
           eventType: 'ADMIN_ACCESS',
-          title: 'Failed Login Attempt',
+          title: authMessages.failedLoginAttemptTitle || 'Failed Login Attempt',
           body: await (async () => {
             const baseUrl = await getAppUrl(request).catch(() => '')
             const fallbackLink = baseUrl ? `${baseUrl}/login` : null
@@ -141,7 +148,8 @@ export async function POST(request: NextRequest) {
             })()
 
             return [
-              `Someone tried to log in with ${email} via password`,
+              authMessages.someoneTriedToLogInWithEmailViaPassword?.replace('{email}', email)
+                || `Someone tried to log in with ${email} via password`,
               link ? `Link: ${link}` : null,
             ]
               .filter(Boolean)
@@ -151,14 +159,15 @@ export async function POST(request: NextRequest) {
           pushData: {
             email,
             ip: ipAddress,
-            title: 'Failed Login Attempt',
-            body: `Someone tried to log in with ${email} via password`,
+            title: authMessages.failedLoginAttemptTitle || 'Failed Login Attempt',
+            body: authMessages.someoneTriedToLogInWithEmailViaPassword?.replace('{email}', email)
+              || `Someone tried to log in with ${email} via password`,
           },
         }).catch(() => {})
       }
 
       return NextResponse.json(
-        { error: 'Invalid username/email or password' },
+        { error: authMessages.invalidUsernameEmailOrPassword || 'Invalid username/email or password' },
         { status: 401 }
       )
     }
@@ -186,9 +195,9 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         { 
-          error: 'Passkey required',
+          error: authMessages.passkeyRequired || 'Passkey required',
           passkeyRequired: true,
-          message: 'This account has passkey authentication enabled. Please use your passkey to sign in for enhanced security.',
+          message: authMessages.passkeyRequiredMessage || 'This account has passkey authentication enabled. Please use your passkey to sign in for enhanced security.',
         },
         { status: 403 }
       )
@@ -215,14 +224,16 @@ export async function POST(request: NextRequest) {
 
     void enqueueExternalNotification({
       eventType: 'ADMIN_ACCESS',
-      title: 'Admin Login',
-      body: `${user.name || user.email} logged in via password`,
+      title: authMessages.adminLogin || 'Admin Login',
+      body: authMessages.userLoggedInViaPassword?.replace('{user}', user.name || user.email)
+        || `${user.name || user.email} logged in via password`,
       notifyType: 'info',
       pushData: {
         email: user.email,
         ip: ipAddress,
-        title: 'Admin Login',
-        body: `${user.name || user.email} logged in via password`,
+        title: authMessages.adminLogin || 'Admin Login',
+        body: authMessages.userLoggedInViaPassword?.replace('{user}', user.name || user.email)
+          || `${user.name || user.email} logged in via password`,
       },
     }).catch(() => {})
 
@@ -244,7 +255,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'An error occurred during login' },
+      { error: authMessages.errorOccurredDuringLogin || 'An error occurred during login' },
       { status: 500 }
     )
   }

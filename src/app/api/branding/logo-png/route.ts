@@ -3,6 +3,7 @@ import { getFilePath } from '@/lib/storage'
 import { prisma } from '@/lib/db'
 import fs from 'fs/promises'
 import sharp from 'sharp'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -43,6 +44,10 @@ function buildDefaultLogoSvg(accentHex: string, size: number): string {
  * Uses custom uploaded logo if available, otherwise generates default logo with accent color
  */
 export async function GET() {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   try {
     // Check if custom logo exists
     const customLogoPath = getFilePath(STORAGE_PATH)
@@ -138,6 +143,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('[BRANDING:LOGO-PNG] Error:', error)
-    return NextResponse.json({ error: 'Failed to generate logo' }, { status: 500 })
+    return NextResponse.json({ error: settingsMessages.failedToGenerateLogo || 'Failed to generate logo' }, { status: 500 })
   }
 }

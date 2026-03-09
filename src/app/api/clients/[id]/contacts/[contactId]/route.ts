@@ -4,7 +4,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
-import { SUPPORTED_LOCALES } from '@/i18n/locale'
+import { SUPPORTED_LOCALES, getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 interface RouteParams {
   params: Promise<{ id: string; contactId: string }>
@@ -18,11 +18,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return authResult
   }
 
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const contactMessages = messages?.clientContacts
+
   // 2. RATE LIMITING
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many requests. Please slow down.'
+    message: contactMessages?.tooManyRequests || 'Too many requests. Please slow down.'
   }, 'clients-contacts-update')
   if (rateLimitResult) return rateLimitResult
 
@@ -42,18 +46,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     })
 
     if (!existingContact) {
-      return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
+      return NextResponse.json({ error: contactMessages?.contactNotFound || 'Contact not found' }, { status: 404 })
     }
 
     const updateData: { name?: string; email?: string | null; language?: string | null } = {}
 
     if (name !== undefined) {
       if (typeof name !== 'string' || name.trim().length === 0) {
-        return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
+        return NextResponse.json({ error: contactMessages?.contactNameRequired || 'Contact name is required' }, { status: 400 })
       }
       const sanitizedName = sanitizeText(name)
       if (sanitizedName.length === 0) {
-        return NextResponse.json({ error: 'Contact name is required' }, { status: 400 })
+        return NextResponse.json({ error: contactMessages?.contactNameRequired || 'Contact name is required' }, { status: 400 })
       }
       updateData.name = sanitizedName
     }
@@ -61,7 +65,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (email !== undefined) {
       const trimmedEmail = email?.trim() || null
       if (trimmedEmail && !trimmedEmail.includes('@')) {
-        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
+        return NextResponse.json({ error: contactMessages?.invalidEmailFormat || 'Invalid email format' }, { status: 400 })
       }
       updateData.email = trimmedEmail
     }
@@ -69,7 +73,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (language !== undefined) {
       const contactLanguage = language?.trim() || null
       if (contactLanguage && !SUPPORTED_LOCALES.includes(contactLanguage as any)) {
-        return NextResponse.json({ error: 'Unsupported language' }, { status: 400 })
+        return NextResponse.json({ error: contactMessages?.unsupportedLanguage || 'Unsupported language' }, { status: 400 })
       }
       updateData.language = contactLanguage
     }
@@ -82,7 +86,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ contact })
   } catch (error) {
     console.error('Failed to update contact:', error)
-    return NextResponse.json({ error: 'Failed to update contact' }, { status: 500 })
+    return NextResponse.json({ error: contactMessages?.failedToUpdateContact || 'Failed to update contact' }, { status: 500 })
   }
 }
 
@@ -94,11 +98,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return authResult
   }
 
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const contactMessages = messages?.clientContacts
+
   // 2. RATE LIMITING
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many requests. Please slow down.'
+    message: contactMessages?.tooManyRequests || 'Too many requests. Please slow down.'
   }, 'clients-contacts-delete')
   if (rateLimitResult) return rateLimitResult
 
@@ -115,7 +123,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     })
 
     if (!existingContact) {
-      return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
+      return NextResponse.json({ error: contactMessages?.contactNotFound || 'Contact not found' }, { status: 404 })
     }
 
     await prisma.clientContact.delete({
@@ -125,6 +133,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Failed to delete contact:', error)
-    return NextResponse.json({ error: 'Failed to delete contact' }, { status: 500 })
+    return NextResponse.json({ error: contactMessages?.failedToDeleteContact || 'Failed to delete contact' }, { status: 500 })
   }
 }

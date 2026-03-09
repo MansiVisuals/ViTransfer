@@ -9,6 +9,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { safeParseBody } from '@/lib/validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 /**
  * POST /api/auth/device/token
@@ -26,12 +27,15 @@ import { safeParseBody } from '@/lib/validation'
  */
 export async function POST(request: NextRequest) {
   const ipAddress = getClientIpAddress(request)
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
 
   // Rate limit: 120 requests per 10 minutes per IP (polling at 5s = 120 in 10min)
   const rateLimitResult = await rateLimit(request, {
     windowMs: 10 * 60 * 1000,
     maxRequests: 120,
-    message: 'Too many token requests.',
+    message: authMessages.tooManyTokenRequests || 'Too many token requests.',
   }, 'device-token')
 
   if (rateLimitResult) {

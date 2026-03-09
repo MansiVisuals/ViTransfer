@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
 import crypto from 'crypto'
 import { parseBearerToken, refreshAdminTokens, revokePresentedTokens } from '@/lib/auth'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -37,11 +38,15 @@ export const dynamic = 'force-dynamic'
  * 5. Explicit bearer tokens only (no implicit browser credentials)
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     const presentedToken = parseBearerToken(request)
     if (!presentedToken) {
       return NextResponse.json(
-        { error: 'No refresh token provided' },
+        { error: authMessages.noRefreshTokenProvided || 'No refresh token provided' },
         { status: 401 }
       )
     }
@@ -52,7 +57,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: 8,
-      message: 'Too many refresh attempts. Please wait a moment.',
+      message: authMessages.tooManyRefreshAttempts || 'Too many refresh attempts. Please wait a moment.',
     }, `auth-refresh:${tokenHash}`)
     if (rateLimitResult) return rateLimitResult
 
@@ -61,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (!tokens) {
       await revokePresentedTokens({ refreshToken: presentedToken })
-      return NextResponse.json({ error: 'Invalid or expired refresh token' }, { status: 401 })
+      return NextResponse.json({ error: authMessages.invalidOrExpiredRefreshToken || 'Invalid or expired refresh token' }, { status: 401 })
     }
 
     return NextResponse.json({
@@ -76,7 +81,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[AUTH] Token refresh error:', error)
     return NextResponse.json(
-      { error: 'Token refresh failed' },
+      { error: authMessages.tokenRefreshFailed || 'Token refresh failed' },
       { status: 500 }
     )
   }

@@ -84,53 +84,14 @@ export default function VideoComparison({
     }
   }, [])
 
-  const handlePlayPause = useCallback(() => {
-    const a = videoRefA.current
-    const b = videoRefB.current
-    if (!a || !b) return
-
-    if (isPlaying) {
-      a.pause()
-      b.pause()
-      setIsPlaying(false)
-    } else {
-      // Sync B to A's position before playing
-      b.currentTime = a.currentTime
-      // Play both together
-      Promise.all([a.play(), b.play()]).catch(() => {})
-      setIsPlaying(true)
-    }
-  }, [isPlaying])
-
-  const handleSeek = useCallback((time: number) => {
+  const handleSeek = (time: number) => {
     const a = videoRefA.current
     const b = videoRefB.current
     if (a) a.currentTime = time
     if (b) b.currentTime = time
     currentTimeRef.current = time
     setCurrentTime(time)
-  }, [])
-
-  const handleFrameStep = useCallback((direction: 'forward' | 'backward') => {
-    const a = videoRefA.current
-    const b = videoRefB.current
-
-    // Pause both before stepping
-    if (a && !a.paused) a.pause()
-    if (b && !b.paused) b.pause()
-    setIsPlaying(false)
-
-    const frameDuration = 1 / videoFps
-    const current = a?.currentTime ?? currentTimeRef.current
-    const newTime = direction === 'forward'
-      ? Math.min(videoDuration, current + frameDuration)
-      : Math.max(0, current - frameDuration)
-
-    if (a) a.currentTime = newTime
-    if (b) b.currentTime = newTime
-    currentTimeRef.current = newTime
-    setCurrentTime(newTime)
-  }, [videoFps, videoDuration])
+  }
 
   const handleSpeedChange = useCallback((speed: number) => {
     setPlaybackSpeed(speed)
@@ -198,6 +159,42 @@ export default function VideoComparison({
 
   // Keyboard shortcuts — match the main player exactly (Ctrl+ prefix)
   useEffect(() => {
+    const togglePlayPause = () => {
+      const a = videoRefA.current
+      const b = videoRefB.current
+      if (!a || !b) return
+
+      if (isPlaying) {
+        a.pause()
+        b.pause()
+        setIsPlaying(false)
+      } else {
+        b.currentTime = a.currentTime
+        Promise.all([a.play(), b.play()]).catch(() => {})
+        setIsPlaying(true)
+      }
+    }
+
+    const stepFrame = (direction: 'forward' | 'backward') => {
+      const a = videoRefA.current
+      const b = videoRefB.current
+
+      if (a && !a.paused) a.pause()
+      if (b && !b.paused) b.pause()
+      setIsPlaying(false)
+
+      const frameDuration = 1 / videoFps
+      const current = a?.currentTime ?? currentTimeRef.current
+      const newTime = direction === 'forward'
+        ? Math.min(videoDuration, current + frameDuration)
+        : Math.max(0, current - frameDuration)
+
+      if (a) a.currentTime = newTime
+      if (b) b.currentTime = newTime
+      currentTimeRef.current = newTime
+      setCurrentTime(newTime)
+    }
+
     const handleKeyboard = (e: KeyboardEvent) => {
       // Escape: close comparison (no Ctrl needed)
       if (e.key === 'Escape') {
@@ -209,7 +206,7 @@ export default function VideoComparison({
       if (e.ctrlKey && e.code === 'Space') {
         e.preventDefault()
         e.stopPropagation()
-        handlePlayPause()
+        togglePlayPause()
         return
       }
 
@@ -253,7 +250,7 @@ export default function VideoComparison({
       if (e.ctrlKey && e.code === 'KeyJ') {
         e.preventDefault()
         e.stopPropagation()
-        handleFrameStep('backward')
+        stepFrame('backward')
         return
       }
 
@@ -261,7 +258,7 @@ export default function VideoComparison({
       if (e.ctrlKey && e.code === 'KeyL') {
         e.preventDefault()
         e.stopPropagation()
-        handleFrameStep('forward')
+        stepFrame('forward')
         return
       }
     }
@@ -269,13 +266,16 @@ export default function VideoComparison({
     // Use capture phase like the main player
     window.addEventListener('keydown', handleKeyboard, { capture: true })
     return () => window.removeEventListener('keydown', handleKeyboard, { capture: true })
-  }, [onClose, handlePlayPause, handleFrameStep])
+  }, [onClose, isPlaying, videoDuration, videoFps])
 
   // Pause on unmount
   useEffect(() => {
+    const videoA = videoRefA.current
+    const videoB = videoRefB.current
+
     return () => {
-      videoRefA.current?.pause()
-      videoRefB.current?.pause()
+      videoA?.pause()
+      videoB?.pause()
     }
   }, [])
 
@@ -390,7 +390,21 @@ export default function VideoComparison({
                     playsInline
                     preload="metadata"
                     onLoadedMetadata={handleLoadedMetadata}
-                    onClick={handlePlayPause}
+                    onClick={() => {
+                      const a = videoRefA.current
+                      const b = videoRefB.current
+                      if (!a || !b) return
+
+                      if (isPlaying) {
+                        a.pause()
+                        b.pause()
+                        setIsPlaying(false)
+                      } else {
+                        b.currentTime = a.currentTime
+                        Promise.all([a.play(), b.play()]).catch(() => {})
+                        setIsPlaying(true)
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -413,7 +427,21 @@ export default function VideoComparison({
                     playsInline
                     preload="metadata"
                     onLoadedMetadata={handleLoadedMetadata}
-                    onClick={handlePlayPause}
+                    onClick={() => {
+                      const a = videoRefA.current
+                      const b = videoRefB.current
+                      if (!a || !b) return
+
+                      if (isPlaying) {
+                        a.pause()
+                        b.pause()
+                        setIsPlaying(false)
+                      } else {
+                        b.currentTime = a.currentTime
+                        Promise.all([a.play(), b.play()]).catch(() => {})
+                        setIsPlaying(true)
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -444,9 +472,41 @@ export default function VideoComparison({
             videoDuration={videoDuration}
             currentTime={currentTime}
             isPlaying={isPlaying}
-            onPlayPause={handlePlayPause}
+            onPlayPause={() => {
+              const a = videoRefA.current
+              const b = videoRefB.current
+              if (!a || !b) return
+
+              if (isPlaying) {
+                a.pause()
+                b.pause()
+                setIsPlaying(false)
+              } else {
+                b.currentTime = a.currentTime
+                Promise.all([a.play(), b.play()]).catch(() => {})
+                setIsPlaying(true)
+              }
+            }}
             onSeek={handleSeek}
-            onFrameStep={handleFrameStep}
+            onFrameStep={(direction) => {
+              const a = videoRefA.current
+              const b = videoRefB.current
+
+              if (a && !a.paused) a.pause()
+              if (b && !b.paused) b.pause()
+              setIsPlaying(false)
+
+              const frameDuration = 1 / videoFps
+              const current = a?.currentTime ?? currentTimeRef.current
+              const newTime = direction === 'forward'
+                ? Math.min(videoDuration, current + frameDuration)
+                : Math.max(0, current - frameDuration)
+
+              if (a) a.currentTime = newTime
+              if (b) b.currentTime = newTime
+              currentTimeRef.current = newTime
+              setCurrentTime(newTime)
+            }}
             mode={mode}
             onModeChange={setMode}
             playbackSpeed={playbackSpeed}

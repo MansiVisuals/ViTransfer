@@ -3,6 +3,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { initStorage, uploadFile, deleteFile, getFilePath } from '@/lib/storage'
 import { prisma } from '@/lib/db'
 import fs from 'fs/promises'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -67,28 +68,32 @@ function isSafeSvg(svg: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const auth = await requireApiAdmin(request)
   if (auth instanceof Response) return auth
 
   const contentType = request.headers.get('content-type') || ''
   if (!contentType.includes('image/svg+xml')) {
-    return NextResponse.json({ error: 'Only SVG files are allowed' }, { status: 400 })
+    return NextResponse.json({ error: settingsMessages.onlySvg || 'Only SVG files are allowed' }, { status: 400 })
   }
 
   const buffer = Buffer.from(await request.arrayBuffer())
   if (buffer.byteLength > MAX_SIZE_BYTES) {
-    return NextResponse.json({ error: 'SVG too large (max 300KB)' }, { status: 400 })
+    return NextResponse.json({ error: settingsMessages.svgTooLarge || 'SVG too large (max 300KB)' }, { status: 400 })
   }
 
   // Magic check: require "<svg" near the start and the XML signature
   const leading = buffer.slice(0, 256).toString('utf-8').trimStart()
   if (!leading.toLowerCase().startsWith('<svg') && !leading.toLowerCase().startsWith('<?xml')) {
-    return NextResponse.json({ error: 'Invalid SVG file' }, { status: 400 })
+    return NextResponse.json({ error: settingsMessages.invalidSvg || 'Invalid SVG file' }, { status: 400 })
   }
 
   const svgText = buffer.toString('utf-8')
   if (!isSafeSvg(svgText)) {
-    return NextResponse.json({ error: 'Invalid or unsafe SVG content' }, { status: 400 })
+    return NextResponse.json({ error: settingsMessages.unsafeSvg || 'Invalid or unsafe SVG content' }, { status: 400 })
   }
 
   try {
@@ -116,11 +121,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ path: '/api/branding/logo' })
   } catch (error) {
     console.error('[SETTINGS:LOGO] Upload failed:', error)
-    return NextResponse.json({ error: 'Failed to upload logo' }, { status: 500 })
+    return NextResponse.json({ error: settingsMessages.failedToUploadLogo || 'Failed to upload logo' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+
   const auth = await requireApiAdmin(request)
   if (auth instanceof Response) return auth
 
@@ -138,6 +147,6 @@ export async function DELETE(request: NextRequest) {
     return new NextResponse(null, { status: 204 })
   } catch (error) {
     console.error('[SETTINGS:LOGO] Delete failed:', error)
-    return NextResponse.json({ error: 'Failed to delete logo' }, { status: 500 })
+    return NextResponse.json({ error: settingsMessages.failedToRemoveLogo || 'Failed to delete logo' }, { status: 500 })
   }
 }

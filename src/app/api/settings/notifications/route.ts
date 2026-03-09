@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { encrypt } from '@/lib/encryption'
 import { NOTIFICATION_EVENT_TYPES } from '@/lib/external-notifications/constants'
 import { createNotificationDestinationSchema } from '@/lib/validation'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,6 +32,11 @@ function buildSubscriptions(input?: Record<string, boolean> | null) {
 }
 
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+  const notificationsMessages = settingsMessages.notifications || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) return authResult
 
@@ -39,7 +45,7 @@ export async function GET(request: NextRequest) {
     {
       windowMs: 60 * 1000,
       maxRequests: 120,
-      message: 'Too many requests. Please slow down.',
+      message: notificationsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'settings-notifications-read',
     authResult.id
@@ -72,11 +78,16 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error('Error fetching notification destinations:', error)
-    return NextResponse.json({ error: 'Failed to fetch notification destinations' }, { status: 500 })
+    return NextResponse.json({ error: notificationsMessages.failedToFetchNotificationDestinations || 'Failed to fetch notification destinations' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+  const notificationsMessages = settingsMessages.notifications || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) return authResult
 
@@ -85,7 +96,7 @@ export async function POST(request: NextRequest) {
     {
       windowMs: 60 * 1000,
       maxRequests: 20,
-      message: 'Too many requests. Please slow down.',
+      message: notificationsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.',
     },
     'settings-notifications-create',
     authResult.id
@@ -141,6 +152,6 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
-    return NextResponse.json({ error: 'Failed to create notification destination' }, { status: 500 })
+    return NextResponse.json({ error: notificationsMessages.failedToCreateNotificationDestination || 'Failed to create notification destination' }, { status: 500 })
   }
 }

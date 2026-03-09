@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 // GET /api/clients/search - Search clients for autocomplete
 export async function GET(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const clientsMessages = messages?.clients || {}
+
   // 1. AUTHENTICATION
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -15,7 +20,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 120,
-    message: 'Too many requests. Please slow down.'
+    message: clientsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
   }, 'clients-search')
   if (rateLimitResult) return rateLimitResult
 
@@ -85,6 +90,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(results)
   } catch (error) {
     console.error('Failed to search clients:', error)
-    return NextResponse.json({ error: 'Failed to search clients' }, { status: 500 })
+    return NextResponse.json({ error: clientsMessages.failedToSearchClients || 'Failed to search clients' }, { status: 500 })
   }
 }

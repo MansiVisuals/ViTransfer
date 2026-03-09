@@ -8,6 +8,7 @@ import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { trackSharePageAccess } from '@/lib/share-access-tracking'
 import jwt from 'jsonwebtoken'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -22,11 +23,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const shareMessages = messages?.share
   // Rate limiting: Prevent abuse of guest session creation
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 20,
-    message: 'Too many guest access attempts. Please try again later.'
+    message: shareMessages?.guestTooManyAttempts || 'Too many guest access attempts. Please try again later.'
   }, 'guest-entry')
   if (rateLimitResult) return rateLimitResult
 
@@ -43,12 +47,12 @@ export async function POST(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     // Check if guest mode is enabled
     if (!project.guestMode) {
-      return NextResponse.json({ error: 'Guest access is not enabled for this project' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages?.guestAccessNotEnabled || 'Guest access is not enabled for this project' }, { status: 403 })
     }
 
     const ttlSeconds = await getShareTokenTtlSeconds()
@@ -87,7 +91,7 @@ export async function POST(
     return NextResponse.json({ success: true, shareToken })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Unable to process request' },
+      { error: shareMessages?.unableToProcessRequest || 'Unable to process request' },
       { status: 500 }
     )
   }

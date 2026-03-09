@@ -3,6 +3,7 @@ import { generatePasskeyAuthenticationOptions } from '@/lib/passkey'
 import { isPasskeyConfigured } from '@/lib/settings'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -26,6 +27,10 @@ export const runtime = 'nodejs'
  * - PublicKeyCredentialRequestOptions for browser
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const authMessages = messages?.auth || {}
+
   try {
     // Parse request body early to get email for rate limiting
     const body = await request.json().catch(() => ({}))
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest) {
     if (rateLimitCheck.limited) {
       return NextResponse.json(
         {
-          error: 'Too many requests. Please try again later.',
+          error: authMessages.tooManyRequestsTryAgainLater || 'Too many requests. Please try again later.',
           retryAfter: rateLimitCheck.retryAfter,
         },
         {
@@ -54,8 +59,7 @@ export async function POST(request: NextRequest) {
     if (!configured) {
       return NextResponse.json(
         {
-          error:
-            'PassKey authentication is not configured.',
+          error: authMessages.passkeyAuthenticationNotConfigured || 'PassKey authentication is not configured.',
         },
         { status: 503 }
       )
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
     const errorMessage =
       error instanceof Error
         ? error.message
-        : 'Failed to generate PassKey authentication options'
+        : (authMessages.failedToGeneratePasskeyAuthenticationOptions || 'Failed to generate PassKey authentication options')
 
     return NextResponse.json(
       {

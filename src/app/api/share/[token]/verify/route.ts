@@ -12,6 +12,7 @@ import { trackSharePageAccess } from '@/lib/share-access-tracking'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { safeParseBody } from '@/lib/validation'
 import jwt from 'jsonwebtoken'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -58,6 +59,10 @@ export async function POST(
 ) {
   try {
     const { token } = await params
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    const shareMessages = messages?.share
+    const notificationsText = messages?.notificationsText
     const redis = getRedis()
     const rateLimitKey = getIdentifier(request, token)
 
@@ -89,7 +94,7 @@ export async function POST(
         })
 
         return NextResponse.json(
-          { error: 'Too many failed password attempts. Please try again later.', retryAfter },
+          { error: shareMessages?.tooManyPasswordAttempts || 'Too many failed password attempts. Please try again later.', retryAfter },
           { status: 429, headers: { 'Retry-After': String(retryAfter) } }
         )
       }
@@ -100,7 +105,7 @@ export async function POST(
     const { password } = parsed.data
 
     if (!password) {
-      return NextResponse.json({ error: 'Password is required' }, { status: 400 })
+      return NextResponse.json({ error: shareMessages?.passwordRequiredShort || 'Password is required' }, { status: 400 })
     }
 
     const project = await prisma.project.findUnique({
@@ -113,7 +118,7 @@ export async function POST(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     if (!project.sharePassword) {
@@ -198,24 +203,26 @@ export async function POST(
 
         void enqueueExternalNotification({
           eventType: 'SECURITY_ALERT',
-          title: 'Security Alert',
-          body: `Share password locked out on ${project.title} after too many failed attempts`,
+          title: notificationsText?.securityAlertTitle || 'Security Alert',
+          body: (notificationsText?.sharePasswordLockoutBody || 'Share password locked out on {projectTitle} after too many failed attempts')
+            .replace('{projectTitle}', project.title),
           notifyType: 'failure',
           pushData: {
             projectTitle: project.title,
             projectId: project.id,
-            title: 'Security Alert',
-            body: `Share password locked out on ${project.title} after too many failed attempts`,
+            title: notificationsText?.securityAlertTitle || 'Security Alert',
+            body: (notificationsText?.sharePasswordLockoutBody || 'Share password locked out on {projectTitle} after too many failed attempts')
+              .replace('{projectTitle}', project.title),
           },
         }).catch(() => {})
 
         return NextResponse.json(
-          { error: 'Too many failed password attempts. Please try again later.', retryAfter },
+          { error: shareMessages?.tooManyPasswordAttempts || 'Too many failed password attempts. Please try again later.', retryAfter },
           { status: 429, headers: { 'Retry-After': String(retryAfter) } }
         )
       }
 
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     // SUCCESS - clear any existing rate limit data
@@ -256,6 +263,8 @@ export async function POST(
     return NextResponse.json({ success: true, shareToken })
   } catch (error) {
     console.error('Error verifying share password:', error)
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    const locale = await getConfiguredLocale().catch(() => 'en')
+    const messages = await loadLocaleMessages(locale).catch(() => null)
+    return NextResponse.json({ error: messages?.share?.accessDenied || 'Access denied' }, { status: 403 })
   }
 }

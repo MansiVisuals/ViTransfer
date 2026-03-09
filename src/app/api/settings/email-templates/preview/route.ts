@@ -17,6 +17,7 @@ import {
   renderTimecodePill,
   type EmailHeaderStyle,
 } from '@/lib/email'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,11 @@ export const dynamic = 'force-dynamic'
  * Generate a preview of an email template with sample data
  */
 export async function POST(request: NextRequest) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const settingsMessages = messages?.settings || {}
+  const emailTemplateMessages = settingsMessages.emailTemplates || {}
+
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -34,7 +40,7 @@ export async function POST(request: NextRequest) {
   // Rate limit
   const rateLimitResult = await rateLimit(
     request,
-    { windowMs: 60 * 1000, maxRequests: 60, message: 'Too many preview requests. Please slow down.' },
+    { windowMs: 60 * 1000, maxRequests: 60, message: emailTemplateMessages.tooManyPreviewRequests || 'Too many preview requests. Please slow down.' },
     'email-template-preview'
   )
   if (rateLimitResult) return rateLimitResult
@@ -46,21 +52,21 @@ export async function POST(request: NextRequest) {
     // Validate template type
     if (!type || !Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
       return NextResponse.json(
-        { error: 'Invalid template type' },
+        { error: emailTemplateMessages.invalidTemplateType || 'Invalid template type' },
         { status: 400 }
       )
     }
 
     if (!subject || typeof subject !== 'string') {
       return NextResponse.json(
-        { error: 'Subject is required' },
+        { error: emailTemplateMessages.subjectRequired || 'Subject is required' },
         { status: 400 }
       )
     }
 
     if (!bodyContent || typeof bodyContent !== 'string') {
       return NextResponse.json(
-        { error: 'Body content is required' },
+        { error: emailTemplateMessages.bodyContentRequired || 'Body content is required' },
         { status: 400 }
       )
     }
@@ -124,7 +130,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API] Failed to generate email preview:', error)
     return NextResponse.json(
-      { error: 'Failed to generate preview' },
+      { error: emailTemplateMessages.failedToGeneratePreview || 'Failed to generate preview' },
       { status: 500 }
     )
   }

@@ -7,6 +7,7 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { sanitizeCommentHtml } from '@/lib/security/html-sanitization'
 import { cancelCommentNotification } from '@/lib/comment-helpers'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
 
@@ -20,11 +21,16 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const commentsMessages = messages?.comments || {}
+  const shareMessages = messages?.share || {}
+
   // Rate limiting to prevent abuse
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 20,
-    message: 'Too many requests. Please slow down.'
+    message: shareMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'comments-update')
 
   if (rateLimitResult) {
@@ -73,7 +79,7 @@ export async function PATCH(
 
     if (!existingComment) {
       return NextResponse.json(
-        { error: 'Comment not found' },
+        { error: commentsMessages.commentNotFound || 'Comment not found' },
         { status: 404 }
       )
     }
@@ -81,7 +87,7 @@ export async function PATCH(
     // SECURITY: If feedback is hidden, reject comment updates
     if (existingComment.project.hideFeedback) {
       return NextResponse.json(
-        { error: 'Comments are disabled for this project' },
+        { error: commentsMessages.commentsDisabled || 'Comments are disabled for this project' },
         { status: 403 }
       )
     }
@@ -101,7 +107,7 @@ export async function PATCH(
     if (!accessCheck.authorized) {
       // Don't reveal if comment exists - return generic error
       return accessCheck.errorResponse || NextResponse.json(
-        { error: 'Unable to process request' },
+        { error: shareMessages.unableToProcessRequest || 'Unable to process request' },
         { status: 400 }
       )
     }
@@ -168,7 +174,7 @@ export async function PATCH(
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+    return NextResponse.json({ error: commentsMessages.operationFailed || 'Operation failed' }, { status: 500 })
   }
 }
 
@@ -177,6 +183,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const commentsMessages = messages?.comments || {}
+  const shareMessages = messages?.share || {}
+
   // Authentication - admin only
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -187,7 +198,7 @@ export async function DELETE(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 20,
-    message: 'Too many requests. Please slow down.'
+    message: shareMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'comments-delete')
 
   if (rateLimitResult) {
@@ -219,7 +230,7 @@ export async function DELETE(
 
     if (!existingComment) {
       return NextResponse.json(
-        { error: 'Comment not found' },
+        { error: commentsMessages.commentNotFound || 'Comment not found' },
         { status: 404 }
       )
     }
@@ -235,6 +246,6 @@ export async function DELETE(
     // Return success - client will refresh to get updated comments
     return NextResponse.json({ success: true })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete comment' }, { status: 500 })
+    return NextResponse.json({ error: commentsMessages.failedToDeleteComment || 'Failed to delete comment' }, { status: 500 })
   }
 }

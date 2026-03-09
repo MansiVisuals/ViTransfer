@@ -4,6 +4,7 @@ import { updateRecipient, deleteRecipient } from '@/lib/recipients'
 import { invalidateSessionsByEmail } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
+import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
 export const runtime = 'nodejs'
 
@@ -12,7 +13,7 @@ export const runtime = 'nodejs'
 
 const updateRecipientSchema = z.object({
   name: z.string().nullable().optional(),
-  email: z.string().email('Invalid email format').nullable().optional(),
+  email: z.string().email('INVALID_EMAIL_FORMAT').nullable().optional(),
   isPrimary: z.boolean().optional(),
   receiveNotifications: z.boolean().optional()
 }).refine(data => {
@@ -22,13 +23,18 @@ const updateRecipientSchema = z.object({
   }
   return true
 }, {
-  message: 'Invalid email format'
+  message: 'INVALID_EMAIL_FORMAT'
 })
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; rid: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const recipientMessages = messages?.recipients || {}
+  const projectMessages = messages?.projects || {}
+
   // 1. Authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -39,7 +45,7 @@ export async function PATCH(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 30,
-    message: 'Too many requests. Please slow down.'
+    message: projectMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'recipient-update')
   if (rateLimitResult) {
     return rateLimitResult
@@ -52,8 +58,13 @@ export async function PATCH(
     // Validate input
     const validation = updateRecipientSchema.safeParse(body)
     if (!validation.success) {
+      const message = validation.error.errors[0].message
+      const localizedError = message === 'INVALID_EMAIL_FORMAT'
+        ? (recipientMessages.invalidEmail || 'Please enter a valid email address')
+        : message
+
       return NextResponse.json(
-        { error: validation.error.errors[0].message },
+        { error: localizedError },
         { status: 400 }
       )
     }
@@ -80,13 +91,13 @@ export async function PATCH(
 
     if (error.message === 'Recipient not found') {
       return NextResponse.json(
-        { error: 'Recipient not found' },
+        { error: recipientMessages.recipientNotFound || 'Recipient not found' },
         { status: 404 }
       )
     }
 
     return NextResponse.json(
-      { error: 'Failed to update recipient' },
+      { error: recipientMessages.failedToUpdateRecipientApi || 'Failed to update recipient' },
       { status: 500 }
     )
   }
@@ -96,6 +107,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; rid: string }> }
 ) {
+  const locale = await getConfiguredLocale().catch(() => 'en')
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const recipientMessages = messages?.recipients || {}
+  const projectMessages = messages?.projects || {}
+
   // 1. Authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
@@ -106,7 +122,7 @@ export async function DELETE(
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 20,
-    message: 'Too many requests. Please slow down.'
+    message: projectMessages.tooManyRequestsGeneric || 'Too many requests. Please slow down.'
   }, 'recipient-delete')
   if (rateLimitResult) {
     return rateLimitResult
@@ -134,20 +150,20 @@ export async function DELETE(
 
     if (error.message === 'Recipient not found') {
       return NextResponse.json(
-        { error: 'Recipient not found' },
+        { error: recipientMessages.recipientNotFound || 'Recipient not found' },
         { status: 404 }
       )
     }
 
     if (error.message === 'Cannot delete the last recipient') {
       return NextResponse.json(
-        { error: 'Cannot delete the last recipient. At least one recipient is required.' },
+        { error: recipientMessages.cannotDeleteLastRecipient || 'Cannot delete the last recipient. At least one recipient is required.' },
         { status: 400 }
       )
     }
 
     return NextResponse.json(
-      { error: 'Failed to delete recipient' },
+      { error: recipientMessages.failedToDeleteRecipientApi || 'Failed to delete recipient' },
       { status: 500 }
     )
   }

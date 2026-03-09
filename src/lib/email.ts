@@ -1535,6 +1535,9 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
     const transporter = await createTransporter(customConfig)
     const brand = getEmailBrand(settings.accentColor)
     const brandingLogoUrl = buildBrandingLogoUrl(settings)
+  const locale = settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale).catch(() => null)
+  const smtpTestMessages = emailMessages?.smtpTest || {}
 
     // Verify connection
     await transporter.verify()
@@ -1542,23 +1545,23 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
     // Send test email
     const html = renderEmailShell({
       companyName: settings.companyName || 'ViTransfer',
-      title: 'SMTP Test Succeeded',
-      subtitle: 'Email sending is working',
-      preheader: 'SMTP configuration is working',
+      title: smtpTestMessages.title || 'SMTP Test Succeeded',
+      subtitle: smtpTestMessages.subtitle || 'Email sending is working',
+      preheader: smtpTestMessages.preheader || 'SMTP configuration is working',
       brand,
       brandingLogoUrl,
       emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
       bodyContent: `
         <p style="font-size:15px; color:${brand.textSubtle}; line-height:1.6; margin:0 0 12px;">
-          Your SMTP configuration is working. Details below for your records.
+          ${smtpTestMessages.bodyIntro || 'Your SMTP configuration is working. Details below for your records.'}
         </p>
         <div style="border:1px solid ${brand.border}; border-radius:10px; padding:14px 16px; background:${brand.surfaceAlt};">
-          <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${brand.muted}; margin-bottom:8px; font-weight:700;">Connection details</div>
+          <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:${brand.muted}; margin-bottom:8px; font-weight:700;">${smtpTestMessages.connectionDetails || 'Connection details'}</div>
           <div style="font-size:14px; color:${brand.text}; line-height:1.6;">
-            <div><strong>Server:</strong> ${settings.smtpServer}</div>
-            <div><strong>Port:</strong> ${settings.smtpPort}</div>
-            <div><strong>Security:</strong> ${settings.smtpSecure || 'STARTTLS'}</div>
-            <div><strong>From:</strong> ${settings.smtpFromAddress}</div>
+            <div><strong>${smtpTestMessages.serverLabel || 'Server'}:</strong> ${settings.smtpServer}</div>
+            <div><strong>${smtpTestMessages.portLabel || 'Port'}:</strong> ${settings.smtpPort}</div>
+            <div><strong>${smtpTestMessages.securityLabel || 'Security'}:</strong> ${settings.smtpSecure || 'STARTTLS'}</div>
+            <div><strong>${smtpTestMessages.fromLabel || 'From'}:</strong> ${settings.smtpFromAddress}</div>
           </div>
         </div>
       `,
@@ -1569,18 +1572,18 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
       await transporter.sendMail({
         from: settings.smtpFromAddress,
         to: testEmail,
-        subject: 'Test Email - SMTP Configuration Working',
+        subject: smtpTestMessages.subject || 'Test Email - SMTP Configuration Working',
         html,
       })
     } else {
       await sendEmail({
         to: testEmail,
-        subject: 'Test Email - SMTP Configuration Working',
+        subject: smtpTestMessages.subject || 'Test Email - SMTP Configuration Working',
         html,
       })
     }
 
-    return { success: true, message: 'Test email sent successfully!' }
+    return { success: true, message: smtpTestMessages.success || 'Test email sent successfully!' }
   } catch (error) {
     console.error('Email test failed:', error)
     throw error

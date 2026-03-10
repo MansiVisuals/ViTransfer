@@ -54,6 +54,7 @@
     "version": "Versie",
     "description": "Beschrijving",
     "updated": "Bijgewerkt",
+    "created": "Aangemaakt",
     "error": "Er is iets misgegaan",
     "errorTryAgain": "Er is een fout opgetreden. Probeer het opnieuw.",
     "failedToLoad": "Laden mislukt",

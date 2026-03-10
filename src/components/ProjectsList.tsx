@@ -17,6 +17,7 @@ interface Project {
   title: string
   companyName: string | null
   status: string
+  createdAt: Date
   updatedAt: Date
   maxRevisions: number
   enableRevisions: boolean
@@ -249,14 +250,15 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
             <span className="text-xs text-muted-foreground">{sortedProjects.length} {t('projectsCount')}</span>
           </div>
           {/* Table Header */}
-          <div className="hidden sm:flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-2 text-xs text-muted-foreground bg-muted/20 border-b">
+          <div className="hidden sm:flex items-center gap-4 px-5 py-2 text-xs text-muted-foreground bg-muted/20 border-b">
             <span className="flex-1 min-w-0">{tc('name')}</span>
-            <span className="w-40 hidden md:block">{t('client')}</span>
+            <span className="w-36 hidden md:block">{t('client')}</span>
             <span className="w-28">{tc('status')}</span>
-            <span className="w-16 text-center hidden lg:block">{t('videos')}</span>
-            <span className="w-16 text-center hidden lg:block">{t('comments')}</span>
-            <span className="w-28 hidden lg:block">{t('dueDateLabel')}</span>
-            <span className="w-28 hidden lg:block">{tc('updated')}</span>
+            <span className="w-14 text-center hidden lg:block">{t('videos')}</span>
+            <span className="w-14 text-center hidden lg:block">{t('comments')}</span>
+            <span className="w-24 hidden lg:block">{t('dueDateLabel')}</span>
+            <span className="w-24 hidden xl:block">{tc('created')}</span>
+            <span className="w-24 hidden lg:block">{tc('updated')}</span>
             <span className="w-4"></span>
           </div>
           <div className="divide-y">
@@ -269,10 +271,10 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                 <Link
                   key={project.id}
                   href={`/admin/projects/${project.id}`}
-                  className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-2.5 text-sm hover:bg-accent/30 transition-colors"
+                  className="flex items-center gap-4 px-5 py-3 text-sm hover:bg-accent/30 transition-colors"
                 >
                   <span className="flex-1 min-w-0 font-medium truncate">{project.title}</span>
-                  <span className="w-40 text-xs text-muted-foreground truncate hidden md:block">{displayName}</span>
+                  <span className="w-36 text-xs text-muted-foreground truncate hidden md:block">{displayName}</span>
                   <span className="w-28">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
@@ -290,12 +292,15 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                       {{ IN_REVIEW: t('statusInReview'), APPROVED: t('statusApproved'), SHARE_ONLY: t('statusShareOnly'), ARCHIVED: t('statusArchived') }[project.status] || project.status}
                     </span>
                   </span>
-                  <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
-                  <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
-                  <span className={`w-28 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate, project.status) : 'text-muted-foreground'}`}>
-                    {project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                  <span className="w-14 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
+                  <span className="w-14 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
+                  <span className={`w-24 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate, project.status) : 'text-muted-foreground'}`}>
+                    {project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
                   </span>
-                  <span className="w-28 text-xs text-muted-foreground hidden lg:block">
+                  <span className="w-24 text-xs text-muted-foreground hidden xl:block">
+                    {formatDate(project.createdAt)}
+                  </span>
+                  <span className="w-24 text-xs text-muted-foreground hidden lg:block">
                     {formatDate(project.updatedAt)}
                   </span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />

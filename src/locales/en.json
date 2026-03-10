@@ -54,6 +54,7 @@
     "version": "Version",
     "description": "Description",
     "updated": "Updated",
+    "created": "Created",
     "error": "Something went wrong",
     "errorTryAgain": "An error occurred. Please try again.",
     "failedToLoad": "Failed to load",

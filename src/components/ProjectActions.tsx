@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { Project } from '@prisma/client'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -42,6 +42,7 @@ interface ProjectActionsProps {
 export default function ProjectActions({ project, videos, onRefresh, shareUrl = '', recipients = [] }: ProjectActionsProps) {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
+  const locale = useLocale()
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingApproval, setIsTogglingApproval] = useState(false)
@@ -356,7 +357,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             const diffDays = Math.round((dueDay.getTime() - today.getTime()) / 86400000)
             const isCompleted = project.status === 'APPROVED' || project.status === 'ARCHIVED' || project.status === 'SHARE_ONLY'
             const colorClass = isCompleted ? '' : diffDays < 0 ? 'text-destructive' : diffDays <= 1 ? 'text-warning' : diffDays <= 7 ? 'text-primary' : ''
-            const dateStr = due.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+            const dateStr = due.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })
 
             return (
               <div className="pb-3 border-b border-border">

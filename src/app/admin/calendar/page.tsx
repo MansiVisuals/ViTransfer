@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Calendar, ChevronLeft, ChevronRight, Copy, RefreshCw, BarChart3, Check, Link2 } from 'lucide-react'
@@ -24,6 +24,7 @@ type GanttRange = 'all' | '1m' | '3m' | '6m' | '1y'
 export default function CalendarPage() {
   const t = useTranslations('calendar')
   const tc = useTranslations('common')
+  const locale = useLocale()
   const [projects, setProjects] = useState<CalendarProject[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('calendar')
@@ -139,20 +140,20 @@ export default function CalendarPage() {
 
   function getHeaderLabel(): string {
     if (calendarScale === 'day') {
-      return currentDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+      return currentDate.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     }
     if (calendarScale === 'week') {
       const start = getWeekStart(currentDate)
       const end = new Date(start)
       end.setDate(end.getDate() + 6)
-      const startStr = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-      const endStr = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      const startStr = start.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+      const endStr = end.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
       return `${startStr} – ${endStr}`
     }
     if (calendarScale === 'year') {
       return String(currentDate.getFullYear())
     }
-    return currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    return currentDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
   }
 
   function getWeekStart(date: Date): Date {
@@ -351,7 +352,7 @@ export default function CalendarPage() {
                   className={`text-xs font-semibold mb-1 hover:text-primary transition-colors ${isCurrentMonth ? 'text-primary' : 'text-foreground'}`}
                   onClick={() => { setCurrentDate(new Date(year, monthIdx, 1)); setCalendarScale('month') }}
                 >
-                  {monthDate.toLocaleDateString(undefined, { month: 'short' })}
+                  {monthDate.toLocaleDateString(locale, { month: 'short' })}
                 </button>
                 <div className="grid grid-cols-7 gap-px">
                   {/* Day headers */}
@@ -462,7 +463,7 @@ export default function CalendarPage() {
       while (current <= ganttEnd) {
         const dayOffset = (current.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)
         markers.push({
-          label: current.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          label: current.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
           leftPercent: (dayOffset / ganttTotalDays) * 100,
         })
         current.setDate(current.getDate() + 7)
@@ -475,7 +476,7 @@ export default function CalendarPage() {
       while (current <= ganttEnd) {
         const dayOffset = (current.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)
         markers.push({
-          label: current.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
+          label: current.toLocaleDateString(locale, { month: 'short', year: '2-digit' }),
           leftPercent: (dayOffset / ganttTotalDays) * 100,
         })
         current.setMonth(current.getMonth() + 1)
@@ -496,7 +497,7 @@ export default function CalendarPage() {
     const opts: Intl.DateTimeFormatOptions = ganttRange === '1y'
       ? { year: 'numeric' }
       : { month: 'short', year: 'numeric' }
-    return `${ganttStart.toLocaleDateString(undefined, opts)} – ${ganttEnd.toLocaleDateString(undefined, opts)}`
+    return `${ganttStart.toLocaleDateString(locale, opts)} – ${ganttEnd.toLocaleDateString(locale, opts)}`
   }
 
   const todayGanttOffset = ((new Date().getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24) / ganttTotalDays) * 100

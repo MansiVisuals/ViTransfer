@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -37,6 +37,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
   const t = useTranslations('projects')
   const tc = useTranslations('common')
   const tn = useTranslations('nav')
+  const locale = useLocale()
   const STATUS_OPTIONS = STATUS_OPTIONS_KEYS.map(value => ({
     value,
     label: value === 'IN_REVIEW' ? t('statusInReview') :
@@ -232,7 +233,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                           <span className={metricIconWrapperClassName}>
                             <Calendar className={metricIconClassName} />
                           </span>
-                          <span className="font-medium text-xs">{new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                          <span className="font-medium text-xs">{new Date(project.dueDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</span>
                         </div>
                       )}
                     </div>
@@ -295,7 +296,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                   <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
                   <span className="w-20 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
                   <span className={`w-20 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate, project.status) : 'text-muted-foreground'}`}>
-                    {project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
+                    {project.dueDate ? new Date(project.dueDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : '—'}
                   </span>
                   <span className="w-24 text-xs text-muted-foreground hidden xl:block">
                     {formatDate(project.createdAt)}

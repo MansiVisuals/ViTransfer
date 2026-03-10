@@ -660,9 +660,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 {authMode === 'OTP' && t('otpPrompt')}
                 {authMode === 'BOTH' && t('bothPrompt')}
               </p>
-              <p className="text-xs text-muted-foreground mt-3 px-4">
-                {t('recipientsOnly')}
-              </p>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Password Authentication - hide when OTP code is being entered */}

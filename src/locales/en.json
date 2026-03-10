@@ -854,7 +854,6 @@
     "passwordPrompt": "Please enter the password to continue.",
     "otpPrompt": "Enter your email to receive an access code.",
     "bothPrompt": "Choose your preferred authentication method.",
-    "recipientsOnly": "This authentication is for project recipients only.",
     "enterPassword": "Enter password",
     "verifying": "Verifying...",
     "verify": "Verify",

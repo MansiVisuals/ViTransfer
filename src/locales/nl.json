@@ -813,7 +813,6 @@
     "passwordPrompt": "Voer het wachtwoord in om verder te gaan.",
     "otpPrompt": "Voer uw e-mailadres in om een toegangscode te ontvangen.",
     "bothPrompt": "Kies uw gewenste authenticatiemethode.",
-    "recipientsOnly": "Deze authenticatie is alleen voor projectontvangers.",
     "enterPassword": "Voer Wachtwoord in",
     "verifying": "Verifiëren...",
     "verify": "Verifiëren",

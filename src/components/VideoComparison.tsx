@@ -58,7 +58,6 @@ export default function VideoComparison({
   const videoRefB = useRef<HTMLVideoElement | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const currentTimeRef = useRef(0)
-  const isSyncingRef = useRef(false)
 
   const versionA = sorted[versionAIndex]
   const versionB = sorted[versionBIndex]
@@ -67,36 +66,8 @@ export default function VideoComparison({
   const videoFps = versionA?.fps || versionB?.fps || 24
 
   // --- Synced playback ---
-  // Video A is the master clock. B follows A via timeupdate events.
-
-  const syncBToA = useCallback(() => {
-    const a = videoRefA.current
-    const b = videoRefB.current
-    if (!a || !b || isSyncingRef.current || a.paused) return
-
-    const drift = a.currentTime - b.currentTime // positive = B is behind
-    const absDrift = Math.abs(drift)
-
-    if (absDrift > 0.3) {
-      // Large drift: force seek (rare — initial play, stall, or manual seek)
-      isSyncingRef.current = true
-      b.currentTime = a.currentTime
-      b.playbackRate = a.playbackRate
-      requestAnimationFrame(() => { isSyncingRef.current = false })
-    } else if (absDrift > 0.05) {
-      // Small drift: nudge playback rate to gradually converge
-      // Avoids buffer flushes caused by repeated currentTime seeks
-      const baseRate = a.playbackRate
-      b.playbackRate = drift > 0
-        ? baseRate * 1.06  // B is behind, speed up slightly
-        : baseRate * 0.94  // B is ahead, slow down slightly
-    } else {
-      // In sync: ensure B matches A's rate exactly
-      if (Math.abs(b.playbackRate - a.playbackRate) > 0.001) {
-        b.playbackRate = a.playbackRate
-      }
-    }
-  }, [])
+  // No continuous sync — just align B to A on user actions (play/pause/seek).
+  // Browsers keep two videos playing at the same rate with negligible drift.
 
   const handleSeek = (time: number) => {
     const a = videoRefA.current
@@ -113,7 +84,7 @@ export default function VideoComparison({
     if (videoRefB.current) videoRefB.current.playbackRate = speed
   }, [])
 
-  // Master clock: A's timeupdate drives the UI and syncs B
+  // A's timeupdate drives the UI timeline only — no sync logic
   useEffect(() => {
     const a = videoRefA.current
     if (!a) return
@@ -121,24 +92,24 @@ export default function VideoComparison({
     const onTimeUpdate = () => {
       currentTimeRef.current = a.currentTime
       setCurrentTime(a.currentTime)
-      syncBToA()
     }
 
     const onPlay = () => {
       setIsPlaying(true)
-      // Ensure B is also playing when A starts
       const b = videoRefB.current
       if (b && b.paused) {
         b.currentTime = a.currentTime
-        b.playbackRate = a.playbackRate
         b.play().catch(() => {})
       }
     }
 
     const onPause = () => {
       setIsPlaying(false)
-      // Pause B when A pauses
-      videoRefB.current?.pause()
+      const b = videoRefB.current
+      if (b) {
+        b.pause()
+        b.currentTime = a.currentTime
+      }
     }
 
     const onEnded = () => {
@@ -158,7 +129,7 @@ export default function VideoComparison({
       a.removeEventListener('pause', onPause)
       a.removeEventListener('ended', onEnded)
     }
-  }, [syncBToA, videoUrlA])
+  }, [videoUrlA])
 
   // Handle metadata load — set duration, apply speed
   const handleLoadedMetadata = useCallback(() => {

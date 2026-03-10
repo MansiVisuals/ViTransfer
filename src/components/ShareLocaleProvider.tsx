@@ -5,7 +5,6 @@ import { NextIntlClientProvider } from 'next-intl'
 
 interface ShareLocaleProviderProps {
   children: React.ReactNode
-  onLocaleChange?: (locale: string) => void
 }
 
 /**
@@ -13,7 +12,7 @@ interface ShareLocaleProviderProps {
  * Loads messages dynamically when the client toggles language.
  * Falls back to the server-rendered messages until client-side override kicks in.
  */
-export default function ShareLocaleProvider({ children, onLocaleChange }: ShareLocaleProviderProps) {
+export default function ShareLocaleProvider({ children }: ShareLocaleProviderProps) {
   const [locale, setLocale] = useState<string | null>(null)
   const [messages, setMessages] = useState<Record<string, any> | null>(null)
 

@@ -17,25 +17,26 @@ export default function LanguageToggle({ onChange }: LanguageToggleProps) {
   const [availableLocales, setAvailableLocales] = useState<LocaleOption[]>([])
   const [mounted, setMounted] = useState(false)
 
-  const fetchLanguageSettings = useCallback(async () => {
+  const fetchLanguageSettings = useCallback(async (): Promise<{ defaultLanguage: string; locales: LocaleOption[] }> => {
     try {
       const response = await fetch('/api/settings/language')
       if (response.ok) {
         const data = await response.json()
-        setAvailableLocales(data.availableLocales || [])
-        return data.defaultLanguage || 'en'
+        const locales: LocaleOption[] = data.availableLocales || []
+        setAvailableLocales(locales)
+        return { defaultLanguage: data.defaultLanguage || 'en', locales }
       }
     } catch {
       // Fallback
     }
-    return 'en'
+    return { defaultLanguage: 'en', locales: [] }
   }, [])
 
   useEffect(() => {
     setMounted(true)
 
     async function init() {
-      const adminDefault = await fetchLanguageSettings()
+      const { defaultLanguage, locales } = await fetchLanguageSettings()
 
       // Priority: localStorage > browser language > admin default
       const saved = localStorage.getItem('shareLanguage')
@@ -47,21 +48,15 @@ export default function LanguageToggle({ onChange }: LanguageToggleProps) {
 
       // Auto-detect from browser language
       const browserLang = navigator.language?.split('-')[0] || 'en'
-      // Check if browser language is available
-      const response = await fetch('/api/settings/language')
-      if (response.ok) {
-        const data = await response.json()
-        const codes = (data.availableLocales || []).map((l: LocaleOption) => l.code)
-        if (codes.includes(browserLang)) {
-          setLocale(browserLang)
-          onChange?.(browserLang)
-          return
-        }
+      if (locales.some(l => l.code === browserLang)) {
+        setLocale(browserLang)
+        onChange?.(browserLang)
+        return
       }
 
       // Fall back to admin default
-      setLocale(adminDefault)
-      onChange?.(adminDefault)
+      setLocale(defaultLanguage)
+      onChange?.(defaultLanguage)
     }
 
     init()

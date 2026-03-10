@@ -6,7 +6,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { isSmtpConfigured } from '@/lib/email'
 import { getFilePath } from '@/lib/storage'
 import { flushPendingAdminNotifications } from '@/lib/notifications'
-import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { getConfiguredLocale, loadLocaleMessages, SUPPORTED_LOCALES } from '@/i18n/locale'
 import fs from 'fs/promises'
 export const runtime = 'nodejs'
 
@@ -139,8 +139,7 @@ export async function PATCH(request: NextRequest) {
 
     // SECURITY: Validate language setting
     if (language !== undefined) {
-      const validLanguages = ['en', 'nl']
-      if (typeof language !== 'string' || !validLanguages.includes(language)) {
+      if (typeof language !== 'string' || !(SUPPORTED_LOCALES as readonly string[]).includes(language)) {
         return NextResponse.json(
           { error: settingsMessages.invalidLanguageCode || 'Invalid language code.' },
           { status: 400 }

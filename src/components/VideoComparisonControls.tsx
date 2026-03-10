@@ -5,13 +5,6 @@ import { useTranslations } from 'next-intl'
 import { Play, Pause, SkipBack, SkipForward, Columns2, SplitSquareHorizontal } from 'lucide-react'
 import { secondsToTimecode, formatCommentTimestamp } from '@/lib/timecode'
 
-function formatTime(seconds: number): string {
-  if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
 function formatTimeWithMode(
   seconds: number,
   fps: number,

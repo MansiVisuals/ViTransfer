@@ -84,6 +84,42 @@ export default function VideoComparison({
     if (videoRefB.current) videoRefB.current.playbackRate = speed
   }, [])
 
+  const togglePlayPause = useCallback(() => {
+    const a = videoRefA.current
+    const b = videoRefB.current
+    if (!a || !b) return
+
+    if (isPlaying) {
+      a.pause()
+      b.pause()
+      setIsPlaying(false)
+    } else {
+      b.currentTime = a.currentTime
+      Promise.all([a.play(), b.play()]).catch(() => {})
+      setIsPlaying(true)
+    }
+  }, [isPlaying])
+
+  const stepFrame = useCallback((direction: 'forward' | 'backward') => {
+    const a = videoRefA.current
+    const b = videoRefB.current
+
+    if (a && !a.paused) a.pause()
+    if (b && !b.paused) b.pause()
+    setIsPlaying(false)
+
+    const frameDuration = 1 / videoFps
+    const current = a?.currentTime ?? currentTimeRef.current
+    const newTime = direction === 'forward'
+      ? Math.min(videoDuration, current + frameDuration)
+      : Math.max(0, current - frameDuration)
+
+    if (a) a.currentTime = newTime
+    if (b) b.currentTime = newTime
+    currentTimeRef.current = newTime
+    setCurrentTime(newTime)
+  }, [videoFps, videoDuration])
+
   // A's timeupdate drives the UI timeline only — no sync logic
   useEffect(() => {
     const a = videoRefA.current
@@ -145,42 +181,6 @@ export default function VideoComparison({
 
   // Keyboard shortcuts — match the main player exactly (Ctrl+ prefix)
   useEffect(() => {
-    const togglePlayPause = () => {
-      const a = videoRefA.current
-      const b = videoRefB.current
-      if (!a || !b) return
-
-      if (isPlaying) {
-        a.pause()
-        b.pause()
-        setIsPlaying(false)
-      } else {
-        b.currentTime = a.currentTime
-        Promise.all([a.play(), b.play()]).catch(() => {})
-        setIsPlaying(true)
-      }
-    }
-
-    const stepFrame = (direction: 'forward' | 'backward') => {
-      const a = videoRefA.current
-      const b = videoRefB.current
-
-      if (a && !a.paused) a.pause()
-      if (b && !b.paused) b.pause()
-      setIsPlaying(false)
-
-      const frameDuration = 1 / videoFps
-      const current = a?.currentTime ?? currentTimeRef.current
-      const newTime = direction === 'forward'
-        ? Math.min(videoDuration, current + frameDuration)
-        : Math.max(0, current - frameDuration)
-
-      if (a) a.currentTime = newTime
-      if (b) b.currentTime = newTime
-      currentTimeRef.current = newTime
-      setCurrentTime(newTime)
-    }
-
     const handleKeyboard = (e: KeyboardEvent) => {
       // Escape: close comparison (no Ctrl needed)
       if (e.key === 'Escape') {
@@ -252,7 +252,7 @@ export default function VideoComparison({
     // Use capture phase like the main player
     window.addEventListener('keydown', handleKeyboard, { capture: true })
     return () => window.removeEventListener('keydown', handleKeyboard, { capture: true })
-  }, [onClose, isPlaying, videoDuration, videoFps])
+  }, [onClose, togglePlayPause, stepFrame])
 
   // Pause on unmount
   useEffect(() => {
@@ -380,21 +380,7 @@ export default function VideoComparison({
                     playsInline
                     preload="auto"
                     onLoadedMetadata={handleLoadedMetadata}
-                    onClick={() => {
-                      const a = videoRefA.current
-                      const b = videoRefB.current
-                      if (!a || !b) return
-
-                      if (isPlaying) {
-                        a.pause()
-                        b.pause()
-                        setIsPlaying(false)
-                      } else {
-                        b.currentTime = a.currentTime
-                        Promise.all([a.play(), b.play()]).catch(() => {})
-                        setIsPlaying(true)
-                      }
-                    }}
+                    onClick={togglePlayPause}
                   />
                 </div>
               </div>
@@ -417,21 +403,7 @@ export default function VideoComparison({
                     playsInline
                     preload="auto"
                     onLoadedMetadata={handleLoadedMetadata}
-                    onClick={() => {
-                      const a = videoRefA.current
-                      const b = videoRefB.current
-                      if (!a || !b) return
-
-                      if (isPlaying) {
-                        a.pause()
-                        b.pause()
-                        setIsPlaying(false)
-                      } else {
-                        b.currentTime = a.currentTime
-                        Promise.all([a.play(), b.play()]).catch(() => {})
-                        setIsPlaying(true)
-                      }
-                    }}
+                    onClick={togglePlayPause}
                   />
                 </div>
               </div>
@@ -462,41 +434,9 @@ export default function VideoComparison({
             videoDuration={videoDuration}
             currentTime={currentTime}
             isPlaying={isPlaying}
-            onPlayPause={() => {
-              const a = videoRefA.current
-              const b = videoRefB.current
-              if (!a || !b) return
-
-              if (isPlaying) {
-                a.pause()
-                b.pause()
-                setIsPlaying(false)
-              } else {
-                b.currentTime = a.currentTime
-                Promise.all([a.play(), b.play()]).catch(() => {})
-                setIsPlaying(true)
-              }
-            }}
+            onPlayPause={togglePlayPause}
             onSeek={handleSeek}
-            onFrameStep={(direction) => {
-              const a = videoRefA.current
-              const b = videoRefB.current
-
-              if (a && !a.paused) a.pause()
-              if (b && !b.paused) b.pause()
-              setIsPlaying(false)
-
-              const frameDuration = 1 / videoFps
-              const current = a?.currentTime ?? currentTimeRef.current
-              const newTime = direction === 'forward'
-                ? Math.min(videoDuration, current + frameDuration)
-                : Math.max(0, current - frameDuration)
-
-              if (a) a.currentTime = newTime
-              if (b) b.currentTime = newTime
-              currentTimeRef.current = newTime
-              setCurrentTime(newTime)
-            }}
+            onFrameStep={stepFrame}
             mode={mode}
             onModeChange={setMode}
             playbackSpeed={playbackSpeed}

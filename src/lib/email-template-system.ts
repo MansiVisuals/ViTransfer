@@ -7,6 +7,7 @@
  */
 
 import { prisma } from './db'
+import { loadLocaleMessages } from '@/i18n/locale'
 
 function getEmailTemplateLocaleDefaults(messages: Record<string, any>) {
   const common = messages.common || {}
@@ -464,7 +465,7 @@ export async function getLocalizedPlaceholdersForType(
   if (!locale) return placeholders
 
   try {
-    const messages = (await import(`../locales/${locale}.json`)).default
+    const messages = await loadLocaleMessages(locale)
     const descriptions = messages.settings?.emailTemplates?.placeholderDescriptions || {}
 
     return placeholders.map(p => {
@@ -487,39 +488,7 @@ export function getDefaultTemplate(type: EmailTemplateType): DefaultTemplate | u
   return DEFAULT_TEMPLATES.find(t => t.type === type)
 }
 
-/**
- * Load email translation messages for a given locale
- * Falls back to English if locale file not found
- */
-export async function loadEmailMessages(locale: string = 'en'): Promise<Record<string, any>> {
-  try {
-    const messages = (await import(`../locales/${locale}.json`)).default
-    return messages.email || {}
-  } catch {
-    try {
-      const messages = (await import('../locales/en.json')).default
-      return messages.email || {}
-    } catch {
-      return {}
-    }
-  }
-}
-
-/**
- * Load all locale messages for a given locale
- * Falls back to English if locale file not found
- */
-export async function loadLocaleMessages(locale: string = 'en'): Promise<Record<string, any>> {
-  try {
-    return (await import(`../locales/${locale}.json`)).default
-  } catch {
-    try {
-      return (await import('../locales/en.json')).default
-    } catch {
-      return {}
-    }
-  }
-}
+// loadLocaleMessages imported from @/i18n/locale (single source of truth)
 
 /**
  * Get localized template metadata (name + description) for a template type
@@ -878,7 +847,8 @@ export async function getEmailTemplate(type: EmailTemplateType, locale?: string)
 
   // Return localized default template if locale provided
   if (locale) {
-    const messages = await loadEmailMessages(locale)
+    const allMessages = await loadLocaleMessages(locale)
+    const messages = allMessages.email || {}
     const localizedTemplate = buildLocalizedDefaultTemplate(type, messages)
     if (localizedTemplate) {
       return {

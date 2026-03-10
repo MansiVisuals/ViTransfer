@@ -463,10 +463,10 @@
     "clientInfoNotifications": "Klantinformatie & meldingen",
     "clientInfoNotificationsDescription": "Beheer het klantbedrijf, ontvangers en meldingsinstellingen",
   "companyBrandName": "Bedrijfs-/merknaam",
-  "companyBrandNameHint": "Begin met typen om in je klantenlijst te zoeken of voer zelf een bedrijfsnaam in",
-    "clientNotificationSchedule": "Klantmeldingsschema",
-    "clientNotificationScheduleDescription": "Bepaal wanneer klanten samenvattingen van je reacties voor dit project ontvangen. Let op: goedkeuringsmails worden altijd direct verstuurd.",
-    "allowClientApproval": "Klantgoedkeuring toestaan",
+  "companyBrandNameHint": "Begin met typen om een bestaande klant te zoeken of voer een nieuwe bedrijfsnaam in",
+  "clientNotificationSchedule": "Notificatieschema voor klanten",
+"clientNotificationScheduleDescription": "Bepaal wanneer klanten samenvattingen van reacties op dit project ontvangen. Goedkeuringsmails worden altijd direct verstuurd.",
+  "allowClientApproval": "Klantgoedkeuring toestaan",
   "allowClientApprovalDescription": "Sta klanten toe video's goed te keuren. Als dit uitstaat, kunnen alleen beheerders video's goedkeuren.",
     "allowAssetDownloads": "Bestanden downloaden toestaan",
   "allowAssetDownloadsDescription": "Sta klanten toe projectbestanden te downloaden zodra de video is goedgekeurd",
@@ -515,7 +515,7 @@
     "shareLinkEmpty": "Deellink mag niet leeg zijn",
     "otpRequiresSMTP": "OTP-authenticatie vereist dat SMTP is geconfigureerd",
     "otpRequiresRecipients": "OTP-authenticatie vereist minimaal één ontvanger met een e-mailadres",
-    "tooManyTokenGenerationRequests": "Te veel verzoeken om tokens te genereren. Doe het wat rustiger aan.",
+    "tooManyTokenGenerationRequests": "Te veel verzoeken om tokens te genereren. Probeer het later opnieuw.",
     "missingRequiredParameters": "Verplichte parameters ontbreken",
     "videoNotFoundOrDoesNotBelongToProject": "Video niet gevonden of hoort niet bij dit project",
     "failedToGenerateToken": "Token genereren mislukt",
@@ -524,7 +524,7 @@
   },
 
   "videos": {
-    "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+    "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
     "uploadVideo": "Video uploaden",
     "uploadVideos": "Video's uploaden",
   "uploadAssets": "Assets uploaden",
@@ -782,7 +782,7 @@
   },
 
   "comments": {
-  "feedbackAndDiscussion": "Feedback & discussie",
+  "feedbackAndDiscussion": "Feedback & Discussie",
     "hideFeedback": "Feedback verbergen",
   "showFeedback": "Feedback weergeven",
   "watchingApprovedVersion": "U bekijkt de goedgekeurde versie",
@@ -847,7 +847,7 @@
 
   "share": {
   "authRequired": "Authenticatie vereist",
-    "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+    "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
     "slugRequired": "Slug is verplicht",
     "failedToGenerateShareUrl": "Share-URL genereren mislukt",
     "passwordPrompt": "Voer het wachtwoord in om verder te gaan.",
@@ -951,7 +951,7 @@
     "title": "Algemene instellingen",
     "description": "Beheer instellingen voor de hele applicatie",
     "savedSuccessfully": "Instellingen succesvol opgeslagen!",
-  "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+  "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
     "failedToLoad": "Instellingen laden mislukt",
     "failedToSave": "Instellingen opslaan mislukt",
   "failedToFetchSettings": "Instellingen ophalen mislukt",
@@ -1107,7 +1107,7 @@
       "labelText": "Labeltekst in hoofdletters",
       "loadingTemplates": "Templates laden...",
       "failedToLoad": "E-mailtemplates laden mislukt",
-  "tooManyPreviewRequests": "Te veel previewverzoeken. Doe het wat rustiger aan.",
+  "tooManyPreviewRequests": "Te veel previewverzoeken. Probeer het later opnieuw.",
       "clientNotifications": "Klantmeldingen",
       "adminNotifications": "Beheerdersmeldingen",
       "securityCategory": "Beveiliging",
@@ -1186,7 +1186,7 @@
     "notifications": {
       "title": "E-mail & pushmeldingen",
   "description": "Configureer bestemmingen voor e-mail- en pushmeldingen",
-      "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+      "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
       "failedToFetchNotificationDestinations": "Ophalen van meldingsbestemmingen mislukt",
       "failedToCreateNotificationDestination": "Aanmaken van meldingsbestemming mislukt",
       "notificationDestinationNotFound": "Meldingsbestemming niet gevonden",
@@ -1440,7 +1440,7 @@
   "security": {
     "title": "Beveiligingsgebeurtenissen",
   "description": "Bekijk gebeurtenissen, verzoekslimieten en verdachte activiteit",
-    "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+    "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
     "securityEventsDashboardDisabled": "Dashboard voor beveiligingsgebeurtenissen is uitgeschakeld",
     "failedToFetchSecurityEvents": "Ophalen van beveiligingsgebeurtenissen mislukt",
     "olderThanMustBeZeroOrGreater": "olderThan moet 0 of hoger zijn (0 = alles verwijderen)",
@@ -1527,7 +1527,7 @@
     "fullVideoFile": "Volledig videobestand",
     "content": "Inhoud",
   "pagination": "Paginering",
-  "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+  "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
   "unableToProcessRequest": "Aanvraag verwerken mislukt",
   "projectNotFound": "Project niet gevonden"
   },
@@ -1643,7 +1643,7 @@
     "unsubscribing": "Afmelden\u2026",
     "unsubscribe": "Afmelden",
     "hint": "Stopt alleen e-mailmeldingen. Uw deellink blijft werken.",
-    "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan."
+    "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw."
   },
 
   "notFound": {
@@ -1661,9 +1661,9 @@
   },
 
   "clients": {
-    "title": "Klantenlijst",
+    "title": "Klantenbeheer",
   "description": "Beheer je klanten en contactpersonen",
-    "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+    "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
     "failedToFetchClients": "Klanten ophalen mislukt",
     "syncExisting": "Bestaande synchroniseren",
     "syncTitle": "Bestaande klanten importeren uit historische projecten",
@@ -1720,8 +1720,8 @@
   "users": {
     "title": "Gebruikersbeheer",
     "description": "Beheer beheerdersaccounts",
-    "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
-    "tooManyUserCreationRequests": "Te veel verzoeken om gebruikers aan te maken. Doe het wat rustiger aan.",
+    "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
+    "tooManyUserCreationRequests": "Te veel verzoeken om gebruikers aan te maken. Probeer het later opnieuw.",
     "unableToProcessRequest": "Kan verzoek niet verwerken",
     "addUser": "Gebruiker toevoegen",
     "searchPlaceholder": "Zoek gebruikers...",
@@ -1818,7 +1818,7 @@
     "title": "Agenda",
   "description": "Overzicht van projectdeadlines en planning",
     "notFound": "Niet gevonden",
-    "tooManyRequestsSlowDown": "Te veel verzoeken. Doe het wat rustiger aan.",
+    "tooManyRequestsSlowDown": "Te veel verzoeken. Probeer het later opnieuw.",
     "invalidFromDateParameter": "Ongeldige \"from\"-datumparameter",
     "invalidToDateParameter": "Ongeldige \"to\"-datumparameter",
     "operationFailed": "Bewerking mislukt",

@@ -36,19 +36,3 @@ export async function loadLocaleMessages(locale: string): Promise<Record<string,
   }
 }
 
-/**
- * Get available locales by checking which locale files exist.
- * Only returns locales that have a corresponding JSON file.
- */
-export function getAvailableLocales(): Array<{ code: string; name: string }> {
-  return SUPPORTED_LOCALES
-    .filter(code => {
-      try {
-        require(`../locales/${code}.json`)
-        return true
-      } catch {
-        return false
-      }
-    })
-    .map(code => ({ code, name: LOCALE_NAMES[code] || code }))
-}

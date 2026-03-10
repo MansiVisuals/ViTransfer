@@ -254,9 +254,9 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
             <span className="flex-1 min-w-0">{tc('name')}</span>
             <span className="w-36 hidden md:block">{t('client')}</span>
             <span className="w-28">{tc('status')}</span>
-            <span className="w-14 text-center hidden lg:block">{t('videos')}</span>
-            <span className="w-14 text-center hidden lg:block">{t('comments')}</span>
-            <span className="w-24 hidden lg:block">{t('dueDateLabel')}</span>
+            <span className="w-16 text-center hidden lg:block">{t('videos')}</span>
+            <span className="w-20 text-center hidden lg:block">{t('comments')}</span>
+            <span className="w-20 hidden lg:block">{t('dueDateLabel')}</span>
             <span className="w-24 hidden xl:block">{tc('created')}</span>
             <span className="w-24 hidden lg:block">{tc('updated')}</span>
             <span className="w-4"></span>
@@ -292,9 +292,9 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                       {{ IN_REVIEW: t('statusInReview'), APPROVED: t('statusApproved'), SHARE_ONLY: t('statusShareOnly'), ARCHIVED: t('statusArchived') }[project.status] || project.status}
                     </span>
                   </span>
-                  <span className="w-14 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
-                  <span className="w-14 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
-                  <span className={`w-24 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate, project.status) : 'text-muted-foreground'}`}>
+                  <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
+                  <span className="w-20 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
+                  <span className={`w-20 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate, project.status) : 'text-muted-foreground'}`}>
                     {project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
                   </span>
                   <span className="w-24 text-xs text-muted-foreground hidden xl:block">

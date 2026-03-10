@@ -398,6 +398,7 @@ export default function CalendarPage() {
 
   // ── Gantt helpers ──
   const allGanttProjects = projects.filter(p => p.dueDate)
+  const ganttRangeMonths: Record<string, number> = { '1m': 1, '3m': 3, '6m': 6, '1y': 12 }
 
   // Compute viewport based on selected range
   function getGanttViewport(): { start: Date; end: Date } {
@@ -413,8 +414,7 @@ export default function CalendarPage() {
       return { start, end }
     }
 
-    const monthsMap: Record<string, number> = { '1m': 1, '3m': 3, '6m': 6, '1y': 12 }
-    const months = monthsMap[ganttRange] || 3
+    const months = ganttRangeMonths[ganttRange] || 3
     const start = new Date(ganttCenter)
     start.setMonth(start.getMonth() - Math.floor(months / 2))
     start.setDate(1)
@@ -485,8 +485,7 @@ export default function CalendarPage() {
   }
 
   function navigateGantt(direction: 'prev' | 'next') {
-    const monthsMap: Record<string, number> = { '1m': 1, '3m': 3, '6m': 6, '1y': 12 }
-    const step = monthsMap[ganttRange] || 3
+    const step = ganttRangeMonths[ganttRange] || 3
     const d = new Date(ganttCenter)
     d.setMonth(d.getMonth() + (direction === 'next' ? step : -step))
     setGanttCenter(d)

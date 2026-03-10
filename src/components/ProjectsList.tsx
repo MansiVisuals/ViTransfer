@@ -43,11 +43,11 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
            value === 'SHARE_ONLY' ? t('statusShareOnly') :
            t('statusArchived'),
   }))
-  const [sortMode, setSortMode] = useState<'status' | 'alphabetical' | 'dueDate'>(() => {
+  const [sortMode, setSortMode] = useState<'status' | 'alphabetical' | 'alphabetical-reverse' | 'dueDate'>(() => {
     // Load sort mode from localStorage
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('admin_projects_sort_mode')
-      if (stored === 'status' || stored === 'alphabetical' || stored === 'dueDate') {
+      if (stored === 'status' || stored === 'alphabetical' || stored === 'alphabetical-reverse' || stored === 'dueDate') {
         return stored
       }
     }
@@ -113,6 +113,8 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
   const sortedProjects = [...filteredProjects].sort((a, b) => {
     if (sortMode === 'alphabetical') {
       return a.title.localeCompare(b.title)
+    } else if (sortMode === 'alphabetical-reverse') {
+      return b.title.localeCompare(a.title)
     } else if (sortMode === 'dueDate') {
       // Projects with due dates first, sorted earliest first
       if (!a.dueDate && !b.dueDate) return a.title.localeCompare(b.title)
@@ -145,12 +147,15 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSortMode(current => current === 'alphabetical' ? 'status' : current === 'status' ? 'dueDate' : 'alphabetical')}
+            onClick={() => setSortMode(current => {
+              const cycle: typeof current[] = ['alphabetical', 'alphabetical-reverse', 'status', 'dueDate']
+              return cycle[(cycle.indexOf(current) + 1) % cycle.length]
+            })}
             title={sortMode === 'alphabetical' ? t('sortByStatus') : sortMode === 'status' ? t('sortByDueDate') : t('sortAlphabetically')}
           >
             {sortMode === 'dueDate' ? <Calendar className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
             <span className="hidden sm:inline ml-2">
-              {sortMode === 'alphabetical' ? t('aToZ') : sortMode === 'status' ? tc('status') : t('dueDateLabel')}
+              {sortMode === 'alphabetical' ? t('aToZ') : sortMode === 'alphabetical-reverse' ? t('zToA') : sortMode === 'status' ? tc('status') : t('dueDateLabel')}
             </span>
           </Button>
         </div>

@@ -307,6 +307,7 @@
     "sortByStatus": "Op status sorteren",
     "sortByDueDate": "Op deadline sorteren",
     "aToZ": "A-Z",
+    "zToA": "Z-A",
 
     "statusInReview": "In beoordeling",
     "statusApproved": "Goedgekeurd",

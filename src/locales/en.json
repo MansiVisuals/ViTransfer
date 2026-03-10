@@ -308,6 +308,7 @@
     "sortByStatus": "Sort by status",
     "sortByDueDate": "Sort by due date",
     "aToZ": "A-Z",
+    "zToA": "Z-A",
 
     "statusInReview": "In Review",
     "statusApproved": "Approved",

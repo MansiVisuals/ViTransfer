@@ -400,11 +400,13 @@ export default function ClientsPage() {
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Users className="w-3 h-3" />
-                        {t('contactCount', { count: company.contacts.length })}
+                        <span className="sm:hidden">{company.contacts.length}</span>
+                        <span className="hidden sm:inline">{t('contactCount', { count: company.contacts.length })}</span>
                       </span>
                       <span className="flex items-center gap-1">
                         <FolderKanban className="w-3 h-3" />
-                        {t('projectCount', { count: company._count.projects })}
+                        <span className="sm:hidden">{company._count.projects}</span>
+                        <span className="hidden sm:inline">{t('projectCount', { count: company._count.projects })}</span>
                       </span>
                     </div>
                   </div>

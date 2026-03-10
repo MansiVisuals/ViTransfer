@@ -265,13 +265,17 @@ export default function VideoComparison({
     }
   }, [])
 
-  // Reset time when versions change
+  // Reset time and reload videos when versions or mode change
   useEffect(() => {
+    const a = videoRefA.current
+    const b = videoRefB.current
+    if (a) { a.pause(); a.currentTime = 0; a.load() }
+    if (b) { b.pause(); b.currentTime = 0; b.load() }
     setCurrentTime(0)
     currentTimeRef.current = 0
     setVideoDuration(0)
     setIsPlaying(false)
-  }, [versionAIndex, versionBIndex])
+  }, [versionAIndex, versionBIndex, mode])
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">

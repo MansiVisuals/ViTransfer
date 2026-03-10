@@ -354,7 +354,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             today.setHours(0, 0, 0, 0)
             const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
             const diffDays = Math.round((dueDay.getTime() - today.getTime()) / 86400000)
-            const colorClass = diffDays < 0 ? 'text-destructive' : diffDays <= 1 ? 'text-warning' : diffDays <= 7 ? 'text-primary' : ''
+            const isCompleted = project.status === 'APPROVED' || project.status === 'ARCHIVED' || project.status === 'SHARE_ONLY'
+            const colorClass = isCompleted ? '' : diffDays < 0 ? 'text-destructive' : diffDays <= 1 ? 'text-warning' : diffDays <= 7 ? 'text-primary' : ''
             const dateStr = due.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
             return (
@@ -365,11 +366,11 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
                     <Calendar className="w-4 h-4" />
                     {dateStr}
                   </p>
-                  {diffDays < 0 && <p className="text-xs text-destructive mt-1">{Math.abs(diffDays)} {Math.abs(diffDays) !== 1 ? t('days') : t('day')} {t('overdue')}</p>}
-                  {diffDays === 0 && <p className="text-xs text-warning mt-1">{t('dueToday')}</p>}
-                  {diffDays === 1 && <p className="text-xs text-warning mt-1">{t('dueTomorrow')}</p>}
-                  {diffDays > 1 && diffDays <= 7 && <p className="text-xs text-primary mt-1">{diffDays} {t('daysRemaining')}</p>}
-                  {diffDays > 7 && <p className="text-xs text-muted-foreground mt-1">{diffDays} {t('daysRemaining')}</p>}
+                  {!isCompleted && diffDays < 0 && <p className="text-xs text-destructive mt-1">{Math.abs(diffDays)} {Math.abs(diffDays) !== 1 ? t('days') : t('day')} {t('overdue')}</p>}
+                  {!isCompleted && diffDays === 0 && <p className="text-xs text-warning mt-1">{t('dueToday')}</p>}
+                  {!isCompleted && diffDays === 1 && <p className="text-xs text-warning mt-1">{t('dueTomorrow')}</p>}
+                  {!isCompleted && diffDays > 1 && diffDays <= 7 && <p className="text-xs text-primary mt-1">{diffDays} {t('daysRemaining')}</p>}
+                  {!isCompleted && diffDays > 7 && <p className="text-xs text-muted-foreground mt-1">{diffDays} {t('daysRemaining')}</p>}
                 </div>
               </div>
             )

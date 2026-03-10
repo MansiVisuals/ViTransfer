@@ -19,6 +19,7 @@ interface CalendarProject {
 
 type ViewMode = 'calendar' | 'gantt'
 type CalendarScale = 'day' | 'week' | 'month' | 'year'
+type GanttRange = 'all' | '1m' | '3m' | '6m' | '1y'
 
 export default function CalendarPage() {
   const t = useTranslations('calendar')
@@ -28,6 +29,8 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('calendar')
   const [calendarScale, setCalendarScale] = useState<CalendarScale>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [ganttRange, setGanttRange] = useState<GanttRange>('all')
+  const [ganttCenter, setGanttCenter] = useState(new Date())
   const [feedUrl, setFeedUrl] = useState('')
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
@@ -394,41 +397,107 @@ export default function CalendarPage() {
   }
 
   // ── Gantt helpers ──
-  const ganttProjects = projects.filter(p => p.dueDate)
-  const ganttStart = ganttProjects.length > 0
-    ? new Date(Math.min(...ganttProjects.map(p => new Date(p.createdAt).getTime())))
-    : new Date()
-  const ganttEnd = ganttProjects.length > 0
-    ? new Date(Math.max(...ganttProjects.map(p => new Date(p.dueDate).getTime())))
-    : new Date()
-  ganttStart.setDate(ganttStart.getDate() - 7)
-  ganttEnd.setDate(ganttEnd.getDate() + 7)
+  const allGanttProjects = projects.filter(p => p.dueDate)
+
+  // Compute viewport based on selected range
+  function getGanttViewport(): { start: Date; end: Date } {
+    if (ganttRange === 'all') {
+      const start = allGanttProjects.length > 0
+        ? new Date(Math.min(...allGanttProjects.map(p => new Date(p.createdAt).getTime())))
+        : new Date()
+      const end = allGanttProjects.length > 0
+        ? new Date(Math.max(...allGanttProjects.map(p => new Date(p.dueDate).getTime())))
+        : new Date()
+      start.setDate(start.getDate() - 7)
+      end.setDate(end.getDate() + 7)
+      return { start, end }
+    }
+
+    const monthsMap: Record<string, number> = { '1m': 1, '3m': 3, '6m': 6, '1y': 12 }
+    const months = monthsMap[ganttRange] || 3
+    const start = new Date(ganttCenter)
+    start.setMonth(start.getMonth() - Math.floor(months / 2))
+    start.setDate(1)
+    const end = new Date(ganttCenter)
+    end.setMonth(end.getMonth() + Math.ceil(months / 2))
+    end.setDate(0) // last day of previous month
+    return { start, end }
+  }
+
+  const { start: ganttStart, end: ganttEnd } = getGanttViewport()
   const ganttTotalDays = Math.max(1, Math.ceil((ganttEnd.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)))
+
+  // Filter projects that overlap the current viewport
+  const ganttProjects = allGanttProjects.filter(p => {
+    if (ganttRange === 'all') return true
+    const created = new Date(p.createdAt)
+    const due = new Date(p.dueDate)
+    return due >= ganttStart && created <= ganttEnd
+  })
 
   function ganttBarStyle(project: CalendarProject) {
     const created = new Date(project.createdAt)
     const due = new Date(project.dueDate)
-    const offset = Math.max(0, (created.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24))
-    const duration = Math.max(1, (due.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
+    // Clamp bar to viewport bounds
+    const barStart = Math.max(created.getTime(), ganttStart.getTime())
+    const barEnd = Math.min(due.getTime(), ganttEnd.getTime())
+    const offset = Math.max(0, (barStart - ganttStart.getTime()) / (1000 * 60 * 60 * 24))
+    const duration = Math.max(1, (barEnd - barStart) / (1000 * 60 * 60 * 24))
     const leftPercent = (offset / ganttTotalDays) * 100
     const widthPercent = (duration / ganttTotalDays) * 100
     return { left: `${leftPercent}%`, width: `${Math.max(widthPercent, 1)}%` }
   }
 
-  function ganttMonthMarkers() {
+  function ganttTimeMarkers() {
     const markers: { label: string; leftPercent: number }[] = []
-    const current = new Date(ganttStart)
-    current.setDate(1)
-    if (current < ganttStart) current.setMonth(current.getMonth() + 1)
-    while (current <= ganttEnd) {
-      const dayOffset = (current.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)
-      markers.push({
-        label: current.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
-        leftPercent: (dayOffset / ganttTotalDays) * 100,
-      })
-      current.setMonth(current.getMonth() + 1)
+    const useWeeks = ganttRange === '1m'
+
+    if (useWeeks) {
+      // Weekly markers for 1-month range
+      const current = new Date(ganttStart)
+      // Advance to next Monday
+      const dayOfWeek = current.getDay()
+      const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek
+      current.setDate(current.getDate() + daysUntilMonday)
+      while (current <= ganttEnd) {
+        const dayOffset = (current.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)
+        markers.push({
+          label: current.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          leftPercent: (dayOffset / ganttTotalDays) * 100,
+        })
+        current.setDate(current.getDate() + 7)
+      }
+    } else {
+      // Monthly markers
+      const current = new Date(ganttStart)
+      current.setDate(1)
+      if (current < ganttStart) current.setMonth(current.getMonth() + 1)
+      while (current <= ganttEnd) {
+        const dayOffset = (current.getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24)
+        markers.push({
+          label: current.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
+          leftPercent: (dayOffset / ganttTotalDays) * 100,
+        })
+        current.setMonth(current.getMonth() + 1)
+      }
     }
     return markers
+  }
+
+  function navigateGantt(direction: 'prev' | 'next') {
+    const monthsMap: Record<string, number> = { '1m': 1, '3m': 3, '6m': 6, '1y': 12 }
+    const step = monthsMap[ganttRange] || 3
+    const d = new Date(ganttCenter)
+    d.setMonth(d.getMonth() + (direction === 'next' ? step : -step))
+    setGanttCenter(d)
+  }
+
+  function getGanttHeaderLabel(): string {
+    if (ganttRange === 'all') return ''
+    const opts: Intl.DateTimeFormatOptions = ganttRange === '1y'
+      ? { year: 'numeric' }
+      : { month: 'short', year: 'numeric' }
+    return `${ganttStart.toLocaleDateString(undefined, opts)} – ${ganttEnd.toLocaleDateString(undefined, opts)}`
   }
 
   const todayGanttOffset = ((new Date().getTime() - ganttStart.getTime()) / (1000 * 60 * 60 * 24) / ganttTotalDays) * 100
@@ -528,10 +597,52 @@ export default function CalendarPage() {
             {calendarScale === 'year' && renderYearView()}
           </>
         ) : (
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <>
+            {/* Gantt range controls + navigation */}
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                {([
+                  ['all', t('ganttAll')],
+                  ['1m', t('gantt1Month')],
+                  ['3m', t('gantt3Months')],
+                  ['6m', t('gantt6Months')],
+                  ['1y', t('gantt1Year')],
+                ] as [GanttRange, string][]).map(([range, label]) => (
+                  <button
+                    key={range}
+                    onClick={() => { setGanttRange(range); if (range !== 'all') setGanttCenter(new Date()) }}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                      ganttRange === range
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                {ganttRange !== 'all' && (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => navigateGantt('prev')}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm font-medium min-w-[160px] text-center">{getGanttHeaderLabel()}</span>
+                    <Button variant="ghost" size="sm" onClick={() => navigateGantt('next')}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+                <Button variant="outline" size="sm" onClick={() => { setGanttCenter(new Date()); if (ganttRange === 'all') setGanttRange('3m') }}>
+                  {t('today')}
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <div className="relative h-8 border-b border-border min-w-[800px]">
-                {ganttMonthMarkers().map((marker, i) => (
+                {ganttTimeMarkers().map((marker, i) => (
                   <div
                     key={i}
                     className="absolute top-0 h-full border-l border-border/50 px-1 text-xs text-muted-foreground flex items-center"
@@ -571,6 +682,7 @@ export default function CalendarPage() {
               </div>
             </div>
           </div>
+          </>
         )}
 
         {/* iCal subscription */}

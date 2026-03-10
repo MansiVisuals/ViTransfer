@@ -110,7 +110,7 @@ export default function VideoComparisonSlider({
         className="absolute inset-0 w-full h-full object-contain"
         crossOrigin="anonymous"
         playsInline
-        preload="metadata"
+        preload="auto"
         onLoadedMetadata={onLoadedMetadata}
       />
 
@@ -126,7 +126,7 @@ export default function VideoComparisonSlider({
           className="absolute inset-0 w-full h-full object-contain"
           crossOrigin="anonymous"
           playsInline
-          preload="metadata"
+          preload="auto"
           onLoadedMetadata={onLoadedMetadata}
         />
       </div>

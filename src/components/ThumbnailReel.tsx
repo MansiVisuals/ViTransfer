@@ -20,6 +20,8 @@ interface ThumbnailReelProps {
   showCommentToggle?: boolean
   isCommentPanelVisible?: boolean
   onToggleCommentPanel?: () => void
+  // Language toggle visibility (hidden on admin share page)
+  showLanguageToggle?: boolean
 }
 
 export default function ThumbnailReel({
@@ -32,6 +34,7 @@ export default function ThumbnailReel({
   showCommentToggle = false,
   isCommentPanelVisible = true,
   onToggleCommentPanel,
+  showLanguageToggle = true,
 }: ThumbnailReelProps) {
   const tShare = useTranslations('share')
   const tComments = useTranslations('comments')
@@ -266,7 +269,7 @@ export default function ThumbnailReel({
             )}
 
             {/* Language and theme toggles */}
-            <LanguageToggle />
+            {showLanguageToggle && <LanguageToggle />}
             <ThemeToggle />
           </div>
         </div>

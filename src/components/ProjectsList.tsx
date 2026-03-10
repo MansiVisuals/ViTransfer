@@ -91,7 +91,11 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
     localStorage.setItem('admin_projects_sort_mode', sortMode)
   }, [sortMode])
 
-  function getDueDateColor(dueDate: string): string {
+  function getDueDateColor(dueDate: string, status: string): string {
+    // Completed projects (approved, archived, share-only) should never show overdue styling
+    if (status === 'APPROVED' || status === 'ARCHIVED' || status === 'SHARE_ONLY') {
+      return 'text-muted-foreground'
+    }
     const due = new Date(dueDate)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -218,7 +222,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                         <span className="hidden sm:inline">{project._count.comments !== 1 ? t('commentsPlural') : t('comment')}</span>
                       </div>
                       {project.dueDate && (
-                        <div className={`inline-flex items-center gap-2 ${getDueDateColor(project.dueDate)}`}>
+                        <div className={`inline-flex items-center gap-2 ${getDueDateColor(project.dueDate, project.status)}`}>
                           <span className={metricIconWrapperClassName}>
                             <Calendar className={metricIconClassName} />
                           </span>
@@ -283,7 +287,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                   </span>
                   <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
                   <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
-                  <span className={`w-28 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate) : 'text-muted-foreground'}`}>
+                  <span className={`w-28 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate, project.status) : 'text-muted-foreground'}`}>
                     {project.dueDate ? new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                   </span>
                   <span className="w-28 text-xs text-muted-foreground hidden lg:block">

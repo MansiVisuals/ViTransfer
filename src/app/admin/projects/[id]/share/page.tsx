@@ -502,6 +502,7 @@ export default function AdminSharePage() {
         onVideoSelect={handleVideoSelect}
         onBackToGrid={handleBackToGrid}
         showBackButton={true}
+        showLanguageToggle={false}
         showCommentToggle={!project.hideFeedback}
         isCommentPanelVisible={!hideComments}
         onToggleCommentPanel={() => setHideComments(!hideComments)}

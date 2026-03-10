@@ -72,15 +72,29 @@ export default function VideoComparison({
   const syncBToA = useCallback(() => {
     const a = videoRefA.current
     const b = videoRefB.current
-    if (!a || !b || isSyncingRef.current) return
+    if (!a || !b || isSyncingRef.current || a.paused) return
 
-    const drift = Math.abs(a.currentTime - b.currentTime)
-    // Tight sync: correct any drift > 0.05s (roughly 1 frame at 24fps)
-    if (drift > 0.05) {
+    const drift = a.currentTime - b.currentTime // positive = B is behind
+    const absDrift = Math.abs(drift)
+
+    if (absDrift > 0.3) {
+      // Large drift: force seek (rare — initial play, stall, or manual seek)
       isSyncingRef.current = true
       b.currentTime = a.currentTime
-      // Release lock after a short delay to avoid feedback loops
+      b.playbackRate = a.playbackRate
       requestAnimationFrame(() => { isSyncingRef.current = false })
+    } else if (absDrift > 0.05) {
+      // Small drift: nudge playback rate to gradually converge
+      // Avoids buffer flushes caused by repeated currentTime seeks
+      const baseRate = a.playbackRate
+      b.playbackRate = drift > 0
+        ? baseRate * 1.06  // B is behind, speed up slightly
+        : baseRate * 0.94  // B is ahead, slow down slightly
+    } else {
+      // In sync: ensure B matches A's rate exactly
+      if (Math.abs(b.playbackRate - a.playbackRate) > 0.001) {
+        b.playbackRate = a.playbackRate
+      }
     }
   }, [])
 
@@ -116,6 +130,7 @@ export default function VideoComparison({
       const b = videoRefB.current
       if (b && b.paused) {
         b.currentTime = a.currentTime
+        b.playbackRate = a.playbackRate
         b.play().catch(() => {})
       }
     }
@@ -388,7 +403,7 @@ export default function VideoComparison({
                     className="w-full h-full object-contain cursor-pointer"
                     crossOrigin="anonymous"
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     onLoadedMetadata={handleLoadedMetadata}
                     onClick={() => {
                       const a = videoRefA.current
@@ -425,7 +440,7 @@ export default function VideoComparison({
                     className="w-full h-full object-contain cursor-pointer"
                     crossOrigin="anonymous"
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     onLoadedMetadata={handleLoadedMetadata}
                     onClick={() => {
                       const a = videoRefA.current

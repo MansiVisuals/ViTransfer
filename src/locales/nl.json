@@ -1076,7 +1076,7 @@
       "testEmailPlaceholder": "Voer e-mailadres in om test te ontvangen",
       "sendingTest": "Test-e-mail versturen...",
       "sendTest": "Test-e-mail versturen",
-      "adminSchedule": "Beheerdersmeldingsschema",
+      "adminSchedule": "Notificatieschema voor beheerders",
       "adminScheduleHint": "Configureer wanneer je samenvattingen ontvangt van klantopmerkingen over alle projecten. Opmerking: Goedkeuringsmeldingen worden altijd direct verstuurd.",
       "fillAllFields": "Vul alle SMTP-velden in voordat je test",
       "testSuccess": "Test-e-mail succesvol verzonden! Controleer je inbox.",

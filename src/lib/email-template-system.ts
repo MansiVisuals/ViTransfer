@@ -488,7 +488,14 @@ export function getDefaultTemplate(type: EmailTemplateType): DefaultTemplate | u
   return DEFAULT_TEMPLATES.find(t => t.type === type)
 }
 
-// loadLocaleMessages imported from @/i18n/locale (single source of truth)
+/**
+ * Load email translation messages for a given locale.
+ * Thin wrapper around loadLocaleMessages that extracts the `email` section.
+ */
+export async function loadEmailMessages(locale: string = 'en'): Promise<Record<string, any>> {
+  const messages = await loadLocaleMessages(locale)
+  return messages.email || {}
+}
 
 /**
  * Get localized template metadata (name + description) for a template type

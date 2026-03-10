@@ -38,6 +38,8 @@ interface ProjectInfoProps {
   allowAssetDownload?: boolean
   shareToken?: string | null
   activeVideoName?: string
+  authenticatedEmail?: string | null
+  authenticatedName?: string | null
   className?: string
   usePreviewForApprovedPlayback?: boolean
 }
@@ -61,6 +63,8 @@ export default function ProjectInfo({
   allowAssetDownload = true,
   shareToken = null,
   activeVideoName,
+  authenticatedEmail = null,
+  authenticatedName = null,
   className,
   usePreviewForApprovedPlayback = false,
 }: ProjectInfoProps) {
@@ -147,6 +151,8 @@ export default function ProjectInfo({
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           selectedVideoId: selectedVideo.id,
+          authorName: authenticatedName || undefined,
+          authorEmail: authenticatedEmail || undefined,
         }),
       })
 

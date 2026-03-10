@@ -25,6 +25,8 @@ interface VideoPlayerProps {
   projectStatus: ProjectStatus
   defaultQuality?: '720p' | '1080p' // Default quality from settings
   onApprove?: () => void // Optional approval callback
+  authenticatedEmail?: string | null // Email of OTP-authenticated user
+  authenticatedName?: string | null // Name of OTP-authenticated user
   projectTitle?: string
   projectDescription?: string
   clientName?: string
@@ -79,6 +81,8 @@ export default function VideoPlayer({
   onVideoStateChange, // Callback to expose video state for mobile layout
   usePreviewForApprovedPlayback = false, // Default to false (use original)
   fillContainer = false, // Default to false (standard aspect ratio)
+  authenticatedEmail = null,
+  authenticatedName = null,
 }: VideoPlayerProps) {
   const t = useTranslations('videos')
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
@@ -959,6 +963,8 @@ export default function VideoPlayer({
         allowAssetDownload={allowAssetDownload}
         shareToken={shareToken}
         activeVideoName={activeVideoName}
+        authenticatedEmail={authenticatedEmail}
+        authenticatedName={authenticatedName}
         className="mt-3 lg:order-3"
         usePreviewForApprovedPlayback={usePreviewForApprovedPlayback}
       />

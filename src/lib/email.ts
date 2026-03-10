@@ -1170,11 +1170,12 @@ export async function sendAdminProjectApprovedEmail({
   const statusTitle = isComplete
     ? (adminApprovedMsg.titleAllAction || 'All Deliverables {{ACTION}}').replace('{{ACTION}}', action)
     : (adminApprovedMsg.titleOneAction || 'Deliverable {{ACTION}}').replace('{{ACTION}}', action)
-  const statusMessage = isComplete
-    ? `${clientName} has ${actionLower} all deliverables for this project`
-    : `${clientName} has ${actionLower} ${approvedVideos[0]?.name || 'a deliverable'}`
-
   const videoName = approvedVideos[0]?.name || 'A deliverable'
+  const statusMessage = isComplete
+    ? (adminApprovedMsg.subtitleAll || '{{CLIENT_NAME}} has {{ACTION}} all deliverables for this project')
+        .replace('{{CLIENT_NAME}}', clientName).replace('{{ACTION}}', actionLower)
+    : (adminApprovedMsg.subtitleOne || '{{CLIENT_NAME}} has {{ACTION}} {{VIDEO_NAME}}')
+        .replace('{{CLIENT_NAME}}', clientName).replace('{{ACTION}}', actionLower).replace('{{VIDEO_NAME}}', videoName)
 
   // Build placeholder values
   const placeholderValues: Record<string, string> = {

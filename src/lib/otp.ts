@@ -239,7 +239,7 @@ export async function sendOTPEmail(
       <p style="margin: 0; font-size: 13px; color: ${brand.muted}; line-height: 1.5;">
         ${ignoreNotice}
       </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand) : ''}
+      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, messages?.email) : ''}
     `,
   })
 

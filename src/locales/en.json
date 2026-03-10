@@ -1932,6 +1932,8 @@
       "unapproved": "Unapproved",
       "approvedAction": "approved",
       "unapprovedAction": "unapproved",
+      "subtitleAll": "{{CLIENT_NAME}} has {{ACTION}} all deliverables for this project",
+      "subtitleOne": "{{CLIENT_NAME}} has {{ACTION}} {{VIDEO_NAME}}",
       "subject": "{{CLIENT_NAME}} {{APPROVAL_STATUS}}: {{PROJECT_TITLE}}",
       "body": "<strong>{{CLIENT_NAME}}</strong> has {{APPROVAL_ACTION}} {{VIDEO_NAME}} in {{PROJECT_TITLE}}.",
       "button": "View in Admin Panel"

@@ -44,6 +44,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
   const [authenticatedEmail, setAuthenticatedEmail] = useState<string | null>(null) // Track OTP-authenticated email
+  const [authenticatedName, setAuthenticatedName] = useState<string | null>(null) // Track OTP-authenticated name
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -81,15 +82,22 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   // Server extracts recipientId from token - client never decodes token
   useEffect(() => {
     if (!project?.authenticatedRecipientId || !project?.recipients?.length) return
-    if (authenticatedEmail) return // Already set, skip
-
-    // Match server-provided recipientId with recipients to get email
+    // Match server-provided recipientId with recipients to get email/name
     const recipient = project.recipients.find((r: any) => r.id === project.authenticatedRecipientId)
     if (recipient?.email) {
-      setAuthenticatedEmail(recipient.email)
+      if (!authenticatedEmail) setAuthenticatedEmail(recipient.email)
+      if (!authenticatedName && recipient.name) setAuthenticatedName(recipient.name)
     }
-  }, [project?.authenticatedRecipientId, project?.recipients, authenticatedEmail])
+  }, [project?.authenticatedRecipientId, project?.recipients, authenticatedEmail, authenticatedName])
 
+  // Resolve authenticated name from recipients when we have email but no name
+  useEffect(() => {
+    if (!authenticatedEmail || authenticatedName || !project?.recipients?.length) return
+    const recipient = project.recipients.find(
+      (r: any) => r.email?.toLowerCase() === authenticatedEmail.toLowerCase()
+    )
+    if (recipient?.name) setAuthenticatedName(recipient.name)
+  }, [authenticatedEmail, authenticatedName, project?.recipients])
 
   // Fetch comments separately for security
   const fetchComments = useCallback(async () => {
@@ -925,6 +933,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 watermarkEnabled={project.watermarkEnabled}
                 activeVideoName={activeVideoName}
                 onApprove={isGuest ? undefined : fetchProjectData}
+                authenticatedEmail={authenticatedEmail}
+                authenticatedName={authenticatedName}
                 initialSeekTime={initialSeekTime}
                 initialVideoIndex={initialVideoIndex}
                 isAdmin={false}

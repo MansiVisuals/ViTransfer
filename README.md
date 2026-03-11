@@ -25,7 +25,7 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 4. Open `http://localhost:4321` and login.
 
 ## Documentation (Wiki)
-Full docs live in the GitHub Wiki and are mirrored in `docs/wiki` (v0.8.9).
+Full docs live in the GitHub Wiki and are mirrored in `docs/wiki` (v0.9.5).
 
 - GitHub Wiki: https://github.com/MansiVisuals/ViTransfer/wiki
 - Start here: [docs/wiki/Home.md](docs/wiki/Home.md)

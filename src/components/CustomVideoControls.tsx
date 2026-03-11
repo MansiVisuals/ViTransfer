@@ -787,7 +787,7 @@ export default function CustomVideoControls({
 
             {/* Volume Slider */}
             {showVolume && (
-              <div className="absolute bottom-full right-0 mb-2 bg-black/90 p-3 rounded-lg shadow-xl border border-white/20 flex items-center backdrop-blur-sm">
+              <div className="absolute bottom-full right-0 mb-2 bg-black/90 p-3 rounded-lg shadow-xl border border-white/20 flex items-center justify-center backdrop-blur-sm">
                 <input
                   type="range"
                   min="0"
@@ -795,11 +795,11 @@ export default function CustomVideoControls({
                   step="0.05"
                   value={isMuted ? 0 : volume}
                   onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-                  className="h-20 sm:h-24 cursor-pointer accent-primary"
+                  className="h-20 sm:h-24 w-2 cursor-pointer accent-primary"
                   style={{
-                    WebkitAppearance: 'slider-vertical',
-                    width: '4px',
-                  } as React.CSSProperties}
+                    writingMode: 'vertical-lr',
+                    direction: 'rtl',
+                  }}
                 />
               </div>
             )}

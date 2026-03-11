@@ -7,20 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-03-11
+
 ### Added
-- Video version comparison mode with side-by-side and slider overlay. Synced playback controls, frame stepping, speed adjustment, and keyboard shortcuts. Accessible via the "Compare" button when a video has 2+ versions.
-- Due date reminder email template. Admins now receive email notifications alongside push and external provider notifications when project deadlines approach. Template is fully customizable in Settings > Email Templates with placeholders for project title, due date, and reminder type.
-- "Due Date Reminders" event type added to browser push and external notification event filters.
+- Due dates with calendar view, Gantt chart, and iCal feed for project deadline management.
+- Due date reminder notifications via email, push, and external providers (Apprise). Configurable reminder intervals in project settings.
+- Video version comparison mode with side-by-side and slider overlay. Synced playback controls, frame stepping, speed adjustment, and keyboard shortcuts.
+- Interactive client tutorial with Driver.js. Auto-starts on first visit, guiding clients through the review interface. Configurable per project in share settings.
+- Internationalization support (English and Dutch) with next-intl. Language toggle available on share pages. See [Translations](docs/wiki/Translations.md) to contribute or improve translations.
+- Z-A reverse alphabetical sorting option for the projects list.
+- Created date column in the project table view.
+- Apprise updated to 1.9.7.
 
 ### Fixed
-- Fixed BullMQ notification repeat job history accumulating indefinitely in Redis (~1,440 keys/day with no TTL). Added `removeOnComplete` and `removeOnFail` to prevent future accumulation.
-- Upgraded dompurify to 3.3.2 to fix XSS vulnerability (GHSA-v2wj-7wpq-c8vv).
+- Large video processing crash caused by database connection pool exhaustion.
+- BullMQ notification repeat job history accumulating indefinitely in Redis (~1,440 keys/day with no TTL).
+- XSS vulnerability in dompurify (upgraded to 3.3.2, GHSA-v2wj-7wpq-c8vv).
+- 3 moderate Dependabot vulnerabilities.
+- Volume slider not rendering vertically on Firefox.
+
+### Security
+- Client and contact name sanitization to prevent stored XSS.
+- Input validation and SMTP credential masking improvements.
 
 ### Upgrade Notes
 - **Redis cleanup (optional):** If your Redis instance has been running since before this update, you may have accumulated stale `bull:notification-processing:repeat:*` keys. To reclaim memory, run:
   ```
   docker exec -it <redis-container> sh -c "redis-cli -a '<password>' --no-auth-warning --scan --pattern 'bull:notification-processing:repeat:*' | xargs -n 100 redis-cli -a '<password>' --no-auth-warning DEL"
   ```
+
+## [0.9.4] - 2026-02-27
+
+### Security
+- Fixed CodeQL sanitization alerts across API routes.
+- Added CodeQL workflow for automated security scanning on main and dev branches.
+- Secure temporary file creation with mkdtempSync.
+- Added service worker origin check.
+- Removed minimatch override and fixed audit vulnerabilities.
+- Added permissions to all GitHub Actions workflow files.
 
 ## [0.9.3] - 2026-02-25
 

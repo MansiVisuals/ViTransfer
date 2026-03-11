@@ -773,7 +773,7 @@ export default function VideoPlayer({
     <div className={`flex flex-col ${fillContainer ? 'h-full' : 'space-y-4 max-h-full'}`}>
       {/* Version Selector - Show ABOVE video on mobile, BELOW on desktop */}
       {displayVideos.length > 1 && (
-        <div className={`flex gap-2 overflow-x-auto py-2 px-2 flex-shrink-0 ${fillContainer ? '' : 'lg:order-2'}`}>
+        <div data-tutorial="version-selector" className={`flex gap-2 overflow-x-auto py-2 px-2 flex-shrink-0 ${fillContainer ? '' : 'lg:order-2'}`}>
           {displayVideos.map((video, index) => {
             const videoApproved = (video as any).approved === true
             return (

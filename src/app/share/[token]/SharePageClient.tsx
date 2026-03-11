@@ -906,7 +906,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
       {/* Thumbnail Reel - always visible, collapsible */}
-      <div data-tutorial="version-selector">
+      <div data-tutorial="video-reel">
         <ThumbnailReel
           videosByName={project.videosByName}
           thumbnailsByName={thumbnailsByName}

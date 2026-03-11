@@ -1,10 +1,13 @@
 'use client'
 
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { driver, type DriveStep, type Config } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { HelpCircle } from 'lucide-react'
+
+/** Steps that may appear after the main tutorial (conditional on video state) */
+const DEFERRED_STEPS = ['version-selector', 'download-btn', 'approve-btn'] as const
 
 interface ShareTutorialProps {
   projectId: string
@@ -30,14 +33,31 @@ export function ShareTutorial({
 }: ShareTutorialProps) {
   const t = useTranslations('tutorial')
   const [hasCompleted, setHasCompleted] = useState(true) // default true to avoid flash
+  const deferredRunningRef = useRef(false)
 
   const storageKey = `vt-tutorial-${inPlayerView ? 'player' : 'grid'}-${projectId}`
+  const stepKey = useCallback((step: string) => `vt-tutorial-step-${step}-${projectId}`, [projectId])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setHasCompleted(localStorage.getItem(storageKey) === 'done')
     }
   }, [storageKey])
+
+  /** Build a single step definition for a given tutorial element */
+  const buildStepForElement = useCallback((id: string): DriveStep | null => {
+    const map: Record<string, { title: string; description: string }> = {
+      'version-selector': { title: t('versionsTitle'), description: t('versionsDescription') },
+      'download-btn': { title: t('downloadTitle'), description: t('downloadDescription') },
+      'approve-btn': { title: t('approveTitle'), description: t('approveDescription') },
+    }
+    const info = map[id]
+    if (!info) return null
+    return {
+      element: `[data-tutorial="${id}"]`,
+      popover: { title: info.title, description: info.description },
+    }
+  }, [t])
 
   const buildSteps = useCallback((): DriveStep[] => {
     const steps: DriveStep[] = []
@@ -51,7 +71,6 @@ export function ShareTutorial({
         },
       })
 
-      // Target the thumbnail grid
       const gridEl = document.querySelector('[data-tutorial="video-grid"]')
       if (gridEl) {
         steps.push({
@@ -64,6 +83,19 @@ export function ShareTutorial({
       }
     } else {
       // Player view steps
+
+      // Video reel (different videos in the project)
+      const reelEl = document.querySelector('[data-tutorial="video-reel"]')
+      if (reelEl) {
+        steps.push({
+          element: '[data-tutorial="video-reel"]',
+          popover: {
+            title: t('reelTitle'),
+            description: t('reelDescription'),
+          },
+        })
+      }
+
       const playerEl = document.querySelector('[data-tutorial="video-player"]')
       if (playerEl) {
         steps.push({
@@ -75,6 +107,7 @@ export function ShareTutorial({
         })
       }
 
+      // Version selector (only visible when 2+ versions exist)
       const versionsEl = document.querySelector('[data-tutorial="version-selector"]')
       if (versionsEl) {
         steps.push({
@@ -84,6 +117,7 @@ export function ShareTutorial({
             description: t('versionsDescription'),
           },
         })
+        localStorage.setItem(stepKey('version-selector'), 'done')
       }
 
       if (watermarkEnabled) {
@@ -132,6 +166,7 @@ export function ShareTutorial({
               description: t('approveDescription'),
             },
           })
+          localStorage.setItem(stepKey('approve-btn'), 'done')
         }
       }
 
@@ -146,6 +181,7 @@ export function ShareTutorial({
               description: t('downloadDescription'),
             },
           })
+          localStorage.setItem(stepKey('download-btn'), 'done')
         }
       }
     }
@@ -159,10 +195,9 @@ export function ShareTutorial({
     })
 
     return steps
-  }, [inPlayerView, watermarkEnabled, hideFeedback, clientCanApprove, allowAssetDownload, isGuest, t])
+  }, [inPlayerView, watermarkEnabled, hideFeedback, clientCanApprove, allowAssetDownload, isGuest, t, stepKey])
 
-  const startTutorial = useCallback(() => {
-    const steps = buildSteps()
+  const runDriver = useCallback((steps: DriveStep[], onComplete?: () => void) => {
     if (steps.length === 0) return
 
     const config: Config = {
@@ -179,15 +214,24 @@ export function ShareTutorial({
       stageRadius: 8,
       popoverOffset: 12,
       onDestroyStarted: () => {
-        localStorage.setItem(storageKey, 'done')
-        setHasCompleted(true)
+        onComplete?.()
         driverObj.destroy()
       },
     }
 
     const driverObj = driver(config)
     driverObj.drive()
-  }, [buildSteps, storageKey, t])
+  }, [t])
+
+  const startTutorial = useCallback(() => {
+    const steps = buildSteps()
+    if (steps.length === 0) return
+
+    runDriver(steps, () => {
+      localStorage.setItem(storageKey, 'done')
+      setHasCompleted(true)
+    })
+  }, [buildSteps, runDriver, storageKey])
 
   // Auto-start on first visit (both grid and player views, with delay for page to render)
   useEffect(() => {
@@ -199,6 +243,52 @@ export function ShareTutorial({
 
     return () => clearTimeout(timer)
   }, [showTutorial, hasCompleted, inPlayerView, startTutorial])
+
+  // Watch for deferred elements that appear after the main tutorial is done
+  // (e.g. version selector when v2 is uploaded, download button after approval)
+  useEffect(() => {
+    if (!showTutorial || !hasCompleted || !inPlayerView || isGuest) return
+
+    const checkDeferred = () => {
+      if (deferredRunningRef.current) return
+
+      for (const step of DEFERRED_STEPS) {
+        // Skip steps the user has already seen
+        if (localStorage.getItem(stepKey(step)) === 'done') continue
+
+        // Skip steps that don't apply to this project config
+        if (step === 'approve-btn' && !clientCanApprove) continue
+        if (step === 'download-btn' && !allowAssetDownload) continue
+
+        const el = document.querySelector(`[data-tutorial="${step}"]`)
+        if (el) {
+          const built = buildStepForElement(step)
+          if (!built) continue
+
+          deferredRunningRef.current = true
+          runDriver([built], () => {
+            localStorage.setItem(stepKey(step), 'done')
+            deferredRunningRef.current = false
+          })
+          break // one at a time
+        }
+      }
+    }
+
+    // Initial check after a delay (element may already be present)
+    const timer = setTimeout(checkDeferred, 1500)
+
+    // Watch for DOM changes (element appearing after state change)
+    const observer = new MutationObserver(() => {
+      checkDeferred()
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      clearTimeout(timer)
+      observer.disconnect()
+    }
+  }, [showTutorial, hasCompleted, inPlayerView, isGuest, clientCanApprove, allowAssetDownload, stepKey, buildStepForElement, runDriver])
 
   // Don't render button if tutorial disabled or guest
   if (!showTutorial || isGuest) return null

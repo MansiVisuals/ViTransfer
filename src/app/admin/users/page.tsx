@@ -467,9 +467,6 @@ export default function UsersPage() {
                         <span>@{user.username}</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {t('created', { date: formatDate(user.createdAt) })}
-                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-0.5 sm:gap-1 ml-2 flex-shrink-0">

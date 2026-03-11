@@ -849,8 +849,8 @@
   },
 
   "tutorial": {
-    "welcomeTitle": "Welcome to Video Review",
-    "welcomeDescription": "This page lets you watch videos, leave feedback, and approve final versions. Let us show you around.",
+    "welcomeTitle": "Welcome",
+    "welcomeDescription": "This page lets you watch videos, leave feedback, approve final versions, and download approved files. Let us show you around.",
     "gridTitle": "Video Selection",
     "gridDescription": "Click any video thumbnail to start reviewing. Videos needing review appear first.",
     "playerTitle": "Video Player",

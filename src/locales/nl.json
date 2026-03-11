@@ -808,8 +808,8 @@
     "failedToDeleteComment": "Opmerking verwijderen mislukt"
   },
   "tutorial": {
-    "welcomeTitle": "Welkom bij Video Review",
-    "welcomeDescription": "Op deze pagina kunt u video's bekijken, feedback geven en definitieve versies goedkeuren. We laten u even zien hoe het werkt.",
+    "welcomeTitle": "Welkom",
+    "welcomeDescription": "Op deze pagina kunt u video's bekijken, feedback geven, definitieve versies goedkeuren en goedgekeurde bestanden downloaden. We laten u even zien hoe het werkt.",
     "gridTitle": "Video Selectie",
     "gridDescription": "Klik op een videominiatuur om te beginnen met reviewen. Video's die nog beoordeeld moeten worden verschijnen eerst.",
     "playerTitle": "Videospeler",

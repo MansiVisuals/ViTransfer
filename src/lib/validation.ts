@@ -279,6 +279,9 @@ export const updateProjectSchema = z.object({
   // Approved playback settings
   usePreviewForApprovedPlayback: z.boolean().optional(),
 
+  // Client tutorial
+  showClientTutorial: z.boolean().optional(),
+
   // Authentication settings
   sharePassword: z.string()
     .min(8, 'Share password must be at least 8 characters')

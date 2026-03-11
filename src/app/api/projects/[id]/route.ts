@@ -290,6 +290,11 @@ export async function PATCH(
       updateData.usePreviewForApprovedPlayback = validatedBody.usePreviewForApprovedPlayback
     }
 
+    // Handle client tutorial setting
+    if (validatedBody.showClientTutorial !== undefined) {
+      updateData.showClientTutorial = validatedBody.showClientTutorial
+    }
+
     // Handle password, authMode, and guest settings updates
     // Fetch current project once if any security field is being updated
     let passwordWasChanged = false

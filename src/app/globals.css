@@ -216,6 +216,41 @@
   input[type="date"]::-webkit-date-and-time-value {
     text-align: left;
   }
+
+  /* Driver.js tutorial overlay theming */
+  .driver-popover {
+    @apply bg-card text-foreground border border-border;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .driver-popover-title {
+    @apply text-foreground font-semibold text-base;
+  }
+
+  .driver-popover-description {
+    @apply text-muted-foreground text-sm leading-relaxed;
+  }
+
+  .driver-popover-progress-text {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .driver-popover-footer button {
+    @apply text-sm rounded-md px-3 py-1.5 font-medium transition-colors;
+  }
+
+  .driver-popover-next-btn {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .driver-popover-prev-btn {
+    @apply bg-muted text-foreground;
+  }
+
+  .driver-popover-close-btn {
+    @apply text-muted-foreground hover:text-foreground;
+  }
 }
 
 @layer utilities {

@@ -297,6 +297,7 @@ export async function GET(
       allowAssetDownload: project.allowAssetDownload,
       allowClientAssetUpload: project.allowClientAssetUpload,
       clientCanApprove: project.clientCanApprove,
+      showClientTutorial: project.showClientTutorial ?? true,
 
       videos: sanitizedVideos,
       videosByName: sanitizedVideosByName,

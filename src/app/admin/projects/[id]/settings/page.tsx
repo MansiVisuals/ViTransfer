@@ -66,6 +66,7 @@ interface Project {
   allowClientAssetUpload: boolean
   clientCanApprove: boolean
   usePreviewForApprovedPlayback: boolean
+  showClientTutorial: boolean
   clientNotificationSchedule: string
   clientNotificationTime: string | null
   clientNotificationDay: number | null
@@ -111,6 +112,7 @@ export default function ProjectSettingsPage() {
   const [allowClientAssetUpload, setAllowClientAssetUpload] = useState(false)
   const [clientCanApprove, setClientCanApprove] = useState(true)
   const [usePreviewForApprovedPlayback, setUsePreviewForApprovedPlayback] = useState(false)
+  const [showClientTutorial, setShowClientTutorial] = useState(true)
 
   // Notification settings state
   const [clientNotificationSchedule, setClientNotificationSchedule] = useState('HOURLY')
@@ -195,6 +197,7 @@ export default function ProjectSettingsPage() {
         setAllowClientAssetUpload(data.allowClientAssetUpload ?? false)
         setClientCanApprove(data.clientCanApprove ?? true)
         setUsePreviewForApprovedPlayback(data.usePreviewForApprovedPlayback ?? false)
+        setShowClientTutorial(data.showClientTutorial ?? true)
         setAuthMode(data.authMode || 'PASSWORD')
         setGuestMode(data.guestMode || false)
         setGuestLatestOnly(data.guestLatestOnly ?? true)
@@ -304,6 +307,7 @@ export default function ProjectSettingsPage() {
         allowClientAssetUpload,
         clientCanApprove,
         usePreviewForApprovedPlayback,
+        showClientTutorial,
         sharePassword: sharePassword || null,
         authMode,
         guestMode,
@@ -765,6 +769,20 @@ export default function ProjectSettingsPage() {
                     id="allowClientAssetUpload"
                     checked={allowClientAssetUpload}
                     onCheckedChange={setAllowClientAssetUpload}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="showClientTutorial">{t('showClientTutorial')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('showClientTutorialDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="showClientTutorial"
+                    checked={showClientTutorial}
+                    onCheckedChange={setShowClientTutorial}
                   />
                 </div>
               </div>

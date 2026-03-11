@@ -73,6 +73,9 @@ model Project {
   // Approved playback settings
   usePreviewForApprovedPlayback Boolean @default(false) // Use browser-compatible preview instead of original after approval
 
+  // Client tutorial
+  showClientTutorial Boolean @default(true) // Show interactive tutorial overlay for first-time visitors
+
   // Due date tracking
   dueDate     DateTime? // Optional project deadline
   dueReminder String?   // NONE, DAY_BEFORE, WEEK_BEFORE

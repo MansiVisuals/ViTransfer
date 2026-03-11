@@ -17,6 +17,7 @@ import BrandLogo from '@/components/BrandLogo'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageToggle from '@/components/LanguageToggle'
+import { ShareTutorial } from '@/components/ShareTutorial'
 
 interface SharePageClientProps {
   token: string
@@ -856,11 +857,23 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
         {/* Theme and language toggles for grid view */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+          {project.showClientTutorial && (
+            <ShareTutorial
+              projectId={project.id || token}
+              showTutorial={project.showClientTutorial}
+              watermarkEnabled={project.watermarkEnabled}
+              hideFeedback={project.hideFeedback}
+              clientCanApprove={project.clientCanApprove}
+              allowAssetDownload={project.allowAssetDownload}
+              isGuest={isGuest}
+              inPlayerView={false}
+            />
+          )}
           <LanguageToggle />
           <ThemeToggle />
         </div>
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8" data-tutorial="video-grid">
             <ThumbnailGrid
               videosByName={project.videosByName}
               thumbnailsByName={thumbnailsByName}
@@ -893,17 +906,35 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
       {/* Thumbnail Reel - always visible, collapsible */}
-      <ThumbnailReel
-        videosByName={project.videosByName}
-        thumbnailsByName={thumbnailsByName}
-        activeVideoName={activeVideoName}
-        onVideoSelect={handleVideoSelect}
-        onBackToGrid={handleBackToGrid}
-        showBackButton={true}
-        showCommentToggle={!project.hideFeedback && !isGuest}
-        isCommentPanelVisible={!hideComments}
-        onToggleCommentPanel={() => setHideComments(!hideComments)}
-      />
+      <div data-tutorial="version-selector">
+        <ThumbnailReel
+          videosByName={project.videosByName}
+          thumbnailsByName={thumbnailsByName}
+          activeVideoName={activeVideoName}
+          onVideoSelect={handleVideoSelect}
+          onBackToGrid={handleBackToGrid}
+          showBackButton={true}
+          showCommentToggle={!project.hideFeedback && !isGuest}
+          isCommentPanelVisible={!hideComments}
+          onToggleCommentPanel={() => setHideComments(!hideComments)}
+        />
+      </div>
+
+      {/* Tutorial replay button - fixed position in player view */}
+      {project.showClientTutorial && !isGuest && (
+        <div className="fixed bottom-3 right-3 z-30">
+          <ShareTutorial
+            projectId={project.id || token}
+            showTutorial={project.showClientTutorial}
+            watermarkEnabled={project.watermarkEnabled}
+            hideFeedback={project.hideFeedback}
+            clientCanApprove={project.clientCanApprove}
+            allowAssetDownload={project.allowAssetDownload}
+            isGuest={isGuest}
+            inPlayerView={true}
+          />
+        </div>
+      )}
 
       {/* Main Content Area - scrollable on mobile, fixed on desktop (xl breakpoint for better vertical video support) */}
       <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
@@ -920,7 +951,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         ) : (
           <>
             {/* Video Player - natural height on mobile, fills space on desktop */}
-            <div className={`xl:h-full xl:min-h-0 xl:flex-1 min-w-0 flex flex-col ${showCommentPanel ? 'xl:flex-[2] 2xl:flex-[2.5]' : ''}`}>
+            <div data-tutorial="video-player" className={`xl:h-full xl:min-h-0 xl:flex-1 min-w-0 flex flex-col ${showCommentPanel ? 'xl:flex-[2] 2xl:flex-[2.5]' : ''}`}>
               <VideoPlayer
                 videos={readyVideos}
                 projectId={project.id}
@@ -952,7 +983,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
             {/* Comments Section - max one screen height on mobile, side panel on desktop */}
             {showCommentPanel && (
-              <div className="max-h-[100vh] xl:shrink xl:flex-1 xl:max-w-[30%] 2xl:max-w-[25%] xl:min-w-[280px] flex flex-col xl:max-h-full xl:h-full overflow-hidden rounded-xl bg-card">
+              <div data-tutorial="comments" className="max-h-[100vh] xl:shrink xl:flex-1 xl:max-w-[30%] 2xl:max-w-[25%] xl:min-w-[280px] flex flex-col xl:max-h-full xl:h-full overflow-hidden rounded-xl bg-card">
                 <CommentSection
                   projectId={project.id}
                   comments={filteredComments}

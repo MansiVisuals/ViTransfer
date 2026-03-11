@@ -54,12 +54,20 @@
 5. The Gantt chart shows a timeline of all projects with due dates, color-coded by status.
 
 ## Subscribing to the iCal feed
-1. Go to **Calendar** and click the **Subscribe** button.
-2. Copy the generated iCal feed URL.
+1. Go to **Calendar** in the admin panel.
+2. Copy the iCal feed URL shown at the bottom of the page.
 3. Add it to your calendar app (Google Calendar, Apple Calendar, Outlook, etc.) as a URL subscription.
-4. Projects with due dates appear as all-day events in your calendar.
-5. Changes sync automatically when your calendar app refreshes the feed.
-6. To invalidate the feed URL, click **Regenerate** — this creates a new token and the old URL stops working.
+4. All projects with due dates appear as all-day events in your calendar.
+5. Changes sync automatically when your calendar app refreshes the feed (typically every 15 min to 24 hours depending on the app).
+6. To force a refresh, remove and re-add the subscription in your calendar app.
+7. To invalidate the feed URL, click **Regenerate** — this creates a new token and the old URL stops working.
+
+**What appears in the feed:**
+- All projects with a due date are included, regardless of status or whether the date is in the past.
+- Approved projects show with a ✓ prefix (e.g. "✓ Summer Campaign").
+- Archived projects show with a ✗ prefix (e.g. "✗ Old Project").
+- Events are never removed — deadlines are preserved as historical records.
+- Each event links back to the project in the admin panel.
 
 ## Comparing video versions
 1. Open a project with 2 or more versions of the same video.

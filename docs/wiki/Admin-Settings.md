@@ -89,14 +89,46 @@ Configure in the admin panel under Settings.
 ## Calendar & Due Dates
 - Calendar view: day, week, month (default), and year scales.
 - Gantt chart: visual timeline of project due dates color-coded by status.
-- iCal feed: subscribe from any calendar app (Google Calendar, Apple Calendar, Outlook, etc.).
-- Per-admin calendar token: each admin gets a unique feed URL, regeneratable at any time.
-- Feed URL format: `https://yourdomain.com/api/calendar/feed?token=<token>`.
-- Regenerating the token invalidates the old feed URL immediately.
 - Due date reminders: automated notifications sent day-before or week-before (configurable per project).
 - Reminder channels: browser push, external providers (Gotify/ntfy/Pushover/Telegram), and email to all admins.
 - Due date reminder email template: customizable in Settings > Email Templates with placeholders for project title, due date, and reminder type.
 - Reminders run daily via the background worker using the server timezone (`TZ` env var).
+
+### iCal Feed
+Subscribe to project deadlines from any calendar app (Google Calendar, Apple Calendar, Outlook, etc.).
+
+**Setup**
+- Navigate to **Calendar** in the admin panel.
+- Copy the iCal feed URL shown at the bottom of the page.
+- Add it to your calendar app as a URL/subscription calendar.
+- Feed URL format: `https://yourdomain.com/api/calendar/feed?token=<token>`.
+
+**Token management**
+- Each admin gets a unique feed URL with a secure 64-character token.
+- Click **Regenerate** to create a new token — the old URL stops working immediately.
+- Tokens are stored per admin user; deleting a user invalidates their feed.
+
+**Feed behavior**
+- The feed includes **all projects with a due date**, regardless of status or age.
+- Events are never removed from the feed — past deadlines persist as historical records.
+- All events use iCal `STATUS:CONFIRMED` so calendar apps always display them.
+- Approved projects are prefixed with a checkmark in the title (e.g. "✓ Summer Campaign").
+- Archived projects are prefixed with a cross (e.g. "✗ Old Project").
+- Active/in-review projects show the plain title.
+- Events are all-day events (date-only, no time component) — they appear in the top banner of calendar apps, not as time-blocked slots.
+- Each event includes a direct URL link back to the project in the admin panel.
+- The `UID` for each event is the project ID, so calendar apps correctly update existing events on refresh.
+
+**Sync & caching**
+- The feed response includes `Cache-Control: no-cache` headers, but calendar apps control their own refresh interval (typically 15 minutes to 24 hours).
+- To force a refresh: remove and re-add the subscription in your calendar app.
+- Rate limited to 10 requests per minute per IP.
+
+**Technical details (RFC 5545)**
+- Format: iCalendar (`.ics`) with `METHOD:PUBLISH`.
+- Events are `VEVENT` with `VALUE=DATE` (all-day).
+- `STATUS:CONFIRMED` for all events (not `COMPLETED`, which causes calendar apps to hide events).
+- Calendar name: "ViTransfer Deadlines" (`X-WR-CALNAME`).
 
 ## Per-project settings
 **Video processing**

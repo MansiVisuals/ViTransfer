@@ -163,31 +163,32 @@ export default function NewProjectPage() {
                   <Calendar className="w-4 h-4" />
                   {t('dueDateOptional')}
                 </Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  className="max-w-xs"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-                {dueDate && (
-                  <div className="space-y-2">
-                    <Label htmlFor="dueReminder">{t('reminder')}</Label>
-                    <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="NONE">{t('noReminder')}</SelectItem>
-                        <SelectItem value="DAY_BEFORE">{t('dayBefore')}</SelectItem>
-                        <SelectItem value="WEEK_BEFORE">{t('weekBefore')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {t('reminderHint')}
-                    </p>
-                  </div>
-                )}
+                <div className="max-w-xs space-y-3">
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                  {dueDate && (
+                    <div className="space-y-2">
+                      <Label htmlFor="dueReminder">{t('reminder')}</Label>
+                      <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NONE">{t('noReminder')}</SelectItem>
+                          <SelectItem value="DAY_BEFORE">{t('dayBefore')}</SelectItem>
+                          <SelectItem value="WEEK_BEFORE">{t('weekBefore')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {t('reminderHint')}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Authentication Section */}

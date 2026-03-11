@@ -620,47 +620,48 @@ export default function ProjectSettingsPage() {
                   <Calendar className="w-4 h-4" />
                   {t('dueDateLabel')}
                 </Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  className="max-w-xs"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t('dueDateHint')}
-                </p>
+                <div className="max-w-xs space-y-3">
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('dueDateHint')}
+                  </p>
 
-                {dueDate && (
-                  <div className="space-y-2 pt-2">
-                    <Label htmlFor="dueReminder">{t('reminder')}</Label>
-                    <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="NONE">{t('noReminder')}</SelectItem>
-                        <SelectItem value="DAY_BEFORE">{t('dayBefore')}</SelectItem>
-                        <SelectItem value="WEEK_BEFORE">{t('weekBefore')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {t('reminderHint')}
-                    </p>
-                  </div>
-                )}
+                  {dueDate && (
+                    <div className="space-y-2 pt-2">
+                      <Label htmlFor="dueReminder">{t('reminder')}</Label>
+                      <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NONE">{t('noReminder')}</SelectItem>
+                          <SelectItem value="DAY_BEFORE">{t('dayBefore')}</SelectItem>
+                          <SelectItem value="WEEK_BEFORE">{t('weekBefore')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {t('reminderHint')}
+                      </p>
+                    </div>
+                  )}
 
-                {dueDate && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-muted-foreground"
-                    onClick={() => { setDueDate(''); setDueReminder('NONE') }}
-                  >
-                    {t('clearDueDate')}
-                  </Button>
-                )}
+                  {dueDate && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-muted-foreground"
+                      onClick={() => { setDueDate(''); setDueReminder('NONE') }}
+                    >
+                      {t('clearDueDate')}
+                    </Button>
+                  )}
+                </div>
               </div>
 	          </CollapsibleSection>
 

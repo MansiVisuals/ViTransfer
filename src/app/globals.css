@@ -205,6 +205,17 @@
   .focus-ring {
     @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
   }
+
+  /* Normalize date inputs to match other inputs on mobile */
+  input[type="date"] {
+    @apply appearance-none;
+    min-height: 2.5rem;
+    line-height: 1.25rem;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+  }
 }
 
 @layer utilities {

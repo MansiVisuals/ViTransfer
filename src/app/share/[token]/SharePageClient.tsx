@@ -857,6 +857,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
         {/* Theme and language toggles for grid view */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+          <LanguageToggle />
+          <ThemeToggle />
           {project.showClientTutorial && (
             <ShareTutorial
               projectId={project.id || token}
@@ -869,8 +871,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               inPlayerView={false}
             />
           )}
-          <LanguageToggle />
-          <ThemeToggle />
         </div>
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8" data-tutorial="video-grid">
@@ -917,24 +917,22 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           showCommentToggle={!project.hideFeedback && !isGuest}
           isCommentPanelVisible={!hideComments}
           onToggleCommentPanel={() => setHideComments(!hideComments)}
+          trailingAction={
+            project.showClientTutorial ? (
+              <ShareTutorial
+                projectId={project.id || token}
+                showTutorial={project.showClientTutorial}
+                watermarkEnabled={project.watermarkEnabled}
+                hideFeedback={project.hideFeedback}
+                clientCanApprove={project.clientCanApprove}
+                allowAssetDownload={project.allowAssetDownload}
+                isGuest={isGuest}
+                inPlayerView={true}
+              />
+            ) : undefined
+          }
         />
       </div>
-
-      {/* Tutorial replay button - fixed position in player view */}
-      {project.showClientTutorial && !isGuest && (
-        <div className="fixed bottom-3 right-3 z-30">
-          <ShareTutorial
-            projectId={project.id || token}
-            showTutorial={project.showClientTutorial}
-            watermarkEnabled={project.watermarkEnabled}
-            hideFeedback={project.hideFeedback}
-            clientCanApprove={project.clientCanApprove}
-            allowAssetDownload={project.allowAssetDownload}
-            isGuest={isGuest}
-            inPlayerView={true}
-          />
-        </div>
-      )}
 
       {/* Main Content Area - scrollable on mobile, fixed on desktop (xl breakpoint for better vertical video support) */}
       <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row p-2 sm:p-3 gap-2 sm:gap-3">

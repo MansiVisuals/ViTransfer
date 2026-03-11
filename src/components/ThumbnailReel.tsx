@@ -22,6 +22,8 @@ interface ThumbnailReelProps {
   onToggleCommentPanel?: () => void
   // Language toggle visibility (hidden on admin share page)
   showLanguageToggle?: boolean
+  // Optional slot rendered after ThemeToggle (e.g. tutorial help button)
+  trailingAction?: React.ReactNode
 }
 
 export default function ThumbnailReel({
@@ -35,6 +37,7 @@ export default function ThumbnailReel({
   isCommentPanelVisible = true,
   onToggleCommentPanel,
   showLanguageToggle = true,
+  trailingAction,
 }: ThumbnailReelProps) {
   const tShare = useTranslations('share')
   const tComments = useTranslations('comments')
@@ -271,6 +274,7 @@ export default function ThumbnailReel({
             {/* Language and theme toggles */}
             {showLanguageToggle && <LanguageToggle />}
             <ThemeToggle />
+            {trailingAction}
           </div>
         </div>
       </div>

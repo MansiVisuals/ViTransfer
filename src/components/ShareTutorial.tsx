@@ -31,7 +31,7 @@ export function ShareTutorial({
   const t = useTranslations('tutorial')
   const [hasCompleted, setHasCompleted] = useState(true) // default true to avoid flash
 
-  const storageKey = `vt-tutorial-${projectId}`
+  const storageKey = `vt-tutorial-${inPlayerView ? 'player' : 'grid'}-${projectId}`
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -96,6 +96,18 @@ export function ShareTutorial({
         })
       }
 
+      // Info button
+      const infoBtn = document.querySelector('[data-tutorial="info-btn"]')
+      if (infoBtn) {
+        steps.push({
+          element: '[data-tutorial="info-btn"]',
+          popover: {
+            title: t('infoTitle'),
+            description: t('infoDescription'),
+          },
+        })
+      }
+
       if (!hideFeedback && !isGuest) {
         const commentsEl = document.querySelector('[data-tutorial="comments"]')
         if (commentsEl) {
@@ -109,24 +121,32 @@ export function ShareTutorial({
         }
       }
 
+      // Approve button (only visible when video is not yet approved)
       if (clientCanApprove && !isGuest) {
-        steps.push({
-          element: '[data-tutorial="video-player"]',
-          popover: {
-            title: t('approveTitle'),
-            description: t('approveDescription'),
-          },
-        })
+        const approveBtn = document.querySelector('[data-tutorial="approve-btn"]')
+        if (approveBtn) {
+          steps.push({
+            element: '[data-tutorial="approve-btn"]',
+            popover: {
+              title: t('approveTitle'),
+              description: t('approveDescription'),
+            },
+          })
+        }
       }
 
+      // Download button (only visible when video is approved)
       if (allowAssetDownload && !isGuest) {
-        steps.push({
-          element: '[data-tutorial="video-player"]',
-          popover: {
-            title: t('downloadTitle'),
-            description: t('downloadDescription'),
-          },
-        })
+        const downloadBtn = document.querySelector('[data-tutorial="download-btn"]')
+        if (downloadBtn) {
+          steps.push({
+            element: '[data-tutorial="download-btn"]',
+            popover: {
+              title: t('downloadTitle'),
+              description: t('downloadDescription'),
+            },
+          })
+        }
       }
     }
 
@@ -152,7 +172,8 @@ export function ShareTutorial({
       prevBtnText: t('previous'),
       doneBtnText: t('done'),
       progressText: t('stepOf', { current: '{{current}}', total: '{{total}}' }),
-      allowClose: true,
+      allowClose: false,
+      disableActiveInteraction: true,
       overlayColor: 'rgba(0, 0, 0, 0.6)',
       stagePadding: 8,
       stageRadius: 8,
@@ -168,13 +189,13 @@ export function ShareTutorial({
     driverObj.drive()
   }, [buildSteps, storageKey, t])
 
-  // Auto-start on first visit (grid view only, with delay for page to render)
+  // Auto-start on first visit (both grid and player views, with delay for page to render)
   useEffect(() => {
-    if (!showTutorial || hasCompleted || inPlayerView) return
+    if (!showTutorial || hasCompleted) return
 
     const timer = setTimeout(() => {
       startTutorial()
-    }, 800)
+    }, inPlayerView ? 1200 : 800)
 
     return () => clearTimeout(timer)
   }, [showTutorial, hasCompleted, inPlayerView, startTutorial])
@@ -186,11 +207,11 @@ export function ShareTutorial({
     <button
       type="button"
       onClick={startTutorial}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground bg-card/80 backdrop-blur border border-border rounded-lg transition-colors"
+      className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
+      aria-label={t('replayTutorial')}
       title={t('replayTutorial')}
     >
-      <HelpCircle className="w-3.5 h-3.5" />
-      <span className="hidden sm:inline">{t('replayTutorial')}</span>
+      <HelpCircle className="h-5 w-5 text-foreground" />
     </button>
   )
 }

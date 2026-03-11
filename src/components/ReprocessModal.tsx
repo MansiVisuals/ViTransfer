@@ -59,7 +59,7 @@ export function ReprocessModal({
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row">
+        <DialogFooter className="flex-col gap-2">
           <DialogClose asChild>
             <Button variant="outline" disabled={saving || reprocessing}>
               {tc('cancel')}

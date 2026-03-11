@@ -818,6 +818,8 @@
     "versionsDescription": "Schakel tussen verschillende revisies van de video. De nieuwste versie is standaard geselecteerd.",
     "watermarkTitle": "Over het Watermerk",
     "watermarkDescription": "Het watermerk wordt getoond op voorbeeldvideo's ter bescherming. Zodra je een video goedkeurt, wordt het watermerk verwijderd en komt de originele kwaliteit beschikbaar.",
+    "infoTitle": "Video-informatie",
+    "infoDescription": "Klik op deze knop om technische details van de video te bekijken zoals resolutie, codec, duur en bestandsgrootte.",
     "commentsTitle": "Feedback Geven",
     "commentsDescription": "Laat opmerkingen achter op elk moment in de video. Je feedback wordt gekoppeld aan het exacte frame dat je bekijkt.",
     "annotationsTitle": "Tekenen op de Video",

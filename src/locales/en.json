@@ -859,6 +859,8 @@
     "versionsDescription": "Switch between different revisions of the video. The latest version is selected by default.",
     "watermarkTitle": "About the Watermark",
     "watermarkDescription": "The watermark is shown on preview videos for protection. Once you approve a video, the watermark is removed and the original quality becomes available.",
+    "infoTitle": "Video Information",
+    "infoDescription": "Click this button to view technical details about the video such as resolution, codec, duration, and file size.",
     "commentsTitle": "Leave Feedback",
     "commentsDescription": "Leave timestamped comments at any point in the video. Your feedback is linked to the exact frame you are viewing.",
     "annotationsTitle": "Draw on the Video",

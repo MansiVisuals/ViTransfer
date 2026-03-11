@@ -246,6 +246,7 @@ export default function ProjectInfo({
           {/* Approve Button - Only show when not approved and approval is allowed */}
           {!isVideoApproved && onApprove && (isAdmin || clientCanApprove) && (
             <Button
+              data-tutorial="approve-btn"
               onClick={() => setShowApprovalConfirm(true)}
               variant="success"
               size="sm"
@@ -260,7 +261,7 @@ export default function ProjectInfo({
           {!isGuest && (
             <Dialog open={showInfoDialog} onOpenChange={setShowInfoDialog}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" title={t('viewVideoInfo')}>
+                <Button data-tutorial="info-btn" variant="outline" size="sm" title={t('viewVideoInfo')}>
                   <Info className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">{t('info')}</span>
                 </Button>
@@ -354,7 +355,7 @@ export default function ProjectInfo({
 
           {/* Download Button - Only show when video is approved and not in guest mode */}
           {isVideoApproved && !isGuest && !hideDownloadButton && (
-            <Button onClick={handleDownload} variant="default" size="sm" title={t('downloadOriginal')}>
+            <Button data-tutorial="download-btn" onClick={handleDownload} variant="default" size="sm" title={t('downloadOriginal')}>
               <Download className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">{tc('download')}</span>
             </Button>

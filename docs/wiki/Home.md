@@ -11,7 +11,8 @@ This folder (`docs/wiki`) is a mirror of those pages for easy versioning in the 
 - [Platform guides](Platform-Guides)
 - [Configuration](Configuration)
 - [Admin settings](Admin-Settings)
-- [Usage guide](Usage-Guide)
+- [Usage guide](Usage-Guide) (for admins)
+- [Client guide](Client-Guide) (for clients and reviewers)
 - [Security](Security)
 - [Maintenance](Maintenance)
 - [Troubleshooting](Troubleshooting)
@@ -30,4 +31,4 @@ ViTransfer is a self-hosted video review and approval platform for filmmakers an
 - The worker handles background processing (transcoding + notifications).
 
 ---
-Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Translations](Translations) | [Contributing](Contributing) | [License](License)
+Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Client Guide](Client-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Translations](Translations) | [Contributing](Contributing) | [License](License)

@@ -65,26 +65,7 @@ interface AnalyticsData {
   activity: Activity[]
 }
 
-// Calculate page size to fill available height without scrolling
-function calculatePageSize(rowHeight: number, headerOffset: number): number {
-  if (typeof window === 'undefined') return 15
-  const available = window.innerHeight - headerOffset
-  return Math.max(5, Math.floor(available / rowHeight))
-}
-
-function useResponsivePageSize(rowHeight: number, headerOffset: number): number {
-  // Calculate initial value synchronously to prevent flickering on mount
-  const [pageSize, setPageSize] = useState(() => calculatePageSize(rowHeight, headerOffset))
-
-  useEffect(() => {
-    // Only listen for resize events, don't recalculate on mount
-    const handleResize = () => setPageSize(calculatePageSize(rowHeight, headerOffset))
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [rowHeight, headerOffset])
-
-  return pageSize
-}
+const ACTIVITY_PER_PAGE = 10
 
 export default function AnalyticsClient({ id }: { id: string }) {
   const t = useTranslations('analytics')
@@ -96,8 +77,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [expandedVideos, setExpandedVideos] = useState<Set<string>>(new Set())
   const [activityPage, setActivityPage] = useState(1)
-  // Row ~36px, header/stats/nav ~380px offset
-  const activityPerPage = useResponsivePageSize(36, 380)
+  const activityPerPage = ACTIVITY_PER_PAGE
 
   const toggleExpand = (itemId: string) => {
     setExpandedItems(prev => {

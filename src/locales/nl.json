@@ -1131,6 +1131,42 @@
         "EXPIRY_TIME": "Geldigheid van de link",
         "DUE_DATE": "Opgemaakte deadline",
         "REMINDER_TYPE": "Wanneer de deadline is (bijv. morgen, over 7 dagen)"
+      },
+      "placeholderExamples": {
+        "COMPANY_NAME": "Acme Studios",
+        "RECIPIENT_NAME": "Jan de Vries",
+        "PROJECT_TITLE": "Zomercampagne 2026",
+        "VIDEO_NAME": "Hoofdcommercial",
+        "VERSION_LABEL": "v2",
+        "APPROVAL_MESSAGE": "heeft alle video's voor Zomercampagne 2026 goedgekeurd. De definitieve bestanden staan klaar voor download.",
+        "AUTHOR_NAME": "Pieter Jansen",
+        "COMMENT_CONTENT": "Goed werk aan de intro!",
+        "CLIENT_NAME": "Jan de Vries",
+        "CLIENT_EMAIL": "jan@voorbeeld.nl",
+        "APPROVAL_STATUS": "Goedgekeurd",
+        "APPROVAL_ACTION": "goedgekeurd",
+        "PROJECT_DESCRIPTION": "Definitieve video's voor de zomermarketingcampagne.",
+        "PASSWORD": "xK9mP2nL",
+        "EXPIRY_TIME": "30 minuten",
+        "DUE_DATE": "15 maart 2026",
+        "REMINDER_TYPE": "morgen"
+      },
+      "previewTitles": {
+        "NEW_VERSION": "Nieuwe Versie Beschikbaar",
+        "PROJECT_APPROVED": "Project Goedgekeurd",
+        "COMMENT_NOTIFICATION": "Nieuwe Opmerking",
+        "ADMIN_COMMENT_NOTIFICATION": "Nieuwe Opmerking",
+        "ADMIN_PROJECT_APPROVED": "Klant Goedgekeurd",
+        "PROJECT_GENERAL": "Klaar voor Beoordeling",
+        "PASSWORD": "Projectwachtwoord",
+        "PASSWORD_RESET": "Wachtwoord Herstellen",
+        "DUE_DATE_REMINDER": "Deadlineherinnering"
+      },
+      "previewSubtitles": {
+        "NEW_VERSION": "Klaar voor beoordeling",
+        "PROJECT_APPROVED": "Klaar voor download",
+        "PASSWORD_RESET": "Herstel je beheerderswachtwoord",
+        "DUE_DATE_REMINDER_SUFFIX": "heeft deadline morgen"
       }
     },
     "notifications": {

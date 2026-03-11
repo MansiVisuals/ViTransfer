@@ -64,26 +64,7 @@ interface RateLimitEntry {
   type: string
 }
 
-// Calculate page size to fill available height without scrolling
-function calculatePageSize(rowHeight: number, headerOffset: number): number {
-  if (typeof window === 'undefined') return 15
-  const available = window.innerHeight - headerOffset
-  return Math.max(5, Math.floor(available / rowHeight))
-}
-
-function useResponsivePageSize(rowHeight: number, headerOffset: number): number {
-  // Calculate initial value synchronously to prevent flickering on mount
-  const [pageSize, setPageSize] = useState(() => calculatePageSize(rowHeight, headerOffset))
-
-  useEffect(() => {
-    // Only listen for resize events, don't recalculate on mount
-    const handleResize = () => setPageSize(calculatePageSize(rowHeight, headerOffset))
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [rowHeight, headerOffset])
-
-  return pageSize
-}
+const EVENTS_PER_PAGE = 10
 
 export default function SecurityEventsClient() {
   const t = useTranslations('security')
@@ -94,11 +75,8 @@ export default function SecurityEventsClient() {
     { value: 'INFO', label: t('info') },
   ]
 
-  // Row ~40px, header/stats/filters ~280px offset
-  const dynamicLimit = useResponsivePageSize(40, 280)
   const [events, setEvents] = useState<SecurityEvent[]>([])
-  // Initialize pagination with dynamic limit to prevent re-fetch on mount
-  const [pagination, setPagination] = useState(() => ({ page: 1, limit: calculatePageSize(40, 280), total: 0, pages: 0 }))
+  const [pagination, setPagination] = useState({ page: 1, limit: EVENTS_PER_PAGE, total: 0, pages: 0 })
   const [stats, setStats] = useState<Array<{ type: string; count: number }>>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
@@ -199,11 +177,6 @@ export default function SecurityEventsClient() {
       alert(t('failedToClearAll'))
     }
   }
-
-  // Update pagination limit when screen size changes
-  useEffect(() => {
-    setPagination(p => ({ ...p, limit: dynamicLimit, page: 1 }))
-  }, [dynamicLimit])
 
   useEffect(() => {
     loadEvents()

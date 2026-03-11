@@ -467,6 +467,7 @@ export async function getLocalizedPlaceholdersForType(
   try {
     const messages = await loadLocaleMessages(locale)
     const descriptions = messages.settings?.emailTemplates?.placeholderDescriptions || {}
+    const examples = messages.settings?.emailTemplates?.placeholderExamples || {}
 
     return placeholders.map(p => {
       // Extract key name from {{KEY}} format
@@ -474,6 +475,7 @@ export async function getLocalizedPlaceholdersForType(
       return {
         ...p,
         description: descriptions[keyName] || p.description,
+        example: examples[keyName] || p.example,
       }
     })
   } catch {

@@ -623,6 +623,7 @@ export default function ProjectSettingsPage() {
                 <Input
                   id="dueDate"
                   type="date"
+                  className="max-w-xs"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                 />

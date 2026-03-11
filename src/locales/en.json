@@ -1180,6 +1180,42 @@
         "EXPIRY_TIME": "How long the link is valid",
         "DUE_DATE": "Formatted due date",
         "REMINDER_TYPE": "When the project is due (e.g., tomorrow, in 7 days)"
+      },
+      "placeholderExamples": {
+        "COMPANY_NAME": "Acme Studios",
+        "RECIPIENT_NAME": "Jane Doe",
+        "PROJECT_TITLE": "Summer Campaign 2026",
+        "VIDEO_NAME": "Main Commercial",
+        "VERSION_LABEL": "v2",
+        "APPROVAL_MESSAGE": "has approved all deliverables for Summer Campaign 2026. The final files are now ready for download.",
+        "AUTHOR_NAME": "John Smith",
+        "COMMENT_CONTENT": "Great work on the intro!",
+        "CLIENT_NAME": "Jane Doe",
+        "CLIENT_EMAIL": "jane@example.com",
+        "APPROVAL_STATUS": "Approved",
+        "APPROVAL_ACTION": "approved",
+        "PROJECT_DESCRIPTION": "Final deliverables for the summer marketing campaign.",
+        "PASSWORD": "xK9mP2nL",
+        "EXPIRY_TIME": "30 minutes",
+        "DUE_DATE": "March 15, 2026",
+        "REMINDER_TYPE": "tomorrow"
+      },
+      "previewTitles": {
+        "NEW_VERSION": "New Version Available",
+        "PROJECT_APPROVED": "Project Approved",
+        "COMMENT_NOTIFICATION": "New Comment",
+        "ADMIN_COMMENT_NOTIFICATION": "New Comment",
+        "ADMIN_PROJECT_APPROVED": "Client Approved",
+        "PROJECT_GENERAL": "Ready for Review",
+        "PASSWORD": "Project Password",
+        "PASSWORD_RESET": "Password Reset",
+        "DUE_DATE_REMINDER": "Deadline Reminder"
+      },
+      "previewSubtitles": {
+        "NEW_VERSION": "Ready for your review",
+        "PROJECT_APPROVED": "Ready for download",
+        "PASSWORD_RESET": "Reset your admin account password",
+        "DUE_DATE_REMINDER_SUFFIX": "is due tomorrow"
       }
     },
 

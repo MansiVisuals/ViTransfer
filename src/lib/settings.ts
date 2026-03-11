@@ -10,6 +10,7 @@ const cachedRateLimits: CachedValue<{
   shareTokenTtlSeconds?: number
 }> = { value: { ipRateLimit: 1000, sessionRateLimit: 600 }, expiresAt: 0 }
 const cachedSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
+const cachedAdminSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
 const cachedSmtpConfigured: CachedValue<boolean> = { value: false, expiresAt: 0 }
 
 /**
@@ -162,6 +163,68 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
   } catch (error) {
     console.error('Error fetching client session timeout:', error)
     return cachedSessionTimeout.value
+  }
+}
+
+/**
+ * Get admin session timeout in seconds from security settings
+ * Used for admin access token TTL.
+ * Environment variables ADMIN_ACCESS_TTL_SECONDS / ADMIN_REFRESH_TTL_SECONDS take precedence.
+ */
+export async function getAdminSessionTimeoutSeconds(): Promise<number> {
+  // Environment variable takes precedence
+  const envOverride = process.env.ADMIN_ACCESS_TTL_SECONDS
+  if (envOverride) {
+    const parsed = parseInt(envOverride, 10)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+
+  const now = Date.now()
+  if (cachedAdminSessionTimeout.expiresAt > now) {
+    return cachedAdminSessionTimeout.value
+  }
+
+  try {
+    const settings = await prisma.securitySettings.findUnique({
+      where: { id: 'default' },
+      select: {
+        adminSessionTimeoutValue: true,
+        adminSessionTimeoutUnit: true,
+      },
+    })
+
+    if (!settings) {
+      cachedAdminSessionTimeout.value = 15 * 60
+      cachedAdminSessionTimeout.expiresAt = now + SETTINGS_CACHE_TTL_MS
+      return cachedAdminSessionTimeout.value
+    }
+
+    const value = settings.adminSessionTimeoutValue
+    const unit = settings.adminSessionTimeoutUnit
+
+    switch (unit) {
+      case 'MINUTES':
+        cachedAdminSessionTimeout.value = value * 60
+        break
+      case 'HOURS':
+        cachedAdminSessionTimeout.value = value * 60 * 60
+        break
+      case 'DAYS':
+        cachedAdminSessionTimeout.value = value * 24 * 60 * 60
+        break
+      case 'WEEKS':
+        cachedAdminSessionTimeout.value = value * 7 * 24 * 60 * 60
+        break
+      default:
+        cachedAdminSessionTimeout.value = 15 * 60
+        break
+    }
+
+    cachedAdminSessionTimeout.expiresAt = now + SETTINGS_CACHE_TTL_MS
+    return cachedAdminSessionTimeout.value
+  } catch (error) {
+    console.error('Error fetching admin session timeout:', error)
+    return cachedAdminSessionTimeout.value
   }
 }
 

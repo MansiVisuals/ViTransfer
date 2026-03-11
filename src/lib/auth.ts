@@ -7,6 +7,7 @@ import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
 import { getRedis } from './redis'
 import { isShareSessionRevoked } from './session-invalidation'
+import { getAdminSessionTimeoutSeconds } from './settings'
 
 export interface AuthUser {
   id: string
@@ -69,7 +70,7 @@ if (process.env.SKIP_ENV_VALIDATION !== '1') {
   }
 }
 
-function signAdminAccess(user: AuthUser, sessionId: string): string {
+function signAdminAccess(user: AuthUser, sessionId: string, ttlSeconds?: number): string {
   if (!ADMIN_ACCESS_SECRET) throw new Error('JWT_SECRET missing')
   const payload: AdminAccessPayload = {
     userId: user.id,
@@ -78,7 +79,7 @@ function signAdminAccess(user: AuthUser, sessionId: string): string {
     sessionId,
     type: 'admin_access',
   }
-  return jwt.sign(payload, ADMIN_ACCESS_SECRET, { expiresIn: ACCESS_TOKEN_DURATION, algorithm: 'HS256' })
+  return jwt.sign(payload, ADMIN_ACCESS_SECRET, { expiresIn: ttlSeconds || ACCESS_TOKEN_DURATION, algorithm: 'HS256' })
 }
 
 function signAdminRefresh(user: AuthUser, sessionId: string, rotationId: string): string {
@@ -179,7 +180,8 @@ export function parseBearerToken(request: NextRequest, headerName: string = 'aut
 export async function issueAdminTokens(user: AuthUser, fingerprintHash?: string) {
   const sessionId = crypto.randomUUID()
   const rotationId = crypto.randomUUID()
-  const accessToken = signAdminAccess(user, sessionId)
+  const adminTtl = await getAdminSessionTimeoutSeconds()
+  const accessToken = signAdminAccess(user, sessionId, adminTtl)
   const refreshToken = signAdminRefresh(user, sessionId, rotationId)
 
   if (fingerprintHash) {
@@ -189,7 +191,7 @@ export async function issueAdminTokens(user: AuthUser, fingerprintHash?: string)
   return {
     accessToken,
     refreshToken,
-    accessExpiresAt: Date.now() + ACCESS_TOKEN_DURATION * 1000,
+    accessExpiresAt: Date.now() + adminTtl * 1000,
     refreshExpiresAt: Date.now() + REFRESH_TOKEN_DURATION * 1000,
     sessionId,
   }
@@ -222,7 +224,8 @@ export async function refreshAdminTokens(params: {
   }
 
   const rotationId = crypto.randomUUID()
-  const accessToken = signAdminAccess(user, payload.sessionId)
+  const adminTtl = await getAdminSessionTimeoutSeconds()
+  const accessToken = signAdminAccess(user, payload.sessionId, adminTtl)
   const newRefreshToken = signAdminRefresh(user, payload.sessionId, rotationId)
 
   // Revoke old refresh token on rotation
@@ -234,7 +237,7 @@ export async function refreshAdminTokens(params: {
   return {
     accessToken,
     refreshToken: newRefreshToken,
-    accessExpiresAt: Date.now() + ACCESS_TOKEN_DURATION * 1000,
+    accessExpiresAt: Date.now() + adminTtl * 1000,
     refreshExpiresAt: Date.now() + REFRESH_TOKEN_DURATION * 1000,
     sessionId: payload.sessionId,
   }

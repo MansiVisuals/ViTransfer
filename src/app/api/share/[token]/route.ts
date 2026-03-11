@@ -25,12 +25,12 @@ export async function GET(
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     const shareMessages = messages?.share
-    const { ipRateLimit } = await getRateLimitSettings()
+    const { shareSessionRateLimit } = await getRateLimitSettings()
     const shareTtlSeconds = await getShareTokenTtlSeconds()
 
     const rateLimitResult = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
-      maxRequests: ipRateLimit || 100,
+      maxRequests: shareSessionRateLimit || 300,
       message: shareMessages?.tooManyRequestsGeneric || 'Too many requests. Please try again later.'
     }, `share-access:${token}`)
     if (rateLimitResult) return rateLimitResult

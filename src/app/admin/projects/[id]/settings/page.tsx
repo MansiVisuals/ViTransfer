@@ -620,7 +620,7 @@ export default function ProjectSettingsPage() {
                   <Calendar className="w-4 h-4" />
                   {t('dueDateLabel')}
                 </Label>
-                <div className="max-w-[200px] space-y-3">
+                <div className="space-y-3">
                   <Input
                     id="dueDate"
                     type="date"
@@ -632,7 +632,7 @@ export default function ProjectSettingsPage() {
                   </p>
 
                   {dueDate && (
-                    <div className="space-y-2 pt-2">
+                    <div className="space-y-2 pt-2 border-t border-border">
                       <Label htmlFor="dueReminder">{t('reminder')}</Label>
                       <Select value={dueReminder} onValueChange={(v) => setDueReminder(v as 'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE')}>
                         <SelectTrigger>

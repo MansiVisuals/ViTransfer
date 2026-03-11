@@ -163,7 +163,7 @@ export default function NewProjectPage() {
                   <Calendar className="w-4 h-4" />
                   {t('dueDateOptional')}
                 </Label>
-                <div className="max-w-xs space-y-3">
+                <div className="max-w-[200px] space-y-3">
                   <Input
                     id="dueDate"
                     type="date"

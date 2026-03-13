@@ -303,18 +303,27 @@ export async function DELETE(
     const asset = await prisma.videoAsset.findFirst({
       where: {
         id: assetId,
-        videoId,
-        uploadedBy: 'client',
-        uploadedBySessionId: uploaderSessionId,
-        commentId: null,
       },
       select: {
         id: true,
+        videoId: true,
+        uploadedBy: true,
+        uploadedBySessionId: true,
+        commentId: true,
         storagePath: true,
       },
     })
 
     if (!asset) {
+      return NextResponse.json({ error: videosMessages.attachmentNotFound || 'Attachment not found' }, { status: 404 })
+    }
+
+    const belongsToAuthorizedSession = asset.videoId === videoId &&
+      asset.uploadedBy === 'client' &&
+      asset.commentId === null &&
+      asset.uploadedBySessionId === uploaderSessionId
+
+    if (!belongsToAuthorizedSession) {
       return NextResponse.json({ error: videosMessages.attachmentNotFound || 'Attachment not found' }, { status: 404 })
     }
 

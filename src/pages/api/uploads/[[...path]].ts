@@ -7,7 +7,7 @@ import path from 'path'
 import fs from 'fs'
 import { Readable } from 'stream'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { logError } from '@/lib/logging'
+import { logError, logMessage } from '@/lib/logging'
 
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
@@ -231,7 +231,7 @@ const tusServer: Server = new Server({
       } else if (assetId) {
         return await handleAssetUploadFinish(tusFilePath, upload, assetId, tusServer)
       } else {
-        console.error('[UPLOAD] No videoId or assetId in upload metadata')
+        logMessage('[UPLOAD] No videoId or assetId in upload metadata')
         return {}
       }
     } catch (error) {
@@ -253,7 +253,7 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
   })
 
   if (!video) {
-    console.error(`[UPLOAD] Video not found: ${videoId}`)
+    logMessage(`[UPLOAD] Video not found: ${videoId}`)
     return {}
   }
 
@@ -303,7 +303,7 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
   })
 
   if (!asset) {
-    console.error(`[UPLOAD] Asset not found: ${assetId}`)
+    logMessage(`[UPLOAD] Asset not found: ${assetId}`)
     return {}
   }
 

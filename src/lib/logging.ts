@@ -18,6 +18,10 @@ export function formatErrorForLog(error: unknown): string {
   }
 }
 
+export function logMessage(message: string): void {
+  console.error(sanitizeLogValue(message))
+}
+
 export function logError(message: string, error: unknown): void {
   const sanitizedMessage = sanitizeLogValue(message).replace(/:\s*$/, '')
   console.error(`${sanitizedMessage}: ${formatErrorForLog(error)}`)

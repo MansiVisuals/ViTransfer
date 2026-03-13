@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getShareContext } from '@/lib/auth'
+import { logError } from '@/lib/logging'
 import { generateVideoAccessToken } from '@/lib/video-access'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 
@@ -68,7 +69,7 @@ export async function GET(
 
     return NextResponse.json({ token: tokenValue })
   } catch (error) {
-    console.error('[SHARE] Failed to generate video token', { videoId, quality, error })
+    logError(`[SHARE] Failed to generate video token (videoId=${videoId}, quality=${quality})`, error)
     return NextResponse.json({ error: shareMessages?.failedToGenerateToken || 'Failed to generate token' }, { status: 500 })
   }
 }

@@ -81,7 +81,11 @@ const tusServer: Server = new Server({
         // Verify the asset belongs to the share token's project and is a client asset
         const asset = await prisma.videoAsset.findUnique({
           where: { id: upload.metadata.assetId as string },
-          include: { video: { select: { projectId: true } } },
+          select: {
+            uploadedBy: true,
+            uploadedBySessionId: true,
+            video: { select: { projectId: true } },
+          },
         })
 
         if (!asset) {
@@ -103,6 +107,13 @@ const tusServer: Server = new Server({
           throw {
             status_code: 403,
             body: 'Asset does not belong to your project'
+          }
+        }
+
+        if (asset.uploadedBySessionId !== sharePayload.sessionId) {
+          throw {
+            status_code: 403,
+            body: 'Asset does not belong to your session'
           }
         }
 

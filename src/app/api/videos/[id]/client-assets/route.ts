@@ -69,6 +69,11 @@ export async function POST(
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
+    const uploaderSessionId = accessCheck.shareTokenSessionId
+    if (!uploaderSessionId) {
+      return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
+    }
+
     // Parse JSON body
     const body = await request.json()
     const { fileName, fileSize, category: requestedCategory, authorName, authorEmail } = body
@@ -133,6 +138,7 @@ export async function POST(
         category,
         uploadedBy: 'client',
         uploadedByName: authorName || authorEmail || null,
+        uploadedBySessionId: uploaderSessionId,
       },
     })
 
@@ -199,10 +205,16 @@ export async function GET(
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
+    const uploaderSessionId = accessCheck.shareTokenSessionId
+    if (!uploaderSessionId) {
+      return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
+    }
+
     const assets = await prisma.videoAsset.findMany({
       where: {
         videoId,
         uploadedBy: 'client',
+        ...(accessCheck.isAdmin ? {} : { uploadedBySessionId: uploaderSessionId }),
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -283,11 +295,17 @@ export async function DELETE(
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
+    const uploaderSessionId = accessCheck.shareTokenSessionId
+    if (!uploaderSessionId) {
+      return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
+    }
+
     const asset = await prisma.videoAsset.findFirst({
       where: {
         id: assetId,
         videoId,
         uploadedBy: 'client',
+        uploadedBySessionId: uploaderSessionId,
         commentId: null,
       },
       select: {

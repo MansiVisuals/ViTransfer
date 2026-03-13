@@ -270,6 +270,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const uploaderSessionId = accessCheck.shareTokenSessionId
+    if (!uploaderSessionId) {
+      return NextResponse.json(
+        { error: shareMessages.unableToProcessRequest || 'Unable to process request' },
+        { status: 400 }
+      )
+    }
+
     const { isAdmin, isAuthenticated } = accessCheck
 
     // Resolve author information
@@ -356,6 +364,7 @@ export async function POST(request: NextRequest) {
           id: { in: assetIds },
           videoId,
           uploadedBy: 'client',
+          uploadedBySessionId: uploaderSessionId,
           commentId: null,
         },
       })

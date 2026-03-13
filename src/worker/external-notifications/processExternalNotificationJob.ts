@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { decrypt } from '@/lib/encryption'
+import { formatErrorForLog, sanitizeLogValue } from '@/lib/logging'
 import type { ExternalNotificationJob } from '@/lib/queue'
 import { sendAppriseNotification } from '@/worker/external-notifications/sendAppriseNotification'
 
@@ -20,12 +21,21 @@ function log(message: string, extra?: Record<string, unknown>) {
 }
 
 function logError(message: string, extra?: Record<string, unknown>) {
+  const sanitizedMessage = sanitizeLogValue(message)
+
   if (extra && VERBOSE) {
-    console.error('[EXTERNAL-NOTIFICATIONS]', message, extra)
+    console.error(`[EXTERNAL-NOTIFICATIONS] ${sanitizedMessage}: ${sanitizeLogValue(JSON.stringify(extra))}`)
     return
   }
-  const err = typeof extra?.error === 'string' ? redactUrlSecrets(extra.error) : ''
-  console.error('[EXTERNAL-NOTIFICATIONS]', err ? `${message}: ${err}` : message)
+  if (extra?.error !== undefined) {
+    const errorValue = typeof extra.error === 'string'
+      ? redactUrlSecrets(extra.error)
+      : formatErrorForLog(extra.error)
+    console.error(`[EXTERNAL-NOTIFICATIONS] ${sanitizedMessage}: ${sanitizeLogValue(errorValue)}`)
+    return
+  }
+
+  console.error(`[EXTERNAL-NOTIFICATIONS] ${sanitizedMessage}`)
 }
 
 function safeTextPreview(text: string, maxLen: number): string {

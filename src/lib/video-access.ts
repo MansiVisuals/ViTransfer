@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { NextRequest } from 'next/server'
 import { prisma } from './db'
+import { logError, logMessage } from './logging'
 import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
 import { getRedis } from './redis'
@@ -137,14 +138,11 @@ export async function verifyVideoAccessToken(
     tokenData = JSON.parse(data)
 
     if (!tokenData.videoId || !tokenData.projectId || !tokenData.sessionId) {
-      console.error('[SECURITY] Invalid token data structure', { token: token.substring(0, 10) })
+      logMessage(`[SECURITY] Invalid token data structure (tokenPrefix=${token.substring(0, 10)})`)
       return null
     }
   } catch (error) {
-    console.error('[SECURITY] Failed to parse video access token data', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      token: token.substring(0, 10)
-    })
+    logError(`[SECURITY] Failed to parse video access token data (tokenPrefix=${token.substring(0, 10)})`, error)
     return null
   }
 
@@ -358,7 +356,7 @@ export async function logSecurityEvent(params: {
     }))
     await redis.ltrim('security:events:recent', 0, 999)
   } catch (error) {
-    console.error('[SECURITY_EVENT] Failed to log:', error)
+    logError('[SECURITY_EVENT] Failed to log:', error)
   }
 }
 
@@ -430,7 +428,7 @@ async function getBlockedIPs(): Promise<string[]> {
     try {
       return JSON.parse(cached)
     } catch (error) {
-      console.error('[BLOCKLIST] Failed to parse cached IPs:', error)
+      logError('[BLOCKLIST] Failed to parse cached IPs:', error)
     }
   }
 
@@ -460,7 +458,7 @@ async function getBlockedDomains(): Promise<string[]> {
     try {
       return JSON.parse(cached)
     } catch (error) {
-      console.error('[BLOCKLIST] Failed to parse cached domains:', error)
+      logError('[BLOCKLIST] Failed to parse cached domains:', error)
     }
   }
 
@@ -502,10 +500,7 @@ export async function revokeProjectVideoTokens(projectId: string): Promise<void>
           keysToDelete.push(key)
         }
       } catch (error) {
-        console.error('[SECURITY] Corrupted token data during revocation, will delete', {
-          key,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
+        logError(`[SECURITY] Corrupted token data during revocation, will delete (key=${key})`, error)
         keysToDelete.push(key)
       }
     }

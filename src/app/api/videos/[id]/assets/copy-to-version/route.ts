@@ -4,6 +4,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -116,7 +118,7 @@ export async function POST(
       copiedCount: copiedAssets.length,
     })
   } catch (error) {
-    console.error('Error copying assets to version:', error)
+    logError('Error copying assets to version:', error)
     return NextResponse.json(
       { error: videoMessages.failedToCopyAssetsApi || 'Failed to copy assets' },
       { status: 500 }

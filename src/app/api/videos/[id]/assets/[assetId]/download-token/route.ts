@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { generateVideoAccessToken } from '@/lib/video-access'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 /**
  * Generate a temporary download token for asset downloads (admins and share users)
@@ -89,7 +91,7 @@ export async function POST(
       url: `/api/content/${token}?download=true&assetId=${assetId}`,
     })
   } catch (error) {
-    console.error('Asset download token generation error:', error)
+    logError('Asset download token generation error:', error)
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     const videoMessages = messages?.videos || {}

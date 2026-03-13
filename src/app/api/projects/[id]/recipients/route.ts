@@ -4,6 +4,8 @@ import { getProjectRecipients, addRecipient } from '@/lib/recipients'
 import { z } from 'zod'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -48,7 +50,7 @@ export async function GET(
 
     return NextResponse.json({ recipients })
   } catch (error) {
-    console.error('Failed to fetch recipients:', error)
+    logError('Failed to fetch recipients:', error)
     return NextResponse.json(
       { error: recipientMessages.failedToFetchRecipients || 'Failed to fetch recipients' },
       { status: 500 }
@@ -96,7 +98,7 @@ export async function POST(
 
     return NextResponse.json({ recipient }, { status: 201 })
   } catch (error: any) {
-    console.error('Failed to add recipient:', error)
+    logError('Failed to add recipient:', error)
 
     // Handle unique constraint violation
     if (error.code === 'P2002') {

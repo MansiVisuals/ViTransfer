@@ -16,6 +16,8 @@ import {
 } from '@/lib/email-template-system'
 import { prisma } from '@/lib/db'
 import { loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -100,7 +102,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       defaultBodyContent,
     })
   } catch (error) {
-    console.error('[API] Failed to get email template:', error)
+    logError('[API] Failed to get email template:', error)
     return NextResponse.json(
       { error: templateMessages?.failedToLoad || 'Failed to load email template' },
       { status: 500 }
@@ -183,7 +185,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       message: templateMessages?.templateSavedSuccessfully || 'Template saved successfully',
     })
   } catch (error) {
-    console.error('[API] Failed to save email template:', error)
+    logError('[API] Failed to save email template:', error)
     return NextResponse.json(
       { error: templateMessages?.failedToSaveTemplate || 'Failed to save email template' },
       { status: 500 }
@@ -255,7 +257,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       bodyContent,
     })
   } catch (error) {
-    console.error('[API] Failed to reset email template:', error)
+    logError('[API] Failed to reset email template:', error)
     return NextResponse.json(
       { error: templateMessages?.failedToResetTemplate || 'Failed to reset email template' },
       { status: 500 }

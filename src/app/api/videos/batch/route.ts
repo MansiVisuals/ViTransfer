@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -66,7 +68,7 @@ export async function PATCH(request: NextRequest) {
       updated: result.count
     })
   } catch (error) {
-    console.error('Error batch updating videos:', error)
+    logError('Error batch updating videos:', error)
     return NextResponse.json(
       { error: videoMessages.failedToUpdateVideosBatch || 'Failed to update videos' },
       { status: 500 }

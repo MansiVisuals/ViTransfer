@@ -11,6 +11,8 @@ import { sanitizeComment } from '@/lib/comment-sanitization'
 import { updateProjectSchema } from '@/lib/validation'
 import { syncCompanyToDirectory } from '@/lib/client-directory-sync'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 export async function GET(
@@ -457,7 +459,7 @@ export async function PATCH(
           `[SECURITY] Project ${changeReason} - invalidated ${shareSessionsInvalidated} share sessions for project ${id}`
         )
       } catch (error) {
-        console.error('[SECURITY] Failed to invalidate project sessions after security change:', error)
+        logError('[SECURITY] Failed to invalidate project sessions after security change:', error)
         // Don't fail the request if session invalidation fails - security change is more important
       }
 
@@ -466,7 +468,7 @@ export async function PATCH(
     // Auto-sync company name to client directory (fire and forget)
     if (validatedBody.companyName && updateData.companyName) {
       syncCompanyToDirectory(id, updateData.companyName).catch(err => {
-        console.error('Failed to sync company to client directory:', err)
+        logError('Failed to sync company to client directory:', err)
       })
     }
 
@@ -535,7 +537,7 @@ export async function DELETE(
           await deleteFile(video.thumbnailPath)
         }
       } catch (error) {
-        console.error(`Failed to delete files for video ${video.id}:`, error)
+        logError(`Failed to delete files for video ${video.id}:`, error)
         // Continue deleting other files even if one fails
       }
     }
@@ -544,7 +546,7 @@ export async function DELETE(
     try {
       await deleteDirectory(`projects/${id}`)
     } catch (error) {
-      console.error(`Failed to delete project directory for ${id}:`, error)
+      logError(`Failed to delete project directory for ${id}:`, error)
       // Continue even if directory deletion fails
     }
 
@@ -553,7 +555,7 @@ export async function DELETE(
       const invalidatedCount = await invalidateShareTokensByProject(id)
       console.log(`[SECURITY] Project deleted - invalidated ${invalidatedCount} share sessions`)
     } catch (error) {
-      console.error('[SECURITY] Failed to invalidate sessions during project deletion:', error)
+      logError('[SECURITY] Failed to invalidate sessions during project deletion:', error)
       // Continue with deletion even if session invalidation fails
     }
 

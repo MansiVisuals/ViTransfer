@@ -6,6 +6,8 @@ import { revokeAllUserTokens } from '@/lib/token-revocation'
 import { invalidateAdminSessions } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -63,7 +65,7 @@ export async function GET(
 
     return NextResponse.json({ user })
   } catch (error) {
-    console.error('Error fetching user:', error)
+    logError('Error fetching user:', error)
     // SECURITY: Generic message
     return NextResponse.json(
       { error: usersMessages.unableToProcessRequest || 'Unable to process request' },
@@ -260,7 +262,7 @@ export async function PATCH(
       message: securityMessage || usersMessages.userUpdatedSuccessfully || 'User updated successfully'
     })
   } catch (error) {
-    console.error('Error updating user:', error)
+    logError('Error updating user:', error)
     // SECURITY: Generic message
     return NextResponse.json(
       { error: usersMessages.operationFailed || 'Operation failed' },
@@ -319,7 +321,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting user:', error)
+    logError('Error deleting user:', error)
     // SECURITY: Generic message
     return NextResponse.json(
       { error: usersMessages.operationFailed || 'Operation failed' },

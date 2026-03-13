@@ -18,6 +18,8 @@ import {
   type EmailHeaderStyle,
 } from '@/lib/email'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -132,7 +134,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[API] Failed to generate email preview:', error)
+    logError('[API] Failed to generate email preview:', error)
     return NextResponse.json(
       { error: emailTemplateMessages.failedToGeneratePreview || 'Failed to generate preview' },
       { status: 500 }

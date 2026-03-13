@@ -4,6 +4,8 @@ import { verifyPasskeyRegistration } from '@/lib/passkey'
 import { getClientIpAddress } from '@/lib/utils'
 import type { RegistrationResponseJSON } from '@simplewebauthn/browser'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
       credentialId: result.credentialId,
     })
   } catch (error) {
-    console.error('[PASSKEY] Registration verification error:', error)
+    logError('[PASSKEY] Registration verification error:', error)
 
     return NextResponse.json(
       {

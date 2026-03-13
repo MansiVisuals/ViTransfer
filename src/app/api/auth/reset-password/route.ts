@@ -9,6 +9,8 @@ import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import crypto from 'crypto'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -190,7 +192,7 @@ export async function POST(request: NextRequest) {
       message: authMessages.passwordResetCompleted || 'Password has been reset successfully',
     })
   } catch (error) {
-    console.error('[PASSWORD_RESET] Error:', error)
+    logError('[PASSWORD_RESET] Error:', error)
     return NextResponse.json(
       { error: authMessages.failedToResetPasswordApi || 'Failed to reset password' },
       { status: 500 }

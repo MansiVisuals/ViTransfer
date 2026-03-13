@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { getRateLimitedEntries, clearRateLimitByKey, clearAllRateLimits } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
       count: entries.length,
     })
   } catch (error) {
-    console.error('Error fetching rate limit entries:', error)
+    logError('Error fetching rate limit entries:', error)
     return NextResponse.json(
       { error: securityMessages.failedToFetchRateLimitEntries || 'Failed to fetch rate limit entries' },
       { status: 500 }
@@ -98,7 +100,7 @@ export async function DELETE(request: NextRequest) {
       deleted,
     })
   } catch (error) {
-    console.error('Error clearing rate limit:', error)
+    logError('Error clearing rate limit:', error)
     return NextResponse.json(
       { error: securityMessages.failedToClearRateLimit || 'Failed to clear rate limit' },
       { status: 500 }

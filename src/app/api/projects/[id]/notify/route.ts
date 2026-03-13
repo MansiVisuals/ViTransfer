@@ -8,6 +8,8 @@ import { getProjectRecipients } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '@/lib/unsubscribe'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -209,7 +211,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         passwordSuccessCount = passwordResults.filter(r => r.status === 'fulfilled' && (r.value as any).success).length
         successfulPasswordRecipients = recipientsWithEmails.slice(0, passwordSuccessCount)
       } catch (error) {
-        console.error('Error sending password emails:', error)
+        logError('Error sending password emails:', error)
       }
     }
 
@@ -237,7 +239,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       )
     }
   } catch (error) {
-    console.error('Notify error:', error)
+    logError('Notify error:', error)
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     const projectMessages = messages?.projects || {}

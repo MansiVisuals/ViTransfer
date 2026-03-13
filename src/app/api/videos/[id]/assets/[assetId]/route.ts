@@ -7,6 +7,8 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { createReadStream } from 'fs'
 import fs from 'fs'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -116,7 +118,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error('Error downloading asset:', error)
+    logError('Error downloading asset:', error)
     return NextResponse.json(
       { error: videoMessages.failedToDownloadAsset || 'Failed to download asset' },
       { status: 500 }
@@ -201,7 +203,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting asset:', error)
+    logError('Error deleting asset:', error)
     return NextResponse.json(
       { error: videoMessages.failedToDeleteAssetApi || 'Failed to delete asset' },
       { status: 500 }

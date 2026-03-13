@@ -5,6 +5,8 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
 import { initStorage, deleteFile } from '@/lib/storage'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 // POST /api/videos/[id]/client-assets - Create a client asset record (JSON)
@@ -142,7 +144,7 @@ export async function POST(
       category,
     })
   } catch (error) {
-    console.error('Error creating client asset record:', error)
+    logError('Error creating client asset record:', error)
     return NextResponse.json(
       { error: videosMessages.failedToCreateAssetRecord || 'Failed to create asset record' },
       { status: 500 }
@@ -218,7 +220,7 @@ export async function GET(
 
     return NextResponse.json({ assets: serializedAssets })
   } catch (error) {
-    console.error('Error fetching client assets:', error)
+    logError('Error fetching client assets:', error)
     return NextResponse.json(
       { error: videosMessages.failedToFetchClientAssets || 'Failed to fetch client assets' },
       { status: 500 }
@@ -307,7 +309,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting client asset:', error)
+    logError('Error deleting client asset:', error)
     return NextResponse.json(
       { error: videosMessages.failedToDeleteAttachment || 'Failed to delete attachment' },
       { status: 500 }

@@ -3,6 +3,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { generatePasskeyRegistrationOptions } from '@/lib/passkey'
 import { isPasskeyConfigured } from '@/lib/settings'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(options)
   } catch (error) {
-    console.error('[PASSKEY] Registration options error:', error)
+    logError('[PASSKEY] Registration options error:', error)
 
     // Return user-friendly error
     return NextResponse.json(

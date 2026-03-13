@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db'
 import fs from 'fs/promises'
 import sharp from 'sharp'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -142,7 +144,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error('[BRANDING:LOGO-PNG] Error:', error)
+    logError('[BRANDING:LOGO-PNG] Error:', error)
     return NextResponse.json({ error: settingsMessages.failedToGenerateLogo || 'Failed to generate logo' }, { status: 500 })
   }
 }

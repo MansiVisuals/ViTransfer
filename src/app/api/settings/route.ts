@@ -8,6 +8,8 @@ import { getFilePath } from '@/lib/storage'
 import { flushPendingAdminNotifications } from '@/lib/notifications'
 import { getConfiguredLocale, loadLocaleMessages, SUPPORTED_LOCALES } from '@/i18n/locale'
 import fs from 'fs/promises'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -78,7 +80,7 @@ export async function GET(request: NextRequest) {
       smtpConfigured,
     })
   } catch (error) {
-    console.error('Error fetching settings:', error)
+    logError('Error fetching settings:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToFetchSettings || 'Failed to fetch settings' },
       { status: 500 }
@@ -411,7 +413,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(maskedSettings)
   } catch (error) {
-    console.error('Error updating settings:', error)
+    logError('Error updating settings:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToUpdateSettings || 'Failed to update settings' },
       { status: 500 }

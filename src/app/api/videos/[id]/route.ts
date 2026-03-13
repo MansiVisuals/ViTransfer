@@ -5,6 +5,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { getAutoApproveProject } from '@/lib/settings'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -56,7 +58,7 @@ export async function GET(
 
     return NextResponse.json(video)
   } catch (error) {
-    console.error('Error fetching video status:', error)
+    logError('Error fetching video status:', error)
     return NextResponse.json(
       { error: videoMessages.failedToFetchVideoStatus || 'Failed to fetch video status' },
       { status: 500 }
@@ -328,7 +330,7 @@ export async function DELETE(
         }
       }
     } catch (error) {
-      console.error(`Failed to delete files for video ${video.id}:`, error)
+      logError(`Failed to delete files for video ${video.id}:`, error)
       // Continue with database deletion even if storage deletion fails
     }
 

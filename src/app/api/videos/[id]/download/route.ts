@@ -6,6 +6,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import fs from 'fs'
 import { createReadStream } from 'fs'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -115,7 +117,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error('Download error:', error)
+    logError('Download error:', error)
     return NextResponse.json(
       { error: videoMessages.failedToDownloadVideoFile || 'Failed to download file' },
       { status: 500 }

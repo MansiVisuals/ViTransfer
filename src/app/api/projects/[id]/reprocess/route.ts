@@ -6,6 +6,8 @@ import { deleteFile } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -133,7 +135,7 @@ export async function POST(
       videos: reprocessed,
     })
   } catch (error) {
-    console.error('Error reprocessing videos:', error)
+    logError('Error reprocessing videos:', error)
     return NextResponse.json(
       { error: projectMessages.failedToReprocessVideos || 'Failed to reprocess videos' },
       { status: 500 }

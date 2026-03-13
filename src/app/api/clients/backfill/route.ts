@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 // POST /api/clients/backfill - Backfill client directory from existing projects
 export async function POST(request: NextRequest) {
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
         .replace('{skipped}', String(stats.skipped))
     })
   } catch (error) {
-    console.error('Failed to backfill client directory:', error)
+    logError('Failed to backfill client directory:', error)
     return NextResponse.json({ error: clientsMessages.failedToBackfillClientDirectory || 'Failed to backfill client directory' }, { status: 500 })
   }
 }

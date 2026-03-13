@@ -9,6 +9,8 @@ import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { safeParseBody } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 // Valid client IDs for workflow integrations
 const VALID_CLIENT_IDS = [
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
       interval: 5,
     })
   } catch (error) {
-    console.error('[Device Code] Error issuing device code:', error)
+    logError('[Device Code] Error issuing device code:', error)
     return NextResponse.json(
       { error: authMessages.failedToIssueDeviceCode || 'Failed to issue device code' },
       { status: 500 }

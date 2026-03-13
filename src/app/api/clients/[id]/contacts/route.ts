@@ -6,6 +6,8 @@ import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
 import { SUPPORTED_LOCALES } from '@/i18n/locale'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -43,7 +45,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ contacts })
   } catch (error) {
-    console.error('Failed to fetch contacts:', error)
+    logError('Failed to fetch contacts:', error)
     return NextResponse.json({ error: clientContactMessages.failedToFetchContacts || 'Failed to fetch contacts' }, { status: 500 })
   }
 }
@@ -120,7 +122,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ contact }, { status: 201 })
   } catch (error) {
-    console.error('Failed to create contact:', error)
+    logError('Failed to create contact:', error)
     return NextResponse.json({ error: clientContactMessages.failedToCreateContact || 'Failed to create contact' }, { status: 500 })
   }
 }

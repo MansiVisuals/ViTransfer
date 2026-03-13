@@ -8,6 +8,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getAuthContext } from '@/lib/auth'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -423,7 +425,7 @@ export async function GET(
     })
   } catch (error) {
     // Stream errors are technical issues, not security events
-    console.error('[STREAM] Video streaming error:', error)
+    logError('[STREAM] Video streaming error:', error)
 
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)

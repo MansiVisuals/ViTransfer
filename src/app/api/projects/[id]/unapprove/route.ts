@@ -4,6 +4,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -95,7 +97,7 @@ export async function POST(
       unapprovedVideos: unapproveVideos
     })
   } catch (error) {
-    console.error('Error unapproving project:', error)
+    logError('Error unapproving project:', error)
     return NextResponse.json(
       { error: projectMessages.failedToUnapproveProjectApi || 'Failed to unapprove project' },
       { status: 500 }

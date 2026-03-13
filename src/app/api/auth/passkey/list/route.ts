@@ -3,6 +3,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { getUserPasskeys } from '@/lib/passkey'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -51,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ passkeys })
   } catch (error) {
-    console.error('[PASSKEY] List error:', error)
+    logError('[PASSKEY] List error:', error)
 
     return NextResponse.json(
       { error: authMessages.failedToRetrievePasskeys || 'Failed to retrieve passkeys' },

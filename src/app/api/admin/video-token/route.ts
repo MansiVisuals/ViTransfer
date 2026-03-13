@@ -4,6 +4,8 @@ import { generateVideoAccessToken } from '@/lib/video-access'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ token })
   } catch (error) {
-    console.error('[API] Failed to generate admin video token:', error)
+    logError('[API] Failed to generate admin video token:', error)
     return NextResponse.json(
       { error: videosMessages.failedToGenerateToken || 'Failed to generate token' },
       { status: 500 }

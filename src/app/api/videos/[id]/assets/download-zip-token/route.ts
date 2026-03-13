@@ -7,6 +7,8 @@ import { getClientIpAddress } from '@/lib/utils'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 
@@ -139,7 +141,7 @@ export async function POST(
       url: `/api/content/zip/${token}`,
     })
   } catch (error) {
-    console.error('ZIP download token generation error:', error)
+    logError('ZIP download token generation error:', error)
     return NextResponse.json(
       { error: videoMessages.failedToGenerateDownloadLink || 'Failed to generate download link' },
       { status: 500 }

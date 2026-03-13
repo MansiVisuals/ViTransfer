@@ -7,6 +7,8 @@ import archiver from 'archiver'
 import { Readable } from 'stream'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -105,7 +107,7 @@ export async function POST(
 
     // Handle archive errors
     archive.on('error', (err) => {
-      console.error('Archive error:', err)
+      logError('Archive error:', err)
       throw err
     })
 
@@ -115,7 +117,7 @@ export async function POST(
         const fileStream = await downloadFile(asset.storagePath)
         archive.append(fileStream, { name: asset.fileName })
       } catch (error) {
-        console.error(`Error adding file ${asset.fileName} to archive:`, error)
+        logError(`Error adding file ${asset.fileName} to archive:`, error)
         // Continue with other files
       }
     }
@@ -139,7 +141,7 @@ export async function POST(
       },
     })
   } catch (error) {
-    console.error('Error creating asset zip:', error)
+    logError('Error creating asset zip:', error)
     return NextResponse.json(
       { error: videoMessages.failedToCreateAssetArchive || 'Failed to create asset archive' },
       { status: 500 }

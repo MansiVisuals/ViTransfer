@@ -7,6 +7,8 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         })
         console.log(`[APPROVAL] Queued clean preview generation for video ${selectedVideoId}`)
       } catch (queueError) {
-        console.error('[APPROVAL] Failed to queue clean preview job:', queueError)
+        logError('[APPROVAL] Failed to queue clean preview job:', queueError)
         // Don't fail the approval if queue fails
       }
     }
@@ -221,13 +223,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         })
       }
     } catch (error) {
-      console.error('[APPROVAL] Error handling approval notifications:', error)
+      logError('[APPROVAL] Error handling approval notifications:', error)
     }
 
     console.log('[APPROVAL] Approval process complete, returning success')
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[APPROVAL] ERROR in approval route:', error)
+    logError('[APPROVAL] ERROR in approval route:', error)
     return NextResponse.json({ error: projectMessages.failedToApproveProjectApi || 'Failed to approve project' }, { status: 500 })
   }
 }

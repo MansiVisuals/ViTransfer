@@ -3,6 +3,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { getPasskeyConfigStatus } from '@/lib/settings'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(status)
   } catch (error) {
-    console.error('[PASSKEY] Status check error:', error)
+    logError('[PASSKEY] Status check error:', error)
 
     return NextResponse.json(
       {

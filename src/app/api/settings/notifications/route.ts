@@ -6,6 +6,8 @@ import { encrypt } from '@/lib/encryption'
 import { NOTIFICATION_EVENT_TYPES } from '@/lib/external-notifications/constants'
 import { createNotificationDestinationSchema } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
       }))
     )
   } catch (error) {
-    console.error('Error fetching notification destinations:', error)
+    logError('Error fetching notification destinations:', error)
     return NextResponse.json({ error: notificationsMessages.failedToFetchNotificationDestinations || 'Failed to fetch notification destinations' }, { status: 500 })
   }
 }

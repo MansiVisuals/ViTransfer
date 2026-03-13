@@ -6,6 +6,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -87,7 +89,7 @@ export async function PATCH(
 
     return NextResponse.json({ recipient })
   } catch (error: any) {
-    console.error('Failed to update recipient:', error)
+    logError('Failed to update recipient:', error)
 
     if (error.message === 'Recipient not found') {
       return NextResponse.json(
@@ -146,7 +148,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Failed to delete recipient:', error)
+    logError('Failed to delete recipient:', error)
 
     if (error.message === 'Recipient not found') {
       return NextResponse.json(

@@ -13,6 +13,8 @@ import { enqueueExternalNotification } from '@/lib/external-notifications/enqueu
 import { safeParseBody } from '@/lib/validation'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -291,7 +293,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, shareToken })
   } catch (error) {
-    console.error('Error verifying OTP:', error)
+    logError('Error verifying OTP:', error)
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     const shareMessages = messages?.share || {}

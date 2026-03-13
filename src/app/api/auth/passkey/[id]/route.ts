@@ -3,6 +3,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { deletePasskey, updatePasskeyName } from '@/lib/passkey'
 import { invalidateAdminSessions, clearPasskeyChallenges } from '@/lib/session-invalidation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -60,7 +62,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[PASSKEY] Delete error:', error)
+    logError('[PASSKEY] Delete error:', error)
 
     return NextResponse.json({ error: authMessages.failedToDeletePasskeyApi || 'Failed to delete passkey' }, { status: 500 })
   }
@@ -129,7 +131,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[PASSKEY] Update name error:', error)
+    logError('[PASSKEY] Update name error:', error)
 
     return NextResponse.json(
       { error: authMessages.failedToUpdatePasskeyName || 'Failed to update passkey name' },

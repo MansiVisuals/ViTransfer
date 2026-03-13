@@ -9,6 +9,8 @@ import archiver from 'archiver'
 import { Readable } from 'stream'
 import crypto from 'crypto'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -154,7 +156,7 @@ export async function GET(
     })
 
     archive.on('error', (err) => {
-      console.error('ZIP archive error:', err)
+      logError('ZIP archive error:', err)
     })
 
     // Add files to archive
@@ -165,7 +167,7 @@ export async function GET(
         archive.append(fileStream, { name: asset.fileName })
         appendedCount += 1
       } catch (error) {
-        console.error(`Error adding file ${asset.fileName} to archive:`, error)
+        logError(`Error adding file ${asset.fileName} to archive:`, error)
         // Continue with other files instead of failing completely
       }
     }
@@ -197,7 +199,7 @@ export async function GET(
     })
   } catch (error) {
     // Download errors are technical issues, not security events
-    console.error('[DOWNLOAD] ZIP download error:', error)
+    logError('[DOWNLOAD] ZIP download error:', error)
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     const shareMessages = messages?.share || {}

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 // GET /api/clients/search - Search clients for autocomplete
 export async function GET(request: NextRequest) {
@@ -89,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(results)
   } catch (error) {
-    console.error('Failed to search clients:', error)
+    logError('Failed to search clients:', error)
     return NextResponse.json({ error: clientsMessages.failedToSearchClients || 'Failed to search clients' }, { status: 500 })
   }
 }

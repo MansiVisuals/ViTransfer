@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -30,7 +32,7 @@ export async function GET() {
       defaultPreviewResolution: settings?.defaultPreviewResolution || '720p'
     })
   } catch (error) {
-    console.error('Error fetching default quality:', error)
+    logError('Error fetching default quality:', error)
     return NextResponse.json(
       { defaultPreviewResolution: '720p' },
       { status: 200 } // Still return default even on error

@@ -3,6 +3,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import crypto from 'crypto'
 import { parseBearerToken, refreshAdminTokens, revokePresentedTokens } from '@/lib/auth'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('[AUTH] Token refresh error:', error)
+    logError('[AUTH] Token refresh error:', error)
     return NextResponse.json(
       { error: authMessages.tokenRefreshFailed || 'Token refresh failed' },
       { status: 500 }

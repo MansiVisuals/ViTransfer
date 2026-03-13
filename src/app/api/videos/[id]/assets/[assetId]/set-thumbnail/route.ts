@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -103,7 +105,7 @@ export async function POST(
       message: videoMessages.thumbnailUpdated || 'Thumbnail updated successfully',
     })
   } catch (error) {
-    console.error('Error setting asset as thumbnail:', error)
+    logError('Error setting asset as thumbnail:', error)
     return NextResponse.json(
       { error: videoMessages.failedToSetThumbnailApi || 'Failed to set thumbnail' },
       { status: 500 }

@@ -4,6 +4,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { invalidateAllShareSessions, clearAllRateLimits } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 function adminTimeoutSeconds(value: number, unit: string): number | null {
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(settings)
   } catch (error) {
-    console.error('Error fetching security settings:', error)
+    logError('Error fetching security settings:', error)
     return NextResponse.json(
       { error: settingsSecurityMessages.failedToFetchSecuritySettings || 'Failed to fetch security settings' },
       { status: 500 }
@@ -264,7 +266,7 @@ export async function PATCH(request: NextRequest) {
         invalidationLog.push(`Invalidated ${count} share sessions (timeout changed)`)
         console.log(`[SECURITY] Session timeout changed - invalidated ${count} share sessions`)
       } catch (error) {
-        console.error('[SECURITY] Failed to invalidate sessions after timeout change:', error)
+        logError('[SECURITY] Failed to invalidate sessions after timeout change:', error)
         // Don't fail the request if session invalidation fails
       }
     }
@@ -277,7 +279,7 @@ export async function PATCH(request: NextRequest) {
         invalidationLog.push(`Invalidated ${count} share sessions (hotlink protection strengthened)`)
         console.log(`[SECURITY] Hotlink protection strengthened - invalidated ${count} share sessions`)
       } catch (error) {
-        console.error('[SECURITY] Failed to invalidate sessions after hotlink change:', error)
+        logError('[SECURITY] Failed to invalidate sessions after hotlink change:', error)
       }
     }
 
@@ -289,7 +291,7 @@ export async function PATCH(request: NextRequest) {
         invalidationLog.push(`Cleared ${count} rate limit counters (password attempts changed)`)
         console.log(`[SECURITY] Password attempts changed - cleared ${count} rate limit entries`)
       } catch (error) {
-        console.error('[SECURITY] Failed to clear rate limits:', error)
+        logError('[SECURITY] Failed to clear rate limits:', error)
       }
     }
 
@@ -299,7 +301,7 @@ export async function PATCH(request: NextRequest) {
       _invalidation: invalidationLog.length > 0 ? invalidationLog : undefined
     })
   } catch (error) {
-    console.error('Error updating security settings:', error)
+    logError('Error updating security settings:', error)
     return NextResponse.json(
       { error: settingsSecurityMessages.failedToUpdateSecuritySettings || 'Failed to update security settings' },
       { status: 500 }

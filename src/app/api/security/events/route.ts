@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -112,7 +114,7 @@ export async function GET(request: NextRequest) {
       }))
     })
   } catch (error) {
-    console.error('Error fetching security events:', error)
+    logError('Error fetching security events:', error)
     return NextResponse.json(
       { error: securityMessages.failedToFetchSecurityEvents || 'Failed to fetch security events' },
       { status: 500 }
@@ -176,7 +178,7 @@ export async function DELETE(request: NextRequest) {
       message
     })
   } catch (error) {
-    console.error('Error deleting security events:', error)
+    logError('Error deleting security events:', error)
     return NextResponse.json(
       { error: securityMessages.failedToDeleteSecurityEventsApi || 'Failed to delete security events' },
       { status: 500 }

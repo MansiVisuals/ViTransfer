@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { generateVideoAccessToken } from '@/lib/video-access'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 /**
  * Generate a temporary download token for video downloads (admins and share users)
@@ -77,7 +79,7 @@ export async function POST(
       url: `/api/content/${token}?download=true`,
     })
   } catch (error) {
-    console.error('Download token generation error:', error)
+    logError('Download token generation error:', error)
     return NextResponse.json(
       { error: videoMessages.failedToGenerateDownloadLink || 'Failed to generate download link' },
       { status: 500 }

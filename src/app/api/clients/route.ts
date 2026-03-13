@@ -5,6 +5,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 // GET /api/clients - List all client companies with contacts
 export async function GET(request: NextRequest) {
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ companies })
   } catch (error) {
-    console.error('Failed to fetch clients:', error)
+    logError('Failed to fetch clients:', error)
     return NextResponse.json({ error: clientsMessages.failedToFetchClients || 'Failed to fetch clients' }, { status: 500 })
   }
 }
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ company }, { status: 201 })
   } catch (error) {
-    console.error('Failed to create client company:', error)
+    logError('Failed to create client company:', error)
     return NextResponse.json({ error: clientsMessages.failedToCreateClientCompany || 'Failed to create client company' }, { status: 500 })
   }
 }

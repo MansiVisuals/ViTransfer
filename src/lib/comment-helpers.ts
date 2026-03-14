@@ -8,6 +8,7 @@ import { enqueueExternalNotification } from '@/lib/external-notifications/enqueu
 import { getAppDomain } from '@/lib/url'
 import { formatTimecodeDisplay, timecodeToSeekSeconds } from '@/lib/timecode'
 import { htmlToText } from 'html-to-text'
+import { logError } from '@/lib/logging'
 
 /**
  * Validate comment permissions
@@ -268,7 +269,9 @@ export async function handleCommentNotifications(params: {
           email: authorEmail || undefined,
           url: adminShareUrl || undefined,
         },
-      }).catch(() => {})
+      }).catch((notificationError) => {
+        logError('[COMMENT-NOTIFICATION] Failed to enqueue external notification', notificationError)
+      })
     }
 
     // Check if SMTP is configured (email notifications)

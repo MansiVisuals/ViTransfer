@@ -7,7 +7,7 @@ import { logSecurityEvent } from '@/lib/video-access'
 import { getAppDomain } from '@/lib/url'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
-import { logError } from '@/lib/logging'
+import { logError, logMessage } from '@/lib/logging'
 
 
 export const runtime = 'nodejs'
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
           },
         })
       } catch (emailError) {
-        logError(`[PASSWORD_RESET] Email send error for user ${user.email}`, emailError)
+        logError(`[PASSWORD_RESET] Email send error for userId ${user.id}`, emailError)
         // Log email failure
         await logSecurityEvent({
           type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // SMTP not configured - log for admin awareness but still return success
-      console.warn('[PASSWORD_RESET] SMTP not configured, reset token generated but email not sent for user:', user.email)
+      logMessage(`[PASSWORD_RESET] SMTP not configured, reset token generated but email not sent (userId=${user.id})`)
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
         severity: 'WARNING',

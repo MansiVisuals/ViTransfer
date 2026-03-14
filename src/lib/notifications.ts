@@ -8,6 +8,7 @@ import { getRedis } from './redis'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from './unsubscribe'
 import { normalizeNotificationDataTimecode } from '@/worker/notification-helpers'
+import { logError } from '@/lib/logging'
 
 interface NotificationContext {
   comment: Comment
@@ -363,7 +364,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
       email: authorEmail || undefined,
       url: adminShareUrl || undefined,
     },
-  }).catch(() => {})
+  }).catch((notificationError) => {
+    logError('[APPROVAL] Failed to enqueue external notification', notificationError)
+  })
 }
 
 /**

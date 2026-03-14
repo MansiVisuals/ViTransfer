@@ -3,6 +3,7 @@ import { getRedis } from '../lib/redis'
 import { enqueueExternalNotification } from '../lib/external-notifications/enqueueExternalNotification'
 import { sendDueDateReminderEmail } from '../lib/email'
 import { isSmtpConfigured } from '../lib/settings'
+import { logError, logMessage } from '../lib/logging'
 
 const REDIS_KEY = 'due_date_reminder:last_check'
 let firstRun = true
@@ -11,7 +12,7 @@ export async function processDueDateReminders() {
   const redis = getRedis()
 
   if (firstRun) {
-    console.log('[WORKER] Due date reminder check initialized')
+    logMessage('[WORKER] Due date reminder check initialized')
     firstRun = false
   }
 
@@ -25,8 +26,7 @@ export async function processDueDateReminders() {
     }
   }
 
-  console.log('[WORKER] Running daily due date reminder check...')
-  await redis.set(REDIS_KEY, new Date().toISOString(), 'EX', 86400)
+  logMessage('[WORKER] Running daily due date reminder check...')
 
   const now = new Date()
   now.setHours(0, 0, 0, 0)
@@ -69,27 +69,36 @@ export async function processDueDateReminders() {
   ]
 
   if (allReminders.length === 0) {
-    console.log(`[WORKER] Due date check complete — no reminders to send (${dayBeforeProjects.length} day-before, ${weekBeforeProjects.length} week-before)`)
+    await redis.set(REDIS_KEY, new Date().toISOString(), 'EX', 86400)
+    logMessage(`[WORKER] Due date check complete — no reminders to send (${dayBeforeProjects.length} day-before, ${weekBeforeProjects.length} week-before)`)
     return
   }
 
-  console.log(`[WORKER] Found ${allReminders.length} due date reminder(s) to send`)
+  logMessage(`[WORKER] Found ${allReminders.length} due date reminder(s) to send`)
+
+  let externalFailures = 0
+  let emailFailures = 0
 
   // Send external notifications for each reminder
   for (const project of allReminders) {
-    const dueStr = new Date(project.dueDate!).toLocaleDateString()
-    await enqueueExternalNotification({
-      eventType: 'DUE_DATE_REMINDER',
-      title: `Deadline Reminder: ${project.title}`,
-      body: `"${project.title}" is due ${project.reminderType} (${dueStr})`,
-    })
+    try {
+      const dueStr = new Date(project.dueDate!).toLocaleDateString()
+      await enqueueExternalNotification({
+        eventType: 'DUE_DATE_REMINDER',
+        title: `Deadline Reminder: ${project.title}`,
+        body: `"${project.title}" is due ${project.reminderType} (${dueStr})`,
+      })
+    } catch (notificationError) {
+      externalFailures++
+      logError(`[WORKER] Failed to enqueue due date reminder notification (projectId=${project.id})`, notificationError)
+    }
   }
 
   // Send email reminders to all admins
   try {
     const smtpReady = await isSmtpConfigured()
     if (!smtpReady) {
-      console.log('[WORKER] SMTP not configured — skipping due date reminder emails')
+      logMessage('[WORKER] SMTP not configured — skipping due date reminder emails')
     } else {
       const admins = await prisma.user.findMany({
         where: { role: 'ADMIN' },
@@ -98,27 +107,41 @@ export async function processDueDateReminders() {
       const adminEmails = admins.map(a => a.email).filter(Boolean)
 
       if (adminEmails.length === 0) {
-        console.log('[WORKER] No admin emails found — skipping due date reminder emails')
+        logMessage('[WORKER] No admin emails found — skipping due date reminder emails')
       } else {
         for (const project of allReminders) {
-          const dueStr = new Date(project.dueDate!).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
-          await sendDueDateReminderEmail({
-            adminEmails,
-            projectTitle: project.title,
-            dueDate: dueStr,
-            reminderType: project.reminderType,
-          })
+          try {
+            const dueStr = new Date(project.dueDate!).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })
+            await sendDueDateReminderEmail({
+              adminEmails,
+              projectTitle: project.title,
+              dueDate: dueStr,
+              reminderType: project.reminderType,
+            })
+          } catch (emailError) {
+            emailFailures++
+            logError(`[WORKER] Failed to send due date reminder email (projectId=${project.id})`, emailError)
+          }
         }
-        console.log(`[WORKER] Sent due date reminder emails to ${adminEmails.length} admin(s)`)
+        logMessage(`[WORKER] Sent due date reminder emails to ${adminEmails.length} admin(s)`) 
       }
     }
   } catch (error) {
-    console.error('[WORKER] Failed to send due date reminder emails:', error)
+    emailFailures++
+    logError('[WORKER] Failed to send due date reminder emails', error)
   }
 
-  console.log(`[WORKER] Due date check complete — ${allReminders.length} reminder(s) processed`)
+  const totalFailures = externalFailures + emailFailures
+  if (totalFailures === 0) {
+    await redis.set(REDIS_KEY, new Date().toISOString(), 'EX', 86400)
+    logMessage(`[WORKER] Due date check complete — ${allReminders.length} reminder(s) processed`)
+    return
+  }
+
+  await redis.set(REDIS_KEY, new Date().toISOString(), 'EX', 900)
+  logMessage(`[WORKER] Due date check completed with ${totalFailures} failure(s); retry scheduled in 15 minutes`)
 }

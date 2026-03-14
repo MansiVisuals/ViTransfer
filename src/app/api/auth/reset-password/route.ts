@@ -9,7 +9,7 @@ import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import crypto from 'crypto'
-import { logError } from '@/lib/logging'
+import { logError, logMessage } from '@/lib/logging'
 
 
 export const runtime = 'nodejs'
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('[PASSWORD_RESET] Password successfully reset for user:', user.email)
+    logMessage(`[PASSWORD_RESET] Password reset completed (userId=${user.id})`)
 
     // Return generic success message (no user-specific information)
     return NextResponse.json({

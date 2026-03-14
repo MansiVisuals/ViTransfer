@@ -1156,13 +1156,20 @@
   "failedToGeneratePreview": "Failed to generate preview",
   "failedToSaveTemplate": "Failed to save template",
   "failedToResetTemplate": "Failed to reset template",
+  "failedToUpdateTemplateStatus": "Failed to update template status",
   "invalidTemplateType": "Invalid template type",
+  "invalidEnabledValue": "Enabled must be a boolean",
   "subjectRequired": "Subject is required",
   "bodyContentRequired": "Body content is required",
   "subjectTooLong": "Subject is too long (max 200 characters)",
   "bodyContentTooLarge": "Body content is too large (max 50KB)",
   "templateSavedSuccessfully": "Template saved successfully",
   "templateResetToDefault": "Template reset to default",
+  "templateEnabled": "Template enabled",
+  "templateDisabled": "Template disabled",
+  "enable": "Enable",
+  "disable": "Disable",
+  "disabled": "Disabled",
       "resetConfirm": "Reset this template to the default? Your customizations will be lost.",
       "example": "Example:",
 
@@ -1175,7 +1182,10 @@
         "PROJECT_GENERAL": "Ready for Review",
         "PASSWORD": "Project Password",
         "PASSWORD_RESET": "Admin Password Reset",
-        "DUE_DATE_REMINDER": "Due Date Reminder"
+        "DUE_DATE_REMINDER": "Due Date Reminder",
+        "OTP_VERIFICATION": "OTP Verification Code",
+        "CLIENT_ACTIVITY_SUMMARY": "Client Activity Summary",
+        "ADMIN_ACTIVITY_SUMMARY": "Admin Activity Summary"
       },
       "templateDescriptions": {
         "NEW_VERSION": "Sent to clients when a new version is uploaded",
@@ -1186,7 +1196,10 @@
         "PROJECT_GENERAL": "Sent to clients when deliverables are ready for review",
         "PASSWORD": "Sends the access password in a separate email for security",
         "PASSWORD_RESET": "Sent to admins when they request a password reset",
-        "DUE_DATE_REMINDER": "Sent to admins when a project deadline is approaching"
+        "DUE_DATE_REMINDER": "Sent to admins when a project deadline is approaching",
+        "OTP_VERIFICATION": "Sent to recipients when OTP verification is required",
+        "CLIENT_ACTIVITY_SUMMARY": "Scheduled summary sent to client recipients",
+        "ADMIN_ACTIVITY_SUMMARY": "Scheduled summary sent to admins"
       },
       "placeholderDescriptions": {
         "COMPANY_NAME": "Your company name from settings",
@@ -1214,7 +1227,14 @@
         "RESET_URL": "Password reset link",
         "EXPIRY_TIME": "How long the link is valid",
         "DUE_DATE": "Formatted due date",
-        "REMINDER_TYPE": "When the project is due (e.g., tomorrow, in 7 days)"
+        "REMINDER_TYPE": "When the project is due (e.g., tomorrow, in 7 days)",
+        "OTP_CODE": "One-time verification code",
+        "EXPIRY_MINUTES": "Code expiry in minutes",
+        "SUMMARY_TEXT": "Summary counts text",
+        "PERIOD": "Schedule period text",
+        "SUMMARY_ITEMS": "Rendered summary items HTML",
+        "SUMMARY_PROJECTS": "Rendered project summary HTML",
+        "UNSUBSCRIBE_SECTION": "Unsubscribe section HTML (optional)"
       },
       "placeholderExamples": {
         "COMPANY_NAME": "Acme Studios",
@@ -1233,7 +1253,14 @@
         "PASSWORD": "xK9mP2nL",
         "EXPIRY_TIME": "30 minutes",
         "DUE_DATE": "March 15, 2026",
-        "REMINDER_TYPE": "tomorrow"
+        "REMINDER_TYPE": "tomorrow",
+        "OTP_CODE": "123456",
+        "EXPIRY_MINUTES": "10",
+        "SUMMARY_TEXT": "3 new comments, 1 approval",
+        "PERIOD": "today",
+        "SUMMARY_ITEMS": "",
+        "SUMMARY_PROJECTS": "",
+        "UNSUBSCRIBE_SECTION": ""
       },
       "previewTitles": {
         "NEW_VERSION": "New Version Available",
@@ -1244,13 +1271,17 @@
         "PROJECT_GENERAL": "Ready for Review",
         "PASSWORD": "Project Password",
         "PASSWORD_RESET": "Password Reset",
-        "DUE_DATE_REMINDER": "Deadline Reminder"
+        "DUE_DATE_REMINDER": "Deadline Reminder",
+        "OTP_VERIFICATION": "Verification Code",
+        "CLIENT_ACTIVITY_SUMMARY": "Project Update",
+        "ADMIN_ACTIVITY_SUMMARY": "Client Activity Summary"
       },
       "previewSubtitles": {
         "NEW_VERSION": "Ready for your review",
         "PROJECT_APPROVED": "Ready for download",
         "PASSWORD_RESET": "Reset your admin account password",
-        "DUE_DATE_REMINDER_SUFFIX": "is due tomorrow"
+        "DUE_DATE_REMINDER_SUFFIX": "is due tomorrow",
+        "ADMIN_ACTIVITY_SUMMARY": "Latest updates"
       }
     },
 
@@ -2043,6 +2074,37 @@
       "subject": "Deadline Reminder: {{PROJECT_TITLE}} due {{REMINDER_TYPE}}",
       "body": "<strong>{{PROJECT_TITLE}}</strong> is due <strong>{{REMINDER_TYPE}}</strong>.",
       "button": "View in Admin Panel"
+    },
+    "otpVerification": {
+      "subject": "Your verification code for {{PROJECT_TITLE}}",
+      "body": "Use this verification code to access <strong>{{PROJECT_TITLE}}</strong>:",
+      "codeLabel": "Verification Code",
+      "expiry": "This code expires in {{EXPIRY_MINUTES}} minutes.",
+      "ignoreNotice": "If you didn't request this code, you can safely ignore this email."
+    },
+    "clientActivitySummary": {
+      "title": "Project Update",
+      "subject": "Updates on {{PROJECT_TITLE}}",
+      "body": "Here's an update on <strong>{{PROJECT_TITLE}}</strong>.",
+      "summaryLabel": "Summary",
+      "latestActivity": "Latest activity",
+      "newCommentSingular": "new comment",
+      "newCommentPlural": "new comments",
+      "approvalSingular": "approval",
+      "approvalPlural": "approvals",
+      "unapprovedLabel": "unapproved",
+      "button": "View Project"
+    },
+    "adminActivitySummary": {
+      "title": "Client Activity Summary",
+      "subject": "Project activity summary ({{SUMMARY_TEXT}})",
+      "body": "Here is the latest client activity ({{SUMMARY_TEXT}} {{PERIOD}}).",
+      "commentSingular": "comment",
+      "commentPlural": "comments",
+      "projectSingular": "project",
+      "projectPlural": "projects",
+      "across": "across",
+      "button": "Open Admin Dashboard"
     },
     "passwordNotice": "Protected project: Use the password sent separately to access this project."
   }

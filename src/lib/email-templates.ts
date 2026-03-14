@@ -4,6 +4,9 @@
  */
 
 import { escapeHtml, renderEmailButton, renderEmailShell, renderUnsubscribeSection, getEmailBrand, buildTimecodeDeepLink, buildAdminTimecodeDeepLink, renderTimecodePill } from './email'
+import { getEmailTemplate, replacePlaceholders } from './email-template-system'
+import { processTemplateContent } from './email'
+import { loadEmailMessages } from './email-template-system'
 
 interface NotificationData {
   type: 'CLIENT_COMMENT' | 'ADMIN_REPLY' | 'VIDEO_APPROVED' | 'VIDEO_UNAPPROVED' | 'PROJECT_APPROVED'
@@ -36,6 +39,7 @@ interface NotificationSummaryData {
   period: string
   notifications: NotificationData[]
   unsubscribeUrl?: string
+  locale?: string
 }
 
 interface AdminSummaryData {
@@ -50,14 +54,17 @@ interface AdminSummaryData {
     shareUrl: string
     notifications: NotificationData[]
   }>
+  locale?: string
 }
 
 /**
  * Client notification summary
  */
-export function generateNotificationSummaryEmail(data: NotificationSummaryData): string {
+export async function generateNotificationSummaryEmail(data: NotificationSummaryData): Promise<{ subject: string; html: string }> {
   const companyName = data.companyName || 'ViTransfer'
   const brand = getEmailBrand(data.accentColor)
+  const emailMessages: Record<string, any> = await loadEmailMessages(data.locale || 'en').catch(() => ({}))
+  const summaryMessages = emailMessages.clientActivitySummary || {}
   const greeting = data.recipientName !== data.recipientEmail
     ? data.recipientName
     : 'there'
@@ -68,10 +75,22 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
   const unapprovedCount = data.notifications.filter(n => n.type === 'VIDEO_UNAPPROVED').length
 
   const summaryParts = []
-  if (commentCount > 0) summaryParts.push(`${commentCount} new ${commentCount === 1 ? 'comment' : 'comments'}`)
-  if (approvedCount > 0) summaryParts.push(`${approvedCount} ${approvedCount === 1 ? 'approval' : 'approvals'}`)
-  if (unapprovedCount > 0) summaryParts.push(`${unapprovedCount} unapproved`)
-  const summaryText = summaryParts.join(', ') || 'Latest activity'
+  if (commentCount > 0) {
+    summaryParts.push(
+      `${commentCount} ${commentCount === 1
+        ? (summaryMessages.newCommentSingular || 'new comment')
+        : (summaryMessages.newCommentPlural || 'new comments')}`
+    )
+  }
+  if (approvedCount > 0) {
+    summaryParts.push(
+      `${approvedCount} ${approvedCount === 1
+        ? (summaryMessages.approvalSingular || 'approval')
+        : (summaryMessages.approvalPlural || 'approvals')}`
+    )
+  }
+  if (unapprovedCount > 0) summaryParts.push(`${unapprovedCount} ${summaryMessages.unapprovedLabel || 'unapproved'}`)
+  const summaryText = summaryParts.join(', ') || (summaryMessages.latestActivity || 'Latest activity')
 
   const itemsHtmlContent = data.notifications.map((n) => {
     if (n.type === 'PROJECT_APPROVED') {
@@ -115,41 +134,53 @@ export function generateNotificationSummaryEmail(data: NotificationSummaryData):
     </div>
   `
 
-  return renderEmailShell({
+  const unsubscribeSection = data.unsubscribeUrl ? renderUnsubscribeSection(data.unsubscribeUrl, brand) : ''
+
+  const template = await getEmailTemplate('CLIENT_ACTIVITY_SUMMARY')
+  const placeholderValues: Record<string, string> = {
+    '{{RECIPIENT_NAME}}': greeting,
+    '{{PROJECT_TITLE}}': data.projectTitle,
+    '{{SUMMARY_TEXT}}': summaryText,
+    '{{PERIOD}}': data.period,
+    '{{SUMMARY_ITEMS}}': itemsHtml,
+    '{{SHARE_URL}}': data.shareUrl,
+    '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
+  const html = renderEmailShell({
     companyName,
-    title: 'Project Update',
+    title: summaryMessages.title || 'Project Update',
     subtitle: `${summaryText} ${data.period}`,
     preheader: `Updates on ${data.projectTitle}`,
     footerNote: companyName,
     brand,
-    bodyContent: `
-      <p style="margin:0 0 20px; font-size:16px; color:${brand.text};">
-        Hi <strong>${escapeHtml(greeting)}</strong>,
-      </p>
-      <p style="margin:0 0 24px; font-size:15px; color:${brand.textSubtle};">
-        Here's an update on <strong>${escapeHtml(data.projectTitle)}</strong>:
-      </p>
-      ${itemsHtml}
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: data.shareUrl, label: 'View Project', brand })}
-      </div>
-      <p style="margin:24px 0 0; font-size:13px; color:${brand.muted}; text-align:center; line-height:1.5;">
-        You can manage email preferences anytime.
-      </p>
-      ${data.unsubscribeUrl ? renderUnsubscribeSection(data.unsubscribeUrl, brand) : ''}
-    `,
+    bodyContent,
   }).trim()
+
+  return { subject, html }
 }
 
 /**
  * Admin summary - multi-project
  */
-export function generateAdminSummaryEmail(data: AdminSummaryData): string {
+export async function generateAdminSummaryEmail(data: AdminSummaryData): Promise<{ subject: string; html: string }> {
   const companyName = data.companyName || 'ViTransfer'
   const brand = getEmailBrand(data.accentColor)
+  const emailMessages: Record<string, any> = await loadEmailMessages(data.locale || 'en').catch(() => ({}))
+  const summaryMessages = emailMessages.adminActivitySummary || {}
   const greeting = data.adminName ? data.adminName : 'there'
   const totalComments = data.projects.reduce((sum, p) => sum + p.notifications.length, 0)
   const projectCount = data.projects.length
+  const commentsWord = totalComments === 1
+    ? (summaryMessages.commentSingular || 'comment')
+    : (summaryMessages.commentPlural || 'comments')
+  const projectsWord = projectCount === 1
+    ? (summaryMessages.projectSingular || 'project')
+    : (summaryMessages.projectPlural || 'projects')
 
   const projectsHtml = data.projects.map((project) => {
     const items = project.notifications.map((n, index) => {
@@ -185,24 +216,28 @@ export function generateAdminSummaryEmail(data: AdminSummaryData): string {
 
   const adminUrl = data.projects[0]?.shareUrl ? escapeHtml(data.projects[0].shareUrl.replace(/\/share\/[^/]+/, '/admin/projects')) : '#'
 
-  return renderEmailShell({
+  const template = await getEmailTemplate('ADMIN_ACTIVITY_SUMMARY')
+  const placeholderValues: Record<string, string> = {
+    '{{RECIPIENT_NAME}}': greeting,
+    '{{SUMMARY_TEXT}}': `${totalComments} ${commentsWord} ${summaryMessages.across || 'across'} ${projectCount} ${projectsWord}`,
+    '{{PERIOD}}': data.period,
+    '{{SUMMARY_PROJECTS}}': projectsHtml,
+    '{{ADMIN_URL}}': adminUrl,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
+  const html = renderEmailShell({
     companyName,
-    title: 'Client Activity Summary',
-    subtitle: `${totalComments} ${totalComments === 1 ? 'comment' : 'comments'} across ${projectCount} ${projectCount === 1 ? 'project' : 'projects'} ${data.period}`,
+    title: summaryMessages.title || 'Client Activity Summary',
+    subtitle: `${totalComments} ${commentsWord} ${summaryMessages.across || 'across'} ${projectCount} ${projectsWord} ${data.period}`,
     preheader: `Client activity summary: ${totalComments} updates`,
     footerNote: companyName,
     brand,
-    bodyContent: `
-      <p style="margin:0 0 20px; font-size:16px; color:${brand.text};">
-        Hi <strong>${escapeHtml(greeting)}</strong>,
-      </p>
-      <p style="margin:0 0 24px; font-size:15px; color:${brand.textSubtle};">
-        Here are the latest client comments:
-      </p>
-      ${projectsHtml}
-      <div style="margin: 28px 0; text-align: center;">
-        ${renderEmailButton({ href: adminUrl, label: 'Open Admin Dashboard', brand })}
-      </div>
-    `,
+    bodyContent,
   }).trim()
+
+  return { subject, html }
 }

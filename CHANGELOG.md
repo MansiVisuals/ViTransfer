@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Template enable/disable controls in Settings → Email Templates, including API support and localized UI/status messages.
+- New customizable email template types: OTP verification, client activity summary, and admin activity summary.
+- Localized default content for the new email templates in both English and Dutch, including preview metadata and placeholder descriptions/examples.
+
+### Changed
+- Refactored summary and OTP email generation to use the centralized customizable template system.
+- Localized runtime summary wording (titles, subtitles, counters, and labels) for client/admin activity summaries.
+- Email settings updates now invalidate the cached SMTP/email settings immediately.
+
+### Fixed
+- Standardized placeholder sanitization for email rendering (escape-by-default with explicit allowlists for trusted HTML/URL placeholders).
+- Removed duplicate hardcoded default template source by deriving defaults from the localized template builder.
+- Removed unused email template helper code and resolved related typing/consistency issues.
+- Improved logging consistency in email/notification worker paths by using centralized `logError` handling.
+
 ## [0.9.5] - 2026-03-11
 
 ### Added

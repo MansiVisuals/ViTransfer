@@ -4,6 +4,7 @@ import { generateAdminSummaryEmail } from '../lib/email-templates'
 import { generateShareUrl } from '../lib/url'
 import { getRedis } from '../lib/redis'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
+import { logError } from '../lib/logging'
 
 /**
  * Process admin notification summaries
@@ -156,19 +157,20 @@ export async function processAdminNotifications() {
         const projects = Object.values(projectGroups)
 
         for (const admin of admins) {
-          const html = generateAdminSummaryEmail({
+          const summaryEmail = await generateAdminSummaryEmail({
             companyName,
             accentColor: emailSettings.accentColor || undefined,
             appDomain: emailSettings.appDomain || undefined,
             adminName: admin.name || '',
             period,
-            projects
+            projects,
+            locale: emailSettings.language || 'en',
           })
 
           const result = await sendEmail({
             to: admin.email,
-            subject: `Project activity summary (${pendingNotifications.length} updates)`,
-            html,
+            subject: summaryEmail.subject,
+            html: summaryEmail.html,
           })
 
           if (result.success) {
@@ -189,6 +191,6 @@ export async function processAdminNotifications() {
       console.log(`[ADMIN] Summary sent (${pendingNotifications.length} notifications to ${admins.length} admins)`)
     }
   } catch (error) {
-    console.error('Failed to process admin notifications:', error)
+    logError('Failed to process admin notifications:', error)
   }
 }

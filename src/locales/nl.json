@@ -1108,13 +1108,20 @@
       "failedToGeneratePreview": "Voorbeeld genereren mislukt",
       "failedToSaveTemplate": "Template opslaan mislukt",
       "failedToResetTemplate": "Template herstellen mislukt",
+      "failedToUpdateTemplateStatus": "Template-status bijwerken mislukt",
       "invalidTemplateType": "Ongeldig templatetype",
+      "invalidEnabledValue": "Ingeschakeld moet een boolean zijn",
       "subjectRequired": "Onderwerp is verplicht",
       "bodyContentRequired": "Berichtinhoud is verplicht",
       "subjectTooLong": "Onderwerp is te lang (maximaal 200 tekens)",
       "bodyContentTooLarge": "Berichtinhoud is te groot (maximaal 50 KB)",
       "templateSavedSuccessfully": "Template succesvol opgeslagen",
       "templateResetToDefault": "Template is teruggezet naar de standaardversie",
+      "templateEnabled": "Template ingeschakeld",
+      "templateDisabled": "Template uitgeschakeld",
+      "enable": "Inschakelen",
+      "disable": "Uitschakelen",
+      "disabled": "Uitgeschakeld",
       "resetConfirm": "Deze template terugzetten naar de standaardversie? Je aanpassingen gaan verloren.",
       "example": "Voorbeeld:",
       "templateNames": {
@@ -1126,7 +1133,10 @@
         "PROJECT_GENERAL": "Klaar voor Beoordeling",
         "PASSWORD": "Projectwachtwoord",
         "PASSWORD_RESET": "Admin-Wachtwoord Herstellen",
-        "DUE_DATE_REMINDER": "Deadlineherinnering"
+        "DUE_DATE_REMINDER": "Deadlineherinnering",
+        "OTP_VERIFICATION": "OTP-verificatiecode",
+        "CLIENT_ACTIVITY_SUMMARY": "Klantactiviteitssamenvatting",
+        "ADMIN_ACTIVITY_SUMMARY": "Beheeractiviteitssamenvatting"
       },
       "templateDescriptions": {
         "NEW_VERSION": "Wordt naar klanten gestuurd wanneer een nieuwe versie klaarstaat",
@@ -1137,7 +1147,10 @@
         "PROJECT_GENERAL": "Wordt naar klanten gestuurd wanneer video's klaarstaan voor beoordeling",
         "PASSWORD": "Stuurt het wachtwoord apart voor de veiligheid",
         "PASSWORD_RESET": "Wordt naar admins gestuurd bij wachtwoordherstel",
-        "DUE_DATE_REMINDER": "Wordt naar admins gestuurd bij naderende deadline"
+        "DUE_DATE_REMINDER": "Wordt naar admins gestuurd bij naderende deadline",
+        "OTP_VERIFICATION": "Wordt naar ontvangers gestuurd wanneer OTP-verificatie vereist is",
+        "CLIENT_ACTIVITY_SUMMARY": "Geplande samenvatting voor klantontvangers",
+        "ADMIN_ACTIVITY_SUMMARY": "Geplande samenvatting voor admins"
       },
       "placeholderDescriptions": {
         "COMPANY_NAME": "Je bedrijfsnaam uit instellingen",
@@ -1165,7 +1178,14 @@
         "RESET_URL": "Wachtwoord-herstelkoppeling",
         "EXPIRY_TIME": "Geldigheid van de link",
         "DUE_DATE": "Opgemaakte deadline",
-        "REMINDER_TYPE": "Wanneer de deadline is (bijv. morgen, over 7 dagen)"
+        "REMINDER_TYPE": "Wanneer de deadline is (bijv. morgen, over 7 dagen)",
+        "OTP_CODE": "Eenmalige verificatiecode",
+        "EXPIRY_MINUTES": "Verlooptijd van de code in minuten",
+        "SUMMARY_TEXT": "Samenvattingstekst met aantallen",
+        "PERIOD": "Periode van het schema",
+        "SUMMARY_ITEMS": "Gerenderde HTML voor samenvattingsitems",
+        "SUMMARY_PROJECTS": "Gerenderde HTML voor projectsamenvatting",
+        "UNSUBSCRIBE_SECTION": "HTML-sectie voor uitschrijven (optioneel)"
       },
       "placeholderExamples": {
         "COMPANY_NAME": "Acme Studios",
@@ -1184,7 +1204,14 @@
         "PASSWORD": "xK9mP2nL",
         "EXPIRY_TIME": "30 minuten",
         "DUE_DATE": "15 maart 2026",
-        "REMINDER_TYPE": "morgen"
+        "REMINDER_TYPE": "morgen",
+        "OTP_CODE": "123456",
+        "EXPIRY_MINUTES": "10",
+        "SUMMARY_TEXT": "3 nieuwe opmerkingen, 1 goedkeuring",
+        "PERIOD": "vandaag",
+        "SUMMARY_ITEMS": "",
+        "SUMMARY_PROJECTS": "",
+        "UNSUBSCRIBE_SECTION": ""
       },
       "previewTitles": {
         "NEW_VERSION": "Nieuwe Versie Beschikbaar",
@@ -1195,13 +1222,17 @@
         "PROJECT_GENERAL": "Klaar voor Beoordeling",
         "PASSWORD": "Projectwachtwoord",
         "PASSWORD_RESET": "Wachtwoord Herstellen",
-        "DUE_DATE_REMINDER": "Deadlineherinnering"
+        "DUE_DATE_REMINDER": "Deadlineherinnering",
+        "OTP_VERIFICATION": "Verificatiecode",
+        "CLIENT_ACTIVITY_SUMMARY": "Projectupdate",
+        "ADMIN_ACTIVITY_SUMMARY": "Klantactiviteitsoverzicht"
       },
       "previewSubtitles": {
         "NEW_VERSION": "Klaar voor beoordeling",
         "PROJECT_APPROVED": "Klaar voor download",
         "PASSWORD_RESET": "Herstel je beheerderswachtwoord",
-        "DUE_DATE_REMINDER_SUFFIX": "heeft deadline morgen"
+        "DUE_DATE_REMINDER_SUFFIX": "heeft deadline morgen",
+        "ADMIN_ACTIVITY_SUMMARY": "Laatste updates"
       }
     },
     "notifications": {
@@ -1969,6 +2000,37 @@
       "subject": "Deadlineherinnering: {{PROJECT_TITLE}} deadline {{REMINDER_TYPE}}",
       "body": "<strong>{{PROJECT_TITLE}}</strong> heeft de deadline <strong>{{REMINDER_TYPE}}</strong>.",
       "button": "Bekijken in Beheerderspaneel"
+    },
+    "otpVerification": {
+      "subject": "Uw verificatiecode voor {{PROJECT_TITLE}}",
+      "body": "Gebruik deze verificatiecode om toegang te krijgen tot <strong>{{PROJECT_TITLE}}</strong>:",
+      "codeLabel": "Verificatiecode",
+      "expiry": "Deze code verloopt over {{EXPIRY_MINUTES}} minuten.",
+      "ignoreNotice": "Heeft u deze code niet aangevraagd? Dan kunt u deze e-mail veilig negeren."
+    },
+    "clientActivitySummary": {
+      "title": "Projectupdate",
+      "subject": "Updates over {{PROJECT_TITLE}}",
+      "body": "Hierbij een update over <strong>{{PROJECT_TITLE}}</strong>.",
+      "summaryLabel": "Samenvatting",
+      "latestActivity": "Laatste activiteit",
+      "newCommentSingular": "nieuwe opmerking",
+      "newCommentPlural": "nieuwe opmerkingen",
+      "approvalSingular": "goedkeuring",
+      "approvalPlural": "goedkeuringen",
+      "unapprovedLabel": "intrekkingen",
+      "button": "Project Bekijken"
+    },
+    "adminActivitySummary": {
+      "title": "Overzicht van klantactiviteit",
+      "subject": "Overzicht projectactiviteit ({{SUMMARY_TEXT}})",
+      "body": "Hierbij de nieuwste klantactiviteit ({{SUMMARY_TEXT}} {{PERIOD}}).",
+      "commentSingular": "opmerking",
+      "commentPlural": "opmerkingen",
+      "projectSingular": "project",
+      "projectPlural": "projecten",
+      "across": "over",
+      "button": "Beheerdersdashboard Openen"
     },
     "passwordNotice": "Beveiligd project: Gebruik het apart verstuurde wachtwoord om toegang te krijgen tot dit project."
   },

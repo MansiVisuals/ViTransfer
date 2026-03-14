@@ -8,6 +8,7 @@ import {
   loadEmailMessages,
 } from './email-template-system'
 import { htmlToText } from 'html-to-text'
+import { logError } from './logging'
 
 // Email header style options for branding
 export type EmailHeaderStyle = 'NONE' | 'LOGO_ONLY' | 'NAME_ONLY' | 'LOGO_AND_NAME'
@@ -239,8 +240,10 @@ export function processTemplateContent(
   brand: EmailBrandColors,
   logoUrl?: string | null
 ): string {
+  const safeValues = sanitizePlaceholderValues(values)
+
   // Replace placeholders
-  let processed = replacePlaceholders(content, values)
+  let processed = replacePlaceholders(content, safeValues)
   
   // Process {{LOGO}} placeholder - replace with inline image
   if (logoUrl) {
@@ -256,6 +259,64 @@ export function processTemplateContent(
   // Process CSS classes to inline styles
   processed = processEmailClasses(processed, brand)
   return processed
+}
+
+const HTML_ALLOWED_PLACEHOLDERS = new Set([
+  '{{TIMECODE}}',
+  '{{ATTACHMENTS}}',
+  '{{VIDEO_LIST}}',
+  '{{PASSWORD_NOTICE}}',
+  '{{APPROVAL_MESSAGE}}',
+  '{{SUMMARY_ITEMS}}',
+  '{{SUMMARY_PROJECTS}}',
+  '{{UNSUBSCRIBE_SECTION}}',
+  '{{LOGO}}',
+])
+
+const URL_ALLOWED_PLACEHOLDERS = new Set([
+  '{{SHARE_URL}}',
+  '{{ADMIN_URL}}',
+  '{{RESET_URL}}',
+  '{{APP_DOMAIN}}',
+])
+
+function sanitizeUrlValue(url: string): string {
+  const value = (url || '').trim()
+  if (!value) return ''
+
+  if (
+    value.startsWith('https://') ||
+    value.startsWith('http://') ||
+    value.startsWith('/') ||
+    value.startsWith('mailto:')
+  ) {
+    return value
+  }
+
+  return '#'
+}
+
+function sanitizePlaceholderValues(values: Record<string, string>): Record<string, string> {
+  const sanitized: Record<string, string> = {}
+
+  for (const [rawKey, value] of Object.entries(values)) {
+    const key = rawKey.startsWith('{{') ? rawKey : `{{${rawKey}}}`
+    const safeValue = value ?? ''
+
+    if (HTML_ALLOWED_PLACEHOLDERS.has(key)) {
+      sanitized[key] = safeValue
+      continue
+    }
+
+    if (URL_ALLOWED_PLACEHOLDERS.has(key)) {
+      sanitized[key] = sanitizeUrlValue(safeValue)
+      continue
+    }
+
+    sanitized[key] = escapeHtml(safeValue)
+  }
+
+  return sanitized
 }
 
 /**
@@ -694,7 +755,7 @@ export async function sendEmail({
 
     return { success: true, messageId: info.messageId }
   } catch (error) {
-    console.error('Error sending email:', error)
+    logError('Error sending email:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
@@ -746,9 +807,10 @@ export async function sendNewVersionEmail({
     '{{COMPANY_NAME}}': companyName,
     '{{PASSWORD_NOTICE}}': '', // Will be handled separately
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line (replace placeholders)
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -874,9 +936,10 @@ export async function sendProjectApprovedEmail({
     '{{COMPANY_NAME}}': companyName,
     '{{APPROVAL_MESSAGE}}': approvalMessage,
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -972,9 +1035,10 @@ export async function sendCommentNotificationEmail({
     '{{COMPANY_NAME}}': companyName,
     '{{ATTACHMENTS}}': attachmentsHtml,
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -1074,9 +1138,10 @@ export async function sendAdminCommentNotificationEmail({
     '{{COMPANY_NAME}}': companyName,
     '{{ATTACHMENTS}}': attachmentsHtml,
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -1175,9 +1240,10 @@ export async function sendAdminProjectApprovedEmail({
     '{{ADMIN_URL}}': `${appDomain}/admin`,
     '{{COMPANY_NAME}}': companyName,
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -1279,9 +1345,10 @@ export async function sendProjectGeneralNotificationEmail({
     '{{VIDEO_LIST}}': videoListHtml,
     '{{PASSWORD_NOTICE}}': passwordNotice,
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -1348,9 +1415,10 @@ export async function sendPasswordEmail({
     '{{PASSWORD}}': password,
     '{{COMPANY_NAME}}': companyName,
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -1410,9 +1478,10 @@ export async function sendPasswordResetEmail({
     '{{COMPANY_NAME}}': companyName,
     '{{EXPIRY_TIME}}': '30 minutes',
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -1476,9 +1545,10 @@ export async function sendDueDateReminderEmail({
     '{{ADMIN_URL}}': adminUrl,
     '{{COMPANY_NAME}}': companyName,
   }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
   // Process subject line
-  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
@@ -1573,7 +1643,7 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
 
     return { success: true, message: smtpTestMessages.success || 'Test email sent successfully!' }
   } catch (error) {
-    console.error('Email test failed:', error)
+    logError('Email test failed:', error)
     throw error
   }
 }

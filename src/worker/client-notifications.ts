@@ -1,11 +1,12 @@
 import { prisma } from '../lib/db'
-import { getEmailSettings, sendEmail } from '../lib/email'
+import { getEmailSettings, getRecipientLocale, sendEmail } from '../lib/email'
 import { generateNotificationSummaryEmail } from '../lib/email-templates'
 import { getProjectRecipients } from '../lib/recipients'
 import { generateShareUrl } from '../lib/url'
 import { getRedis } from '../lib/redis'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '../lib/unsubscribe'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
+import { logError } from '../lib/logging'
 
 /**
  * Process client notification summaries
@@ -103,8 +104,8 @@ export async function processClientNotifications() {
 
       // Filter out cancelled notifications
       const redis = getRedis()
-      const validNotifications = []
-      const cancelledNotificationIds = []
+      const validNotifications: typeof project.notificationQueue = []
+      const cancelledNotificationIds: string[] = []
 
       for (const notification of project.notificationQueue) {
         const commentId = (notification.data as any).commentId
@@ -167,7 +168,7 @@ export async function processClientNotifications() {
               unsubscribeUrl = undefined
             }
 
-            const html = generateNotificationSummaryEmail({
+            const summaryEmail = await generateNotificationSummaryEmail({
               companyName,
               accentColor: emailSettings.accentColor || undefined,
               projectTitle: project.title,
@@ -177,12 +178,13 @@ export async function processClientNotifications() {
               period,
               notifications,
               unsubscribeUrl,
+              locale: await getRecipientLocale(recipient.email!),
             })
 
             const result = await sendEmail({
               to: recipient.email!,
-              subject: `Updates on ${project.title}`,
-              html,
+              subject: summaryEmail.subject,
+              html: summaryEmail.html,
             })
 
             if (result.success) {
@@ -206,6 +208,6 @@ export async function processClientNotifications() {
 
     console.log('[CLIENT] Check completed')
   } catch (error) {
-    console.error('[CLIENT] Error processing notifications:', error)
+    logError('[CLIENT] Error processing notifications:', error)
   }
 }

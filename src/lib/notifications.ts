@@ -455,19 +455,20 @@ export async function flushPendingAdminNotifications(): Promise<void> {
     console.log(`[FLUSH-ADMIN] Sending ${validNotifications.length} queued notification(s) to ${admins.length} admin(s)`)
 
     for (const admin of admins) {
-      const html = generateAdminSummaryEmail({
+      const summaryEmail = await generateAdminSummaryEmail({
         companyName,
         accentColor: emailSettings.accentColor || undefined,
         appDomain: emailSettings.appDomain || undefined,
         adminName: admin.name || '',
         period: 'before schedule change',
-        projects
+        projects,
+        locale: emailSettings.language || 'en',
       })
 
       await sendEmail({
         to: admin.email,
-        subject: `Project activity summary (${validNotifications.length} updates)`,
-        html,
+        subject: summaryEmail.subject,
+        html: summaryEmail.html,
       })
     }
 
@@ -575,7 +576,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
         unsubscribeUrl = undefined
       }
 
-      const html = generateNotificationSummaryEmail({
+      const summaryEmail = await generateNotificationSummaryEmail({
         companyName,
         accentColor: emailSettings.accentColor || undefined,
         projectTitle: project.title,
@@ -585,12 +586,13 @@ export async function flushPendingClientNotifications(projectId: string): Promis
         period: 'before schedule change',
         notifications,
         unsubscribeUrl,
+        locale: await getRecipientLocale(recipient.email!),
       })
 
       await sendEmail({
         to: recipient.email!,
-        subject: `Updates on ${project.title}`,
-        html,
+        subject: summaryEmail.subject,
+        html: summaryEmail.html,
       })
     }
 

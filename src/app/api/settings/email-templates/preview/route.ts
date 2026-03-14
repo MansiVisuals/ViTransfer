@@ -258,6 +258,29 @@ function generateSampleValues(
       REMINDER_TYPE: reminderType,
       ADMIN_URL: `${appDomain}/admin`,
     },
+    OTP_VERIFICATION: {
+      ...base,
+      PROJECT_TITLE: projectTitle,
+      OTP_CODE: '123456',
+      EXPIRY_MINUTES: '10',
+      UNSUBSCRIBE_SECTION: '',
+    },
+    CLIENT_ACTIVITY_SUMMARY: {
+      ...base,
+      PROJECT_TITLE: projectTitle,
+      SUMMARY_TEXT: '3 new comments, 1 approval',
+      PERIOD: 'today',
+      SUMMARY_ITEMS: '<div class="secondary-box"><div style="font-size:14px;">• Main Commercial v2 — New comment</div></div>',
+      SHARE_URL: `${appDomain}/share/abc123`,
+      UNSUBSCRIBE_SECTION: '',
+    },
+    ADMIN_ACTIVITY_SUMMARY: {
+      ...base,
+      SUMMARY_TEXT: '12 comments across 3 projects',
+      PERIOD: 'today',
+      SUMMARY_PROJECTS: '<div class="secondary-box"><div style="font-size:14px;">Summer Campaign 2026 — 5 comments</div></div>',
+      ADMIN_URL: `${appDomain}/admin/projects`,
+    },
   }
 
   return typeValues[type] || base
@@ -279,6 +302,9 @@ function getEmailTitle(type: EmailTemplateType, messages?: Record<string, any>):
     PASSWORD: 'Project Password',
     PASSWORD_RESET: 'Password Reset',
     DUE_DATE_REMINDER: 'Deadline Reminder',
+    OTP_VERIFICATION: 'Verification Code',
+    CLIENT_ACTIVITY_SUMMARY: 'Project Update',
+    ADMIN_ACTIVITY_SUMMARY: 'Client Activity Summary',
   }
   return localizedTitles[type] || defaultTitles[type] || 'Notification'
 }
@@ -302,6 +328,9 @@ function getEmailSubtitle(type: EmailTemplateType, values: Record<string, string
     PASSWORD: projectTitle,
     PASSWORD_RESET: localizedSubtitles.PASSWORD_RESET || 'Reset your admin account password',
     DUE_DATE_REMINDER: `${projectTitle} ${localizedSubtitles.DUE_DATE_REMINDER_SUFFIX || 'is due tomorrow'}`,
+    OTP_VERIFICATION: `${projectTitle}`,
+    CLIENT_ACTIVITY_SUMMARY: `${projectTitle}`,
+    ADMIN_ACTIVITY_SUMMARY: localizedSubtitles.ADMIN_ACTIVITY_SUMMARY || 'Latest updates',
   }
   return subtitles[type] || ''
 }

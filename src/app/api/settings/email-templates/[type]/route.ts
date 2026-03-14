@@ -5,6 +5,7 @@ import {
   getEmailTemplate,
   saveEmailTemplate,
   resetEmailTemplate,
+  setEmailTemplateEnabled,
   getLocalizedPlaceholdersForType,
   getDefaultTemplate,
   buildLocalizedDefaultTemplate,
@@ -260,6 +261,66 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     logError('[API] Failed to reset email template:', error)
     return NextResponse.json(
       { error: templateMessages?.failedToResetTemplate || 'Failed to reset email template' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PATCH /api/settings/email-templates/[type]
+ * Enable or disable a specific template override
+ */
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireApiAdmin(request)
+  if (authResult instanceof Response) {
+    return authResult
+  }
+
+  const { type } = await params
+  const settings = await prisma.settings.findFirst({ select: { language: true } })
+  const locale = settings?.language || 'en'
+  const messages = await loadLocaleMessages(locale).catch(() => null)
+  const templateMessages = messages?.settings?.emailTemplates
+
+  const rateLimitResult = await rateLimit(
+    request,
+    { windowMs: 60 * 1000, maxRequests: 30, message: templateMessages?.tooManyUpdatesSlowDown || 'Too many updates. Please slow down.' },
+    'email-template-enable-toggle'
+  )
+  if (rateLimitResult) return rateLimitResult
+
+  if (!Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
+    return NextResponse.json(
+      { error: templateMessages?.invalidTemplateType || 'Invalid template type' },
+      { status: 400 }
+    )
+  }
+
+  try {
+    const body = await request.json()
+    const { enabled } = body
+
+    if (typeof enabled !== 'boolean') {
+      return NextResponse.json(
+        { error: templateMessages?.invalidEnabledValue || 'Enabled must be a boolean' },
+        { status: 400 }
+      )
+    }
+
+    const templateType = type as EmailTemplateType
+    await setEmailTemplateEnabled(templateType, enabled)
+
+    return NextResponse.json({
+      success: true,
+      enabled,
+      message: enabled
+        ? (templateMessages?.templateEnabled || 'Template enabled')
+        : (templateMessages?.templateDisabled || 'Template disabled'),
+    })
+  } catch (error) {
+    logError('[API] Failed to toggle email template enabled state:', error)
+    return NextResponse.json(
+      { error: templateMessages?.failedToUpdateTemplateStatus || 'Failed to update template status' },
       { status: 500 }
     )
   }

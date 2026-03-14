@@ -1,5 +1,8 @@
 export function sanitizeLogValue(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ')
+  return value
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '')
 }
 
 function stringifyLogPart(value: unknown): string {
@@ -43,37 +46,38 @@ export function formatErrorForLog(error: unknown): string {
 
 export function logMessage(message: string, ...extra: unknown[]): void {
   const output = formatLogParts([message, ...extra])
-  console.log(output)
+  console.log(sanitizeLogValue(output))
 }
 
 export function logInfo(message: string, ...extra: unknown[]): void {
   const output = formatLogParts([message, ...extra])
-  console.info(output)
+  console.info(sanitizeLogValue(output))
 }
 
 export function logWarn(message: string, ...extra: unknown[]): void {
   const output = formatLogParts([message, ...extra])
-  console.warn(output)
+  console.warn(sanitizeLogValue(output))
 }
 
 export function logDebug(message: string, ...extra: unknown[]): void {
   const output = formatLogParts([message, ...extra])
-  console.debug(output)
+  console.debug(sanitizeLogValue(output))
 }
 
 export function logError(message: string, error?: unknown, ...extra: unknown[]): void {
   const sanitizedMessage = sanitizeLogValue(message).replace(/:\s*$/, '')
 
   if (error === undefined && extra.length === 0) {
-    console.error(sanitizedMessage)
+    console.error(sanitizeLogValue(sanitizedMessage))
     return
   }
 
   if (extra.length === 0) {
-    console.error(`${sanitizedMessage}: ${formatErrorForLog(error)}`)
+    const errorLine = `${sanitizedMessage}: ${formatErrorForLog(error)}`
+    console.error(sanitizeLogValue(errorLine))
     return
   }
 
   const output = formatLogParts([`${sanitizedMessage}:`, error, ...extra])
-  console.error(output)
+  console.error(sanitizeLogValue(output))
 }

@@ -300,8 +300,9 @@ export async function DELETE(
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
-    const pendingAssets = await prisma.videoAsset.findMany({
+    const asset = await prisma.videoAsset.findFirst({
       where: {
+        id: assetId,
         videoId,
         uploadedBy: 'client',
         uploadedBySessionId: uploaderSessionId,
@@ -312,8 +313,6 @@ export async function DELETE(
         storagePath: true,
       },
     })
-
-    const asset = pendingAssets.find((pendingAsset) => pendingAsset.id === assetId)
 
     if (!asset) {
       return NextResponse.json({ error: videosMessages.attachmentNotFound || 'Attachment not found' }, { status: 404 })

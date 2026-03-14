@@ -1,4 +1,5 @@
 import { prisma } from './db'
+import { getRedis } from './redis'
 
 // Simple in-memory cache for frequently read settings to avoid repeated DB hits
 const SETTINGS_CACHE_TTL_MS = 60_000
@@ -12,6 +13,21 @@ const cachedRateLimits: CachedValue<{
 const cachedSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
 const cachedAdminSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
 const cachedSmtpConfigured: CachedValue<boolean> = { value: false, expiresAt: 0 }
+
+function getHttpsEnvironmentOverride(): boolean | null {
+  const envValue = process.env.HTTPS_ENABLED
+  if (envValue === undefined) return null
+  return envValue === 'true' || envValue === '1'
+}
+
+export async function invalidateSecuritySettingsCache(): Promise<void> {
+  cachedRateLimits.expiresAt = 0
+  cachedSessionTimeout.expiresAt = 0
+  cachedAdminSessionTimeout.expiresAt = 0
+
+  const redis = getRedis()
+  await redis.del('app:security_settings')
+}
 
 /**
  * Get the company name from settings
@@ -250,10 +266,9 @@ export async function getAdminSessionTimeoutSeconds(): Promise<number> {
  */
 export async function initializeSecuritySettings() {
   try {
-    const envValue = process.env.HTTPS_ENABLED
+    const httpsEnabled = getHttpsEnvironmentOverride()
 
-    if (envValue !== undefined) {
-      const httpsEnabled = envValue === 'true' || envValue === '1'
+    if (httpsEnabled !== null) {
 
       // Update database with environment variable value
       await prisma.securitySettings.upsert({
@@ -282,8 +297,12 @@ export async function getMaxAuthAttempts(): Promise<number> {
 }
 
 export async function isHttpsEnabled(): Promise<boolean> {
+  const envOverride = getHttpsEnvironmentOverride()
+  if (envOverride !== null) {
+    return envOverride
+  }
+
   try {
-    // Read from database (env var is synced to DB on startup via initializeSecuritySettings)
     const settings = await prisma.securitySettings.findUnique({
       where: { id: 'default' },
       select: { httpsEnabled: true },
@@ -332,6 +351,10 @@ export async function getRateLimitSettings(): Promise<{
   } catch (error) {
     return cachedRateLimits.value
   }
+}
+
+export function isHttpsManagedByEnvironment(): boolean {
+  return getHttpsEnvironmentOverride() !== null
 }
 
 /**

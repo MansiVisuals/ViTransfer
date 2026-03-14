@@ -153,14 +153,21 @@ export async function GET(
     if (sessionCount === 1) {
       await redis.expire(sessionCounterKey, 60)
     }
-    if (sessionCount > securitySettings.sessionRateLimit) {
+    const sessionRateLimit = isAdminRequest
+      ? securitySettings.sessionRateLimit
+      : securitySettings.shareSessionRateLimit
+
+    if (sessionCount > sessionRateLimit) {
       await logSecurityEvent({
         type: 'RATE_LIMIT_HIT',
         severity: 'INFO',
         projectId: preliminaryTokenData.projectId,
         sessionId,
         ipAddress: getClientIpAddress(request),
-        details: { limit: 'Session-based', window: '1 minute' },
+        details: {
+          limit: isAdminRequest ? 'Admin session-based' : 'Share session-based',
+          window: '1 minute'
+        },
         wasBlocked: true
       })
 

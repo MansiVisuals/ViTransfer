@@ -43,6 +43,7 @@ interface Settings {
 interface SecuritySettings {
   id: string
   httpsEnabled: boolean
+  httpsManagedByEnvironment?: boolean
   hotlinkProtection: string
   ipRateLimit: number
   sessionRateLimit: number
@@ -129,6 +130,7 @@ export default function GlobalSettingsPage() {
   // Form state for security settings
   const [showSecuritySettings, setShowSecuritySettings] = useState(false)
   const [httpsEnabled, setHttpsEnabled] = useState(false)
+  const [httpsManagedByEnvironment, setHttpsManagedByEnvironment] = useState(false)
   const [hotlinkProtection, setHotlinkProtection] = useState('LOG_ONLY')
   const [ipRateLimit, setIpRateLimit] = useState('1000')
   const [sessionRateLimit, setSessionRateLimit] = useState('600')
@@ -189,6 +191,7 @@ export default function GlobalSettingsPage() {
 
   const applySecuritySettingsToForm = useCallback((data: SecuritySettings) => {
     setHttpsEnabled(data.httpsEnabled ?? false)
+    setHttpsManagedByEnvironment(data.httpsManagedByEnvironment ?? false)
     setHotlinkProtection(data.hotlinkProtection || 'LOG_ONLY')
     setIpRateLimit(data.ipRateLimit?.toString() || '1000')
     setSessionRateLimit(data.sessionRateLimit?.toString() || '600')
@@ -705,6 +708,7 @@ export default function GlobalSettingsPage() {
             showSecuritySettings={showSecuritySettings}
             setShowSecuritySettings={setShowSecuritySettings}
             httpsEnabled={httpsEnabled}
+            httpsManagedByEnvironment={httpsManagedByEnvironment}
             setHttpsEnabled={setHttpsEnabled}
             hotlinkProtection={hotlinkProtection}
             setHotlinkProtection={setHotlinkProtection}

@@ -86,8 +86,8 @@ const nextConfig = {
       return header;
     });
 
-    // Add HSTS when HTTPS is enabled or in production (behind reverse proxy/Cloudflare)
-    if (isHttpsEnabled || process.env.NODE_ENV === 'production') {
+    // Add HSTS only when HTTPS is explicitly enabled for the deployment.
+    if (isHttpsEnabled) {
       securityHeaders.push({
         key: 'Strict-Transport-Security',
         value: 'max-age=63072000; includeSubDomains; preload'

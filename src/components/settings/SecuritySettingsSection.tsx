@@ -20,6 +20,7 @@ interface SecuritySettingsSectionProps {
   showSecuritySettings: boolean
   setShowSecuritySettings: (value: boolean) => void
   httpsEnabled: boolean
+  httpsManagedByEnvironment: boolean
   setHttpsEnabled: (value: boolean) => void
   hotlinkProtection: string
   setHotlinkProtection: (value: string) => void
@@ -72,6 +73,7 @@ export function SecuritySettingsSection({
   showSecuritySettings,
   setShowSecuritySettings,
   httpsEnabled,
+  httpsManagedByEnvironment,
   setHttpsEnabled,
   hotlinkProtection,
   setHotlinkProtection,
@@ -152,8 +154,17 @@ export function SecuritySettingsSection({
                 id="httpsEnabled"
                 checked={httpsEnabled}
                 onCheckedChange={setHttpsEnabled}
+                disabled={httpsManagedByEnvironment}
               />
             </div>
+
+            {httpsManagedByEnvironment && (
+              <div className="p-3 bg-warning-visible border-2 border-warning-visible rounded-md">
+                <p className="text-xs text-warning">
+                  {t('security.httpsManagedByEnvironment')}
+                </p>
+              </div>
+            )}
 
             {httpsEnabled && (
               <div className="p-3 bg-primary-visible border-2 border-primary-visible rounded-md">

@@ -3,6 +3,8 @@
  * Validates file types and sizes to prevent malicious uploads
  */
 
+import { logMessage } from './logging'
+
 // Allowed video MIME types
 export const ALLOWED_VIDEO_TYPES = [
   'video/mp4',
@@ -240,8 +242,8 @@ export function validateAssetFile(
     if (!categoryConfig.mimeTypes.includes(normalizedMime) &&
         normalizedMime !== 'application/octet-stream') {
       // Log the actual MIME type for debugging
-      console.log(`[FILE-VALIDATION] Extension ${ext} matched ${category}, but MIME type ${mimeType} did not match. Worker will validate via magic bytes.`)
-      console.log(`[FILE-VALIDATION] Allowed MIME types: ${categoryConfig.mimeTypes.join(', ')}`)
+      logMessage(`[FILE-VALIDATION] Extension ${ext} matched ${category}, but MIME type ${mimeType} did not match. Worker will validate via magic bytes.`)
+      logMessage(`[FILE-VALIDATION] Allowed MIME types: ${categoryConfig.mimeTypes.join(', ')}`)
       return {
         valid: false,
         error: `Invalid MIME type for ${category}. Received: ${mimeType}. Allowed: ${categoryConfig.mimeTypes.join(', ')}`

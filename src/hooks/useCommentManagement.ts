@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { secondsToTimecode, timecodeToSeconds } from '@/lib/timecode'
 import { AnnotationData } from '@/types/annotations'
+import { logError } from '@/lib/logging'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -92,7 +93,7 @@ export function useCommentManagement({
             authorName: matchingRecipient.name
           }))
         } catch (error) {
-          console.error('Failed to save authenticated name:', error)
+          logError('Failed to save authenticated name:', error)
         }
       }
     }

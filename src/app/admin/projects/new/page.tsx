@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle, Calendar } from 'lucide-react'
 import { apiPost, apiFetch } from '@/lib/api-client'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
+import { logError } from '@/lib/logging'
 import { ClientSelector } from '@/components/ClientSelector'
 import { generateSecurePassword } from '@/lib/password-utils'
 
@@ -56,7 +57,7 @@ export default function NewProjectPage() {
         setSmtpConfigured(data.smtpConfigured !== false)
       }
     } catch (err) {
-      console.error('Failed to check SMTP configuration:', err)
+      logError('Failed to check SMTP configuration:', err)
     }
   }
 

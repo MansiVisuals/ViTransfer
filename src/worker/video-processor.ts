@@ -1,5 +1,6 @@
 import { Job } from 'bullmq'
 import { VideoProcessingJob } from '../lib/queue'
+import { logMessage } from '../lib/logging'
 import {
   TempFiles,
   downloadAndValidateVideo,
@@ -29,7 +30,7 @@ import {
 export async function processVideo(job: Job<VideoProcessingJob>) {
   const { videoId, originalStoragePath, projectId } = job.data
 
-  console.log(`[WORKER] Processing video ${videoId}`)
+  logMessage(`[WORKER] Processing video ${videoId}`)
 
   debugLog('Job data:', job.data)
   debugLog('Job ID:', job.id)
@@ -40,7 +41,7 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
 
   try {
     // Stage 1: Update status to processing (may already be PROCESSING from TUS handler)
-    console.log(`[WORKER] Setting video ${videoId} to PROCESSING status (if not already)`)
+    logMessage(`[WORKER] Setting video ${videoId} to PROCESSING status (if not already)`)
     await updateVideoStatus(videoId, 'PROCESSING', 0)
 
     // Stage 2: Download and validate video
@@ -83,7 +84,7 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
 
     // Success!
     const totalTime = Date.now() - processingStart
-    console.log(`[WORKER] Successfully processed video ${videoId} in ${(totalTime / 1000).toFixed(2)}s`)
+    logMessage(`[WORKER] Successfully processed video ${videoId} in ${(totalTime / 1000).toFixed(2)}s`)
 
   } catch (error) {
     // Handle error - update database and log

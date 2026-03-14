@@ -11,6 +11,7 @@ import { Trash2, CheckCircle2, XCircle, Pencil, Upload, Download, ChevronDown, C
 import { apiPost, apiPatch, apiDelete, apiFetch } from '@/lib/api-client'
 import { VideoAssetUploadQueue } from './VideoAssetUploadQueue'
 import { VideoAssetList } from './VideoAssetList'
+import { logError } from '@/lib/logging'
 
 interface VideoListProps {
   videos: Video[]
@@ -215,7 +216,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
         triggerDownload(url)
       })
       .catch((error) => {
-        console.error('Download error:', error)
+        logError('Download error:', error)
         alert(error instanceof Error ? error.message : t('failedToGenerateDownload'))
       })
       .finally(() => {

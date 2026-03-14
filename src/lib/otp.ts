@@ -4,6 +4,7 @@ import { renderUnsubscribeSection, sendEmail, getEmailSettings, renderEmailShell
 import { getRedis } from './redis'
 import { loadLocaleMessages } from '@/i18n/locale'
 import { getEmailTemplate, replacePlaceholders } from './email-template-system'
+import { logError } from './logging'
 
 // OTP Configuration
 const OTP_LENGTH = 6
@@ -91,7 +92,7 @@ export async function checkOTPRateLimit(
     try {
       parsed = JSON.parse(data)
     } catch (error) {
-      console.error('Failed to parse OTP rate limit data:', error)
+      logError('Failed to parse OTP rate limit data:', error)
       await redis.del(rateLimitKey)
       return { limited: false }
     }
@@ -145,7 +146,7 @@ async function incrementOTPRateLimit(
         firstAttempt = parsed.firstAttempt
       }
     } catch (error) {
-      console.error('Failed to parse OTP rate limit data:', error)
+      logError('Failed to parse OTP rate limit data:', error)
       await redis.del(rateLimitKey)
       // Continue with default values
     }
@@ -288,7 +289,7 @@ export async function verifyOTP(
   try {
     otpData = JSON.parse(data)
   } catch (error) {
-    console.error('Failed to parse OTP data:', error)
+    logError('Failed to parse OTP data:', error)
     await redis.del(otpKey)
     return {
       success: false,

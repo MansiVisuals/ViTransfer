@@ -10,6 +10,7 @@ import ProjectActions from '@/components/ProjectActions'
 import { ArrowLeft, Settings, ArrowUpDown, Video, Upload } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { useTranslations } from 'next-intl'
+import { logError } from '@/lib/logging'
 
 // Force dynamic rendering (no static pre-rendering)
 export const dynamic = 'force-dynamic'
@@ -41,7 +42,7 @@ export default function ProjectPage() {
       const data = await response.json()
       setProject(data)
     } catch (error) {
-      console.error('Error fetching project:', error)
+      logError('Error fetching project:', error)
     } finally {
       setLoading(false)
     }
@@ -107,7 +108,7 @@ export default function ProjectPage() {
           setShareUrl(data.shareUrl)
         }
       } catch (error) {
-        console.error('Error fetching share URL:', error)
+        logError('Error fetching share URL:', error)
       }
     }
 

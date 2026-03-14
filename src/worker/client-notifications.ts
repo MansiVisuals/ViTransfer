@@ -6,7 +6,7 @@ import { generateShareUrl } from '../lib/url'
 import { getRedis } from '../lib/redis'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '../lib/unsubscribe'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
-import { logError } from '../lib/logging'
+import { logError, logMessage } from '../lib/logging'
 
 /**
  * Process client notification summaries
@@ -19,7 +19,7 @@ export async function processClientNotifications() {
 
     const now = new Date()
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-    console.log(`[CLIENT] Checking for summaries to send (time: ${timeStr})`)
+    logMessage(`[CLIENT] Checking for summaries to send (time: ${timeStr})`)
 
     // Get all projects with pending client notifications
     const projects = await prisma.project.findMany({
@@ -52,18 +52,18 @@ export async function processClientNotifications() {
     })
 
     if (projects.length === 0) {
-      console.log('[CLIENT] No projects with pending notifications')
+      logMessage('[CLIENT] No projects with pending notifications')
       return
     }
 
-    console.log(`[CLIENT] Found ${projects.length} project(s) with unsent notifications`)
+    logMessage(`[CLIENT] Found ${projects.length} project(s) with unsent notifications`)
 
     for (const project of projects) {
       const pending = project.notificationQueue.length
-      console.log(`[CLIENT] "${project.title}": ${project.clientNotificationSchedule} at ${project.clientNotificationTime || 'N/A'} (${pending} pending)`)
+      logMessage(`[CLIENT] "${project.title}": ${project.clientNotificationSchedule} at ${project.clientNotificationTime || 'N/A'} (${pending} pending)`)
 
       if (project.clientNotificationSchedule === 'IMMEDIATE') {
-        console.log('[CLIENT]   Skip - IMMEDIATE notifications sent instantly')
+        logMessage('[CLIENT]   Skip - IMMEDIATE notifications sent instantly')
         continue
       }
 
@@ -80,11 +80,11 @@ export async function processClientNotifications() {
         const lastSentStr = project.lastClientNotificationSent
           ? new Date(project.lastClientNotificationSent).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
           : 'never'
-        console.log(`[CLIENT]   Wait - last sent ${lastSentStr}`)
+        logMessage(`[CLIENT]   Wait - last sent ${lastSentStr}`)
         continue
       }
 
-      console.log(`[CLIENT]   Sending summary now...`)
+      logMessage(`[CLIENT]   Sending summary now...`)
 
       if (project.notificationQueue.length === 0) {
         continue
@@ -95,7 +95,7 @@ export async function processClientNotifications() {
       const recipients = allRecipients.filter(r => r.receiveNotifications && r.email)
 
       if (recipients.length === 0) {
-        console.log(`[CLIENT]   No recipients with notifications enabled, skipping`)
+        logMessage(`[CLIENT]   No recipients with notifications enabled, skipping`)
         continue
       }
 
@@ -112,7 +112,7 @@ export async function processClientNotifications() {
         if (commentId) {
           const isCancelled = await redis.get(`comment_cancelled:${commentId}`)
           if (isCancelled) {
-            console.log(`[CLIENT]   Skipping cancelled notification for comment ${commentId}`)
+            logMessage(`[CLIENT]   Skipping cancelled notification for comment ${commentId}`)
             cancelledNotificationIds.push(notification.id)
             continue
           }
@@ -125,11 +125,11 @@ export async function processClientNotifications() {
         await prisma.notificationQueue.deleteMany({
           where: { id: { in: cancelledNotificationIds } }
         })
-        console.log(`[CLIENT]   Removed ${cancelledNotificationIds.length} cancelled notification(s)`)
+        logMessage(`[CLIENT]   Removed ${cancelledNotificationIds.length} cancelled notification(s)`)
       }
 
       if (validNotifications.length === 0) {
-        console.log(`[CLIENT]   No valid notifications to send (all cancelled)`)
+        logMessage(`[CLIENT]   No valid notifications to send (all cancelled)`)
         continue
       }
 
@@ -142,7 +142,7 @@ export async function processClientNotifications() {
       })
 
       const currentAttempts = project.notificationQueue[0]?.clientAttempts + 1 || 1
-      console.log(`[CLIENT]   Attempt #${currentAttempts} for ${project.notificationQueue.length} notification(s)`)
+      logMessage(`[CLIENT]   Attempt #${currentAttempts} for ${project.notificationQueue.length} notification(s)`)
 
       // Send summary to each recipient
       const result = await sendNotificationsWithRetry({
@@ -188,7 +188,7 @@ export async function processClientNotifications() {
             })
 
             if (result.success) {
-              console.log(`[CLIENT]     Sent to ${recipient.name || recipient.email}`)
+              logMessage(`[CLIENT]     Sent to ${recipient.name || recipient.email}`)
             } else {
               throw new Error(`Failed to send to ${recipient.email}: ${result.error}`)
             }
@@ -202,11 +202,11 @@ export async function processClientNotifications() {
           where: { id: project.id },
           data: { lastClientNotificationSent: now }
         })
-        console.log(`[CLIENT]   Summary sent (${project.notificationQueue.length} items to ${recipients.length} recipient(s))`)
+        logMessage(`[CLIENT]   Summary sent (${project.notificationQueue.length} items to ${recipients.length} recipient(s))`)
       }
     }
 
-    console.log('[CLIENT] Check completed')
+    logMessage('[CLIENT] Check completed')
   } catch (error) {
     logError('[CLIENT] Error processing notifications:', error)
   }

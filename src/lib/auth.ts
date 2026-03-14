@@ -7,7 +7,7 @@ import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
 import { getRedis } from './redis'
 import { isShareSessionRevoked } from './session-invalidation'
-import { logError } from './logging'
+import { logError, logWarn } from './logging'
 import { getAdminSessionTimeoutSeconds } from './settings'
 
 export interface AuthUser {
@@ -407,13 +407,13 @@ function remainingTtl(token: string, secret: string | undefined | null): number 
   const fallbackTtl = 60 // Ensure a valid TTL even if token parsing fails
 
   if (!secret) {
-    console.warn('[AUTH] Missing JWT secret while computing remaining TTL')
+    logWarn('[AUTH] Missing JWT secret while computing remaining TTL')
     return fallbackTtl
   }
 
   const decoded = jwt.decode(token) as jwt.JwtPayload | null
   if (!decoded?.exp) {
-    console.warn('[AUTH] Token missing exp claim while computing remaining TTL')
+    logWarn('[AUTH] Token missing exp claim while computing remaining TTL')
     return fallbackTtl
   }
 

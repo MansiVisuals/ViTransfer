@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { encrypt, decrypt } from '@/lib/encryption'
 import type { NotificationEventType } from '@/lib/external-notifications/constants'
 import { loadLocaleMessages } from '@/i18n/locale'
+import { logError, logMessage } from '@/lib/logging'
 
 async function getPushLocaleText() {
   const settings = await prisma.settings.findUnique({
@@ -85,7 +86,7 @@ export async function getOrCreateVapidKeys(): Promise<VapidKeys> {
   }
 
   // Generate new keys
-  console.log('[WEB-PUSH] Generating new VAPID keys...')
+  logMessage('[WEB-PUSH] Generating new VAPID keys...')
   const keys = generateVapidKeys()
 
   // Store keys (encrypt the private key)
@@ -102,7 +103,7 @@ export async function getOrCreateVapidKeys(): Promise<VapidKeys> {
     },
   })
 
-  console.log('[WEB-PUSH] VAPID keys generated and stored')
+  logMessage('[WEB-PUSH] VAPID keys generated and stored')
   return keys
 }
 
@@ -185,16 +186,16 @@ async function sendToSubscription(
         }).catch(() => {
           // Ignore if already deleted
         })
-        console.log('[WEB-PUSH] Removed expired subscription:', subscription.endpoint.slice(0, 50))
+        logMessage('[WEB-PUSH] Removed expired subscription:', subscription.endpoint.slice(0, 50))
         return { success: false, error: 'Subscription expired' }
       }
 
-      console.error('[WEB-PUSH] Push error:', error.statusCode, error.message)
+      logError('[WEB-PUSH] Push error:', error.statusCode, error.message)
       return { success: false, error: `Push service error: ${error.statusCode}` }
     }
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[WEB-PUSH] Send error:', errorMessage)
+    logError('[WEB-PUSH] Send error:', errorMessage)
     return { success: false, error: errorMessage }
   }
 }
@@ -267,10 +268,10 @@ export async function sendPushNotifications(
       }
     }
 
-    console.log(`[WEB-PUSH] Event ${eventType}: sent=${sent}, failed=${failed}`)
+    logMessage(`[WEB-PUSH] Event ${eventType}: sent=${sent}, failed=${failed}`)
     return { sent, failed }
   } catch (error) {
-    console.error('[WEB-PUSH] Failed to send notifications:', error)
+    logError('[WEB-PUSH] Failed to send notifications:', error)
     return { sent: 0, failed: 0 }
   }
 }

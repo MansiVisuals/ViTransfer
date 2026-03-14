@@ -18,6 +18,7 @@ import { CompanyNameInput } from '@/components/CompanyNameInput'
 import { apiFetch } from '@/lib/api-client'
 import { sanitizeSlug, generateRandomSlug, generateSecurePassword } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
+import { logError } from '@/lib/logging'
 import Link from 'next/link'
 import { ArrowLeft, Save, RefreshCw, Copy, Check, Calendar } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -381,7 +382,7 @@ export default function ProjectSettingsPage() {
     try {
       await apiPost(`/api/projects/${projectId}/reprocess`, {})
     } catch (err) {
-      console.error('Error reprocessing videos:', err)
+      logError('Error reprocessing videos:', err)
       // Don't throw - we still want to save settings
     } finally {
       setReprocessing(false)

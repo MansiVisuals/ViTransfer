@@ -1,3 +1,5 @@
+import { logError, logWarn } from './logging'
+
 const isEdgeRuntime = typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge'
 
 // Lazy-load crypto so the module isn't pulled into Edge bundles.
@@ -24,7 +26,7 @@ if (!skipValidation && !process.env.ENCRYPTION_KEY) {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('ENCRYPTION_KEY must be set in production. See README for setup instructions.')
   } else {
-    console.warn('WARNING: Using insecure ENCRYPTION_KEY for DEVELOPMENT only. See README for production setup.')
+    logWarn('WARNING: Using insecure ENCRYPTION_KEY for DEVELOPMENT only. See README for production setup.')
   }
 }
 
@@ -99,7 +101,7 @@ export function encrypt(text: string): string {
     // Return format: iv:authTag:encryptedData
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
   } catch (error) {
-    console.error('Encryption error:', error)
+    logError('Encryption error:', error)
     throw new Error('Failed to encrypt data')
   }
 }
@@ -135,7 +137,7 @@ export function decrypt(encryptedText: string): string {
     
     return decrypted
   } catch (error) {
-    console.error('Decryption error:', error)
+    logError('Decryption error:', error)
     throw new Error('Failed to decrypt data')
   }
 }

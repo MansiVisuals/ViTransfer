@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { hashPassword } from './encryption'
+import { logError, logMessage } from './logging'
 
 /**
  * Ensure security settings are initialized
@@ -23,7 +24,7 @@ async function ensureSecuritySettings() {
       },
     })
   } catch (error) {
-    console.error('Error initializing security settings:', error)
+    logError('Error initializing security settings:', error)
     // Don't throw - app should still start even if this fails
   }
 }
@@ -57,20 +58,20 @@ export async function ensureDefaultAdmin() {
     const adminPassword = process.env.ADMIN_PASSWORD
 
     if (!adminEmail || !adminPassword) {
-      console.error('')
-      console.error('===============================================================')
-      console.error('CRITICAL ERROR: Admin credentials not configured!')
-      console.error('===============================================================')
-      console.error('')
-      console.error('No admin user exists and ADMIN_EMAIL/ADMIN_PASSWORD are not set.')
-      console.error('')
-      console.error('REQUIRED: Set these environment variables in your .env file:')
-      console.error('  ADMIN_EMAIL=your-admin@example.com')
-      console.error('  ADMIN_PASSWORD=YourSecurePassword123')
-      console.error('')
-      console.error('Then restart the application.')
-      console.error('===============================================================')
-      console.error('')
+      logError('')
+      logError('===============================================================')
+      logError('CRITICAL ERROR: Admin credentials not configured!')
+      logError('===============================================================')
+      logError('')
+      logError('No admin user exists and ADMIN_EMAIL/ADMIN_PASSWORD are not set.')
+      logError('')
+      logError('REQUIRED: Set these environment variables in your .env file:')
+      logError('  ADMIN_EMAIL=your-admin@example.com')
+      logError('  ADMIN_PASSWORD=YourSecurePassword123')
+      logError('')
+      logError('Then restart the application.')
+      logError('===============================================================')
+      logError('')
       throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in environment variables for initial setup')
     }
 
@@ -85,14 +86,14 @@ export async function ensureDefaultAdmin() {
       throw new Error('ADMIN_PASSWORD must be at least 8 characters long')
     }
 
-    console.log('')
-    console.log('===============================================================')
-    console.log('Creating initial admin user...')
-    console.log('===============================================================')
-    console.log(`Email: ${adminEmail}`)
-    console.log('Password: ********')
-    console.log('===============================================================')
-    console.log('')
+    logMessage('')
+    logMessage('===============================================================')
+    logMessage('Creating initial admin user...')
+    logMessage('===============================================================')
+    logMessage(`Email: ${adminEmail}`)
+    logMessage('Password: ********')
+    logMessage('===============================================================')
+    logMessage('')
 
     const adminUsername = process.env.ADMIN_USERNAME || adminEmail.split('@')[0]
     const hashedPassword = await hashPassword(adminPassword)
@@ -107,13 +108,13 @@ export async function ensureDefaultAdmin() {
       },
     })
 
-    console.log('Admin user created successfully!')
-    console.log('')
+    logMessage('Admin user created successfully!')
+    logMessage('')
 
     // Initialize security settings
     await ensureSecuritySettings()
   } catch (error) {
-    console.error('Error ensuring default admin:', error)
+    logError('Error ensuring default admin:', error)
     // Don't throw - app should still start even if this fails
   }
 }

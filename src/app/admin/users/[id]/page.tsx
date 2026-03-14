@@ -13,6 +13,7 @@ import { apiPatch, apiPost, apiDelete, apiFetch } from '@/lib/api-client'
 import { startRegistration } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 import { useTranslations } from 'next-intl'
+import { logError } from '@/lib/logging'
 
 export default function EditUserPage() {
   const t = useTranslations('users')
@@ -131,7 +132,7 @@ export default function EditUserPage() {
       // Refresh passkey list
       await fetchPasskeys()
     } catch (err: any) {
-      console.error('[PASSKEY] Registration error:', err)
+      logError('[PASSKEY] Registration error:', err)
 
       if (err.name === 'NotAllowedError') {
         setPasskeyError(t('cancelledOrTimedOut'))

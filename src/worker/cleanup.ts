@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { logError, logMessage } from '../lib/logging'
 
 const TEMP_DIR = '/tmp/vitransfer'
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000
@@ -21,14 +22,14 @@ export async function cleanupOldTempFiles() {
 
         if (age > TWO_HOURS_MS) {
           await fs.promises.unlink(filePath)
-          console.log(`Cleaned up old temp file: ${file} (${(age / 1000 / 60).toFixed(0)} minutes old)`)
+          logMessage(`Cleaned up old temp file: ${file} (${(age / 1000 / 60).toFixed(0)} minutes old)`)
         }
       } catch (err) {
         // File might have been deleted already, skip
       }
     }
   } catch (error) {
-    console.error('Failed to cleanup old temp files:', error)
+    logError('Failed to cleanup old temp files:', error)
   }
 }
 

@@ -1,4 +1,5 @@
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from './token-store'
+import { logError } from './logging'
 
 let isRedirecting = false
 let refreshInFlight: Promise<boolean> | null = null
@@ -36,7 +37,7 @@ export async function apiFetch(
 
     return response
   } catch (error) {
-    console.error('[API] Request failed:', error)
+    logError('[API] Request failed:', error)
     throw error
   }
 }
@@ -141,7 +142,7 @@ async function attemptRefresh(): Promise<boolean> {
       clearTokens()
       return false
     } catch (error) {
-      console.error('[API] Failed to refresh token:', error)
+      logError('[API] Failed to refresh token:', error)
       clearTokens()
       return false
     } finally {

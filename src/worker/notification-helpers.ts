@@ -1,5 +1,6 @@
 import { prisma } from '../lib/db'
 import { secondsToTimecode, parseTimecodeInput, isValidTimecode } from '../lib/timecode'
+import { logError, logMessage } from '../lib/logging'
 
 const MAX_ATTEMPTS = 3
 
@@ -158,7 +159,7 @@ export async function sendNotificationsWithRetry(config: {
     sendSuccess = true
   } catch (error) {
     lastError = error instanceof Error ? error.message : 'Unknown error'
-    console.error(`${logPrefix} Send failed:`, error)
+    logError(`${logPrefix} Send failed:`, error)
   }
 
   const now = new Date()
@@ -173,7 +174,7 @@ export async function sendNotificationsWithRetry(config: {
         lastError: null
       }
     })
-    console.log(`${logPrefix} Successfully sent`)
+    logMessage(`${logPrefix} Successfully sent`)
   } else if (currentAttempts >= MAX_ATTEMPTS) {
     // Permanently failed after 3 attempts
     await prisma.notificationQueue.updateMany({
@@ -183,14 +184,14 @@ export async function sendNotificationsWithRetry(config: {
         lastError: lastError || `Failed after ${MAX_ATTEMPTS} attempts`
       }
     })
-    console.error(`${logPrefix} Permanently failed after ${MAX_ATTEMPTS} attempts`)
+    logError(`${logPrefix} Permanently failed after ${MAX_ATTEMPTS} attempts`)
   } else {
     // Will retry
     await prisma.notificationQueue.updateMany({
       where: { id: { in: notificationIds } },
       data: { lastError: lastError || 'Send failed' }
     })
-    console.log(`${logPrefix} Will retry (attempt ${currentAttempts}/${MAX_ATTEMPTS})`)
+    logMessage(`${logPrefix} Will retry (attempt ${currentAttempts}/${MAX_ATTEMPTS})`)
   }
 
   return { success: sendSuccess, lastError }

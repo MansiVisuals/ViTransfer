@@ -12,6 +12,7 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { Lock, LogIn, Fingerprint } from 'lucide-react'
 import { startAuthentication, browserSupportsWebAuthnAutofill } from '@simplewebauthn/browser'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
+import { logError, logMessage } from '@/lib/logging'
 import { setTokens, clearTokens } from '@/lib/token-store'
 import BrandLogo from '@/components/BrandLogo'
 
@@ -46,7 +47,7 @@ function LoginForm() {
         setConditionalUISupported(supported)
         
         if (!supported) {
-          console.log('[PASSKEY] Conditional UI not supported')
+          logMessage('[PASSKEY] Conditional UI not supported')
           return
         }
 
@@ -58,7 +59,7 @@ function LoginForm() {
         })
 
         if (!optionsRes.ok) {
-          console.log('[PASSKEY] Failed to get conditional options')
+          logMessage('[PASSKEY] Failed to get conditional options')
           return
         }
 
@@ -113,7 +114,7 @@ function LoginForm() {
         if (err.name === 'AbortError' || err.name === 'NotAllowedError') {
           return
         }
-        console.error('[PASSKEY] Conditional UI error:', err)
+        logError('[PASSKEY] Conditional UI error:', err)
       }
     }
 
@@ -180,7 +181,7 @@ function LoginForm() {
       router.refresh()
     } catch (err: any) {
       // Log full error for debugging
-      console.error('[PASSKEY] Login error:', err)
+      logError('[PASSKEY] Login error:', err)
 
       // Show generic error to prevent information disclosure
       if (err.name === 'NotAllowedError') {

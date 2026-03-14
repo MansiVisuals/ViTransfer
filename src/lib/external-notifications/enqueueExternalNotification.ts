@@ -1,6 +1,7 @@
 import { getExternalNotificationQueue, type ExternalNotificationJob } from '@/lib/queue'
 import { sendPushNotifications, createNotificationPayload } from '@/lib/push-notifications'
 import type { NotificationEventType } from './constants'
+import { logError } from '@/lib/logging'
 
 // Extended job interface with push notification data
 interface ExtendedNotificationJob extends ExternalNotificationJob {
@@ -73,7 +74,7 @@ export async function enqueueExternalNotification(job: ExtendedNotificationJob):
       await sendPushNotifications(eventType, payload)
     } catch (error) {
       // Don't fail the main notification if push fails
-      console.error('[PUSH-NOTIFICATIONS] Failed to send push:', error)
+      logError('[PUSH-NOTIFICATIONS] Failed to send push:', error)
     }
   }
 
@@ -85,7 +86,7 @@ export async function enqueueExternalNotification(job: ExtendedNotificationJob):
     const queue = getExternalNotificationQueue()
     await queue.add('send', job)
   } catch (error) {
-    console.error('[EXTERNAL-NOTIFICATIONS] Failed to enqueue job', {
+    logError('[EXTERNAL-NOTIFICATIONS] Failed to enqueue job', {
       eventType: job.eventType,
       destinationCount: job.destinationIds?.length || 0,
     })

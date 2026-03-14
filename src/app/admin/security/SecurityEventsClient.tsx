@@ -16,6 +16,7 @@ import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, 
 import FilterDropdown from '@/components/FilterDropdown'
 import { formatDateTime } from '@/lib/utils'
 import { apiDelete, apiFetch } from '@/lib/api-client'
+import { logError } from '@/lib/logging'
 import {
   formatSecurityEventType,
   getSecurityEventDescription,
@@ -124,7 +125,7 @@ export default function SecurityEventsClient() {
         setTypeFilter(new Set(data.stats.map(s => s.type)))
       }
     } catch (error) {
-      console.error('Error loading security events:', error)
+      logError('Error loading security events:', error)
     } finally {
       setLoading(false)
     }
@@ -138,7 +139,7 @@ export default function SecurityEventsClient() {
       const data = await response.json()
       setRateLimits(data.entries || [])
     } catch (error) {
-      console.error('Error loading rate limits:', error)
+      logError('Error loading rate limits:', error)
     }
   }, [t])
 

@@ -1,6 +1,7 @@
 import { getRedis } from './redis'
 import { prisma } from './db'
 import { revokeAllUserTokens } from './token-revocation'
+import { logError, logMessage } from '@/lib/logging'
 
 /**
  * Session Invalidation Utilities
@@ -63,10 +64,10 @@ export async function clearAllRateLimits(): Promise<number> {
   try {
     const clearedCount = await scanAndDeleteKeys('ratelimit:*')
 
-    console.log(`[SESSION_INVALIDATION] Cleared ${clearedCount} rate limit counters`)
+    logMessage(`[SESSION_INVALIDATION] Cleared ${clearedCount} rate limit counters`)
     return clearedCount
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error clearing rate limits:', error)
+    logError('[SESSION_INVALIDATION] Error clearing rate limits:', error)
     throw error
   }
 }
@@ -92,10 +93,10 @@ export async function invalidateShareTokensByProject(projectId: string): Promise
     })
 
     const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
-    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} share sessions for project ${projectId}`)
+    logMessage(`[SESSION_INVALIDATION] Invalidated ${invalidated} share sessions for project ${projectId}`)
     return invalidated
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating share sessions:', error)
+    logError('[SESSION_INVALIDATION] Error invalidating share sessions:', error)
     throw error
   }
 }
@@ -118,10 +119,10 @@ export async function invalidateAllShareSessions(): Promise<number> {
     })
 
     const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
-    console.log(`[SESSION_INVALIDATION] Invalidated ALL ${invalidated} share sessions globally`)
+    logMessage(`[SESSION_INVALIDATION] Invalidated ALL ${invalidated} share sessions globally`)
     return invalidated
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating all share sessions:', error)
+    logError('[SESSION_INVALIDATION] Error invalidating all share sessions:', error)
     throw error
   }
 }
@@ -137,7 +138,7 @@ export async function isShareSessionRevoked(sessionId: string): Promise<boolean>
     const exists = await redis.exists(`revoked:share_session:${sessionId}`)
     return exists === 1
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error checking session revocation:', error)
+    logError('[SESSION_INVALIDATION] Error checking session revocation:', error)
     return true // Fail closed: deny access if Redis is unavailable
   }
 }
@@ -156,9 +157,9 @@ export async function isShareSessionRevoked(sessionId: string): Promise<boolean>
 export async function invalidateAdminSessions(userId: string): Promise<void> {
   try {
     await revokeAllUserTokens(userId)
-    console.log(`[SESSION_INVALIDATION] Invalidated all admin sessions for user ${userId}`)
+    logMessage(`[SESSION_INVALIDATION] Invalidated all admin sessions for user ${userId}`)
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating admin sessions:', error)
+    logError('[SESSION_INVALIDATION] Error invalidating admin sessions:', error)
     throw error
   }
 }
@@ -205,10 +206,10 @@ export async function invalidateRecipientSessions(recipientId: string): Promise<
     )
 
     const invalidated = await revokeShareSessions(recipientSessions.map((session) => session.sessionId))
-    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} sessions for recipient ${recipientId} (${recipient.email})`)
+    logMessage(`[SESSION_INVALIDATION] Invalidated ${invalidated} sessions for recipient ${recipientId} (${recipient.email})`)
     return invalidated
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating recipient sessions:', error)
+    logError('[SESSION_INVALIDATION] Error invalidating recipient sessions:', error)
     throw error
   }
 }
@@ -236,10 +237,10 @@ export async function invalidateSessionsByEmail(email: string): Promise<number> 
     })
 
     const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
-    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} sessions for email ${email}`)
+    logMessage(`[SESSION_INVALIDATION] Invalidated ${invalidated} sessions for email ${email}`)
     return invalidated
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating sessions by email:', error)
+    logError('[SESSION_INVALIDATION] Error invalidating sessions by email:', error)
     throw error
   }
 }
@@ -268,10 +269,10 @@ export async function invalidateGuestSessions(projectId: string): Promise<number
     })
 
     const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
-    console.log(`[SESSION_INVALIDATION] Invalidated ${invalidated} guest sessions for project ${projectId}`)
+    logMessage(`[SESSION_INVALIDATION] Invalidated ${invalidated} guest sessions for project ${projectId}`)
     return invalidated
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error invalidating guest sessions:', error)
+    logError('[SESSION_INVALIDATION] Error invalidating guest sessions:', error)
     throw error
   }
 }
@@ -311,9 +312,9 @@ export async function clearPasskeyChallenges(userId: string): Promise<void> {
 
     await pipeline.exec()
 
-    console.log(`[SESSION_INVALIDATION] Cleared passkey challenges for user ${userId}`)
+    logMessage(`[SESSION_INVALIDATION] Cleared passkey challenges for user ${userId}`)
   } catch (error) {
-    console.error('[SESSION_INVALIDATION] Error clearing passkey challenges:', error)
+    logError('[SESSION_INVALIDATION] Error clearing passkey challenges:', error)
     throw error
   }
 }

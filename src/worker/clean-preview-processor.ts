@@ -10,15 +10,16 @@ import { TEMP_DIR } from './cleanup'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
+import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
 
 function debugLog(message: string, data?: any) {
   if (!DEBUG) return
   if (data !== undefined) {
-    console.log(`[CLEAN PREVIEW DEBUG] ${message}`, data)
+    logMessage(`[CLEAN PREVIEW DEBUG] ${message}`, data)
   } else {
-    console.log(`[CLEAN PREVIEW DEBUG] ${message}`)
+    logMessage(`[CLEAN PREVIEW DEBUG] ${message}`)
   }
 }
 
@@ -29,7 +30,7 @@ function debugLog(message: string, data?: any) {
 export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<void> {
   const { videoId, projectId, originalStoragePath, resolution } = job.data
 
-  console.log(`[CLEAN PREVIEW] Processing clean preview for video ${videoId} at ${resolution}`)
+  logMessage(`[CLEAN PREVIEW] Processing clean preview for video ${videoId} at ${resolution}`)
 
   const tempFiles: { input?: string; output?: string } = {}
   const processingStart = Date.now()
@@ -46,7 +47,7 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
     }
 
     if (!video.approved) {
-      console.log(`[CLEAN PREVIEW] Video ${videoId} is not approved, skipping clean preview generation`)
+      logMessage(`[CLEAN PREVIEW] Video ${videoId} is not approved, skipping clean preview generation`)
       return
     }
 
@@ -59,7 +60,7 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
     const downloadStream = await downloadFile(originalStoragePath)
     await pipeline(downloadStream, fs.createWriteStream(tempInputPath))
 
-    console.log(`[CLEAN PREVIEW] Downloaded original file for video ${videoId}`)
+    logMessage(`[CLEAN PREVIEW] Downloaded original file for video ${videoId}`)
 
     // Get video metadata
     const metadata = await getVideoMetadata(tempInputPath)
@@ -74,7 +75,7 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
     tempFiles.output = tempOutputPath
 
     // Transcode WITHOUT watermark (watermarkText = undefined)
-    console.log(`[CLEAN PREVIEW] Transcoding clean preview for video ${videoId}`)
+    logMessage(`[CLEAN PREVIEW] Transcoding clean preview for video ${videoId}`)
 
     await transcodeVideo({
       inputPath: tempInputPath,
@@ -89,7 +90,7 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
     })
 
     const outputStats = fs.statSync(tempOutputPath)
-    console.log(`[CLEAN PREVIEW] Generated clean preview: ${(outputStats.size / 1024 / 1024).toFixed(2)} MB`)
+    logMessage(`[CLEAN PREVIEW] Generated clean preview: ${(outputStats.size / 1024 / 1024).toFixed(2)} MB`)
 
     // Upload to storage
     const storagePath = `projects/${projectId}/videos/${videoId}/preview-clean-${resolution}.mp4`
@@ -111,10 +112,10 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
     })
 
     const totalTime = Date.now() - processingStart
-    console.log(`[CLEAN PREVIEW] Successfully processed clean preview for video ${videoId} in ${(totalTime / 1000).toFixed(2)}s`)
+    logMessage(`[CLEAN PREVIEW] Successfully processed clean preview for video ${videoId} in ${(totalTime / 1000).toFixed(2)}s`)
 
   } catch (error) {
-    console.error(`[CLEAN PREVIEW ERROR] Error processing clean preview for video ${videoId}:`, error)
+    logError(`[CLEAN PREVIEW ERROR] Error processing clean preview for video ${videoId}:`, error)
     throw error
 
   } finally {
@@ -126,7 +127,7 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
           debugLog('Cleaned up temp file:', path.basename(file))
         }
       } catch (cleanupError) {
-        console.error(`[CLEAN PREVIEW ERROR] Failed to cleanup temp file ${path.basename(file)}:`, cleanupError)
+        logError(`[CLEAN PREVIEW ERROR] Failed to cleanup temp file ${path.basename(file)}:`, cleanupError)
       }
     }
   }

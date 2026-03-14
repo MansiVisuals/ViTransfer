@@ -282,7 +282,7 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     },
   })
 
-  console.log(`[UPLOAD] Video ${videoId} upload complete, status updated to PROCESSING`)
+  logMessage(`[UPLOAD] Video ${videoId} upload complete, status updated to PROCESSING`)
 
   await videoQueue.add('process-video', {
     videoId: video.id,
@@ -290,7 +290,7 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     projectId: video.projectId,
   })
 
-  console.log(`[UPLOAD] Video ${videoId} queued for worker processing`)
+  logMessage(`[UPLOAD] Video ${videoId} queued for worker processing`)
 
   await cleanupTUSFile(tusFilePath)
 
@@ -343,7 +343,7 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
     expectedCategory: asset.category ?? undefined,
   })
 
-  console.log(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
+  logMessage(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
 
   await cleanupTUSFile(tusFilePath)
 
@@ -386,7 +386,7 @@ async function validateVideoFile(tusFilePath: string, filename?: string) {
   // NOTE: Magic byte validation is performed in the video-processor worker
   // This ensures proper file content validation happens during processing
   // without causing Next.js build issues with the file-type ESM module
-  console.log(`[UPLOAD] File extension validation passed, magic byte check will run in worker`)
+  logMessage(`[UPLOAD] File extension validation passed, magic byte check will run in worker`)
 }
 
 async function validateAssetFile(tusFilePath: string, filename?: string) {
@@ -404,7 +404,7 @@ async function validateAssetFile(tusFilePath: string, filename?: string) {
   // NOTE: Magic byte validation is performed in the asset-processor worker
   // This ensures proper file content validation happens during processing
   // without causing Next.js build issues with the file-type ESM module
-  console.log(`[UPLOAD] Asset extension validation passed, magic byte check will run in worker`)
+  logMessage(`[UPLOAD] Asset extension validation passed, magic byte check will run in worker`)
 }
 
 async function cleanupTUSFile(tusFilePath: string) {

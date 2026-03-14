@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { getRedis } from './redis'
+import { logError, logMessage } from '@/lib/logging'
 
 // Simple in-memory cache for frequently read settings to avoid repeated DB hits
 const SETTINGS_CACHE_TTL_MS = 60_000
@@ -42,7 +43,7 @@ export async function getCompanyName(): Promise<string> {
 
     return settings?.companyName || 'Studio'
   } catch (error) {
-    console.error('Error fetching company name:', error)
+    logError('Error fetching company name:', error)
     return 'Studio' // Fallback to default
   }
 }
@@ -68,7 +69,7 @@ export async function getSettings() {
 
     return settings
   } catch (error) {
-    console.error('Error fetching settings:', error)
+    logError('Error fetching settings:', error)
     return null
   }
 }
@@ -99,7 +100,7 @@ export async function isSmtpConfigured(): Promise<boolean> {
 
     return configured
   } catch (error) {
-    console.error('Error checking SMTP configuration:', error)
+    logError('Error checking SMTP configuration:', error)
     return cachedSmtpConfigured.value
   }
 }
@@ -117,7 +118,7 @@ export async function getAutoApproveProject(): Promise<boolean> {
 
     return settings?.autoApproveProject ?? true
   } catch (error) {
-    console.error('Error fetching auto-approve setting:', error)
+    logError('Error fetching auto-approve setting:', error)
     return true // Default to enabled on error
   }
 }
@@ -177,7 +178,7 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
     cachedSessionTimeout.expiresAt = now + SETTINGS_CACHE_TTL_MS
     return cachedSessionTimeout.value
   } catch (error) {
-    console.error('Error fetching client session timeout:', error)
+    logError('Error fetching client session timeout:', error)
     return cachedSessionTimeout.value
   }
 }
@@ -239,7 +240,7 @@ export async function getAdminSessionTimeoutSeconds(): Promise<number> {
     cachedAdminSessionTimeout.expiresAt = now + SETTINGS_CACHE_TTL_MS
     return cachedAdminSessionTimeout.value
   } catch (error) {
-    console.error('Error fetching admin session timeout:', error)
+    logError('Error fetching admin session timeout:', error)
     return cachedAdminSessionTimeout.value
   }
 }
@@ -277,10 +278,10 @@ export async function initializeSecuritySettings() {
         create: { id: 'default', httpsEnabled },
       })
 
-      console.log(`[INIT] HTTPS_ENABLED environment variable detected. Set database value to: ${httpsEnabled}`)
+      logMessage(`[INIT] HTTPS_ENABLED environment variable detected. Set database value to: ${httpsEnabled}`)
     }
   } catch (error) {
-    console.error('[INIT] Error initializing security settings from environment:', error)
+    logError('[INIT] Error initializing security settings from environment:', error)
   }
 }
 
@@ -311,7 +312,7 @@ export async function isHttpsEnabled(): Promise<boolean> {
     // Default to true for production security
     return settings?.httpsEnabled ?? true
   } catch (error) {
-    console.error('Error checking HTTPS enabled status:', error)
+    logError('Error checking HTTPS enabled status:', error)
     // Default to true even on error for security
     return true
   }
@@ -433,7 +434,7 @@ export async function getWebAuthnConfig(): Promise<{
       throw error
     }
 
-    console.error('Error fetching WebAuthn config:', error)
+    logError('Error fetching WebAuthn config:', error)
     throw new Error('Failed to retrieve PassKey configuration. Please check Settings.')
   }
 }

@@ -318,13 +318,11 @@ export async function DELETE(
     if (!asset) {
       return NextResponse.json({ error: videosMessages.attachmentNotFound || 'Attachment not found' }, { status: 404 })
     }
+    await initStorage()
+
+    await deleteFile(asset.storagePath)
 
     await prisma.videoAsset.delete({ where: { id: asset.id } })
-
-    await initStorage()
-    await deleteFile(asset.storagePath).catch((error) => {
-      console.warn('[CLIENT-ASSET] Failed to delete file after record cleanup:', error)
-    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

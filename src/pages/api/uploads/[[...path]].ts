@@ -304,7 +304,8 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
 
   if (!asset) {
     logMessage(`[UPLOAD] Asset not found: ${assetId}`)
-    return {}
+    await cleanupTUSFile(tusFilePath)
+    throw new Error(`Asset record not found for upload completion: ${assetId}`)
   }
 
   const fileSize = await verifyUploadedFile(tusFilePath, upload.size)

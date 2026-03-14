@@ -20,6 +20,8 @@ import {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const CONTENT_SESSION_WINDOW_SECONDS = 60
+
 
 /**
  * Convert Node.js ReadStream to Web ReadableStream
@@ -115,33 +117,44 @@ export async function GET(
   return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 401 })
     }
 
-    // Session-based rate limiting using lightweight INCR to avoid heavy payloads per chunk
-    const sessionCounterKey = `content-session-count:${sessionId}`
-    const sessionCount = await redis.incr(sessionCounterKey)
-    if (sessionCount === 1) {
-      await redis.expire(sessionCounterKey, 60)
-    }
-    const sessionRateLimit = isAdminRequest
-      ? securitySettings.sessionRateLimit
-      : securitySettings.shareSessionRateLimit
+    // Session-based content rate limiting.
+    // Range requests (video scrubbing/seeking) are normal browser behaviour and are
+    // already guarded by the IP rate limit, hotlink detection, and the per-video
+    // frequency counter in detectHotlinking (>3000 req / 5 min). Only count
+    // non-range requests (initial video loads, downloads, thumbnails) against the
+    // session budget so that scrubbing never triggers a 429.
+    const rangeHeader = request.headers.get('range')
+    const isRangeRequest = !!rangeHeader
 
-    if (sessionCount > sessionRateLimit) {
-      await logSecurityEvent({
-        type: 'RATE_LIMIT_HIT',
-        severity: 'INFO',
-        projectId: preliminaryTokenData.projectId,
-        sessionId,
-        ipAddress: getClientIpAddress(request),
-        details: {
-          limit: isAdminRequest ? 'Admin session-based' : 'Share session-based',
-          window: '1 minute'
-        },
-        wasBlocked: true
-      })
+    if (!isRangeRequest) {
+      const sessionCounterKey = `content-session-count:${sessionId}`
+      const sessionCount = await redis.incr(sessionCounterKey)
+      if (sessionCount === 1) {
+        await redis.expire(sessionCounterKey, CONTENT_SESSION_WINDOW_SECONDS)
+      }
 
-      return NextResponse.json({
-        error: shareMessages.videoStreamingRateLimitExceeded || 'Video streaming rate limit exceeded. Please wait a moment.'
-      }, { status: 429, headers: { 'Retry-After': '60' } })
+      const sessionRateLimit = isAdminRequest
+        ? securitySettings.sessionRateLimit
+        : securitySettings.shareSessionRateLimit
+
+      if (sessionCount > sessionRateLimit) {
+        await logSecurityEvent({
+          type: 'RATE_LIMIT_HIT',
+          severity: 'INFO',
+          projectId: preliminaryTokenData.projectId,
+          sessionId,
+          ipAddress: getClientIpAddress(request),
+          details: {
+            limit: isAdminRequest ? 'Admin session-based' : 'Share session-based',
+            window: '1 minute'
+          },
+          wasBlocked: true
+        })
+
+        return NextResponse.json({
+          error: shareMessages.videoStreamingRateLimitExceeded || 'Video streaming rate limit exceeded. Please wait a moment.'
+        }, { status: 429, headers: { 'Retry-After': String(CONTENT_SESSION_WINDOW_SECONDS) } })
+      }
     }
 
     const verifiedToken = await verifyVideoAccessToken(token, request, sessionId)

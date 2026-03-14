@@ -7,21 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-03-14
+
 ### Added
 - Template enable/disable controls in Settings → Email Templates, including API support and localized UI/status messages.
 - New customizable email template types: OTP verification, client activity summary, and admin activity summary.
 - Localized default content for the new email templates in both English and Dutch, including preview metadata and placeholder descriptions/examples.
+- Stronger server-side validation for global settings (preview resolution, SMTP port/security/from address, and app domain).
 
 ### Changed
 - Refactored summary and OTP email generation to use the centralized customizable template system.
 - Localized runtime summary wording (titles, subtitles, counters, and labels) for client/admin activity summaries.
 - Email settings updates now invalidate the cached SMTP/email settings immediately.
+- Replaced remaining direct console logging paths with centralized logging helpers across API and worker code.
+- Hardened security-settings handling with cache invalidation, stricter validation, split rate-limit handling, and HTTPS alignment behavior.
 
 ### Fixed
 - Standardized placeholder sanitization for email rendering (escape-by-default with explicit allowlists for trusted HTML/URL placeholders).
 - Removed duplicate hardcoded default template source by deriving defaults from the localized template builder.
 - Removed unused email template helper code and resolved related typing/consistency issues.
 - Improved logging consistency in email/notification worker paths by using centralized `logError` handling.
+- Fixed client asset cleanup flow by binding client assets to sessions, filtering pending assets before deletion, and verifying asset ownership on delete operations.
+- Hardened notification retry behavior and improved auth-related logging/error paths.
+
+### Security
+- Prevented passkey user-enumeration paths and sanitized passkey credential names.
+- Applied broader API safety hardening in auth/session and notification-related flows.
+
+### Dependencies
+- Updated `file-type` to `21.3.2`.
+- Updated `flatted` to `3.4.1`.
 
 ## [0.9.5] - 2026-03-11
 

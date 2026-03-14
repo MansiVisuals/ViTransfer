@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.9.6] - 2026-03-14
 
 ### Added
-- Improved email template management in Settings with clearer save/reset behavior and preview rendering consistency.
 - New customizable email template types: OTP verification, client activity summary, and admin activity summary.
 - Localized default content for the new email templates in both English and Dutch, including preview metadata and placeholder descriptions/examples.
 - Stronger server-side validation for global settings (preview resolution, SMTP port/security/from address, and app domain).
@@ -18,12 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Refactored summary and OTP email generation to use the centralized customizable template system.
 - Localized runtime summary wording (titles, subtitles, counters, and labels) for client/admin activity summaries.
+- Improved upload and download consistency with adaptive transfer tuning and better range-streaming behavior.
+- Simplified email template management in Settings so save/reset controls define template state more clearly.
 - Email settings updates now invalidate the cached SMTP/email settings immediately.
 - Replaced remaining direct console logging paths with centralized logging helpers across API and worker code.
 - Hardened security-settings handling with cache invalidation, stricter validation, split rate-limit handling, and HTTPS alignment behavior.
 
 ### Fixed
 - Standardized placeholder sanitization for email rendering (escape-by-default with explicit allowlists for trusted HTML/URL placeholders).
+- Fixed email template preview rendering so placeholders, attachments, unsubscribe sections, and sample content display correctly in the editor.
+- Normalized unsubscribe placeholder support across client-facing email templates and kept backward compatibility for older custom templates.
 - Removed duplicate hardcoded default template source by deriving defaults from the localized template builder.
 - Removed unused email template helper code and resolved related typing/consistency issues.
 - Improved logging consistency in email/notification worker paths by using centralized `logError` handling.

@@ -7,6 +7,7 @@ import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import fs from 'fs'
 import { createReadStream } from 'fs'
 import { logError } from '@/lib/logging'
+import { STREAM_HIGH_WATER_MARK_BYTES, parseBoundedRangeHeader } from '@/lib/transfer-tuning'
 
 export const runtime = 'nodejs'
 
@@ -89,9 +90,47 @@ export async function GET(
     const originalFilename = video.originalFileName || 'video.mp4'
     const safeFilename = sanitizeFilenameForHeader(originalFilename)
 
-    // CRITICAL FIX: Stream file instead of loading into memory
-    // This prevents OOM crashes with large video files
-    const fileStream = createReadStream(fullPath)
+    const range = request.headers.get('range')
+
+    if (range) {
+      const parsedRange = parseBoundedRangeHeader(range, stat.size, 16 * 1024 * 1024)
+      if (!parsedRange) {
+        return new NextResponse(null, {
+          status: 416,
+          headers: { 'Content-Range': `bytes */${stat.size}` },
+        })
+      }
+
+      const { start, end } = parsedRange
+      const chunkSize = (end - start) + 1
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
+
+      const readableStream = new ReadableStream({
+        start(controller) {
+          fileStream.on('data', (chunk) => controller.enqueue(chunk))
+          fileStream.on('end', () => controller.close())
+          fileStream.on('error', (err) => controller.error(err))
+        },
+        cancel() {
+          fileStream.destroy()
+        },
+      })
+
+      return new NextResponse(readableStream, {
+        status: 206,
+        headers: {
+          'Content-Type': 'video/mp4',
+          'Content-Disposition': `attachment; filename="${safeFilename}"`,
+          'Content-Length': chunkSize.toString(),
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Accept-Ranges': 'bytes',
+          'X-Content-Type-Options': 'nosniff',
+          'Cache-Control': 'private, no-cache',
+        },
+      })
+    }
+
+    const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
 
     // Convert Node.js stream to Web API ReadableStream
     const readableStream = new ReadableStream({
@@ -111,6 +150,7 @@ export async function GET(
         'Content-Type': 'video/mp4',
         'Content-Disposition': `attachment; filename="${safeFilename}"`,
         'Content-Length': stat.size.toString(),
+        'Accept-Ranges': 'bytes',
         // Security headers
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'private, no-cache',

@@ -8,6 +8,7 @@ import { createReadStream } from 'fs'
 import fs from 'fs'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
+import { STREAM_HIGH_WATER_MARK_BYTES, parseBoundedRangeHeader } from '@/lib/transfer-tuning'
 
 export const runtime = 'nodejs'
 
@@ -92,9 +93,50 @@ export async function GET(
     }
 
     const sanitizedFilename = sanitizeFilenameForHeader(asset.fileName)
+    const range = request.headers.get('range')
 
-    // Stream file with proper Node.js to Web API stream conversion
-    const fileStream = createReadStream(fullPath)
+    if (range) {
+      const parsedRange = parseBoundedRangeHeader(range, stat.size, 16 * 1024 * 1024)
+      if (!parsedRange) {
+        return new NextResponse(null, {
+          status: 416,
+          headers: { 'Content-Range': `bytes */${stat.size}` },
+        })
+      }
+
+      const { start, end } = parsedRange
+      const chunkSize = (end - start) + 1
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
+
+      const readableStream = new ReadableStream({
+        start(controller) {
+          fileStream.on('data', (chunk) => controller.enqueue(chunk))
+          fileStream.on('end', () => controller.close())
+          fileStream.on('error', (err) => {
+            fileStream.destroy()
+            controller.error(err)
+          })
+        },
+        cancel() {
+          fileStream.destroy()
+        },
+      })
+
+      return new NextResponse(readableStream, {
+        status: 206,
+        headers: {
+          'Content-Type': asset.fileType,
+          'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
+          'Content-Length': chunkSize.toString(),
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Accept-Ranges': 'bytes',
+          'X-Content-Type-Options': 'nosniff',
+          'Cache-Control': 'private, no-cache',
+        },
+      })
+    }
+
+    const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
 
     // Convert Node.js stream to Web API ReadableStream
     const readableStream = new ReadableStream({
@@ -116,6 +158,7 @@ export async function GET(
         'Content-Type': asset.fileType,
         'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
         'Content-Length': stat.size.toString(),
+        'Accept-Ranges': 'bytes',
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'private, no-cache',
       },

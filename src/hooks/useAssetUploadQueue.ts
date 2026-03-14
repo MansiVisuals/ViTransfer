@@ -3,6 +3,7 @@ import * as tus from 'tus-js-client'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
 import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
   clearFileContext,
@@ -159,13 +160,13 @@ export function useAssetUploadQueue({
 
       const tusUpload = new tus.Upload(upload.file, {
         endpoint: `${window.location.origin}/api/uploads`,
-        retryDelays: [0, 1000, 3000, 5000, 10000],
+        retryDelays: TUS_RETRY_DELAYS_MS,
         metadata: {
           filename: upload.file.name,
           filetype: upload.file.type || 'application/octet-stream',
           assetId: assetId,
         },
-        chunkSize: 50 * 1024 * 1024,
+        chunkSize: getTusChunkSizeBytes(upload.file.size),
         storeFingerprintForResuming: true,
         removeFingerprintOnSuccess: true,
 

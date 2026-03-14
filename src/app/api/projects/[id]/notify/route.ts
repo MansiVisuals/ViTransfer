@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail, isSmtpConfigured, getRecipientLocale } from '@/lib/email'
+import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail, getRecipientLocale } from '@/lib/email'
 import { generateShareUrl } from '@/lib/url'
 import { requireApiAdmin } from '@/lib/auth'
 import { decrypt } from '@/lib/encryption'
@@ -9,6 +9,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '@/lib/unsubscribe'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
+import { isSmtpConfigured } from '@/lib/settings'
 
 export const runtime = 'nodejs'
 

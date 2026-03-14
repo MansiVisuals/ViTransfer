@@ -285,56 +285,6 @@ export async function clearRateLimit(
 }
 
 /**
- * Unblock a specific IP address from rate limiting
- * Clears all rate limit entries for the given IP
- *
- * @param ipAddress - IP address to unblock
- * @returns Number of rate limit entries cleared
- */
-export async function unblockIpAddress(_ipAddress: string): Promise<number> {
-  try {
-    const redis = getRedis()
-
-    if (redis.status !== 'ready') {
-      await redis.connect()
-    }
-
-    // Use SCAN instead of KEYS to avoid blocking Redis on large datasets
-    let clearedCount = 0
-    let cursor = '0'
-
-    do {
-      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'ratelimit:*', 'COUNT', 100)
-      cursor = nextCursor
-
-      for (const key of keys) {
-        const data = await redis.get(key)
-        if (!data) continue
-
-        try {
-          const entry = JSON.parse(data) as RateLimitEntry
-          // Check if this entry has a lockout (only clear active lockouts)
-          if (entry.lockoutUntil && entry.lockoutUntil > Date.now()) {
-            // We can't directly check IP from the key (it's hashed)
-            // So we delete all lockout entries - admin action
-            await redis.del(key)
-            clearedCount++
-          }
-        } catch (parseError) {
-          // Skip invalid entries
-          continue
-        }
-      }
-    } while (cursor !== '0')
-
-    return clearedCount
-  } catch (error) {
-    console.error('IP unblock error:', error)
-    throw new Error('Failed to unblock IP address')
-  }
-}
-
-/**
  * Get all currently rate-limited IPs
  * Note: Since IPs are hashed in keys, we can only return lockout info
  *

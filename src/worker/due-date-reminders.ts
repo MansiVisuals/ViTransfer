@@ -1,7 +1,8 @@
 import { prisma } from '../lib/db'
 import { getRedis } from '../lib/redis'
 import { enqueueExternalNotification } from '../lib/external-notifications/enqueueExternalNotification'
-import { sendDueDateReminderEmail, isSmtpConfigured } from '../lib/email'
+import { sendDueDateReminderEmail } from '../lib/email'
+import { isSmtpConfigured } from '../lib/settings'
 
 const REDIS_KEY = 'due_date_reminder:last_check'
 let firstRun = true

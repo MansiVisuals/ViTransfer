@@ -16,31 +16,11 @@ import { ScheduleSelector } from '@/components/ScheduleSelector'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { CompanyNameInput } from '@/components/CompanyNameInput'
 import { apiFetch } from '@/lib/api-client'
-import { sanitizeSlug, generateSecurePassword } from '@/lib/password-utils'
+import { sanitizeSlug, generateRandomSlug, generateSecurePassword } from '@/lib/password-utils'
 import { apiPatch, apiPost } from '@/lib/api-client'
 import Link from 'next/link'
 import { ArrowLeft, Save, RefreshCw, Copy, Check, Calendar } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-
-// Client-safe slug generation using Web Crypto API
-function generateRandomSlug(): string {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'
-  const getRandomInt = (max: number) => {
-    const array = new Uint32Array(1)
-    crypto.getRandomValues(array)
-    return array[0] % max
-  }
-
-  let slug = ''
-  const length = 8 + getRandomInt(5) // 8-12 chars
-  for (let i = 0; i < length; i++) {
-    slug += chars.charAt(getRandomInt(chars.length))
-    if (i > 0 && i < length - 1 && getRandomInt(5) === 0) {
-      slug += '-'
-    }
-  }
-  return slug.replace(/-+/g, '-')
-}
 
 interface Project {
   id: string

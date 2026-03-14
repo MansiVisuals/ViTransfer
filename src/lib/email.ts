@@ -608,19 +608,6 @@ export async function getEmailSettings(forceRefresh = false): Promise<EmailSetti
 }
 
 /**
- * Check if SMTP is properly configured
- */
-export async function isSmtpConfigured(): Promise<boolean> {
-  try {
-    const settings = await getEmailSettings()
-    return !!(settings.smtpServer && settings.smtpPort && settings.smtpUsername && settings.smtpPassword)
-  } catch (error) {
-    console.error('Error checking SMTP configuration:', error)
-    return false
-  }
-}
-
-/**
  * Resolve the preferred locale for a recipient email.
  * Checks ClientContact.language first, falls back to system language.
  */

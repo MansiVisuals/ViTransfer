@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { Comment } from '@prisma/client'
 import { Clock, Trash2, Brush } from 'lucide-react'
-import DOMPurify from 'dompurify'
+import DOMPurify from 'isomorphic-dompurify'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import CommentAttachments from './CommentAttachments'
 

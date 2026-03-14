@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-03-14
+
 ### Added
 - GDPR-compliant privacy disclosure banner for client share pages. Configurable toggle and custom text in Branding & Appearance settings. Visitors see a fixed bottom banner with accept/decline and expandable full disclosure text. Preference stored in localStorage (no cookies).
 - Page size selector (10/25/50/100) on the security events dashboard for adjustable pagination.

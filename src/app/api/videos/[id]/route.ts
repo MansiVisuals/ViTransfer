@@ -5,7 +5,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { getAutoApproveProject } from '@/lib/settings'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
-import { logError } from '@/lib/logging'
+import { logError, logMessage } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 
@@ -227,13 +227,13 @@ export async function PATCH(
 
     // Update project status if approval changed
     if (approved !== undefined) {
-      console.log(`[VIDEO-APPROVAL] Admin toggled approval for video ${id} to ${approved}`)
+      logMessage(`[VIDEO-APPROVAL] Admin toggled approval for video ${id} to ${approved}`)
       await updateProjectStatus(video.projectId, id, approved, video.project.status)
 
       // NOTE: Admin-toggled approvals/unapprovals do NOT send email notifications
       // Only client-initiated approvals (via /approve route) send emails immediately
       // This prevents spam when admins are managing multiple videos
-      console.log('[VIDEO-APPROVAL] Admin approval - emails NOT sent (by design)')
+      logMessage('[VIDEO-APPROVAL] Admin approval - emails NOT sent (by design)')
     }
 
     return NextResponse.json({ success: true })

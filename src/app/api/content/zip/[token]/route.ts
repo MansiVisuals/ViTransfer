@@ -9,7 +9,7 @@ import archiver from 'archiver'
 import { Readable } from 'stream'
 import crypto from 'crypto'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
-import { logError } from '@/lib/logging'
+import { logError, logMessage } from '@/lib/logging'
 
 
 export const runtime = 'nodejs'
@@ -80,7 +80,7 @@ export async function GET(
 
     if (!rawTokenData) {
       // Invalid/expired download token - not a security event, just expired link
-      console.warn('[DOWNLOAD] Invalid or expired zip download token')
+      logMessage('[DOWNLOAD] Invalid or expired zip download token')
   return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
 

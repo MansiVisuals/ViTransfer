@@ -8,7 +8,7 @@ import { getFilePath } from '@/lib/storage'
 import { flushPendingAdminNotifications } from '@/lib/notifications'
 import { getConfiguredLocale, loadLocaleMessages, SUPPORTED_LOCALES } from '@/i18n/locale'
 import fs from 'fs/promises'
-import { logError } from '@/lib/logging'
+import { logError, logMessage } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 
@@ -400,7 +400,7 @@ export async function PATCH(request: NextRequest) {
 
     // Flush pending admin notifications when schedule changes
     if (previousAdminSchedule !== null && adminNotificationSchedule !== previousAdminSchedule) {
-      console.log(`[SETTINGS] Admin notification schedule changed: ${previousAdminSchedule} → ${adminNotificationSchedule}`)
+      logMessage(`[SETTINGS] Admin notification schedule changed: ${previousAdminSchedule} → ${adminNotificationSchedule}`)
       // Fire-and-forget: don't block the response
       void flushPendingAdminNotifications().catch((error) => {
         logError('[SETTINGS] Failed to flush pending admin notifications after schedule change:', error)

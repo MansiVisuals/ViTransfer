@@ -230,7 +230,9 @@ export async function POST(
               .replace('{projectTitle}', project.title)
               .replace('{email}', email),
           },
-        }).catch(() => {})
+        }).catch((notificationError) => {
+          logError('[SHARE VERIFY OTP] Failed to enqueue external lockout notification:', notificationError)
+        })
       }
 
       // SECURITY: Return same generic error as non-recipient to prevent enumeration

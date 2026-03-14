@@ -115,7 +115,9 @@ export async function POST(request: NextRequest) {
       })
     } catch (dbError) {
       // DB upsert failed — remove orphaned file from disk
-      await deleteFile(STORAGE_PATH).catch(() => {})
+      await deleteFile(STORAGE_PATH).catch((cleanupError) => {
+        logError('[SETTINGS:LOGO] Failed to rollback orphaned logo file', cleanupError)
+      })
       throw dbError
     }
 

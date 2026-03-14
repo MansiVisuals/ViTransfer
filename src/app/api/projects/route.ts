@@ -70,7 +70,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            email: true,
             isPrimary: true,
           },
         },
@@ -86,7 +85,13 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ projects })
+    const sanitizedProjects = projects.map(({ sharePassword, recipients, ...project }) => ({
+      ...project,
+      sharePassword: Boolean(sharePassword),
+      recipients,
+    }))
+
+    return NextResponse.json({ projects: sanitizedProjects })
   } catch (error) {
     return NextResponse.json(
       { error: projectMessages.unableToProcessRequest || 'Unable to process request' },

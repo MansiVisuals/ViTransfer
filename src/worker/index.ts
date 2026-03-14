@@ -12,23 +12,24 @@ import { processExternalNotificationJob } from './external-notifications/process
 import { createCleanPreviewWorker } from './clean-preview-processor'
 import { processDueDateReminders } from './due-date-reminders'
 import { cleanupOldTempFiles, ensureTempDir } from './cleanup'
+import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
 const ONE_HOUR_MS = 60 * 60 * 1000
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 
 async function main() {
-  console.log('[WORKER] Initializing video processing worker...')
+  logMessage('[WORKER] Initializing video processing worker...')
 
   // Get centralized CPU allocation (coordinates with FFmpeg threads)
   const cpuAllocation = getCpuAllocation()
   logCpuAllocation(cpuAllocation)
 
   if (DEBUG) {
-    console.log('[WORKER DEBUG] Debug mode is ENABLED')
-    console.log('[WORKER DEBUG] Node version:', process.version)
-    console.log('[WORKER DEBUG] Platform:', process.platform)
-    console.log('[WORKER DEBUG] Architecture:', process.arch)
+    logMessage('[WORKER DEBUG] Debug mode is ENABLED')
+    logMessage(`[WORKER DEBUG] Node version: ${process.version}`)
+    logMessage(`[WORKER DEBUG] Platform: ${process.platform}`)
+    logMessage(`[WORKER DEBUG] Architecture: ${process.arch}`)
   }
 
   // Ensure temp directory exists
@@ -36,19 +37,19 @@ async function main() {
 
   // Initialize storage
   if (DEBUG) {
-    console.log('[WORKER DEBUG] Initializing storage...')
+    logMessage('[WORKER DEBUG] Initializing storage...')
   }
 
   await initStorage()
 
   if (DEBUG) {
-    console.log('[WORKER DEBUG] Storage initialized')
+    logMessage('[WORKER DEBUG] Storage initialized')
   }
 
   // Use centralized CPU allocation for worker concurrency
   const concurrency = cpuAllocation.workerConcurrency
 
-  console.log(`[WORKER] Worker concurrency: ${concurrency} (from CPU allocation)`)
+  logMessage(`[WORKER] Worker concurrency: ${concurrency} (from CPU allocation)`)
 
   const worker = new Worker<VideoProcessingJob>('video-processing', processVideo, {
     connection: getRedisForQueue(),
@@ -63,32 +64,32 @@ async function main() {
   })
 
   if (DEBUG) {
-    console.log('[WORKER DEBUG] BullMQ worker created with config:', {
+    logMessage(`[WORKER DEBUG] BullMQ worker created with config: ${JSON.stringify({
       queue: 'video-processing',
       concurrency,
       limiter: {
         max: concurrency * 10,
         duration: 60000
       }
-    })
+    })}`)
   }
 
   worker.on('completed', (job) => {
-    console.log(`[WORKER] Job ${job.id} completed successfully`)
+    logMessage(`[WORKER] Job ${job.id} completed successfully`)
   })
 
   worker.on('failed', (job, err) => {
-    console.error(`[WORKER ERROR] Job ${job?.id} failed:`, err)
+    logError(`[WORKER ERROR] Job ${job?.id} failed`, err)
     if (DEBUG) {
-      console.error('[WORKER DEBUG] Job failure details:', {
+      logMessage(`[WORKER DEBUG] Job failure details: ${JSON.stringify({
         jobId: job?.id,
         jobData: job?.data,
         error: err instanceof Error ? err.stack : err
-      })
+      })}`)
     }
   })
 
-  console.log('[WORKER] Video processing worker started')
+  logMessage('[WORKER] Video processing worker started')
 
   // Create asset processing worker
   const assetWorker = new Worker<AssetProcessingJob>('asset-processing', processAsset, {
@@ -97,24 +98,24 @@ async function main() {
   })
 
   assetWorker.on('completed', (job) => {
-    console.log(`[WORKER] Asset job ${job.id} completed successfully`)
+    logMessage(`[WORKER] Asset job ${job.id} completed successfully`)
   })
 
   assetWorker.on('failed', (job, err) => {
-    console.error(`[WORKER ERROR] Asset job ${job?.id} failed:`, err)
+    logError(`[WORKER ERROR] Asset job ${job?.id} failed`, err)
     if (DEBUG) {
-      console.error('[WORKER DEBUG] Asset job failure details:', {
+      logMessage(`[WORKER DEBUG] Asset job failure details: ${JSON.stringify({
         jobId: job?.id,
         jobData: job?.data,
         error: err instanceof Error ? err.stack : err
-      })
+      })}`)
     }
   })
 
-  console.log('[WORKER] Asset processing worker started')
+  logMessage('[WORKER] Asset processing worker started')
 
   // Create notification processing queue with repeatable job
-  console.log('Setting up notification processing...')
+  logMessage('Setting up notification processing...')
   const notificationQueue = new Queue('notification-processing', {
     connection: getRedisForQueue(),
   })
@@ -137,7 +138,7 @@ async function main() {
   const notificationWorker = new Worker(
     'notification-processing',
     async () => {
-      console.log('Running scheduled notification check...')
+      logMessage('Running scheduled notification check...')
 
       await Promise.all([
         processAdminNotifications(),
@@ -145,7 +146,7 @@ async function main() {
         processDueDateReminders(),
       ])
 
-      console.log('Notification check completed')
+      logMessage('Notification check completed')
     },
     {
       connection: getRedisForQueue(),
@@ -154,16 +155,16 @@ async function main() {
   )
 
   notificationWorker.on('completed', (job) => {
-    console.log(`Notification check ${job.id} completed`)
+    logMessage(`Notification check ${job.id} completed`)
   })
 
   notificationWorker.on('failed', (job, err) => {
-    console.error(`Notification check ${job?.id} failed:`, err)
+    logError(`Notification check ${job?.id} failed`, err)
   })
 
-  console.log('Notification worker started')
-  console.log('  → Checks every 1 minute for scheduled summaries')
-  console.log('  → IMMEDIATE notifications sent instantly (not in batches)')
+  logMessage('Notification worker started')
+  logMessage('  → Checks every 1 minute for scheduled summaries')
+  logMessage('  → IMMEDIATE notifications sent instantly (not in batches)')
 
   // Create worker to process external notification jobs (Apprise)
   const externalNotificationWorker = new Worker<ExternalNotificationJob>(
@@ -179,56 +180,56 @@ async function main() {
 
   externalNotificationWorker.on('completed', (job) => {
     if (DEBUG) {
-      console.log(`[WORKER] External notification job ${job.id} completed`)
+      logMessage(`[WORKER] External notification job ${job.id} completed`)
     }
   })
 
   externalNotificationWorker.on('failed', (job, err) => {
-    console.error(`[WORKER ERROR] External notification job ${job?.id} failed:`, err)
+    logError(`[WORKER ERROR] External notification job ${job?.id} failed`, err)
   })
 
-  console.log('External notification worker started')
+  logMessage('External notification worker started')
 
   // Create clean preview worker for generating non-watermarked previews on approval
   const cleanPreviewWorker = createCleanPreviewWorker()
 
   cleanPreviewWorker.on('completed', (job) => {
-    console.log(`[WORKER] Clean preview completed for video ${job.data.videoId}`)
+    logMessage(`[WORKER] Clean preview completed for video ${job.data.videoId}`)
   })
 
   cleanPreviewWorker.on('failed', (job, err) => {
-    console.error(`[WORKER ERROR] Clean preview failed for video ${job?.data.videoId}:`, err.message)
+    logError(`[WORKER ERROR] Clean preview failed for video ${job?.data.videoId}`, err)
   })
 
-  console.log('[WORKER] Clean preview worker started')
+  logMessage('[WORKER] Clean preview worker started')
 
   // Run cleanup on startup
-  console.log('Running initial TUS upload cleanup...')
+  logMessage('Running initial TUS upload cleanup...')
   await runCleanup().catch((err) => {
-    console.error('Initial cleanup failed:', err)
+    logError('Initial cleanup failed', err)
   })
 
   // Cleanup old temp files on startup
-  console.log('Running initial temp file cleanup...')
+  logMessage('Running initial temp file cleanup...')
   await cleanupOldTempFiles()
 
   // Schedule periodic cleanup every 6 hours (TUS uploads)
   const tusCleanupInterval = setInterval(async () => {
-    console.log('Running scheduled TUS upload cleanup...')
+    logMessage('Running scheduled TUS upload cleanup...')
     await runCleanup().catch((err) => {
-      console.error('Scheduled cleanup failed:', err)
+      logError('Scheduled cleanup failed', err)
     })
   }, SIX_HOURS_MS)
 
   // Schedule temp file cleanup every hour
   const tempCleanupInterval = setInterval(async () => {
-    console.log('Running scheduled temp file cleanup...')
+    logMessage('Running scheduled temp file cleanup...')
     await cleanupOldTempFiles()
   }, ONE_HOUR_MS)
 
   // Handle shutdown gracefully
   process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, closing workers...')
+    logMessage('SIGTERM received, closing workers...')
     clearInterval(tusCleanupInterval)
     clearInterval(tempCleanupInterval)
     await Promise.all([
@@ -240,12 +241,12 @@ async function main() {
       notificationQueue.close(),
     ])
     await closeRedisConnection()
-    console.log('Redis connection closed')
+    logMessage('Redis connection closed')
     process.exit(0)
   })
 
   process.on('SIGINT', async () => {
-    console.log('SIGINT received, closing workers...')
+    logMessage('SIGINT received, closing workers...')
     clearInterval(tusCleanupInterval)
     clearInterval(tempCleanupInterval)
     await Promise.all([
@@ -257,12 +258,12 @@ async function main() {
       notificationQueue.close(),
     ])
     await closeRedisConnection()
-    console.log('Redis connection closed')
+    logMessage('Redis connection closed')
     process.exit(0)
   })
 }
 
 main().catch((err) => {
-  console.error('Worker error:', err)
+  logError('Worker error', err)
   process.exit(1)
 })

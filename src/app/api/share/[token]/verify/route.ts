@@ -216,7 +216,9 @@ export async function POST(
             body: (notificationsText?.sharePasswordLockoutBody || 'Share password locked out on {projectTitle} after too many failed attempts')
               .replace('{projectTitle}', project.title),
           },
-        }).catch(() => {})
+        }).catch((notificationError) => {
+          logError('[SHARE VERIFY] Failed to enqueue external lockout notification:', notificationError)
+        })
 
         return NextResponse.json(
           { error: shareMessages?.tooManyPasswordAttempts || 'Too many failed password attempts. Please try again later.', retryAfter },

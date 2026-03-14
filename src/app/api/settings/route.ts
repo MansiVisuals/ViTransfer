@@ -402,7 +402,9 @@ export async function PATCH(request: NextRequest) {
     if (previousAdminSchedule !== null && adminNotificationSchedule !== previousAdminSchedule) {
       console.log(`[SETTINGS] Admin notification schedule changed: ${previousAdminSchedule} → ${adminNotificationSchedule}`)
       // Fire-and-forget: don't block the response
-      void flushPendingAdminNotifications()
+      void flushPendingAdminNotifications().catch((error) => {
+        logError('[SETTINGS] Failed to flush pending admin notifications after schedule change:', error)
+      })
     }
 
     // SECURITY: Never send SMTP password in cleartext — return masked placeholder

@@ -101,7 +101,10 @@ export async function GET(
       start(controller) {
         fileStream.on('data', (chunk) => controller.enqueue(chunk))
         fileStream.on('end', () => controller.close())
-        fileStream.on('error', (err) => controller.error(err))
+        fileStream.on('error', (err) => {
+          fileStream.destroy()
+          controller.error(err)
+        })
       },
       cancel() {
         fileStream.destroy()

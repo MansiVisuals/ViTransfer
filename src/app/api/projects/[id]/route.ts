@@ -11,7 +11,7 @@ import { sanitizeComment } from '@/lib/comment-sanitization'
 import { updateProjectSchema } from '@/lib/validation'
 import { syncCompanyToDirectory } from '@/lib/client-directory-sync'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
-import { logError } from '@/lib/logging'
+import { logError, logMessage } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 
@@ -435,9 +435,11 @@ export async function PATCH(
 
     // Flush pending client notifications when schedule changes
     if (previousClientSchedule !== null && validatedBody.clientNotificationSchedule !== previousClientSchedule) {
-      console.log(`[PROJECT] Client notification schedule changed for "${project.title}": ${previousClientSchedule} → ${validatedBody.clientNotificationSchedule}`)
+      logMessage(`[PROJECT] Client notification schedule changed for "${project.title}": ${previousClientSchedule} → ${validatedBody.clientNotificationSchedule}`)
       // Fire-and-forget: don't block the response
-      void flushPendingClientNotifications(id)
+      void flushPendingClientNotifications(id).catch((error) => {
+        logError('[PROJECT] Failed to flush pending client notifications after schedule change:', error)
+      })
     }
 
     // SECURITY: After password, authMode, guestMode, or guestLatestOnly is updated in DB, invalidate ALL sessions for this project
@@ -455,7 +457,7 @@ export async function PATCH(
         if (guestLatestOnlyWasChanged) changes.push('guest latest only')
         const changeReason = changes.join(' and ') + ' changed'
 
-        console.log(
+        logMessage(
           `[SECURITY] Project ${changeReason} - invalidated ${shareSessionsInvalidated} share sessions for project ${id}`
         )
       } catch (error) {
@@ -553,7 +555,7 @@ export async function DELETE(
     // SECURITY: Invalidate all share sessions for this project before deletion
     try {
       const invalidatedCount = await invalidateShareTokensByProject(id)
-      console.log(`[SECURITY] Project deleted - invalidated ${invalidatedCount} share sessions`)
+      logMessage(`[SECURITY] Project deleted - invalidated ${invalidatedCount} share sessions`)
     } catch (error) {
       logError('[SECURITY] Failed to invalidate sessions during project deletion:', error)
       // Continue with deletion even if session invalidation fails

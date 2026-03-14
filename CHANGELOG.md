@@ -10,22 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - GDPR-compliant privacy disclosure banner for client share pages. Configurable toggle and custom text in Branding & Appearance settings. Visitors see a fixed bottom banner with accept/decline and expandable full disclosure text. Preference stored in localStorage (no cookies).
 - Page size selector (10/25/50/100) on the security events dashboard for adjustable pagination.
-
-### Changed
-- Tutorial video reel step now highlights the previous arrow, video selector, and next arrow individually instead of the entire reel bar.
-- Removed the "Click to browse all videos" tooltip hint from the thumbnail reel (replaced by tutorial steps).
-
-### Fixed
-- Share session rate limiting no longer triggers 429 errors on video range requests (scrubbing/seeking).
-
-## [0.9.6] - 2026-03-14
-
-### Added
 - New customizable email template types: OTP verification, client activity summary, and admin activity summary.
 - Localized default content for the new email templates in both English and Dutch, including preview metadata and placeholder descriptions/examples.
 - Stronger server-side validation for global settings (preview resolution, SMTP port/security/from address, and app domain).
 
 ### Changed
+- Tutorial video reel step now highlights the previous arrow, video selector, and next arrow individually instead of the entire reel bar.
+- Removed the "Click to browse all videos" tooltip hint from the thumbnail reel (replaced by tutorial steps).
 - Refactored summary and OTP email generation to use the centralized customizable template system.
 - Localized runtime summary wording (titles, subtitles, counters, and labels) for client/admin activity summaries.
 - Improved upload and download consistency with adaptive transfer tuning and better range-streaming behavior.
@@ -35,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened security-settings handling with cache invalidation, stricter validation, split rate-limit handling, and HTTPS alignment behavior.
 
 ### Fixed
+- Share session rate limiting no longer triggers 429 errors on video range requests (scrubbing/seeking).
 - Standardized placeholder sanitization for email rendering (escape-by-default with explicit allowlists for trusted HTML/URL placeholders).
 - Fixed email template preview rendering so placeholders, attachments, unsubscribe sections, and sample content display correctly in the editor.
 - Normalized unsubscribe placeholder support across client-facing email templates and kept backward compatibility for older custom templates.

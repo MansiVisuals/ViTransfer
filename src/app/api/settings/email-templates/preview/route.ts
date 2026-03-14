@@ -191,6 +191,7 @@ function generateSampleValues(
       VERSION_LABEL: ex.VERSION_LABEL || 'v2',
       SHARE_URL: `${appDomain}/share/abc123`,
       PASSWORD_NOTICE: `<div class="protected-note"><strong>${protectedLabel}</strong> ${protectedNotice}</div>`,
+      UNSUBSCRIBE_SECTION: '',
     },
     PROJECT_APPROVED: {
       ...base,
@@ -198,6 +199,7 @@ function generateSampleValues(
       VIDEO_NAME: videoName,
       SHARE_URL: `${appDomain}/share/abc123`,
       APPROVAL_MESSAGE: `<strong>${clientName}</strong> ${approvalMessage}`,
+      UNSUBSCRIBE_SECTION: '',
     },
     COMMENT_NOTIFICATION: {
       ...base,
@@ -208,6 +210,7 @@ function generateSampleValues(
       COMMENT_CONTENT: commentContent,
       TIMECODE: sampleTcPill1,
       SHARE_URL: `${appDomain}/share/abc123`,
+      UNSUBSCRIBE_SECTION: '',
     },
     ADMIN_COMMENT_NOTIFICATION: {
       ...base,
@@ -240,11 +243,13 @@ function generateSampleValues(
         <div style="font-size: 15px; padding: 6px 0;">• Social Media <span style="font-weight: 600;">v1</span></div>
       `,
       PASSWORD_NOTICE: `<div class="protected-note"><strong>${protectedLabel}</strong> ${protectedNotice}</div>`,
+      UNSUBSCRIBE_SECTION: '',
     },
     PASSWORD: {
       ...base,
       PROJECT_TITLE: projectTitle,
       PASSWORD: ex.PASSWORD || 'xK9mP2nL',
+      UNSUBSCRIBE_SECTION: '',
     },
     PASSWORD_RESET: {
       ...base,

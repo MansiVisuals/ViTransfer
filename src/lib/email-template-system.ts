@@ -80,6 +80,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{VERSION_LABEL}}', description: 'Version label (e.g., v1, v2)', example: 'v2' },
     { key: '{{SHARE_URL}}', description: 'Link to view the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{PASSWORD_NOTICE}}', description: 'Password protection notice (shown only if protected)', example: '' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   PROJECT_APPROVED: [
     ...COMMON_PLACEHOLDERS,
@@ -87,6 +88,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{VIDEO_NAME}}', description: 'Name of the approved deliverable', example: 'Main Video' },
     { key: '{{SHARE_URL}}', description: 'Link to view/download the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{APPROVAL_MESSAGE}}', description: 'Dynamic approval message (includes who approved and download info)', example: 'All deliverables for Summer Campaign 2026 have been approved. The final files are now ready for download.' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   COMMENT_NOTIFICATION: [
     ...COMMON_PLACEHOLDERS,
@@ -98,6 +100,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{TIMECODE}}', description: 'Clickable timecode pill linking to the comment (if any)', example: '00:01:23:15' },
     { key: '{{ATTACHMENTS}}', description: 'List of attached files (shown only if files were uploaded)', example: '' },
     { key: '{{SHARE_URL}}', description: 'Link to view and reply', example: 'https://review.acme.com/share/abc123' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   ADMIN_COMMENT_NOTIFICATION: [
     ...COMMON_PLACEHOLDERS,
@@ -127,11 +130,13 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{SHARE_URL}}', description: 'Link to view the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{VIDEO_LIST}}', description: 'HTML list of ready deliverables', example: '' },
     { key: '{{PASSWORD_NOTICE}}', description: 'Password protection notice (shown only if protected)', example: '' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   PASSWORD: [
     ...COMMON_PLACEHOLDERS,
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
     { key: '{{PASSWORD}}', description: 'The access password', example: 'xK9mP2nL' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   PASSWORD_RESET: [
     ...COMMON_PLACEHOLDERS,
@@ -396,7 +401,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'PROJECT_APPROVED': {
@@ -427,7 +434,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'COMMENT_NOTIFICATION': {
@@ -458,7 +467,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'ADMIN_COMMENT_NOTIFICATION': {
@@ -538,7 +549,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'PASSWORD': {
@@ -563,7 +576,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${t.keepConfidential || 'Keep this password confidential. Pair it with the review link we sent separately.'}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'PASSWORD_RESET': {

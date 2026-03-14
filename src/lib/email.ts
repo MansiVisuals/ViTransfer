@@ -808,12 +808,20 @@ export async function sendNewVersionEmail({
     '{{PASSWORD_NOTICE}}': '', // Will be handled separately
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
+  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
   // Process subject line (replace placeholders)
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
+  let bodyContent = processTemplateContent(template.bodyContent, {
+    ...placeholderValues,
+    '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
+  }, brand, brandingLogoUrl)
+
+  if (unsubscribeUrl && !template.bodyContent.includes('{{UNSUBSCRIBE_SECTION}}')) {
+    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
+  }
 
   // Add password protected note if applicable
   if (isPasswordProtected) {
@@ -826,11 +834,6 @@ export async function sendNewVersionEmail({
         </div>
       </div>
     `
-  }
-
-  // Add unsubscribe section if applicable
-  if (unsubscribeUrl) {
-    bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
   const html = renderEmailShell({
@@ -937,15 +940,18 @@ export async function sendProjectApprovedEmail({
     '{{APPROVAL_MESSAGE}}': approvalMessage,
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
+  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
   // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
+  let bodyContent = processTemplateContent(template.bodyContent, {
+    ...placeholderValues,
+    '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
+  }, brand, brandingLogoUrl)
 
-  // Add unsubscribe section if applicable
-  if (unsubscribeUrl) {
+  if (unsubscribeUrl && !template.bodyContent.includes('{{UNSUBSCRIBE_SECTION}}')) {
     bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
@@ -1036,15 +1042,18 @@ export async function sendCommentNotificationEmail({
     '{{ATTACHMENTS}}': attachmentsHtml,
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
+  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
   // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
+  let bodyContent = processTemplateContent(template.bodyContent, {
+    ...placeholderValues,
+    '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
+  }, brand, brandingLogoUrl)
 
-  // Add unsubscribe section if applicable
-  if (unsubscribeUrl) {
+  if (unsubscribeUrl && !template.bodyContent.includes('{{UNSUBSCRIBE_SECTION}}')) {
     bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
@@ -1139,6 +1148,7 @@ export async function sendAdminCommentNotificationEmail({
     '{{ATTACHMENTS}}': attachmentsHtml,
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
+  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
   // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
@@ -1351,10 +1361,12 @@ export async function sendProjectGeneralNotificationEmail({
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
+  let bodyContent = processTemplateContent(template.bodyContent, {
+    ...placeholderValues,
+    '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
+  }, brand, brandingLogoUrl)
 
-  // Add unsubscribe section if applicable
-  if (unsubscribeUrl) {
+  if (unsubscribeUrl && !template.bodyContent.includes('{{UNSUBSCRIBE_SECTION}}')) {
     bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
@@ -1416,15 +1428,18 @@ export async function sendPasswordEmail({
     '{{COMPANY_NAME}}': companyName,
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
+  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
   // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
   // Process body content with placeholders, buttons, and inline styles
-  let bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
+  let bodyContent = processTemplateContent(template.bodyContent, {
+    ...placeholderValues,
+    '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
+  }, brand, brandingLogoUrl)
 
-  // Add unsubscribe section if applicable
-  if (unsubscribeUrl) {
+  if (unsubscribeUrl && !template.bodyContent.includes('{{UNSUBSCRIBE_SECTION}}')) {
     bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 

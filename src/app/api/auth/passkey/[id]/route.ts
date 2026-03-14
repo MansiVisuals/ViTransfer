@@ -119,6 +119,14 @@ export async function PATCH(
       )
     }
 
+    // SECURITY: Sanitize name — only allow safe characters
+    if (/[<>"'`&;{}]/.test(name)) {
+      return NextResponse.json(
+        { error: authMessages.passkeyNameInvalidCharacters || 'Name contains invalid characters' },
+        { status: 400 }
+      )
+    }
+
     // Update passkey name (ownership verified inside)
     const result = await updatePasskeyName(user.id, credentialId, name.trim())
 

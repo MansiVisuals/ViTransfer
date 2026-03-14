@@ -13,6 +13,8 @@ import { enqueueExternalNotification } from '@/lib/external-notifications/enqueu
 import { safeParseBody } from '@/lib/validation'
 import jwt from 'jsonwebtoken'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -132,7 +134,7 @@ export async function POST(
       // Use constant-time comparison to prevent timing attacks
       isValid = constantTimeCompare(password, decryptedPassword)
     } catch (error) {
-      console.error('Error decrypting password:', error)
+      logError('Error decrypting password:', error)
       // If decryption fails, password is invalid
       isValid = false
     }
@@ -214,7 +216,9 @@ export async function POST(
             body: (notificationsText?.sharePasswordLockoutBody || 'Share password locked out on {projectTitle} after too many failed attempts')
               .replace('{projectTitle}', project.title),
           },
-        }).catch(() => {})
+        }).catch((notificationError) => {
+          logError('[SHARE VERIFY] Failed to enqueue external lockout notification:', notificationError)
+        })
 
         return NextResponse.json(
           { error: shareMessages?.tooManyPasswordAttempts || 'Too many failed password attempts. Please try again later.', retryAfter },
@@ -262,7 +266,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, shareToken })
   } catch (error) {
-    console.error('Error verifying share password:', error)
+    logError('Error verifying share password:', error)
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     return NextResponse.json({ error: messages?.share?.accessDenied || 'Access denied' }, { status: 403 })

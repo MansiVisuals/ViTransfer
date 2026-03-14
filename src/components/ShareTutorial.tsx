@@ -84,14 +84,36 @@ export function ShareTutorial({
     } else {
       // Player view steps
 
-      // Video reel (different videos in the project)
-      const reelEl = document.querySelector('[data-tutorial="video-reel"]')
-      if (reelEl) {
+      // Video reel navigation — left arrow, center selector, right arrow
+      const reelPrevEl = document.querySelector('[data-tutorial="video-reel-prev"]')
+      if (reelPrevEl) {
         steps.push({
-          element: '[data-tutorial="video-reel"]',
+          element: '[data-tutorial="video-reel-prev"]',
           popover: {
-            title: t('reelTitle'),
-            description: t('reelDescription'),
+            title: t('reelPrevTitle'),
+            description: t('reelPrevDescription'),
+          },
+        })
+      }
+
+      const reelCenterEl = document.querySelector('[data-tutorial="video-reel-center"]')
+      if (reelCenterEl) {
+        steps.push({
+          element: '[data-tutorial="video-reel-center"]',
+          popover: {
+            title: t('reelCenterTitle'),
+            description: t('reelCenterDescription'),
+          },
+        })
+      }
+
+      const reelNextEl = document.querySelector('[data-tutorial="video-reel-next"]')
+      if (reelNextEl) {
+        steps.push({
+          element: '[data-tutorial="video-reel-next"]',
+          popover: {
+            title: t('reelNextTitle'),
+            description: t('reelNextDescription'),
           },
         })
       }

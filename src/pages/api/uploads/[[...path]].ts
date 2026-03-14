@@ -7,6 +7,8 @@ import path from 'path'
 import fs from 'fs'
 import { Readable } from 'stream'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { logError, logMessage } from '@/lib/logging'
+
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
 const ABSOLUTE_MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024 * 1024 // 100 GB hard safety cap
@@ -79,7 +81,11 @@ const tusServer: Server = new Server({
         // Verify the asset belongs to the share token's project and is a client asset
         const asset = await prisma.videoAsset.findUnique({
           where: { id: upload.metadata.assetId as string },
-          include: { video: { select: { projectId: true } } },
+          select: {
+            uploadedBy: true,
+            uploadedBySessionId: true,
+            video: { select: { projectId: true } },
+          },
         })
 
         if (!asset) {
@@ -101,6 +107,13 @@ const tusServer: Server = new Server({
           throw {
             status_code: 403,
             body: 'Asset does not belong to your project'
+          }
+        }
+
+        if (asset.uploadedBySessionId !== sharePayload.sessionId) {
+          throw {
+            status_code: 403,
+            body: 'Asset does not belong to your session'
           }
         }
 
@@ -202,7 +215,7 @@ const tusServer: Server = new Server({
 
       return { metadata: upload.metadata }
     } catch (error) {
-      console.error('[UPLOAD] Error in onUploadCreate:', error)
+      logError('[UPLOAD] Error in onUploadCreate:', error)
       throw error
     }
   },
@@ -218,11 +231,11 @@ const tusServer: Server = new Server({
       } else if (assetId) {
         return await handleAssetUploadFinish(tusFilePath, upload, assetId, tusServer)
       } else {
-        console.error('[UPLOAD] No videoId or assetId in upload metadata')
+        logMessage('[UPLOAD] No videoId or assetId in upload metadata')
         return {}
       }
     } catch (error) {
-      console.error('[UPLOAD] Error in onUploadFinish:', error)
+      logError('[UPLOAD] Error in onUploadFinish:', error)
       await cleanupTUSFile(tusFilePath)
 
       if (videoId) {
@@ -240,7 +253,7 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
   })
 
   if (!video) {
-    console.error(`[UPLOAD] Video not found: ${videoId}`)
+    logMessage(`[UPLOAD] Video not found: ${videoId}`)
     return {}
   }
 
@@ -269,7 +282,7 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     },
   })
 
-  console.log(`[UPLOAD] Video ${videoId} upload complete, status updated to PROCESSING`)
+  logMessage(`[UPLOAD] Video ${videoId} upload complete, status updated to PROCESSING`)
 
   await videoQueue.add('process-video', {
     videoId: video.id,
@@ -277,7 +290,7 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     projectId: video.projectId,
   })
 
-  console.log(`[UPLOAD] Video ${videoId} queued for worker processing`)
+  logMessage(`[UPLOAD] Video ${videoId} queued for worker processing`)
 
   await cleanupTUSFile(tusFilePath)
 
@@ -290,8 +303,9 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
   })
 
   if (!asset) {
-    console.error(`[UPLOAD] Asset not found: ${assetId}`)
-    return {}
+    logMessage(`[UPLOAD] Asset not found: ${assetId}`)
+    await cleanupTUSFile(tusFilePath)
+    throw new Error(`Asset record not found for upload completion: ${assetId}`)
   }
 
   const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
@@ -329,7 +343,7 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
     expectedCategory: asset.category ?? undefined,
   })
 
-  console.log(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
+  logMessage(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
 
   await cleanupTUSFile(tusFilePath)
 
@@ -372,7 +386,7 @@ async function validateVideoFile(tusFilePath: string, filename?: string) {
   // NOTE: Magic byte validation is performed in the video-processor worker
   // This ensures proper file content validation happens during processing
   // without causing Next.js build issues with the file-type ESM module
-  console.log(`[UPLOAD] File extension validation passed, magic byte check will run in worker`)
+  logMessage(`[UPLOAD] File extension validation passed, magic byte check will run in worker`)
 }
 
 async function validateAssetFile(tusFilePath: string, filename?: string) {
@@ -390,7 +404,7 @@ async function validateAssetFile(tusFilePath: string, filename?: string) {
   // NOTE: Magic byte validation is performed in the asset-processor worker
   // This ensures proper file content validation happens during processing
   // without causing Next.js build issues with the file-type ESM module
-  console.log(`[UPLOAD] Asset extension validation passed, magic byte check will run in worker`)
+  logMessage(`[UPLOAD] Asset extension validation passed, magic byte check will run in worker`)
 }
 
 async function cleanupTUSFile(tusFilePath: string) {
@@ -403,7 +417,7 @@ async function cleanupTUSFile(tusFilePath: string) {
       fs.unlinkSync(metadataPath)
     }
   } catch (cleanupErr) {
-    console.error('[UPLOAD] Failed to cleanup TUS files:', cleanupErr)
+    logError('[UPLOAD] Failed to cleanup TUS files:', cleanupErr)
   }
 }
 
@@ -417,7 +431,7 @@ async function markVideoAsError(videoId: string, error: any) {
       }
     })
   } catch (dbError) {
-    console.error('[UPLOAD] Failed to mark video as ERROR:', dbError)
+    logError('[UPLOAD] Failed to mark video as ERROR:', dbError)
   }
 }
 
@@ -486,7 +500,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const webResponse = await tusServer.handleWeb(webRequest)
     await fromWebResponse(webResponse, res)
   } catch (error) {
-    console.error('[UPLOAD] Pages Router Error:', error)
+    logError('[UPLOAD] Pages Router Error:', error)
     res.status(500).json({
       error: 'Internal server error',
     })

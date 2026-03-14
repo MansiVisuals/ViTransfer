@@ -12,6 +12,7 @@ import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
 import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
   clearFileContext,
@@ -202,7 +203,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         endpoint: `${window.location.origin}/api/uploads`,
 
         // Retry configuration - exponential backoff
-        retryDelays: [0, 1000, 3000, 5000, 10000],
+        retryDelays: TUS_RETRY_DELAYS_MS,
 
         // Metadata
         metadata: {
@@ -211,7 +212,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
           videoId: videoIdRef.current!,
         },
 
-        chunkSize: 50 * 1024 * 1024,
+        chunkSize: getTusChunkSizeBytes(file.size),
 
         // Store upload URL in localStorage for resume after browser close
         storeFingerprintForResuming: true,

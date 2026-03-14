@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { decrypt } from '@/lib/encryption'
+import { formatErrorForLog, logError as baseLogError, logMessage as baseLogMessage, sanitizeLogValue } from '@/lib/logging'
 import type { ExternalNotificationJob } from '@/lib/queue'
 import { sendAppriseNotification } from '@/worker/external-notifications/sendAppriseNotification'
 
@@ -13,19 +14,28 @@ function redactUrlSecrets(message: string): string {
 
 function log(message: string, extra?: Record<string, unknown>) {
   if (extra && VERBOSE) {
-    console.log('[EXTERNAL-NOTIFICATIONS]', message, extra)
+    baseLogMessage('[EXTERNAL-NOTIFICATIONS]', message, extra)
     return
   }
-  console.log('[EXTERNAL-NOTIFICATIONS]', message)
+  baseLogMessage('[EXTERNAL-NOTIFICATIONS]', message)
 }
 
 function logError(message: string, extra?: Record<string, unknown>) {
+  const sanitizedMessage = sanitizeLogValue(message)
+
   if (extra && VERBOSE) {
-    console.error('[EXTERNAL-NOTIFICATIONS]', message, extra)
+    baseLogError(`[EXTERNAL-NOTIFICATIONS] ${sanitizedMessage}`, sanitizeLogValue(JSON.stringify(extra)))
     return
   }
-  const err = typeof extra?.error === 'string' ? redactUrlSecrets(extra.error) : ''
-  console.error('[EXTERNAL-NOTIFICATIONS]', err ? `${message}: ${err}` : message)
+  if (extra?.error !== undefined) {
+    const errorValue = typeof extra.error === 'string'
+      ? redactUrlSecrets(extra.error)
+      : formatErrorForLog(extra.error)
+    baseLogError(`[EXTERNAL-NOTIFICATIONS] ${sanitizedMessage}`, sanitizeLogValue(errorValue))
+    return
+  }
+
+  baseLogError(`[EXTERNAL-NOTIFICATIONS] ${sanitizedMessage}`)
 }
 
 function safeTextPreview(text: string, maxLen: number): string {

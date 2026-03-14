@@ -6,6 +6,8 @@ import { encrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
 import { createProjectSchema, validateRequest } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -68,7 +70,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            email: true,
             isPrimary: true,
           },
         },
@@ -84,7 +85,13 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ projects })
+    const sanitizedProjects = projects.map(({ sharePassword, recipients, ...project }) => ({
+      ...project,
+      sharePassword: Boolean(sharePassword),
+      recipients,
+    }))
+
+    return NextResponse.json({ projects: sanitizedProjects })
   } catch (error) {
     return NextResponse.json(
       { error: projectMessages.unableToProcessRequest || 'Unable to process request' },
@@ -227,7 +234,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(project)
   } catch (error) {
-    console.error('[API] Project creation error:', error)
+    logError('[API] Project creation error:', error)
     return NextResponse.json(
       { error: projectMessages.failedToCreateProjectApi || 'Failed to create project' },
       { status: 500 }

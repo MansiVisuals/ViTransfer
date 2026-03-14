@@ -6,6 +6,8 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { sanitizeComment } from '@/lib/comment-sanitization'
 import { getRateLimitSettings } from '@/lib/settings'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -136,7 +138,7 @@ export async function GET(
 
     return NextResponse.json(sanitizedComments)
   } catch (error) {
-    console.error('Error fetching comments:', error)
+    logError('Error fetching comments:', error)
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     return NextResponse.json({ error: messages?.share?.unableToProcessRequest || 'Unable to process request' }, { status: 500 })

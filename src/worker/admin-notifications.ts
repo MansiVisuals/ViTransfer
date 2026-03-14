@@ -4,6 +4,7 @@ import { generateAdminSummaryEmail } from '../lib/email-templates'
 import { generateShareUrl } from '../lib/url'
 import { getRedis } from '../lib/redis'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
+import { logError, logMessage } from '../lib/logging'
 
 /**
  * Process admin notification summaries
@@ -26,16 +27,16 @@ export async function processAdminNotifications() {
     })
 
     if (!settings || settings.adminNotificationSchedule === 'IMMEDIATE') {
-      console.log('[ADMIN] Admin schedule is IMMEDIATE - notifications sent in real-time')
+      logMessage('[ADMIN] Admin schedule is IMMEDIATE - notifications sent in real-time')
       return
     }
 
     const now = new Date()
     const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-    console.log(`[ADMIN] Checking for admin notifications to send (time: ${timeString})`)
-    console.log(`[ADMIN]   Schedule: ${settings.adminNotificationSchedule}`)
-    console.log(`[ADMIN]   Target time: ${settings.adminNotificationTime || 'N/A'}`)
-    console.log(`[ADMIN]   Last sent: ${settings.lastAdminNotificationSent ? new Date(settings.lastAdminNotificationSent).toISOString() : 'Never'}`)
+    logMessage(`[ADMIN] Checking for admin notifications to send (time: ${timeString})`)
+    logMessage(`[ADMIN]   Schedule: ${settings.adminNotificationSchedule}`)
+    logMessage(`[ADMIN]   Target time: ${settings.adminNotificationTime || 'N/A'}`)
+    logMessage(`[ADMIN]   Last sent: ${settings.lastAdminNotificationSent ? new Date(settings.lastAdminNotificationSent).toISOString() : 'Never'}`)
 
     // Check if it's time to send based on schedule
     const shouldSend = shouldSendNow(
@@ -47,11 +48,11 @@ export async function processAdminNotifications() {
     )
 
     if (!shouldSend) {
-      console.log(`[ADMIN] Not time to send yet - waiting for schedule`)
+      logMessage(`[ADMIN] Not time to send yet - waiting for schedule`)
       return
     }
 
-    console.log(`[ADMIN] Time to send! Checking for pending notifications...`)
+    logMessage(`[ADMIN] Time to send! Checking for pending notifications...`)
 
     // Get pending admin notifications
     const pendingNotifications = await prisma.notificationQueue.findMany({
@@ -69,11 +70,11 @@ export async function processAdminNotifications() {
     })
 
     if (pendingNotifications.length === 0) {
-      console.log(`[ADMIN] No pending notifications found`)
+      logMessage(`[ADMIN] No pending notifications found`)
       return
     }
 
-    console.log(`[ADMIN] Found ${pendingNotifications.length} pending notification(s)`)
+    logMessage(`[ADMIN] Found ${pendingNotifications.length} pending notification(s)`)
 
     // Filter out cancelled notifications
     const redis = getRedis()
@@ -85,7 +86,7 @@ export async function processAdminNotifications() {
       if (commentId) {
         const isCancelled = await redis.get(`comment_cancelled:${commentId}`)
         if (isCancelled) {
-          console.log(`[ADMIN]   Skipping cancelled notification for comment ${commentId}`)
+          logMessage(`[ADMIN]   Skipping cancelled notification for comment ${commentId}`)
           cancelledNotificationIds.push(notification.id)
           continue
         }
@@ -98,11 +99,11 @@ export async function processAdminNotifications() {
       await prisma.notificationQueue.deleteMany({
         where: { id: { in: cancelledNotificationIds } }
       })
-      console.log(`[ADMIN]   Removed ${cancelledNotificationIds.length} cancelled notification(s)`)
+      logMessage(`[ADMIN]   Removed ${cancelledNotificationIds.length} cancelled notification(s)`)
     }
 
     if (validNotifications.length === 0) {
-      console.log(`[ADMIN]   No valid notifications to send (all cancelled)`)
+      logMessage(`[ADMIN]   No valid notifications to send (all cancelled)`)
       return
     }
 
@@ -130,7 +131,7 @@ export async function processAdminNotifications() {
     })
 
     if (admins.length === 0) {
-      console.log('No admin users found, skipping notification summary')
+      logMessage('No admin users found, skipping notification summary')
       return
     }
 
@@ -144,7 +145,7 @@ export async function processAdminNotifications() {
     })
 
     const currentAttempts = validNotifications[0]?.adminAttempts + 1 || 1
-    console.log(`[ADMIN] Attempt #${currentAttempts} for ${validNotifications.length} notification(s)`)
+    logMessage(`[ADMIN] Attempt #${currentAttempts} for ${validNotifications.length} notification(s)`)
 
     // Send summary to each admin
     const result = await sendNotificationsWithRetry({
@@ -156,23 +157,24 @@ export async function processAdminNotifications() {
         const projects = Object.values(projectGroups)
 
         for (const admin of admins) {
-          const html = generateAdminSummaryEmail({
+          const summaryEmail = await generateAdminSummaryEmail({
             companyName,
             accentColor: emailSettings.accentColor || undefined,
             appDomain: emailSettings.appDomain || undefined,
             adminName: admin.name || '',
             period,
-            projects
+            projects,
+            locale: emailSettings.language || 'en',
           })
 
           const result = await sendEmail({
             to: admin.email,
-            subject: `Project activity summary (${pendingNotifications.length} updates)`,
-            html,
+            subject: summaryEmail.subject,
+            html: summaryEmail.html,
           })
 
           if (result.success) {
-            console.log(`[ADMIN]   Sent to ${admin.email}`)
+            logMessage(`[ADMIN]   Sent to ${admin.email}`)
           } else {
             throw new Error(`Failed to send to ${admin.email}: ${result.error}`)
           }
@@ -186,9 +188,9 @@ export async function processAdminNotifications() {
         where: { id: 'default' },
         data: { lastAdminNotificationSent: now }
       })
-      console.log(`[ADMIN] Summary sent (${pendingNotifications.length} notifications to ${admins.length} admins)`)
+      logMessage(`[ADMIN] Summary sent (${pendingNotifications.length} notifications to ${admins.length} admins)`)
     }
   } catch (error) {
-    console.error('Failed to process admin notifications:', error)
+    logError('Failed to process admin notifications:', error)
   }
 }

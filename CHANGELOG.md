@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-03-14
+
+### Added
+- GDPR-compliant privacy disclosure banner for client share pages. Configurable toggle and custom text in Branding & Appearance settings. Visitors see a fixed bottom banner with accept/decline and expandable full disclosure text. Preference stored in localStorage (no cookies).
+- Page size selector (10/25/50/100) on the security events dashboard for adjustable pagination.
+- New customizable email template types: OTP verification, client activity summary, and admin activity summary.
+- Localized default content for the new email templates in both English and Dutch, including preview metadata and placeholder descriptions/examples.
+- Stronger server-side validation for global settings (preview resolution, SMTP port/security/from address, and app domain).
+
+### Changed
+- Tutorial video reel step now highlights the previous arrow, video selector, and next arrow individually instead of the entire reel bar.
+- Removed the "Click to browse all videos" tooltip hint from the thumbnail reel (replaced by tutorial steps).
+- Refactored summary and OTP email generation to use the centralized customizable template system.
+- Localized runtime summary wording (titles, subtitles, counters, and labels) for client/admin activity summaries.
+- Improved upload and download consistency with adaptive transfer tuning and better range-streaming behavior.
+- Simplified email template management in Settings so save/reset controls define template state more clearly.
+- Email settings updates now invalidate the cached SMTP/email settings immediately.
+- Replaced remaining direct console logging paths with centralized logging helpers across API and worker code.
+- Hardened security-settings handling with cache invalidation, stricter validation, split rate-limit handling, and HTTPS alignment behavior.
+
+### Fixed
+- Share session rate limiting no longer triggers 429 errors on video range requests (scrubbing/seeking).
+- Standardized placeholder sanitization for email rendering (escape-by-default with explicit allowlists for trusted HTML/URL placeholders).
+- Fixed email template preview rendering so placeholders, attachments, unsubscribe sections, and sample content display correctly in the editor.
+- Normalized unsubscribe placeholder support across client-facing email templates and kept backward compatibility for older custom templates.
+- Removed duplicate hardcoded default template source by deriving defaults from the localized template builder.
+- Removed unused email template helper code and resolved related typing/consistency issues.
+- Improved logging consistency in email/notification worker paths by using centralized `logError` handling.
+- Fixed client asset cleanup flow by binding client assets to sessions, filtering pending assets before deletion, and verifying asset ownership on delete operations.
+- Hardened notification retry behavior and improved auth-related logging/error paths.
+
+### Security
+- Prevented passkey user-enumeration paths and sanitized passkey credential names.
+- Applied broader API safety hardening in auth/session and notification-related flows.
+
+### Dependencies
+- Updated `file-type` to `21.3.2`.
+- Updated `flatted` to `3.4.1`.
+
 ## [0.9.5] - 2026-03-11
 
 ### Added

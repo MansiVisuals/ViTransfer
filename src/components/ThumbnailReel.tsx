@@ -44,44 +44,9 @@ export default function ThumbnailReel({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   // Start collapsed on first load
   const [isExpanded, setIsExpanded] = useState(false)
-  const [showHint, setShowHint] = useState(false)
   const hasScrolledRef = useRef(false)
-  const hintTimerRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Check sessionStorage and show hint only if not shown before this session
-  useEffect(() => {
-    const hintShown = sessionStorage.getItem('thumbnailReelHintShown')
-    if (hintShown) {
-      setShowHint(false)
-      return
-    }
-
-    // Show hint and auto-hide after 3 seconds
-    setShowHint(true)
-    hintTimerRef.current = setTimeout(() => {
-      setShowHint(false)
-      sessionStorage.setItem('thumbnailReelHintShown', 'true')
-    }, 3000)
-
-    return () => {
-      if (hintTimerRef.current) {
-        clearTimeout(hintTimerRef.current)
-      }
-    }
-  }, [])
-
-  // Hide hint when user interacts
-  const hideHint = () => {
-    if (hintTimerRef.current) {
-      clearTimeout(hintTimerRef.current)
-      hintTimerRef.current = null
-    }
-    setShowHint(false)
-    sessionStorage.setItem('thumbnailReelHintShown', 'true')
-  }
 
   const handleToggleExpanded = () => {
-    hideHint()
     setIsExpanded(!isExpanded)
   }
 
@@ -116,14 +81,12 @@ export default function ThumbnailReel({
 
   // Navigation
   const handlePrevVideo = () => {
-    hideHint()
     if (activeIndex > 0) {
       onVideoSelect(videoNames[activeIndex - 1])
     }
   }
 
   const handleNextVideo = () => {
-    hideHint()
     if (activeIndex < totalVideos - 1) {
       onVideoSelect(videoNames[activeIndex + 1])
     }
@@ -191,6 +154,7 @@ export default function ThumbnailReel({
           <div className="flex-1 flex items-center justify-center">
             <div className="flex items-center gap-1">
               <Button
+                data-tutorial="video-reel-prev"
                 variant="ghost"
                 size="icon"
                 onClick={handlePrevVideo}
@@ -201,44 +165,29 @@ export default function ThumbnailReel({
                 <ChevronLeft className="w-4 h-4" />
               </Button>
 
-              <div className="relative">
-                <button
-                  onClick={handleToggleExpanded}
+              <button
+                data-tutorial="video-reel-center"
+                onClick={handleToggleExpanded}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all",
+                  "hover:bg-muted/80 active:scale-95",
+                  isExpanded && "bg-muted/50"
+                )}
+                title={isExpanded ? "Hide video thumbnails" : "Show video thumbnails"}
+              >
+                <CheckCircle2
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all",
-                    "hover:bg-muted/80 active:scale-95",
-                    isExpanded && "bg-muted/50"
+                    "w-4 h-4",
+                    hasApprovedCurrent ? "text-success" : "text-muted-foreground/50"
                   )}
-                  title={isExpanded ? "Hide video thumbnails" : "Show video thumbnails (click to browse all videos)"}
-                >
-                  <CheckCircle2
-                    className={cn(
-                      "w-4 h-4",
-                      hasApprovedCurrent ? "text-success" : "text-muted-foreground/50"
-                    )}
-                  />
-                  <span className="text-sm text-muted-foreground tabular-nums">
-                    {activeIndex + 1}/{totalVideos}
-                  </span>
-                </button>
-
-                {/* Floating hint tooltip - points to counter */}
-                <div
-                  className={cn(
-                    "absolute left-1/2 -translate-x-1/2 top-full mt-2 pointer-events-none transition-all duration-300",
-                    showHint && !isExpanded ? "opacity-100" : "opacity-0"
-                  )}
-                >
-                  {/* Arrow pointing up */}
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-1.5 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-foreground/90" />
-                  {/* Tooltip content */}
-                  <div className="bg-foreground/90 text-background text-[11px] px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
-                    {tShare('browseAllVideos')}
-                  </div>
-                </div>
-              </div>
+                />
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {activeIndex + 1}/{totalVideos}
+                </span>
+              </button>
 
               <Button
+                data-tutorial="video-reel-next"
                 variant="ghost"
                 size="icon"
                 onClick={handleNextVideo}
@@ -308,7 +257,6 @@ export default function ThumbnailReel({
                       key={name}
                       data-thumbnail
                       onClick={() => {
-                        hideHint()
                         onVideoSelect(name)
                         setIsExpanded(false) // Close after selection
                       }}
@@ -385,7 +333,6 @@ export default function ThumbnailReel({
         <div
           className="fixed inset-0 z-20"
           onClick={() => {
-            hideHint()
             setIsExpanded(false)
           }}
           aria-hidden="true"

@@ -10,6 +10,7 @@ import { Building2, Plus, Search, Users, Trash2, Edit, FolderKanban, User, Mail,
 import { apiFetch, apiPost, apiPatch, apiDelete } from '@/lib/api-client'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SUPPORTED_LOCALES, LOCALE_NAMES } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
 
 interface ClientContact {
   id: string
@@ -70,7 +71,7 @@ export default function ClientsPage() {
         setCompanies(data.companies || [])
       }
     } catch (err) {
-      console.error('Failed to load companies:', err)
+      logError('Failed to load companies:', err)
     } finally {
       setLoading(false)
     }

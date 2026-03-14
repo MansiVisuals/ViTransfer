@@ -812,8 +812,12 @@
     "welcomeDescription": "Op deze pagina kunt u video's bekijken, feedback geven, definitieve versies goedkeuren en goedgekeurde bestanden downloaden. We laten u even zien hoe het werkt.",
     "gridTitle": "Video Selectie",
     "gridDescription": "Klik op een videominiatuur om te beginnen met reviewen. Video's die nog beoordeeld moeten worden verschijnen eerst.",
-    "reelTitle": "Video Navigatie",
-    "reelDescription": "Wissel tussen verschillende video's in het project via dit paneel. Klik op een miniatuur om deze te selecteren voor review.",
+    "reelPrevTitle": "Vorige Video",
+    "reelPrevDescription": "Gebruik deze pijl om naar de vorige video in het project te gaan.",
+    "reelCenterTitle": "Videokiezer",
+    "reelCenterDescription": "Toont uw huidige positie. Klik om miniaturen te openen en naar een video te springen.",
+    "reelNextTitle": "Volgende Video",
+    "reelNextDescription": "Gebruik deze pijl om naar de volgende video in het project te gaan.",
     "playerTitle": "Videospeler",
     "playerDescription": "Bekijk de video hier. Gebruik de bedieningsknoppen onderaan om af te spelen, te pauzeren en frame voor frame te navigeren.",
     "versionsTitle": "Videoversies",
@@ -911,7 +915,6 @@
     "allVideos": "Alle Video's",
     "previousVideo": "Vorige Video",
     "nextVideo": "Volgende Video",
-    "browseAllVideos": "Klik om alle video's te bekijken",
     "approveThisVersion": "Deze Videoversie Goedkeuren",
     "videoInfo": "Video-informatie",
     "videoInfoDescription": "Projectdetails en originele bestandsspecificaties",
@@ -1025,7 +1028,12 @@
       "teal": "Blauwgroen",
       "amber": "Amber",
       "stone": "Steen",
-      "gold": "Goud"
+      "gold": "Goud",
+      "privacyDisclosure": "Privacyverklaring",
+      "privacyDisclosureDescription": "Toon een AVG-conforme privacyverklaring op de deelpagina's voor klanten. Bezoekers moeten akkoord gaan of weigeren voordat ze verder gaan.",
+      "privacyDisclosureCustomText": "Aangepaste Verklaringstekst",
+      "privacyDisclosurePlaceholder": "Laat leeg om de standaard privacyverklaring te gebruiken",
+      "privacyDisclosureHint": "Indien leeg, wordt een generieke standaardtekst getoond over IP-logging, sessieopslag en reacties. U kunt dit aanpassen om een link naar uw volledige privacybeleid op te nemen."
     },
     "language": {
       "title": "Taal",
@@ -1108,6 +1116,7 @@
       "failedToGeneratePreview": "Voorbeeld genereren mislukt",
       "failedToSaveTemplate": "Template opslaan mislukt",
       "failedToResetTemplate": "Template herstellen mislukt",
+      "failedToUpdateTemplateStatus": "Template-status bijwerken mislukt",
       "invalidTemplateType": "Ongeldig templatetype",
       "subjectRequired": "Onderwerp is verplicht",
       "bodyContentRequired": "Berichtinhoud is verplicht",
@@ -1126,7 +1135,10 @@
         "PROJECT_GENERAL": "Klaar voor Beoordeling",
         "PASSWORD": "Projectwachtwoord",
         "PASSWORD_RESET": "Admin-Wachtwoord Herstellen",
-        "DUE_DATE_REMINDER": "Deadlineherinnering"
+        "DUE_DATE_REMINDER": "Deadlineherinnering",
+        "OTP_VERIFICATION": "OTP-verificatiecode",
+        "CLIENT_ACTIVITY_SUMMARY": "Klantactiviteitssamenvatting",
+        "ADMIN_ACTIVITY_SUMMARY": "Beheeractiviteitssamenvatting"
       },
       "templateDescriptions": {
         "NEW_VERSION": "Wordt naar klanten gestuurd wanneer een nieuwe versie klaarstaat",
@@ -1137,7 +1149,10 @@
         "PROJECT_GENERAL": "Wordt naar klanten gestuurd wanneer video's klaarstaan voor beoordeling",
         "PASSWORD": "Stuurt het wachtwoord apart voor de veiligheid",
         "PASSWORD_RESET": "Wordt naar admins gestuurd bij wachtwoordherstel",
-        "DUE_DATE_REMINDER": "Wordt naar admins gestuurd bij naderende deadline"
+        "DUE_DATE_REMINDER": "Wordt naar admins gestuurd bij naderende deadline",
+        "OTP_VERIFICATION": "Wordt naar ontvangers gestuurd wanneer OTP-verificatie vereist is",
+        "CLIENT_ACTIVITY_SUMMARY": "Geplande samenvatting voor klantontvangers",
+        "ADMIN_ACTIVITY_SUMMARY": "Geplande samenvatting voor admins"
       },
       "placeholderDescriptions": {
         "COMPANY_NAME": "Je bedrijfsnaam uit instellingen",
@@ -1165,7 +1180,14 @@
         "RESET_URL": "Wachtwoord-herstelkoppeling",
         "EXPIRY_TIME": "Geldigheid van de link",
         "DUE_DATE": "Opgemaakte deadline",
-        "REMINDER_TYPE": "Wanneer de deadline is (bijv. morgen, over 7 dagen)"
+        "REMINDER_TYPE": "Wanneer de deadline is (bijv. morgen, over 7 dagen)",
+        "OTP_CODE": "Eenmalige verificatiecode",
+        "EXPIRY_MINUTES": "Verlooptijd van de code in minuten",
+        "SUMMARY_TEXT": "Samenvattingstekst met aantallen",
+        "PERIOD": "Periode van het schema",
+        "SUMMARY_ITEMS": "Gerenderde HTML voor samenvattingsitems",
+        "SUMMARY_PROJECTS": "Gerenderde HTML voor projectsamenvatting",
+        "UNSUBSCRIBE_SECTION": "HTML-sectie voor uitschrijven (optioneel)"
       },
       "placeholderExamples": {
         "COMPANY_NAME": "Acme Studios",
@@ -1184,7 +1206,14 @@
         "PASSWORD": "xK9mP2nL",
         "EXPIRY_TIME": "30 minuten",
         "DUE_DATE": "15 maart 2026",
-        "REMINDER_TYPE": "morgen"
+        "REMINDER_TYPE": "morgen",
+        "OTP_CODE": "123456",
+        "EXPIRY_MINUTES": "10",
+        "SUMMARY_TEXT": "3 nieuwe opmerkingen, 1 goedkeuring",
+        "PERIOD": "vandaag",
+        "SUMMARY_ITEMS": "",
+        "SUMMARY_PROJECTS": "",
+        "UNSUBSCRIBE_SECTION": ""
       },
       "previewTitles": {
         "NEW_VERSION": "Nieuwe Versie Beschikbaar",
@@ -1195,13 +1224,17 @@
         "PROJECT_GENERAL": "Klaar voor Beoordeling",
         "PASSWORD": "Projectwachtwoord",
         "PASSWORD_RESET": "Wachtwoord Herstellen",
-        "DUE_DATE_REMINDER": "Deadlineherinnering"
+        "DUE_DATE_REMINDER": "Deadlineherinnering",
+        "OTP_VERIFICATION": "Verificatiecode",
+        "CLIENT_ACTIVITY_SUMMARY": "Projectupdate",
+        "ADMIN_ACTIVITY_SUMMARY": "Klantactiviteitsoverzicht"
       },
       "previewSubtitles": {
         "NEW_VERSION": "Klaar voor beoordeling",
         "PROJECT_APPROVED": "Klaar voor download",
         "PASSWORD_RESET": "Herstel je beheerderswachtwoord",
-        "DUE_DATE_REMINDER_SUFFIX": "heeft deadline morgen"
+        "DUE_DATE_REMINDER_SUFFIX": "heeft deadline morgen",
+        "ADMIN_ACTIVITY_SUMMARY": "Laatste updates"
       }
     },
     "notifications": {
@@ -1256,9 +1289,10 @@
       "description": "Configureer geavanceerde beveiligingsopties",
       "warning": "Waarschuwing: Geavanceerde Configuratie",
       "warningDescription": "Deze instellingen bepalen kritieke beveiligingsfuncties zoals verzoekslimieten, hotlink-bescherming en toegangscontrole. Als je deze waarden zonder goed begrip wijzigt, kan dat invloed hebben op de werking en beveiliging van het systeem. Pas dit alleen aan als je bekend bent met deze beveiligingsmechanismen.",
-      "httpsEnforcement": "HTTPS-handhaving",
-      "httpsHint": "Inschakelen voor productie-implementaties. Uitschakelen voor lokale ontwikkeling met HTTP.",
-      "hstsEnabled": "HSTS-header is ingeschakeld, browsers worden gedwongen HTTPS-verbindingen te gebruiken.",
+      "httpsEnforcement": "HTTPS-modus",
+      "httpsHint": "Wordt gebruikt voor effectieve HTTPS-controles en passkey-validatie. Response-headers volgen de HTTPS_ENABLED-omgevingsinstelling van de deployment.",
+      "hstsEnabled": "HTTPS is ingeschakeld voor runtime-beveiligingscontroles.",
+      "httpsManagedByEnvironment": "Deze instelling wordt momenteel beheerd door de HTTPS_ENABLED-omgevingsvariabele.",
       "hotlinkProtection": "Hotlink-bescherming",
       "hotlinkDisabled": "Uitgeschakeld - Geen hotlink-bescherming",
       "hotlinkLogOnly": "Alleen loggen - Detecteren maar toestaan",
@@ -1276,10 +1310,10 @@
       "rateLimiting": "Verzoekslimieten & Beveiliging",
       "ipRateLimit": "IP-verzoekslimiet",
       "ipRateLimitHint": "Verzoeken per minuut per IP (standaard: 1000)",
-      "adminSessionLimit": "Admin-sessielimiet",
-      "adminSessionLimitHint": "Verzoeken per minuut per admin-sessie (standaard: 600)",
-      "shareSessionLimit": "Deel-sessielimiet",
-      "shareSessionLimitHint": "Verzoeken per minuut per deel-sessie (standaard: 300)",
+      "adminSessionLimit": "Admin-inhoudssessielimiet",
+      "adminSessionLimitHint": "Verzoeken per minuut voor admin-streaming en downloads van inhoud (standaard: 600)",
+      "shareSessionLimit": "Deel-inhoudssessielimiet",
+      "shareSessionLimitHint": "Verzoeken per minuut voor deel-link inhoudstoegang en streaming (standaard: 300)",
       "authAttempts": "Authenticatiepogingen",
       "authAttemptsHint": "Maximum authenticatiepogingen (wachtwoord of OTP) voor vergrendeling",
       "uploadSecurity": "Uploadbeveiliging",
@@ -1476,6 +1510,7 @@
     "types": "Types",
     "blocked": "Geblokkeerd",
     "showing": "{count} van {total} weergegeven",
+    "perPage": "/ pagina",
     "severity": "Ernst",
     "eventType": "Gebeurtenistype",
     "ipAddress": "IP-adres",
@@ -1969,6 +2004,37 @@
       "body": "<strong>{{PROJECT_TITLE}}</strong> heeft de deadline <strong>{{REMINDER_TYPE}}</strong>.",
       "button": "Bekijken in Beheerderspaneel"
     },
+    "otpVerification": {
+      "subject": "Uw verificatiecode voor {{PROJECT_TITLE}}",
+      "body": "Gebruik deze verificatiecode om toegang te krijgen tot <strong>{{PROJECT_TITLE}}</strong>:",
+      "codeLabel": "Verificatiecode",
+      "expiry": "Deze code verloopt over {{EXPIRY_MINUTES}} minuten.",
+      "ignoreNotice": "Heeft u deze code niet aangevraagd? Dan kunt u deze e-mail veilig negeren."
+    },
+    "clientActivitySummary": {
+      "title": "Projectupdate",
+      "subject": "Updates over {{PROJECT_TITLE}}",
+      "body": "Hierbij een update over <strong>{{PROJECT_TITLE}}</strong>.",
+      "summaryLabel": "Samenvatting",
+      "latestActivity": "Laatste activiteit",
+      "newCommentSingular": "nieuwe opmerking",
+      "newCommentPlural": "nieuwe opmerkingen",
+      "approvalSingular": "goedkeuring",
+      "approvalPlural": "goedkeuringen",
+      "unapprovedLabel": "intrekkingen",
+      "button": "Project Bekijken"
+    },
+    "adminActivitySummary": {
+      "title": "Overzicht van klantactiviteit",
+      "subject": "Overzicht projectactiviteit ({{SUMMARY_TEXT}})",
+      "body": "Hierbij de nieuwste klantactiviteit ({{SUMMARY_TEXT}} {{PERIOD}}).",
+      "commentSingular": "opmerking",
+      "commentPlural": "opmerkingen",
+      "projectSingular": "project",
+      "projectPlural": "projecten",
+      "across": "over",
+      "button": "Beheerdersdashboard Openen"
+    },
     "passwordNotice": "Beveiligd project: Gebruik het apart verstuurde wachtwoord om toegang te krijgen tot dit project."
   },
   "notificationsText": {
@@ -1991,5 +2057,15 @@
     "ignoreNotice": "Heeft u deze code niet aangevraagd? Dan kunt u deze e-mail negeren.",
     "textIntro": "Uw verificatiecode voor {projectTitle} is:",
     "textIgnoreNotice": "Heeft u deze code niet aangevraagd? Dan kunt u deze e-mail veilig negeren."
+  },
+
+  "privacy": {
+    "title": "Privacyverklaring",
+    "summary": "Dit platform verwerkt een aantal van uw gegevens om de reviewservice te kunnen bieden.",
+    "readMore": "Meer lezen",
+    "readLess": "Minder lezen",
+    "accept": "Akkoord",
+    "decline": "Weigeren",
+    "defaultDisclosureText": "Dit platform registreert toegangsactiviteit, waaronder uw IP-adres en browserinformatie, voor beveiligings- en functionaliteitsdoeleinden. Uw sessie wordt bijgehouden via lokale browseropslag (er worden geen cookies gebruikt). Opmerkingen en feedback die u achterlaat worden opgeslagen en gedeeld met de projecteigenaar.\n\nDeze gegevens worden verwerkt op basis van het gerechtvaardigd belang van het handhaven van platformbeveiliging en het mogelijk maken van de reviewworkflow. Voor vragen over hoe uw gegevens worden verwerkt, inclusief verzoeken om inzage, correctie of verwijdering, neem contact op met de persoon die deze link met u heeft gedeeld."
   }
 }

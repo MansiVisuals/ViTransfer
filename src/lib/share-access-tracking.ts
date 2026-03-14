@@ -5,6 +5,7 @@ import { enqueueExternalNotification } from '@/lib/external-notifications/enqueu
 import { generateShareUrl, getAppUrl } from '@/lib/url'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
 
 export async function trackSharePageAccess(params: {
   projectId: string
@@ -34,7 +35,7 @@ export async function trackSharePageAccess(params: {
         },
       })
     } catch (error) {
-      console.error('[ANALYTICS] Failed to track share page access:', error)
+      logError('[ANALYTICS] Failed to track share page access', error)
     }
   }
 
@@ -83,5 +84,7 @@ export async function trackSharePageAccess(params: {
       projectId: project?.id || undefined,
       email: email || undefined,
     },
-  }).catch(() => {})
+  }).catch((notificationError) => {
+    logError('[ANALYTICS] Failed to enqueue share access notification', notificationError)
+  })
 }

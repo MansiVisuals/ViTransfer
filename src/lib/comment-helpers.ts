@@ -8,6 +8,7 @@ import { enqueueExternalNotification } from '@/lib/external-notifications/enqueu
 import { getAppDomain } from '@/lib/url'
 import { formatTimecodeDisplay, timecodeToSeekSeconds } from '@/lib/timecode'
 import { htmlToText } from 'html-to-text'
+import { logError, logMessage } from '@/lib/logging'
 
 /**
  * Validate comment permissions
@@ -189,7 +190,7 @@ export async function handleCommentNotifications(params: {
     })
 
     if (!project) {
-      console.log('[COMMENT-NOTIFICATION] Project not found')
+      logMessage('[COMMENT-NOTIFICATION] Project not found')
       return
     }
 
@@ -201,7 +202,7 @@ export async function handleCommentNotifications(params: {
         })
       : null
 
-    console.log('[COMMENT-NOTIFICATION] Video:', video?.name || 'None')
+    logMessage('[COMMENT-NOTIFICATION] Video:', video?.name || 'None')
 
     // External notifications (Apprise) - client comments only
     if (!isAdminComment) {
@@ -268,15 +269,17 @@ export async function handleCommentNotifications(params: {
           email: authorEmail || undefined,
           url: adminShareUrl || undefined,
         },
-      }).catch(() => {})
+      }).catch((notificationError) => {
+        logError('[COMMENT-NOTIFICATION] Failed to enqueue external notification', notificationError)
+      })
     }
 
     // Check if SMTP is configured (email notifications)
     const smtpConfigured = await isSmtpConfigured()
-    console.log('[COMMENT-NOTIFICATION] SMTP configured:', smtpConfigured)
+    logMessage('[COMMENT-NOTIFICATION] SMTP configured:', smtpConfigured)
 
     if (!smtpConfigured) {
-      console.log('[COMMENT-NOTIFICATION] Email notifications skipped - SMTP not configured')
+      logMessage('[COMMENT-NOTIFICATION] Email notifications skipped - SMTP not configured')
       return
     }
 
@@ -289,7 +292,7 @@ export async function handleCommentNotifications(params: {
     const adminSchedule = settings?.adminNotificationSchedule || 'IMMEDIATE'
     const clientSchedule = project.clientNotificationSchedule
 
-    console.log(`[COMMENT-NOTIFICATION] Comment type: ${isAdminComment ? 'ADMIN' : 'CLIENT'}, Admin schedule: ${adminSchedule}, Client schedule: ${clientSchedule}`)
+    logMessage(`[COMMENT-NOTIFICATION] Comment type: ${isAdminComment ? 'ADMIN' : 'CLIENT'}, Admin schedule: ${adminSchedule}, Client schedule: ${clientSchedule}`)
 
     const context = {
       comment,
@@ -309,18 +312,18 @@ export async function handleCommentNotifications(params: {
 
     // Send immediate emails for sides that use IMMEDIATE
     if (clientImmediate) {
-      console.log('[COMMENT-NOTIFICATION] Client path: sending immediately...')
+      logMessage('[COMMENT-NOTIFICATION] Client path: sending immediately...')
       await sendImmediateNotification(context, 'client')
     }
     if (adminImmediate) {
-      console.log('[COMMENT-NOTIFICATION] Admin path: sending immediately...')
+      logMessage('[COMMENT-NOTIFICATION] Admin path: sending immediately...')
       await sendImmediateNotification(context, 'admin')
     }
 
     // Queue once if either side needs batched delivery.
     // Pre-mark sides that were already sent immediately so workers don't re-process them.
     if (!clientImmediate || !adminImmediate) {
-      console.log(`[COMMENT-NOTIFICATION] Queuing for batched delivery (admin: ${adminSchedule}, client: ${clientSchedule})...`)
+      logMessage(`[COMMENT-NOTIFICATION] Queuing for batched delivery (admin: ${adminSchedule}, client: ${clientSchedule})...`)
       await queueNotification(context, {
         admins: adminImmediate,
         clients: clientImmediate,
@@ -328,7 +331,7 @@ export async function handleCommentNotifications(params: {
     }
   } catch (emailError) {
     // Don't fail the request if notification processing fails
-    console.error('[COMMENT-NOTIFICATION] Error processing notification:', emailError)
+    logError('[COMMENT-NOTIFICATION] Error processing notification:', emailError)
   }
 }
 
@@ -340,7 +343,7 @@ export async function cancelCommentNotification(commentId: string): Promise<void
   try {
     const redis = getRedis()
 
-    console.log(`[CANCEL-NOTIFICATION] Cancelling notification for comment ${commentId}`)
+    logMessage(`[CANCEL-NOTIFICATION] Cancelling notification for comment ${commentId}`)
 
     // Mark as cancelled in Redis (8-day TTL covers weekly schedules)
     await redis.set(
@@ -360,9 +363,9 @@ export async function cancelCommentNotification(commentId: string): Promise<void
       }
     })
 
-    console.log(`[CANCEL-NOTIFICATION] Successfully cancelled notification for comment ${commentId}`)
+    logMessage(`[CANCEL-NOTIFICATION] Successfully cancelled notification for comment ${commentId}`)
   } catch (error) {
-    console.error('[CANCEL-NOTIFICATION] Error cancelling notification:', error)
+    logError('[CANCEL-NOTIFICATION] Error cancelling notification:', error)
     // Don't throw - deletion should succeed even if notification cancellation fails
   }
 }

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Building2, User, Plus, Check } from 'lucide-react'
 import { apiFetch, apiPost } from '@/lib/api-client'
+import { logError } from '@/lib/logging'
 
 interface ClientContact {
   id: string
@@ -84,7 +85,7 @@ export function ClientSelector({
         setCompanies(data.companies || [])
       }
     } catch (err) {
-      console.error('Failed to search companies:', err)
+      logError('Failed to search companies:', err)
     } finally {
       setLoading(false)
     }
@@ -105,7 +106,7 @@ export function ClientSelector({
         setContacts(data.contacts || [])
       }
     } catch (err) {
-      console.error('Failed to search contacts:', err)
+      logError('Failed to search contacts:', err)
     } finally {
       setLoading(false)
     }
@@ -184,7 +185,7 @@ export function ClientSelector({
         setShowCompanyDropdown(false)
       }
     } catch (err) {
-      console.error('Failed to create company:', err)
+      logError('Failed to create company:', err)
     }
   }
 

@@ -4,6 +4,8 @@ import { isPasskeyConfigured } from '@/lib/settings'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -73,17 +75,12 @@ export async function POST(request: NextRequest) {
       sessionId, // Return sessionId for usernameless auth
     })
   } catch (error) {
-    console.error('[PASSKEY] Authentication options error:', error)
+    logError('[PASSKEY] Authentication options error:', error)
 
-    // Return user-friendly error
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : (authMessages.failedToGeneratePasskeyAuthenticationOptions || 'Failed to generate PassKey authentication options')
-
+    // SECURITY: Never expose internal error details — prevents user enumeration
     return NextResponse.json(
       {
-        error: errorMessage,
+        error: authMessages.failedToGeneratePasskeyAuthenticationOptions || 'Failed to generate PassKey authentication options',
       },
       { status: 500 }
     )

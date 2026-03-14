@@ -5,6 +5,8 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
 import { initStorage, deleteFile } from '@/lib/storage'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 // POST /api/videos/[id]/client-assets - Create a client asset record (JSON)
@@ -65,6 +67,11 @@ export async function POST(
 
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
+    }
+
+    const uploaderSessionId = accessCheck.shareTokenSessionId
+    if (!uploaderSessionId) {
+      return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
     // Parse JSON body
@@ -131,6 +138,7 @@ export async function POST(
         category,
         uploadedBy: 'client',
         uploadedByName: authorName || authorEmail || null,
+        uploadedBySessionId: uploaderSessionId,
       },
     })
 
@@ -142,7 +150,7 @@ export async function POST(
       category,
     })
   } catch (error) {
-    console.error('Error creating client asset record:', error)
+    logError('Error creating client asset record:', error)
     return NextResponse.json(
       { error: videosMessages.failedToCreateAssetRecord || 'Failed to create asset record' },
       { status: 500 }
@@ -197,10 +205,16 @@ export async function GET(
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
+    const uploaderSessionId = accessCheck.shareTokenSessionId
+    if (!uploaderSessionId) {
+      return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
+    }
+
     const assets = await prisma.videoAsset.findMany({
       where: {
         videoId,
         uploadedBy: 'client',
+        ...(accessCheck.isAdmin ? {} : { uploadedBySessionId: uploaderSessionId }),
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -218,7 +232,7 @@ export async function GET(
 
     return NextResponse.json({ assets: serializedAssets })
   } catch (error) {
-    console.error('Error fetching client assets:', error)
+    logError('Error fetching client assets:', error)
     return NextResponse.json(
       { error: videosMessages.failedToFetchClientAssets || 'Failed to fetch client assets' },
       { status: 500 }
@@ -281,11 +295,16 @@ export async function DELETE(
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
-    const asset = await prisma.videoAsset.findFirst({
+    const uploaderSessionId = accessCheck.shareTokenSessionId
+    if (!uploaderSessionId) {
+      return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
+    }
+
+    const pendingAssets = await prisma.videoAsset.findMany({
       where: {
-        id: assetId,
         videoId,
         uploadedBy: 'client',
+        uploadedBySessionId: uploaderSessionId,
         commentId: null,
       },
       select: {
@@ -294,20 +313,20 @@ export async function DELETE(
       },
     })
 
+    const asset = pendingAssets.find((pendingAsset) => pendingAsset.id === assetId)
+
     if (!asset) {
       return NextResponse.json({ error: videosMessages.attachmentNotFound || 'Attachment not found' }, { status: 404 })
     }
+    await initStorage()
+
+    await deleteFile(asset.storagePath)
 
     await prisma.videoAsset.delete({ where: { id: asset.id } })
 
-    await initStorage()
-    await deleteFile(asset.storagePath).catch((error) => {
-      console.warn('[CLIENT-ASSET] Failed to delete file after record cleanup:', error)
-    })
-
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting client asset:', error)
+    logError('Error deleting client asset:', error)
     return NextResponse.json(
       { error: videosMessages.failedToDeleteAttachment || 'Failed to delete attachment' },
       { status: 500 }

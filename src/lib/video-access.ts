@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { NextRequest } from 'next/server'
 import { prisma } from './db'
+import { logError, logMessage } from './logging'
 import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
 import { getRedis } from './redis'
@@ -10,6 +11,7 @@ type SecuritySettingsResult = {
   hotlinkProtection: string
   ipRateLimit: number
   sessionRateLimit: number
+  shareSessionRateLimit: number
   trackSecurityLogs: boolean
   trackAnalytics: boolean
 }
@@ -20,6 +22,7 @@ const securitySettingsCache: CachedValue<SecuritySettingsResult> = {
     hotlinkProtection: 'LOG_ONLY',
     ipRateLimit: 1000,
     sessionRateLimit: 600,
+    shareSessionRateLimit: 300,
     trackSecurityLogs: true,
     trackAnalytics: true
   },
@@ -137,14 +140,11 @@ export async function verifyVideoAccessToken(
     tokenData = JSON.parse(data)
 
     if (!tokenData.videoId || !tokenData.projectId || !tokenData.sessionId) {
-      console.error('[SECURITY] Invalid token data structure', { token: token.substring(0, 10) })
+      logMessage(`[SECURITY] Invalid token data structure (tokenPrefix=${token.substring(0, 10)})`)
       return null
     }
   } catch (error) {
-    console.error('[SECURITY] Failed to parse video access token data', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      token: token.substring(0, 10)
-    })
+    logError(`[SECURITY] Failed to parse video access token data (tokenPrefix=${token.substring(0, 10)})`, error)
     return null
   }
 
@@ -358,7 +358,7 @@ export async function logSecurityEvent(params: {
     }))
     await redis.ltrim('security:events:recent', 0, 999)
   } catch (error) {
-    console.error('[SECURITY_EVENT] Failed to log:', error)
+    logError('[SECURITY_EVENT] Failed to log:', error)
   }
 }
 
@@ -389,6 +389,7 @@ export async function getSecuritySettings() {
       hotlinkProtection: true,
       ipRateLimit: true,
       sessionRateLimit: true,
+      shareSessionRateLimit: true,
       trackSecurityLogs: true,
       trackAnalytics: true,
       updatedAt: true
@@ -399,6 +400,7 @@ export async function getSecuritySettings() {
     hotlinkProtection: settings?.hotlinkProtection || 'LOG_ONLY',
     ipRateLimit: settings?.ipRateLimit || 1000,
     sessionRateLimit: settings?.sessionRateLimit || 600,
+    shareSessionRateLimit: settings?.shareSessionRateLimit || 300,
     trackSecurityLogs: settings?.trackSecurityLogs ?? true,
     trackAnalytics: settings?.trackAnalytics ?? true
   }
@@ -411,6 +413,13 @@ export async function getSecuritySettings() {
   await redis.setex(REDIS_KEY, 300, JSON.stringify(value)) // 5 min Redis cache
 
   return value
+}
+
+export async function invalidateSecuritySettingsCache(): Promise<void> {
+  securitySettingsCache.expiresAt = 0
+
+  const redis = getRedis()
+  await redis.del('app:security_settings')
 }
 
 const BLOCKLIST_CACHE_TTL = 300 // 5 minutes
@@ -430,7 +439,7 @@ async function getBlockedIPs(): Promise<string[]> {
     try {
       return JSON.parse(cached)
     } catch (error) {
-      console.error('[BLOCKLIST] Failed to parse cached IPs:', error)
+      logError('[BLOCKLIST] Failed to parse cached IPs:', error)
     }
   }
 
@@ -460,7 +469,7 @@ async function getBlockedDomains(): Promise<string[]> {
     try {
       return JSON.parse(cached)
     } catch (error) {
-      console.error('[BLOCKLIST] Failed to parse cached domains:', error)
+      logError('[BLOCKLIST] Failed to parse cached domains:', error)
     }
   }
 
@@ -502,10 +511,7 @@ export async function revokeProjectVideoTokens(projectId: string): Promise<void>
           keysToDelete.push(key)
         }
       } catch (error) {
-        console.error('[SECURITY] Corrupted token data during revocation, will delete', {
-          key,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
+        logError(`[SECURITY] Corrupted token data during revocation, will delete (key=${key})`, error)
         keysToDelete.push(key)
       }
     }

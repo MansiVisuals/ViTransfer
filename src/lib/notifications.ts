@@ -8,6 +8,7 @@ import { getRedis } from './redis'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from './unsubscribe'
 import { normalizeNotificationDataTimecode } from '@/worker/notification-helpers'
+import { logError, logMessage } from '@/lib/logging'
 
 interface NotificationContext {
   comment: Comment
@@ -39,7 +40,7 @@ export async function sendImmediateNotification(context: NotificationContext, ta
   const cancelled = await redis.get(`comment_cancelled:${comment.id}`)
 
   if (cancelled) {
-    console.log(`[IMMEDIATE] Comment ${comment.id} notification was cancelled, skipping send`)
+    logMessage(`[IMMEDIATE] Comment ${comment.id} notification was cancelled, skipping send`)
     return
   }
 
@@ -59,13 +60,13 @@ export async function sendImmediateNotification(context: NotificationContext, ta
     })
 
     if (recipients.length === 0) {
-      console.log(`[IMMEDIATE→CLIENT] Skipped - no recipients for project "${project.title}"`)
+      logMessage(`[IMMEDIATE→CLIENT] Skipped - no recipients for project "${project.title}"`)
       return
     }
 
-    console.log(`[IMMEDIATE→CLIENT] Sending to ${recipients.length} recipient(s) for "${project.title}"`)
-    console.log(`[IMMEDIATE→CLIENT]   Video: ${videoName} (${versionLabel})`)
-    console.log(`[IMMEDIATE→CLIENT]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
+    logMessage(`[IMMEDIATE→CLIENT] Sending to ${recipients.length} recipient(s) for "${project.title}"`)
+    logMessage(`[IMMEDIATE→CLIENT]   Video: ${videoName} (${versionLabel})`)
+    logMessage(`[IMMEDIATE→CLIENT]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
 
     const emailPromises = recipients.map(async (recipient) => {
       let unsubscribeUrl: string | undefined
@@ -100,9 +101,9 @@ export async function sendImmediateNotification(context: NotificationContext, ta
         locale: recipientLocale,
       }).then(result => {
         if (result.success) {
-          console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
+          logMessage(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
         } else {
-          console.error(`[IMMEDIATE→CLIENT]   Failed to ${recipient.email}: ${result.error}`)
+          logError(`[IMMEDIATE→CLIENT]   Failed to ${recipient.email}: ${result.error}`)
         }
         return result
       })
@@ -123,13 +124,13 @@ export async function sendImmediateNotification(context: NotificationContext, ta
     })
 
     if (targetAdmins.length === 0) {
-      console.log(`[IMMEDIATE→ADMIN] Skipped - no admins to notify for "${project.title}"`)
+      logMessage(`[IMMEDIATE→ADMIN] Skipped - no admins to notify for "${project.title}"`)
       return
     }
 
-    console.log(`[IMMEDIATE→ADMIN] Sending to ${targetAdmins.length} admin(s) for "${project.title}"`)
-    console.log(`[IMMEDIATE→ADMIN]   Video: ${videoName} (${versionLabel})`)
-    console.log(`[IMMEDIATE→ADMIN]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
+    logMessage(`[IMMEDIATE→ADMIN] Sending to ${targetAdmins.length} admin(s) for "${project.title}"`)
+    logMessage(`[IMMEDIATE→ADMIN]   Video: ${videoName} (${versionLabel})`)
+    logMessage(`[IMMEDIATE→ADMIN]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
 
     const result = await sendAdminCommentNotificationEmail({
       adminEmails: targetAdmins.map(a => a.email),
@@ -148,9 +149,9 @@ export async function sendImmediateNotification(context: NotificationContext, ta
     })
 
     if (result.success) {
-      console.log(`[IMMEDIATE→ADMIN]   ${result.message}`)
+      logMessage(`[IMMEDIATE→ADMIN]   ${result.message}`)
     } else {
-      console.error(`[IMMEDIATE→ADMIN]   Failed: ${result.message}`)
+      logError(`[IMMEDIATE→ADMIN]   Failed: ${result.message}`)
     }
   }
 }
@@ -167,9 +168,9 @@ export async function queueNotification(
 
   const type = comment.isInternal ? 'ADMIN_REPLY' : 'CLIENT_COMMENT'
 
-  console.log(`[QUEUE] Adding ${type} to queue for "${project.title}"`)
-  console.log(`[QUEUE]   Video: ${video?.name || 'N/A'} (${video?.versionLabel || 'N/A'})`)
-  console.log(`[QUEUE]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
+  logMessage(`[QUEUE] Adding ${type} to queue for "${project.title}"`)
+  logMessage(`[QUEUE]   Video: ${video?.name || 'N/A'} (${video?.versionLabel || 'N/A'})`)
+  logMessage(`[QUEUE]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
 
   // Get parent comment context if this is a reply
   let parentCommentData = null
@@ -219,7 +220,7 @@ export async function queueNotification(
     }
   })
 
-  console.log(`[QUEUE]   Queued successfully`)
+  logMessage(`[QUEUE]   Queued successfully`)
 }
 
 /**
@@ -232,13 +233,13 @@ export async function handleApprovalNotification(context: ApprovalNotificationCo
   // Determine notification type based on whether ALL videos are approved
   const type = isComplete ? 'PROJECT_APPROVED' : (approved ? 'VIDEO_APPROVED' : 'VIDEO_UNAPPROVED')
 
-  console.log(`[APPROVAL] Handling ${type} for "${project.title}"`)
+  logMessage(`[APPROVAL] Handling ${type} for "${project.title}"`)
   if (video) {
-    console.log(`[APPROVAL]   Video: ${video.name}`)
+    logMessage(`[APPROVAL]   Video: ${video.name}`)
   }
 
   // ALWAYS send approval notifications immediately, regardless of schedule
-  console.log(`[APPROVAL]   Sending immediately (approvals always bypass schedule)...`)
+  logMessage(`[APPROVAL]   Sending immediately (approvals always bypass schedule)...`)
   await sendApprovalImmediately(context)
 }
 
@@ -269,7 +270,7 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
   // Send to clients ONLY if complete project approval (all videos approved)
   // Don't send for partial approvals - client knows they just clicked approve
   if (recipients.length > 0 && isComplete && approved) {
-    console.log(`[IMMEDIATE→CLIENT] Sending complete project approval to ${recipients.length} recipient(s)`)
+    logMessage(`[IMMEDIATE→CLIENT] Sending complete project approval to ${recipients.length} recipient(s)`)
 
     const emailPromises = recipients.map(async (recipient) => {
       let unsubscribeUrl: string | undefined
@@ -304,9 +305,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
         locale: recipientLocale,
       }).then(result => {
         if (result.success) {
-          console.log(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
+          logMessage(`[IMMEDIATE→CLIENT]   Sent to ${recipient.email}`)
         } else {
-          console.error(`[IMMEDIATE→CLIENT]   Failed to ${recipient.email}: ${result.error}`)
+          logError(`[IMMEDIATE→CLIENT]   Failed to ${recipient.email}: ${result.error}`)
         }
         return result
       })
@@ -314,13 +315,13 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
 
     await Promise.allSettled(emailPromises)
   } else if (recipients.length > 0 && !isComplete) {
-    console.log(`[IMMEDIATE→CLIENT] Skipped - partial approval (${approvedVideos?.length || 0} videos), not sending to client`)
+    logMessage(`[IMMEDIATE→CLIENT] Skipped - partial approval (${approvedVideos?.length || 0} videos), not sending to client`)
   }
 
   // Send to admins - notify them when client approves OR unapproves ANY video
   if (admins.length > 0) {
     const action = approved ? 'approval' : 'unapproval'
-    console.log(`[IMMEDIATE→ADMIN] Sending ${action} notice to ${admins.length} admin(s)`)
+    logMessage(`[IMMEDIATE→ADMIN] Sending ${action} notice to ${admins.length} admin(s)`)
 
     const result = await sendAdminProjectApprovedEmail({
       adminEmails: admins.map(a => a.email),
@@ -332,9 +333,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
     })
 
     if (result.success) {
-      console.log(`[IMMEDIATE→ADMIN]   ${result.message}`)
+      logMessage(`[IMMEDIATE→ADMIN]   ${result.message}`)
     } else {
-      console.error(`[IMMEDIATE→ADMIN]   Failed: ${result.message}`)
+      logError(`[IMMEDIATE→ADMIN]   Failed: ${result.message}`)
     }
   }
 
@@ -363,7 +364,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
       email: authorEmail || undefined,
       url: adminShareUrl || undefined,
     },
-  }).catch(() => {})
+  }).catch((notificationError) => {
+    logError('[APPROVAL] Failed to enqueue external notification', notificationError)
+  })
 }
 
 /**
@@ -386,7 +389,7 @@ export async function flushPendingAdminNotifications(): Promise<void> {
     })
 
     if (pendingNotifications.length === 0) {
-      console.log('[FLUSH-ADMIN] No pending notifications to flush')
+      logMessage('[FLUSH-ADMIN] No pending notifications to flush')
       return
     }
 
@@ -414,7 +417,7 @@ export async function flushPendingAdminNotifications(): Promise<void> {
     }
 
     if (validNotifications.length === 0) {
-      console.log('[FLUSH-ADMIN] All pending notifications were cancelled')
+      logMessage('[FLUSH-ADMIN] All pending notifications were cancelled')
       return
     }
 
@@ -441,7 +444,7 @@ export async function flushPendingAdminNotifications(): Promise<void> {
     })
 
     if (admins.length === 0) {
-      console.log('[FLUSH-ADMIN] No admins found')
+      logMessage('[FLUSH-ADMIN] No admins found')
       return
     }
 
@@ -449,22 +452,23 @@ export async function flushPendingAdminNotifications(): Promise<void> {
     const companyName = emailSettings.companyName || 'ViTransfer'
     const projects = Object.values(projectGroups)
 
-    console.log(`[FLUSH-ADMIN] Sending ${validNotifications.length} queued notification(s) to ${admins.length} admin(s)`)
+    logMessage(`[FLUSH-ADMIN] Sending ${validNotifications.length} queued notification(s) to ${admins.length} admin(s)`)
 
     for (const admin of admins) {
-      const html = generateAdminSummaryEmail({
+      const summaryEmail = await generateAdminSummaryEmail({
         companyName,
         accentColor: emailSettings.accentColor || undefined,
         appDomain: emailSettings.appDomain || undefined,
         adminName: admin.name || '',
         period: 'before schedule change',
-        projects
+        projects,
+        locale: emailSettings.language || 'en',
       })
 
       await sendEmail({
         to: admin.email,
-        subject: `Project activity summary (${validNotifications.length} updates)`,
-        html,
+        subject: summaryEmail.subject,
+        html: summaryEmail.html,
       })
     }
 
@@ -481,9 +485,9 @@ export async function flushPendingAdminNotifications(): Promise<void> {
       data: { lastAdminNotificationSent: now }
     })
 
-    console.log(`[FLUSH-ADMIN] Flushed ${validNotifications.length} notification(s)`)
+    logMessage(`[FLUSH-ADMIN] Flushed ${validNotifications.length} notification(s)`)
   } catch (error) {
-    console.error('[FLUSH-ADMIN] Error flushing notifications:', error)
+    logError('[FLUSH-ADMIN] Error flushing notifications:', error)
   }
 }
 
@@ -510,7 +514,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
     })
 
     if (!project || project.notificationQueue.length === 0) {
-      console.log(`[FLUSH-CLIENT] No pending notifications for project ${projectId}`)
+      logMessage(`[FLUSH-CLIENT] No pending notifications for project ${projectId}`)
       return
     }
 
@@ -538,7 +542,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
     }
 
     if (validNotifications.length === 0) {
-      console.log(`[FLUSH-CLIENT] All pending notifications were cancelled for project ${projectId}`)
+      logMessage(`[FLUSH-CLIENT] All pending notifications were cancelled for project ${projectId}`)
       return
     }
 
@@ -546,7 +550,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
     const recipients = allRecipients.filter(r => r.receiveNotifications && r.email)
 
     if (recipients.length === 0) {
-      console.log(`[FLUSH-CLIENT] No recipients with notifications enabled for project ${projectId}`)
+      logMessage(`[FLUSH-CLIENT] No recipients with notifications enabled for project ${projectId}`)
       return
     }
 
@@ -557,7 +561,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
       normalizeNotificationDataTimecode(n.data as any)
     )
 
-    console.log(`[FLUSH-CLIENT] Sending ${validNotifications.length} queued notification(s) to ${recipients.length} recipient(s) for "${project.title}"`)
+    logMessage(`[FLUSH-CLIENT] Sending ${validNotifications.length} queued notification(s) to ${recipients.length} recipient(s) for "${project.title}"`)
 
     for (const recipient of recipients) {
       let unsubscribeUrl: string | undefined
@@ -572,7 +576,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
         unsubscribeUrl = undefined
       }
 
-      const html = generateNotificationSummaryEmail({
+      const summaryEmail = await generateNotificationSummaryEmail({
         companyName,
         accentColor: emailSettings.accentColor || undefined,
         projectTitle: project.title,
@@ -582,12 +586,13 @@ export async function flushPendingClientNotifications(projectId: string): Promis
         period: 'before schedule change',
         notifications,
         unsubscribeUrl,
+        locale: await getRecipientLocale(recipient.email!),
       })
 
       await sendEmail({
         to: recipient.email!,
-        subject: `Updates on ${project.title}`,
-        html,
+        subject: summaryEmail.subject,
+        html: summaryEmail.html,
       })
     }
 
@@ -604,8 +609,8 @@ export async function flushPendingClientNotifications(projectId: string): Promis
       data: { lastClientNotificationSent: now }
     })
 
-    console.log(`[FLUSH-CLIENT] Flushed ${validNotifications.length} notification(s) for "${project.title}"`)
+    logMessage(`[FLUSH-CLIENT] Flushed ${validNotifications.length} notification(s) for "${project.title}"`)
   } catch (error) {
-    console.error('[FLUSH-CLIENT] Error flushing notifications:', error)
+    logError('[FLUSH-CLIENT] Error flushing notifications:', error)
   }
 }

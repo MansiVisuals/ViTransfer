@@ -1,4 +1,5 @@
 import { prisma } from './db'
+import { logError } from './logging'
 
 /**
  * Sync a recipient to the client directory
@@ -89,7 +90,7 @@ export async function syncRecipientToDirectory(
     }
   } catch (error) {
     // Log but don't throw - this is a background sync operation
-    console.error('[ClientSync] Failed to sync recipient to directory:', error)
+    logError('[ClientSync] Failed to sync recipient to directory:', error)
   }
 }
 
@@ -119,7 +120,7 @@ export async function syncCompanyToDirectory(
 
     return company.id
   } catch (error) {
-    console.error('[ClientSync] Failed to sync company to directory:', error)
+    logError('[ClientSync] Failed to sync company to directory:', error)
     return null
   }
 }

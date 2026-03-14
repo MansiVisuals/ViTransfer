@@ -8,48 +8,20 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getAuthContext } from '@/lib/auth'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+import {
+  DOWNLOAD_CHUNK_SIZE_BYTES,
+  STREAM_CHUNK_SIZE_BYTES,
+  STREAM_HIGH_WATER_MARK_BYTES,
+  parseBoundedRangeHeader,
+} from '@/lib/transfer-tuning'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const STREAM_HIGH_WATER_MARK = 1 * 1024 * 1024 // 1MB stream buffer
-const STREAM_CHUNK_SIZE = 4 * 1024 * 1024 // 4MB chunks for smooth scrubbing/streaming
-const DOWNLOAD_CHUNK_SIZE = 50 * 1024 * 1024 // 50MB chunks
+const CONTENT_SESSION_WINDOW_SECONDS = 60
 
-function parseRangeHeader(
-  rangeHeader: string,
-  totalSize: number,
-  maxChunkSize: number
-): { start: number; end: number } | null {
-  const match = /^bytes=(\d*)-(\d*)$/i.exec(rangeHeader.trim())
-  if (!match) return null
-
-  const rawStart = match[1]
-  const rawEnd = match[2]
-
-  if (!rawStart && !rawEnd) return null
-
-  let start: number
-  let end: number
-
-  if (rawStart) {
-    start = Number.parseInt(rawStart, 10)
-    if (!Number.isFinite(start) || start < 0 || start >= totalSize) return null
-    const requestedEnd = rawEnd ? Number.parseInt(rawEnd, 10) : start + maxChunkSize - 1
-    if (!Number.isFinite(requestedEnd) || requestedEnd < start) return null
-    end = Math.min(requestedEnd, start + maxChunkSize - 1, totalSize - 1)
-  } else {
-    const suffixLength = Number.parseInt(rawEnd, 10)
-    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return null
-    const boundedSuffix = Math.min(suffixLength, maxChunkSize, totalSize)
-    start = Math.max(totalSize - boundedSuffix, 0)
-    end = totalSize - 1
-  }
-
-  if (end < start) return null
-
-  return { start, end }
-}
 
 /**
  * Convert Node.js ReadStream to Web ReadableStream
@@ -145,26 +117,44 @@ export async function GET(
   return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 401 })
     }
 
-    // Session-based rate limiting using lightweight INCR to avoid heavy payloads per chunk
-    const sessionCounterKey = `content-session-count:${sessionId}`
-    const sessionCount = await redis.incr(sessionCounterKey)
-    if (sessionCount === 1) {
-      await redis.expire(sessionCounterKey, 60)
-    }
-    if (sessionCount > securitySettings.sessionRateLimit) {
-      await logSecurityEvent({
-        type: 'RATE_LIMIT_HIT',
-        severity: 'INFO',
-        projectId: preliminaryTokenData.projectId,
-        sessionId,
-        ipAddress: getClientIpAddress(request),
-        details: { limit: 'Session-based', window: '1 minute' },
-        wasBlocked: true
-      })
+    // Session-based content rate limiting.
+    // Range requests (video scrubbing/seeking) are normal browser behaviour and are
+    // already guarded by the IP rate limit, hotlink detection, and the per-video
+    // frequency counter in detectHotlinking (>3000 req / 5 min). Only count
+    // non-range requests (initial video loads, downloads, thumbnails) against the
+    // session budget so that scrubbing never triggers a 429.
+    const rangeHeader = request.headers.get('range')
+    const isRangeRequest = !!rangeHeader
 
-      return NextResponse.json({
-        error: shareMessages.videoStreamingRateLimitExceeded || 'Video streaming rate limit exceeded. Please wait a moment.'
-      }, { status: 429, headers: { 'Retry-After': '60' } })
+    if (!isRangeRequest) {
+      const sessionCounterKey = `content-session-count:${sessionId}`
+      const sessionCount = await redis.incr(sessionCounterKey)
+      if (sessionCount === 1) {
+        await redis.expire(sessionCounterKey, CONTENT_SESSION_WINDOW_SECONDS)
+      }
+
+      const sessionRateLimit = isAdminRequest
+        ? securitySettings.sessionRateLimit
+        : securitySettings.shareSessionRateLimit
+
+      if (sessionCount > sessionRateLimit) {
+        await logSecurityEvent({
+          type: 'RATE_LIMIT_HIT',
+          severity: 'INFO',
+          projectId: preliminaryTokenData.projectId,
+          sessionId,
+          ipAddress: getClientIpAddress(request),
+          details: {
+            limit: isAdminRequest ? 'Admin session-based' : 'Share session-based',
+            window: '1 minute'
+          },
+          wasBlocked: true
+        })
+
+        return NextResponse.json({
+          error: shareMessages.videoStreamingRateLimitExceeded || 'Video streaming rate limit exceeded. Please wait a moment.'
+        }, { status: 429, headers: { 'Retry-After': String(CONTENT_SESSION_WINDOW_SECONDS) } })
+      }
     }
 
     const verifiedToken = await verifyVideoAccessToken(token, request, sessionId)
@@ -315,7 +305,7 @@ export async function GET(
       if (!range) {
         await trackDownloadOnce()
 
-        const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
+        const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
         const readableStream = createWebReadableStream(fileStream)
 
         return new NextResponse(readableStream, {
@@ -333,7 +323,7 @@ export async function GET(
       }
 
       // If client requested range, serve in 16MB chunks to keep UI responsive
-      const parsedRange = parseRangeHeader(range || 'bytes=0-', stat.size, DOWNLOAD_CHUNK_SIZE)
+      const parsedRange = parseBoundedRangeHeader(range || 'bytes=0-', stat.size, DOWNLOAD_CHUNK_SIZE_BYTES)
       if (!parsedRange) {
         return new NextResponse(null, {
           status: 416,
@@ -347,7 +337,7 @@ export async function GET(
         await trackDownloadOnce()
       }
 
-      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
       const readableStream = createWebReadableStream(fileStream)
 
       return new NextResponse(readableStream, {
@@ -367,7 +357,7 @@ export async function GET(
     }
 
     if (range) {
-      const parsedRange = parseRangeHeader(range, stat.size, STREAM_CHUNK_SIZE)
+      const parsedRange = parseBoundedRangeHeader(range, stat.size, STREAM_CHUNK_SIZE_BYTES)
       if (!parsedRange) {
         return new NextResponse(null, {
           status: 416,
@@ -377,7 +367,7 @@ export async function GET(
       const { start, end } = parsedRange
       const chunksize = (end - start) + 1
 
-      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK })
+      const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
       const readableStream = createWebReadableStream(fileStream)
 
       // For non-asset streams, determine Content-Type based on quality
@@ -401,7 +391,7 @@ export async function GET(
       })
     }
 
-    const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK })
+    const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
     const readableStream = createWebReadableStream(fileStream)
 
     // For non-asset streams, determine Content-Type based on quality
@@ -423,7 +413,7 @@ export async function GET(
     })
   } catch (error) {
     // Stream errors are technical issues, not security events
-    console.error('[STREAM] Video streaming error:', error)
+    logError('[STREAM] Video streaming error:', error)
 
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)

@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import { TEMP_DIR } from './cleanup'
+import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
 
@@ -64,9 +65,9 @@ export function debugLog(message: string, data?: any) {
   if (!DEBUG) return
 
   if (data !== undefined) {
-    console.log(`[WORKER DEBUG] ${message}`, data)
+    logMessage(`[WORKER DEBUG] ${message}`, data)
   } else {
-    console.log(`[WORKER DEBUG] ${message}`)
+    logMessage(`[WORKER DEBUG] ${message}`)
   }
 }
 
@@ -92,7 +93,7 @@ export async function downloadAndValidateVideo(
   await pipeline(downloadStream, fs.createWriteStream(tempInputPath))
   const downloadTime = Date.now() - downloadStart
 
-  console.log(`[WORKER] Downloaded original file for video ${videoId} in ${(downloadTime / 1000).toFixed(2)}s`)
+  logMessage(`[WORKER] Downloaded original file for video ${videoId} in ${(downloadTime / 1000).toFixed(2)}s`)
 
   // Verify file exists and has content
   const stats = fs.statSync(tempInputPath)
@@ -101,7 +102,7 @@ export async function downloadAndValidateVideo(
   }
 
   const fileSize = stats.size
-  console.log(`[WORKER] Downloaded file size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`)
+  logMessage(`[WORKER] Downloaded file size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`)
 
   debugLog('File verification passed')
   debugLog('Download speed:', (fileSize / 1024 / 1024 / (downloadTime / 1000)).toFixed(2) + ' MB/s')
@@ -119,7 +120,7 @@ export async function downloadAndValidateVideo(
     throw new Error(`File content does not match a valid video format. Detected: ${fileType.mime}`)
   }
 
-  console.log(`[WORKER] Magic byte validation passed - detected type: ${fileType.mime}`)
+  logMessage(`[WORKER] Magic byte validation passed - detected type: ${fileType.mime}`)
   debugLog('File is a valid video format')
 
   // Get video metadata
@@ -129,7 +130,7 @@ export async function downloadAndValidateVideo(
   const metadata = await getVideoMetadata(tempInputPath)
   const metadataTime = Date.now() - metadataStart
 
-  console.log(`[WORKER] Video metadata:`, metadata)
+  logMessage(`[WORKER] Video metadata:`, metadata)
   debugLog('Metadata extraction took:', (metadataTime / 1000).toFixed(2) + ' s')
 
   return {
@@ -194,7 +195,7 @@ export function calculateOutputDimensions(
   const isSquareOrNearSquare = Math.abs(metadata.width - metadata.height) / Math.max(metadata.width, metadata.height) < 0.2
   const aspectRatio = metadata.width / metadata.height
 
-  console.log(`[WORKER] Video orientation: ${isVertical ? 'vertical' : isSquareOrNearSquare ? 'square' : 'horizontal'} (${metadata.width}x${metadata.height}, ratio: ${aspectRatio.toFixed(2)})`)
+  logMessage(`[WORKER] Video orientation: ${isVertical ? 'vertical' : isSquareOrNearSquare ? 'square' : 'horizontal'} (${metadata.width}x${metadata.height}, ratio: ${aspectRatio.toFixed(2)})`)
 
   const preset = RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS] || RESOLUTION_PRESETS['720p']
 
@@ -228,7 +229,7 @@ export function calculateOutputDimensions(
     }
   }
 
-  console.log(`[WORKER] Output resolution: ${dimensions.width}x${dimensions.height}`)
+  logMessage(`[WORKER] Output resolution: ${dimensions.width}x${dimensions.height}`)
 
   debugLog('Resolution calculation:', {
     setting: resolution,
@@ -282,7 +283,7 @@ export async function processPreview(
             data: { processingProgress: progress * PROGRESS_WEIGHTS.transcode },
           })
         } catch (err) {
-          console.error(`[WORKER] Progress update failed for video ${videoId}:`, err)
+          logError(`[WORKER] Progress update failed for video ${videoId}:`, err)
         } finally {
           writing = false
         }
@@ -291,7 +292,7 @@ export async function processPreview(
   })
 
   const transcodeTime = Date.now() - transcodeStart
-  console.log(`[WORKER] Generated ${settings.resolution} preview for video ${videoId} in ${(transcodeTime / 1000).toFixed(2)}s`)
+  logMessage(`[WORKER] Generated ${settings.resolution} preview for video ${videoId} in ${(transcodeTime / 1000).toFixed(2)}s`)
 
   const transcodeStats = fs.statSync(tempPreviewPath)
   debugLog('Transcoded file size:', (transcodeStats.size / 1024 / 1024).toFixed(2) + ' MB')
@@ -342,7 +343,7 @@ export async function processThumbnail(
   await generateThumbnail(inputPath, tempThumbnailPath, timestamp)
   const thumbTime = Date.now() - thumbStart
 
-  console.log(`[WORKER] Generated thumbnail for video ${videoId} in ${(thumbTime / 1000).toFixed(2)}s`)
+  logMessage(`[WORKER] Generated thumbnail for video ${videoId} in ${(thumbTime / 1000).toFixed(2)}s`)
 
   // Upload thumbnail
   const thumbnailPath = `projects/${projectId}/videos/${videoId}/thumbnail.jpg`
@@ -453,11 +454,11 @@ export async function cleanupTempFiles(tempFiles: TempFiles): Promise<void> {
       if (fs.existsSync(file)) {
         const fileStats = fs.statSync(file)
         await fs.promises.unlink(file)
-        console.log(`[WORKER] Cleaned up temp file: ${path.basename(file)}`)
+        logMessage(`[WORKER] Cleaned up temp file: ${path.basename(file)}`)
         debugLog('Freed disk space:', (fileStats.size / 1024 / 1024).toFixed(2) + ' MB')
       }
     } catch (cleanupError) {
-      console.error(`[WORKER ERROR] Failed to cleanup temp file ${path.basename(file)}:`, cleanupError)
+      logError(`[WORKER ERROR] Failed to cleanup temp file ${path.basename(file)}:`, cleanupError)
     }
   }
 }
@@ -469,7 +470,7 @@ export async function handleProcessingError(
   videoId: string,
   error: unknown
 ): Promise<void> {
-  console.error(`[WORKER ERROR] Error processing video ${videoId}:`, error)
+  logError(`[WORKER ERROR] Error processing video ${videoId}:`, error)
 
   if (error instanceof Error) {
     debugLog('Full error stack:', error.stack)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { logError, logMessage } from '@/lib/logging'
 
 /**
  * ServiceWorkerProvider registers the service worker for PWA functionality.
@@ -10,7 +11,7 @@ export function ServiceWorkerProvider() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!('serviceWorker' in navigator)) {
-      console.log('[SW] Service workers not supported')
+      logMessage('[SW] Service workers not supported')
       return
     }
 
@@ -21,7 +22,7 @@ export function ServiceWorkerProvider() {
           scope: '/',
         })
 
-        console.log('[SW] Service worker registered:', registration.scope)
+        logMessage('[SW] Service worker registered:', registration.scope)
 
         // Check for updates periodically
         registration.addEventListener('updatefound', () => {
@@ -30,13 +31,13 @@ export function ServiceWorkerProvider() {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // New service worker available
-                console.log('[SW] New service worker available')
+                logMessage('[SW] New service worker available')
               }
             })
           }
         })
       } catch (error) {
-        console.error('[SW] Service worker registration failed:', error)
+        logError('[SW] Service worker registration failed:', error)
       }
     }
 

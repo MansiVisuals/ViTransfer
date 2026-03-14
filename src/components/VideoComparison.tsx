@@ -58,12 +58,41 @@ export default function VideoComparison({
   const videoRefB = useRef<HTMLVideoElement | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const currentTimeRef = useRef(0)
+  const videoFpsRef = useRef(24)
+  const videoDurationRef = useRef(0)
+  const stepFrameRef = useRef<(direction: 'forward' | 'backward') => void>((direction) => {
+    const a = videoRefA.current
+    const b = videoRefB.current
+
+    if (a && !a.paused) a.pause()
+    if (b && !b.paused) b.pause()
+    setIsPlaying(false)
+
+    const frameDuration = 1 / videoFpsRef.current
+    const current = a?.currentTime ?? currentTimeRef.current
+    const newTime = direction === 'forward'
+      ? Math.min(videoDurationRef.current, current + frameDuration)
+      : Math.max(0, current - frameDuration)
+
+    if (a) a.currentTime = newTime
+    if (b) b.currentTime = newTime
+    currentTimeRef.current = newTime
+    setCurrentTime(newTime)
+  })
 
   const versionA = sorted[versionAIndex]
   const versionB = sorted[versionBIndex]
   const videoUrlA = getVideoUrl(versionA, defaultQuality)
   const videoUrlB = getVideoUrl(versionB, defaultQuality)
   const videoFps = versionA?.fps || versionB?.fps || 24
+
+  useEffect(() => {
+    videoFpsRef.current = videoFps
+  }, [videoFps])
+
+  useEffect(() => {
+    videoDurationRef.current = videoDuration
+  }, [videoDuration])
 
   // --- Synced playback ---
   // No continuous sync — just align B to A on user actions (play/pause/seek).
@@ -101,24 +130,8 @@ export default function VideoComparison({
   }, [isPlaying])
 
   const stepFrame = useCallback((direction: 'forward' | 'backward') => {
-    const a = videoRefA.current
-    const b = videoRefB.current
-
-    if (a && !a.paused) a.pause()
-    if (b && !b.paused) b.pause()
-    setIsPlaying(false)
-
-    const frameDuration = 1 / videoFps
-    const current = a?.currentTime ?? currentTimeRef.current
-    const newTime = direction === 'forward'
-      ? Math.min(videoDuration, current + frameDuration)
-      : Math.max(0, current - frameDuration)
-
-    if (a) a.currentTime = newTime
-    if (b) b.currentTime = newTime
-    currentTimeRef.current = newTime
-    setCurrentTime(newTime)
-  }, [videoFps, videoDuration])
+    stepFrameRef.current(direction)
+  }, [])
 
   // A's timeupdate drives the UI timeline only — no sync logic
   useEffect(() => {
@@ -236,7 +249,7 @@ export default function VideoComparison({
       if (e.ctrlKey && e.code === 'KeyJ') {
         e.preventDefault()
         e.stopPropagation()
-        stepFrame('backward')
+        stepFrameRef.current('backward')
         return
       }
 
@@ -244,7 +257,7 @@ export default function VideoComparison({
       if (e.ctrlKey && e.code === 'KeyL') {
         e.preventDefault()
         e.stopPropagation()
-        stepFrame('forward')
+        stepFrameRef.current('forward')
         return
       }
     }
@@ -252,7 +265,7 @@ export default function VideoComparison({
     // Use capture phase like the main player
     window.addEventListener('keydown', handleKeyboard, { capture: true })
     return () => window.removeEventListener('keydown', handleKeyboard, { capture: true })
-  }, [onClose, togglePlayPause, stepFrame])
+  }, [onClose, togglePlayPause])
 
   // Pause on unmount
   useEffect(() => {

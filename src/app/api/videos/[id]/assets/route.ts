@@ -6,6 +6,8 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile } from '@/lib/file-validation'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -122,7 +124,7 @@ export async function GET(
       currentThumbnailPath: accessCheck.isAdmin ? video.thumbnailPath : undefined,
     })
   } catch (error) {
-    console.error('Error fetching video assets:', error)
+    logError('Error fetching video assets:', error)
     return NextResponse.json(
       { error: videoMessages.failedToFetchVideoAssets || 'Failed to fetch video assets' },
       { status: 500 }
@@ -233,7 +235,7 @@ export async function POST(
       assetId: asset.id,
     })
   } catch (error) {
-    console.error('Error creating video asset:', error)
+    logError('Error creating video asset:', error)
     return NextResponse.json(
       { error: videoMessages.failedToCreateVideoAsset || 'Failed to create video asset' },
       { status: 500 }

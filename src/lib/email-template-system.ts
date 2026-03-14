@@ -32,6 +32,9 @@ function getEmailTemplateLocaleDefaults(messages: Record<string, any>) {
     password: messages.password || {},
     passwordReset: messages.passwordReset || {},
     dueDateReminder: messages.dueDateReminder || {},
+    otpVerification: messages.otpVerification || {},
+    clientActivitySummary: messages.clientActivitySummary || {},
+    adminActivitySummary: messages.adminActivitySummary || {},
   }
 }
 
@@ -46,6 +49,9 @@ export const EMAIL_TEMPLATE_TYPES = {
   PASSWORD: 'PASSWORD',
   PASSWORD_RESET: 'PASSWORD_RESET',
   DUE_DATE_REMINDER: 'DUE_DATE_REMINDER',
+  OTP_VERIFICATION: 'OTP_VERIFICATION',
+  CLIENT_ACTIVITY_SUMMARY: 'CLIENT_ACTIVITY_SUMMARY',
+  ADMIN_ACTIVITY_SUMMARY: 'ADMIN_ACTIVITY_SUMMARY',
 } as const
 
 export type EmailTemplateType = keyof typeof EMAIL_TEMPLATE_TYPES
@@ -74,6 +80,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{VERSION_LABEL}}', description: 'Version label (e.g., v1, v2)', example: 'v2' },
     { key: '{{SHARE_URL}}', description: 'Link to view the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{PASSWORD_NOTICE}}', description: 'Password protection notice (shown only if protected)', example: '' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   PROJECT_APPROVED: [
     ...COMMON_PLACEHOLDERS,
@@ -81,6 +88,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{VIDEO_NAME}}', description: 'Name of the approved deliverable', example: 'Main Video' },
     { key: '{{SHARE_URL}}', description: 'Link to view/download the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{APPROVAL_MESSAGE}}', description: 'Dynamic approval message (includes who approved and download info)', example: 'All deliverables for Summer Campaign 2026 have been approved. The final files are now ready for download.' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   COMMENT_NOTIFICATION: [
     ...COMMON_PLACEHOLDERS,
@@ -92,6 +100,7 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{TIMECODE}}', description: 'Clickable timecode pill linking to the comment (if any)', example: '00:01:23:15' },
     { key: '{{ATTACHMENTS}}', description: 'List of attached files (shown only if files were uploaded)', example: '' },
     { key: '{{SHARE_URL}}', description: 'Link to view and reply', example: 'https://review.acme.com/share/abc123' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   ADMIN_COMMENT_NOTIFICATION: [
     ...COMMON_PLACEHOLDERS,
@@ -121,11 +130,13 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{SHARE_URL}}', description: 'Link to view the project', example: 'https://review.acme.com/share/abc123' },
     { key: '{{VIDEO_LIST}}', description: 'HTML list of ready deliverables', example: '' },
     { key: '{{PASSWORD_NOTICE}}', description: 'Password protection notice (shown only if protected)', example: '' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   PASSWORD: [
     ...COMMON_PLACEHOLDERS,
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
     { key: '{{PASSWORD}}', description: 'The access password', example: 'xK9mP2nL' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
   ],
   PASSWORD_RESET: [
     ...COMMON_PLACEHOLDERS,
@@ -138,6 +149,29 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{DUE_DATE}}', description: 'Formatted due date', example: 'March 15, 2026' },
     { key: '{{REMINDER_TYPE}}', description: 'When the project is due (e.g., tomorrow, in 7 days)', example: 'tomorrow' },
     { key: '{{ADMIN_URL}}', description: 'Link to admin panel', example: 'https://review.acme.com/admin' },
+  ],
+  OTP_VERIFICATION: [
+    ...COMMON_PLACEHOLDERS,
+    { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
+    { key: '{{OTP_CODE}}', description: 'One-time verification code', example: '123456' },
+    { key: '{{EXPIRY_MINUTES}}', description: 'Code expiry in minutes', example: '10' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
+  ],
+  CLIENT_ACTIVITY_SUMMARY: [
+    ...COMMON_PLACEHOLDERS,
+    { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
+    { key: '{{SUMMARY_TEXT}}', description: 'Summary counts text', example: '3 new comments, 1 approval' },
+    { key: '{{PERIOD}}', description: 'Schedule period text', example: 'today' },
+    { key: '{{SUMMARY_ITEMS}}', description: 'Rendered summary items HTML', example: '' },
+    { key: '{{SHARE_URL}}', description: 'Link to view project', example: 'https://review.acme.com/share/abc123' },
+    { key: '{{UNSUBSCRIBE_SECTION}}', description: 'Unsubscribe section HTML (optional)', example: '' },
+  ],
+  ADMIN_ACTIVITY_SUMMARY: [
+    ...COMMON_PLACEHOLDERS,
+    { key: '{{SUMMARY_TEXT}}', description: 'Summary counts text', example: '12 comments across 3 projects' },
+    { key: '{{PERIOD}}', description: 'Schedule period text', example: 'today' },
+    { key: '{{SUMMARY_PROJECTS}}', description: 'Rendered project summary HTML', example: '' },
+    { key: '{{ADMIN_URL}}', description: 'Link to admin dashboard', example: 'https://review.acme.com/admin/projects' },
   ],
 }
 
@@ -204,6 +238,24 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
     description: 'Sent to admins when a project deadline is approaching',
     category: 'admin',
   },
+  {
+    type: 'OTP_VERIFICATION',
+    name: 'OTP Verification Code',
+    description: 'Sent to recipients when OTP verification is required',
+    category: 'security',
+  },
+  {
+    type: 'CLIENT_ACTIVITY_SUMMARY',
+    name: 'Client Activity Summary',
+    description: 'Scheduled summary sent to client recipients',
+    category: 'client',
+  },
+  {
+    type: 'ADMIN_ACTIVITY_SUMMARY',
+    name: 'Admin Activity Summary',
+    description: 'Scheduled summary sent to admins',
+    category: 'admin',
+  },
 ]
 
 // Default template content
@@ -215,237 +267,9 @@ export interface DefaultTemplate {
   bodyContent: string
 }
 
-export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
-  {
-    type: 'NEW_VERSION',
-    name: 'New Version Notification',
-    description: 'Sent to clients when a new version is uploaded',
-    subject: 'New Version Available: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
-  Hi <strong>{{RECIPIENT_NAME}}</strong>,
-</p>
-
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  A new version of {{VIDEO_NAME}} (<span class="accent-text">{{VERSION_LABEL}}</span>) is ready for your review in {{PROJECT_TITLE}}.
-</p>
-
-<div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Deliverable</div>
-  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}} <span style="opacity: 0.7;">{{VERSION_LABEL}}</span></div>
-</div>
-
-{{PASSWORD_NOTICE}}
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:View Project:{{SHARE_URL}}}}
-</div>
-
-<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
-  Questions? Simply reply to this email.
-</p>`,
-  },
-  {
-    type: 'PROJECT_APPROVED',
-    name: 'Project/Deliverable Approved',
-    description: 'Sent to clients when a project or deliverable is approved',
-    subject: '{{PROJECT_TITLE}} - Approved and Ready for Download',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
-  Hi <strong>{{RECIPIENT_NAME}}</strong>,
-</p>
-
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  {{APPROVAL_MESSAGE}}
-</p>
-
-<div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Deliverable</div>
-  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
-</div>
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:Download Files:{{SHARE_URL}}}}
-</div>
-
-<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
-  Questions? Simply reply to this email.
-</p>`,
-  },
-  {
-    type: 'COMMENT_NOTIFICATION',
-    name: 'Comment Notification (to Client)',
-    description: 'Sent to clients when admin leaves a comment on a project',
-    subject: 'New Comment on {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
-  Hi <strong>{{RECIPIENT_NAME}}</strong>,
-</p>
-
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  There's a new comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}.
-</p>
-
-<div class="info-box">
-  <div class="info-label">{{AUTHOR_NAME}} &nbsp;{{TIMECODE}}</div>
-  <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
-</div>
-
-{{ATTACHMENTS}}
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:View Project:{{SHARE_URL}}}}
-</div>
-
-<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
-  Questions? Simply reply to this email.
-</p>`,
-  },
-  {
-    type: 'ADMIN_COMMENT_NOTIFICATION',
-    name: 'Comment Notification (to Admin)',
-    description: 'Sent to admins when a client leaves a comment',
-    subject: 'New Comment from {{CLIENT_NAME}}: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  <strong>{{CLIENT_NAME}}</strong> left a comment on {{VIDEO_NAME}} {{VERSION_LABEL}} in {{PROJECT_TITLE}}.
-</p>
-
-<div class="info-box">
-  <div class="info-label">{{CLIENT_NAME}} &nbsp;{{TIMECODE}}</div>
-  <div style="font-size: 15px; line-height: 1.6; white-space: pre-wrap;">{{COMMENT_CONTENT}}</div>
-</div>
-
-{{ATTACHMENTS}}
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:View in Admin Panel:{{ADMIN_URL}}}}
-</div>`,
-  },
-  {
-    type: 'ADMIN_PROJECT_APPROVED',
-    name: 'Approval Notification (to Admin)',
-    description: 'Sent to admins when a client approves a project or deliverable',
-    subject: '{{CLIENT_NAME}} {{APPROVAL_STATUS}}: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  <strong>{{CLIENT_NAME}}</strong> has {{APPROVAL_ACTION}} {{VIDEO_NAME}} in {{PROJECT_TITLE}}.
-</p>
-
-<div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Deliverable</div>
-  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_NAME}}</div>
-</div>
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:View in Admin Panel:{{ADMIN_URL}}}}
-</div>`,
-  },
-  {
-    type: 'PROJECT_GENERAL',
-    name: 'Ready for Review',
-    description: 'Sent to clients when deliverables are ready for review',
-    subject: 'Ready for Review: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
-  Hi <strong>{{RECIPIENT_NAME}}</strong>,
-</p>
-
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  {{PROJECT_TITLE}} is ready for your review.
-</p>
-
-<div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div style="font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{{PROJECT_DESCRIPTION}}</div>
-  <div class="info-label">Deliverables</div>
-  <div style="font-size: 14px; line-height: 1.8;">{{VIDEO_LIST}}</div>
-</div>
-
-{{PASSWORD_NOTICE}}
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:View Project:{{SHARE_URL}}}}
-</div>
-
-<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
-  Questions? Simply reply to this email.
-</p>`,
-  },
-  {
-    type: 'PASSWORD',
-    name: 'Project Password',
-    description: 'Sends the access password in a separate email for security',
-    subject: 'Access Password: {{PROJECT_TITLE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
-  Hi <strong>{{RECIPIENT_NAME}}</strong>,
-</p>
-
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  Use this password to access <strong>{{PROJECT_TITLE}}</strong>. We send it separately for security.
-</p>
-
-<div class="info-box" style="text-align: center;">
-  <div class="info-label">Password</div>
-  <div style="display: inline-block; padding: 12px 18px; border-radius: 10px; border: 1px dashed currentColor; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 18px; letter-spacing: 1px; word-break: break-all; background: #ffffff;">{{PASSWORD}}</div>
-</div>
-
-<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
-  Keep this password confidential. Pair it with the review link we sent separately.
-</p>`,
-  },
-  {
-    type: 'PASSWORD_RESET',
-    name: 'Admin Password Reset',
-    description: 'Sent to admins when they request a password reset',
-    subject: 'Reset Your Password - {{COMPANY_NAME}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
-  Hi <strong>{{RECIPIENT_NAME}}</strong>,
-</p>
-
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  We received a request to reset your password. Click the button below to create a new one.
-</p>
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:Reset Password:{{RESET_URL}}}}
-</div>
-
-<div class="secondary-box">
-  <div class="info-label">Security Notice</div>
-  <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
-    <li>This link expires in <strong>{{EXPIRY_TIME}}</strong></li>
-    <li>Can only be used once</li>
-    <li>All sessions will be logged out after reset</li>
-  </ul>
-</div>
-
-<p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
-  If you didn't request this, you can safely ignore this email.
-</p>`,
-  },
-  {
-    type: 'DUE_DATE_REMINDER',
-    name: 'Due Date Reminder',
-    description: 'Sent to admins when a project deadline is approaching',
-    subject: 'Deadline Reminder: {{PROJECT_TITLE}} due {{REMINDER_TYPE}}',
-    bodyContent: `<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
-  <strong>{{PROJECT_TITLE}}</strong> is due <strong>{{REMINDER_TYPE}}</strong>.
-</p>
-
-<div class="secondary-box" style="text-align: center;">
-  <div class="info-label">Project</div>
-  <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">{{PROJECT_TITLE}}</div>
-  <div class="info-label">Due Date</div>
-  <div style="font-size: 14px; line-height: 1.8;">{{DUE_DATE}}</div>
-</div>
-
-<div style="margin: 28px 0; text-align: center;">
-  {{BUTTON:View in Admin Panel:{{ADMIN_URL}}}}
-</div>`,
-  },
-]
+export const DEFAULT_TEMPLATES: DefaultTemplate[] = TEMPLATE_METADATA
+  .map(meta => buildLocalizedDefaultTemplate(meta.type, {}))
+  .filter((template): template is DefaultTemplate => Boolean(template))
 
 /**
  * Get available placeholders for a template type
@@ -577,7 +401,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'PROJECT_APPROVED': {
@@ -608,7 +434,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'COMMENT_NOTIFICATION': {
@@ -639,7 +467,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'ADMIN_COMMENT_NOTIFICATION': {
@@ -719,7 +549,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${questionsFooter}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'PASSWORD': {
@@ -744,7 +576,9 @@ export function buildLocalizedDefaultTemplate(
 
 <p style="margin: 24px 0 0 0; font-size: 13px; text-align: center; line-height: 1.5;">
   ${t.keepConfidential || 'Keep this password confidential. Pair it with the review link we sent separately.'}
-</p>`,
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
       }
     }
     case 'PASSWORD_RESET': {
@@ -803,30 +637,91 @@ export function buildLocalizedDefaultTemplate(
 </div>`,
       }
     }
+    case 'OTP_VERIFICATION': {
+      const t = defaults.otpVerification
+      return {
+        type: 'OTP_VERIFICATION',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'Your verification code for {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+  ${greeting}
+</p>
+
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+  ${t.body || 'Use this verification code to access <strong>{{PROJECT_TITLE}}</strong>:'}
+</p>
+
+<div class="secondary-box" style="text-align: center;">
+  <div class="info-label">${t.codeLabel || 'Verification Code'}</div>
+  <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">{{OTP_CODE}}</div>
+</div>
+
+<p style="margin: 0 0 10px 0; font-size: 14px; line-height: 1.5;">
+  ${t.expiry || 'This code expires in {{EXPIRY_MINUTES}} minutes.'}
+</p>
+
+<p style="margin: 0 0 18px 0; font-size: 13px; line-height: 1.5;">
+  ${t.ignoreNotice || "If you didn't request this code, you can safely ignore this email."}
+</p>
+
+{{UNSUBSCRIBE_SECTION}}`,
+      }
+    }
+    case 'CLIENT_ACTIVITY_SUMMARY': {
+      const t = defaults.clientActivitySummary
+      return {
+        type: 'CLIENT_ACTIVITY_SUMMARY',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'Updates on {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin:0 0 20px; font-size:16px; line-height:1.5;">
+  ${greeting}
+</p>
+
+<p style="margin:0 0 20px; font-size:15px; line-height:1.6;">
+  ${t.body || "Here's an update on <strong>{{PROJECT_TITLE}}</strong>."}
+</p>
+
+<div class="secondary-box">
+  <div class="info-label">${t.summaryLabel || 'Summary'}</div>
+  <div style="font-size:14px; line-height:1.7;">{{SUMMARY_TEXT}} {{PERIOD}}</div>
+</div>
+
+{{SUMMARY_ITEMS}}
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View Project'}:{{SHARE_URL}}}}
+</div>
+
+{{UNSUBSCRIBE_SECTION}}`,
+      }
+    }
+    case 'ADMIN_ACTIVITY_SUMMARY': {
+      const t = defaults.adminActivitySummary
+      return {
+        type: 'ADMIN_ACTIVITY_SUMMARY',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'Project activity summary ({{SUMMARY_TEXT}})',
+        bodyContent: `<p style="margin:0 0 20px; font-size:16px; line-height:1.5;">
+  ${greeting}
+</p>
+
+<p style="margin:0 0 20px; font-size:15px; line-height:1.6;">
+  ${t.body || 'Here is the latest client activity ({{SUMMARY_TEXT}} {{PERIOD}}).'}
+</p>
+
+{{SUMMARY_PROJECTS}}
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'Open Admin Dashboard'}:{{ADMIN_URL}}}}
+</div>`,
+      }
+    }
     default:
       return undefined
   }
-}
-
-/**
- * Extract all placeholders used in a template
- */
-export function extractPlaceholders(content: string): string[] {
-  const regex = /\{\{([A-Z_]+)\}\}/g
-  const matches = new Set<string>()
-  let match
-
-  while ((match = regex.exec(content)) !== null) {
-    matches.add(`{{${match[1]}}}`)
-  }
-
-  // Also match button syntax {{BUTTON:label:url}}
-  const buttonRegex = /\{\{BUTTON:[^}]+\}\}/g
-  while ((match = buttonRegex.exec(content)) !== null) {
-    matches.add(match[0])
-  }
-
-  return Array.from(matches)
 }
 
 /**
@@ -931,6 +826,7 @@ export async function saveEmailTemplate(
       subject,
       bodyContent,
       isCustom: true,
+      enabled: true,
       updatedAt: new Date(),
     },
   })
@@ -942,6 +838,32 @@ export async function saveEmailTemplate(
 export async function resetEmailTemplate(type: EmailTemplateType): Promise<void> {
   await (prisma as any).emailTemplate?.deleteMany({
     where: { type },
+  })
+}
+
+/**
+ * Enable or disable a template override
+ * When disabled, template resolution falls back to default content
+ */
+export async function setEmailTemplateEnabled(
+  type: EmailTemplateType,
+  enabled: boolean
+): Promise<void> {
+  await (prisma as any).emailTemplate?.upsert({
+    where: { type },
+    create: {
+      type,
+      name: TEMPLATE_METADATA.find(t => t.type === type)?.name || type,
+      description: TEMPLATE_METADATA.find(t => t.type === type)?.description || null,
+      subject: getDefaultTemplate(type)?.subject || '',
+      bodyContent: getDefaultTemplate(type)?.bodyContent || '',
+      isCustom: false,
+      enabled,
+    },
+    update: {
+      enabled,
+      updatedAt: new Date(),
+    },
   })
 }
 

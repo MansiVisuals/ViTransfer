@@ -204,6 +204,8 @@ export async function GET(
           companyName: true,
           defaultPreviewResolution: true,
           maxCommentAttachments: true,
+          privacyDisclosureEnabled: true,
+          privacyDisclosureText: true,
         },
       }),
       getPrimaryRecipient(project.id)
@@ -308,6 +310,8 @@ export async function GET(
         companyName: globalSettings?.companyName || 'Studio',
         defaultPreviewResolution: globalSettings?.defaultPreviewResolution || '720p',
         maxCommentAttachments: globalSettings?.maxCommentAttachments ?? 10,
+        privacyDisclosureEnabled: globalSettings?.privacyDisclosureEnabled ?? false,
+        privacyDisclosureText: globalSettings?.privacyDisclosureText || null,
       },
     }
 

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateBlocklistCache } from '@/lib/video-access'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -33,7 +35,7 @@ export async function GET(request: NextRequest) {
       count: blockedDomains.length,
     })
   } catch (error) {
-    console.error('Error fetching blocked domains:', error)
+    logError('Error fetching blocked domains:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToFetchBlockedDomains || 'Failed to fetch blocked domains' },
       { status: 500 }
@@ -108,7 +110,7 @@ export async function POST(request: NextRequest) {
       blockedDomain,
     })
   } catch (error) {
-    console.error('Error blocking domain:', error)
+    logError('Error blocking domain:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToBlockDomain || 'Failed to block domain' },
       { status: 500 }
@@ -155,7 +157,7 @@ export async function DELETE(request: NextRequest) {
       message: settingsMessages.domainUnblockedSuccessfully || 'Domain unblocked successfully',
     })
   } catch (error) {
-    console.error('Error unblocking domain:', error)
+    logError('Error unblocking domain:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToUnblockDomain || 'Failed to unblock domain' },
       { status: 500 }

@@ -3,11 +3,14 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
-import { isSmtpConfigured } from '@/lib/email'
+import { isSmtpConfigured } from '@/lib/settings'
 import { getFilePath } from '@/lib/storage'
 import { flushPendingAdminNotifications } from '@/lib/notifications'
+import { invalidateEmailSettingsCache } from '@/lib/email'
 import { getConfiguredLocale, loadLocaleMessages, SUPPORTED_LOCALES } from '@/i18n/locale'
 import fs from 'fs/promises'
+import { logError, logMessage } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -78,7 +81,7 @@ export async function GET(request: NextRequest) {
       smtpConfigured,
     })
   } catch (error) {
-    console.error('Error fetching settings:', error)
+    logError('Error fetching settings:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToFetchSettings || 'Failed to fetch settings' },
       { status: 500 }
@@ -135,6 +138,8 @@ export async function PATCH(request: NextRequest) {
       defaultAllowClientAssetUpload,
       emailHeaderStyle,
       maxCommentAttachments,
+      privacyDisclosureEnabled,
+      privacyDisclosureText,
     } = body
 
     // SECURITY: Validate language setting
@@ -246,6 +251,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (defaultPreviewResolution !== undefined) {
+      const validResolutions = ['720p', '1080p']
+      if (!validResolutions.includes(defaultPreviewResolution)) {
+        return NextResponse.json(
+          { error: settingsMessages.invalidPreviewResolution || 'Invalid preview resolution. Must be 720p or 1080p.' },
+          { status: 400 }
+        )
+      }
+    }
+
     if (defaultTimestampDisplay !== undefined) {
       const valid = ['TIMECODE', 'AUTO']
       if (!valid.includes(defaultTimestampDisplay)) {
@@ -271,6 +286,50 @@ export async function PATCH(request: NextRequest) {
       if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
         return NextResponse.json(
           { error: settingsMessages.maxCommentAttachmentsMustBeIntegerBetween1And50 || 'Max comment attachments must be an integer between 1 and 50.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (smtpPort !== undefined && smtpPort !== null) {
+      const port = parseInt(smtpPort, 10)
+      if (isNaN(port) || port < 1 || port > 65535) {
+        return NextResponse.json(
+          { error: settingsMessages.invalidSmtpPort || 'SMTP port must be between 1 and 65535.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (smtpSecure !== undefined && smtpSecure !== null) {
+      const validSecure = ['STARTTLS', 'TLS', 'NONE']
+      if (!validSecure.includes(smtpSecure)) {
+        return NextResponse.json(
+          { error: settingsMessages.invalidSmtpSecure || 'SMTP security must be STARTTLS, TLS, or NONE.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (smtpFromAddress !== undefined && smtpFromAddress !== null && smtpFromAddress !== '') {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+      if (!emailRegex.test(smtpFromAddress)) {
+        return NextResponse.json(
+          { error: settingsMessages.invalidSmtpFromAddress || 'Invalid SMTP from address format.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (appDomain !== undefined && appDomain !== null && appDomain !== '') {
+      try {
+        const parsed = new URL(appDomain)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          throw new Error('Invalid protocol')
+        }
+      } catch {
+        return NextResponse.json(
+          { error: settingsMessages.invalidAppDomain || 'App domain must be a valid URL starting with http:// or https://.' },
           { status: 400 }
         )
       }
@@ -336,6 +395,8 @@ export async function PATCH(request: NextRequest) {
       adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
       defaultUsePreviewForApprovedPlayback,
       defaultAllowClientAssetUpload,
+      privacyDisclosureEnabled,
+      privacyDisclosureText: privacyDisclosureText !== undefined ? (privacyDisclosureText || null) : undefined,
     }
 
     // Only update password if it's not the placeholder
@@ -383,6 +444,8 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
+    invalidateEmailSettingsCache()
+
     // If accent color changed, invalidate cached default logo PNGs
     if (accentColor !== undefined) {
       const defaultCachePrefix = 'branding/default-logo-'
@@ -398,9 +461,11 @@ export async function PATCH(request: NextRequest) {
 
     // Flush pending admin notifications when schedule changes
     if (previousAdminSchedule !== null && adminNotificationSchedule !== previousAdminSchedule) {
-      console.log(`[SETTINGS] Admin notification schedule changed: ${previousAdminSchedule} → ${adminNotificationSchedule}`)
+      logMessage(`[SETTINGS] Admin notification schedule changed: ${previousAdminSchedule} → ${adminNotificationSchedule}`)
       // Fire-and-forget: don't block the response
-      void flushPendingAdminNotifications()
+      void flushPendingAdminNotifications().catch((error) => {
+        logError('[SETTINGS] Failed to flush pending admin notifications after schedule change:', error)
+      })
     }
 
     // SECURITY: Never send SMTP password in cleartext — return masked placeholder
@@ -411,7 +476,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(maskedSettings)
   } catch (error) {
-    console.error('Error updating settings:', error)
+    logError('Error updating settings:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToUpdateSettings || 'Failed to update settings' },
       { status: 500 }

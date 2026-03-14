@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { parseBearerToken, revokePresentedTokens } from '@/lib/auth'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Logout error:', error)
+    logError('Logout error:', error)
     return NextResponse.json({ success: true })
   }
 }

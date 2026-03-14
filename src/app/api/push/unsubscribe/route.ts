@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[API] Failed to unsubscribe:', error)
+    logError('[API] Failed to unsubscribe:', error)
     return NextResponse.json(
       { error: webPushMessages.failedToUnsubscribe || 'Failed to unsubscribe' },
       { status: 500 }

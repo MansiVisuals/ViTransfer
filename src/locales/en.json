@@ -853,8 +853,12 @@
     "welcomeDescription": "This page lets you watch videos, leave feedback, approve final versions, and download approved files. Let us show you around.",
     "gridTitle": "Video Selection",
     "gridDescription": "Click any video thumbnail to start reviewing. Videos needing review appear first.",
-    "reelTitle": "Video Navigation",
-    "reelDescription": "Switch between different videos in the project using this panel. Click a thumbnail to select it for review.",
+    "reelPrevTitle": "Previous Video",
+    "reelPrevDescription": "Use this arrow to go to the previous video in the project.",
+    "reelCenterTitle": "Video Selector",
+    "reelCenterDescription": "Shows your current position. Click to expand thumbnails and jump to any video.",
+    "reelNextTitle": "Next Video",
+    "reelNextDescription": "Use this arrow to go to the next video in the project.",
     "playerTitle": "Video Player",
     "playerDescription": "Watch the video here. Use the controls at the bottom to play, pause, and navigate frame by frame.",
     "versionsTitle": "Video Versions",
@@ -953,7 +957,6 @@
     "allVideos": "All Videos",
     "previousVideo": "Previous video",
     "nextVideo": "Next video",
-    "browseAllVideos": "Click to browse all videos",
 
     "approveThisVersion": "Approve this video version",
     "videoInfo": "Video Information",
@@ -1070,7 +1073,12 @@
       "teal": "Teal",
       "amber": "Amber",
       "stone": "Stone",
-      "gold": "Gold"
+      "gold": "Gold",
+      "privacyDisclosure": "Privacy Disclosure",
+      "privacyDisclosureDescription": "Show a GDPR-compliant privacy notice on client share pages. Visitors must accept or decline before continuing.",
+      "privacyDisclosureCustomText": "Custom Disclosure Text",
+      "privacyDisclosurePlaceholder": "Leave empty to use the default privacy disclosure text",
+      "privacyDisclosureHint": "If left empty, a generic default text covering IP logging, session tracking, and comments will be shown. You can customize this to include a link to your full privacy policy."
     },
 
     "language": {
@@ -1156,6 +1164,7 @@
   "failedToGeneratePreview": "Failed to generate preview",
   "failedToSaveTemplate": "Failed to save template",
   "failedToResetTemplate": "Failed to reset template",
+  "failedToUpdateTemplateStatus": "Failed to update template status",
   "invalidTemplateType": "Invalid template type",
   "subjectRequired": "Subject is required",
   "bodyContentRequired": "Body content is required",
@@ -1175,7 +1184,10 @@
         "PROJECT_GENERAL": "Ready for Review",
         "PASSWORD": "Project Password",
         "PASSWORD_RESET": "Admin Password Reset",
-        "DUE_DATE_REMINDER": "Due Date Reminder"
+        "DUE_DATE_REMINDER": "Due Date Reminder",
+        "OTP_VERIFICATION": "OTP Verification Code",
+        "CLIENT_ACTIVITY_SUMMARY": "Client Activity Summary",
+        "ADMIN_ACTIVITY_SUMMARY": "Admin Activity Summary"
       },
       "templateDescriptions": {
         "NEW_VERSION": "Sent to clients when a new version is uploaded",
@@ -1186,7 +1198,10 @@
         "PROJECT_GENERAL": "Sent to clients when deliverables are ready for review",
         "PASSWORD": "Sends the access password in a separate email for security",
         "PASSWORD_RESET": "Sent to admins when they request a password reset",
-        "DUE_DATE_REMINDER": "Sent to admins when a project deadline is approaching"
+        "DUE_DATE_REMINDER": "Sent to admins when a project deadline is approaching",
+        "OTP_VERIFICATION": "Sent to recipients when OTP verification is required",
+        "CLIENT_ACTIVITY_SUMMARY": "Scheduled summary sent to client recipients",
+        "ADMIN_ACTIVITY_SUMMARY": "Scheduled summary sent to admins"
       },
       "placeholderDescriptions": {
         "COMPANY_NAME": "Your company name from settings",
@@ -1214,7 +1229,14 @@
         "RESET_URL": "Password reset link",
         "EXPIRY_TIME": "How long the link is valid",
         "DUE_DATE": "Formatted due date",
-        "REMINDER_TYPE": "When the project is due (e.g., tomorrow, in 7 days)"
+        "REMINDER_TYPE": "When the project is due (e.g., tomorrow, in 7 days)",
+        "OTP_CODE": "One-time verification code",
+        "EXPIRY_MINUTES": "Code expiry in minutes",
+        "SUMMARY_TEXT": "Summary counts text",
+        "PERIOD": "Schedule period text",
+        "SUMMARY_ITEMS": "Rendered summary items HTML",
+        "SUMMARY_PROJECTS": "Rendered project summary HTML",
+        "UNSUBSCRIBE_SECTION": "Unsubscribe section HTML (optional)"
       },
       "placeholderExamples": {
         "COMPANY_NAME": "Acme Studios",
@@ -1233,7 +1255,14 @@
         "PASSWORD": "xK9mP2nL",
         "EXPIRY_TIME": "30 minutes",
         "DUE_DATE": "March 15, 2026",
-        "REMINDER_TYPE": "tomorrow"
+        "REMINDER_TYPE": "tomorrow",
+        "OTP_CODE": "123456",
+        "EXPIRY_MINUTES": "10",
+        "SUMMARY_TEXT": "3 new comments, 1 approval",
+        "PERIOD": "today",
+        "SUMMARY_ITEMS": "",
+        "SUMMARY_PROJECTS": "",
+        "UNSUBSCRIBE_SECTION": ""
       },
       "previewTitles": {
         "NEW_VERSION": "New Version Available",
@@ -1244,13 +1273,17 @@
         "PROJECT_GENERAL": "Ready for Review",
         "PASSWORD": "Project Password",
         "PASSWORD_RESET": "Password Reset",
-        "DUE_DATE_REMINDER": "Deadline Reminder"
+        "DUE_DATE_REMINDER": "Deadline Reminder",
+        "OTP_VERIFICATION": "Verification Code",
+        "CLIENT_ACTIVITY_SUMMARY": "Project Update",
+        "ADMIN_ACTIVITY_SUMMARY": "Client Activity Summary"
       },
       "previewSubtitles": {
         "NEW_VERSION": "Ready for your review",
         "PROJECT_APPROVED": "Ready for download",
         "PASSWORD_RESET": "Reset your admin account password",
-        "DUE_DATE_REMINDER_SUFFIX": "is due tomorrow"
+        "DUE_DATE_REMINDER_SUFFIX": "is due tomorrow",
+        "ADMIN_ACTIVITY_SUMMARY": "Latest updates"
       }
     },
 
@@ -1308,9 +1341,10 @@
       "description": "Configure advanced security options",
       "warning": "Warning: Advanced Configuration",
       "warningDescription": "These settings control critical security features including rate limiting, hotlink protection, and access controls. Modifying these values without proper understanding may impact system functionality and security. Only adjust if you are familiar with these security mechanisms.",
-      "httpsEnforcement": "HTTPS Enforcement",
-      "httpsHint": "Enable for production deployments. Disable for local development with HTTP.",
-      "hstsEnabled": "HSTS header is enabled, forcing browsers to use HTTPS connections.",
+      "httpsEnforcement": "HTTPS Mode",
+      "httpsHint": "Used for effective HTTPS checks and passkey validation. Response headers follow the deployment's HTTPS_ENABLED environment setting.",
+      "hstsEnabled": "HTTPS is enabled for runtime security checks.",
+      "httpsManagedByEnvironment": "This setting is currently managed by the HTTPS_ENABLED environment variable.",
       "hotlinkProtection": "Hotlink Protection",
       "hotlinkDisabled": "Disabled - No hotlink protection",
       "hotlinkLogOnly": "Log Only - Detect but allow",
@@ -1328,10 +1362,10 @@
       "rateLimiting": "Rate Limiting & Security",
       "ipRateLimit": "IP Rate Limit",
       "ipRateLimitHint": "Requests per minute per IP (default: 1000)",
-      "adminSessionLimit": "Admin Session Limit",
-      "adminSessionLimitHint": "Requests per minute per admin session (default: 600)",
-      "shareSessionLimit": "Share Session Limit",
-      "shareSessionLimitHint": "Requests per minute per share session (default: 300)",
+      "adminSessionLimit": "Admin Content Session Limit",
+      "adminSessionLimitHint": "Requests per minute for admin content streaming and downloads (default: 600)",
+      "shareSessionLimit": "Share Content Session Limit",
+      "shareSessionLimitHint": "Requests per minute for share-link content access and streaming (default: 300)",
       "authAttempts": "Authentication Attempts",
       "authAttemptsHint": "Maximum authentication attempts (password or OTP) before lockout",
       "uploadSecurity": "Upload Security",
@@ -1532,6 +1566,7 @@
     "types": "Types",
     "blocked": "Blocked",
     "showing": "Showing {count} of {total}",
+    "perPage": "/ page",
     "severity": "Severity",
     "eventType": "Event Type",
     "ipAddress": "IP Address",
@@ -2043,6 +2078,37 @@
       "body": "<strong>{{PROJECT_TITLE}}</strong> is due <strong>{{REMINDER_TYPE}}</strong>.",
       "button": "View in Admin Panel"
     },
+    "otpVerification": {
+      "subject": "Your verification code for {{PROJECT_TITLE}}",
+      "body": "Use this verification code to access <strong>{{PROJECT_TITLE}}</strong>:",
+      "codeLabel": "Verification Code",
+      "expiry": "This code expires in {{EXPIRY_MINUTES}} minutes.",
+      "ignoreNotice": "If you didn't request this code, you can safely ignore this email."
+    },
+    "clientActivitySummary": {
+      "title": "Project Update",
+      "subject": "Updates on {{PROJECT_TITLE}}",
+      "body": "Here's an update on <strong>{{PROJECT_TITLE}}</strong>.",
+      "summaryLabel": "Summary",
+      "latestActivity": "Latest activity",
+      "newCommentSingular": "new comment",
+      "newCommentPlural": "new comments",
+      "approvalSingular": "approval",
+      "approvalPlural": "approvals",
+      "unapprovedLabel": "unapproved",
+      "button": "View Project"
+    },
+    "adminActivitySummary": {
+      "title": "Client Activity Summary",
+      "subject": "Project activity summary ({{SUMMARY_TEXT}})",
+      "body": "Here is the latest client activity ({{SUMMARY_TEXT}} {{PERIOD}}).",
+      "commentSingular": "comment",
+      "commentPlural": "comments",
+      "projectSingular": "project",
+      "projectPlural": "projects",
+      "across": "across",
+      "button": "Open Admin Dashboard"
+    },
     "passwordNotice": "Protected project: Use the password sent separately to access this project."
   }
   ,
@@ -2066,5 +2132,15 @@
     "ignoreNotice": "If you didn't request this code, please ignore this email.",
     "textIntro": "Your verification code for {projectTitle} is:",
     "textIgnoreNotice": "If you didn't request this code, you can safely ignore this email."
+  },
+
+  "privacy": {
+    "title": "Privacy Notice",
+    "summary": "This platform processes some of your data to provide the review service.",
+    "readMore": "Read more",
+    "readLess": "Read less",
+    "accept": "Accept",
+    "decline": "Decline",
+    "defaultDisclosureText": "This platform logs access activity including your IP address and browser information for security and functionality purposes. Your session is tracked using local browser storage (no cookies are used). Comments and feedback you provide are stored and shared with the project owner.\n\nThis data is processed based on the legitimate interest of maintaining platform security and enabling the review workflow. For questions about how your data is handled, including requests for access, correction, or deletion, please contact the person who shared this link with you."
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
 export const runtime = 'nodejs'
 
 
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     
     return response
   } catch (error) {
-    console.error('Session check error:', error)
+    logError('Session check error:', error)
     return NextResponse.json(
       { error: authMessages.errorOccurredCheckingSession || 'An error occurred checking session' },
       { status: 500 }

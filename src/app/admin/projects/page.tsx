@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { FolderKanban, Plus, Video, Eye, Download, EyeOff, RefreshCw, Copy, Check, Mail, AlertCircle } from 'lucide-react'
 import ProjectsList from '@/components/ProjectsList'
 import { apiFetch, apiPost } from '@/lib/api-client'
+import { logError } from '@/lib/logging'
 import { useTranslations } from 'next-intl'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { ClientSelector } from '@/components/ClientSelector'
@@ -79,7 +80,7 @@ export default function AdminPage() {
         setSmtpConfigured(data.smtpConfigured !== false)
       }
     } catch (err) {
-      console.error('Failed to check SMTP configuration:', err)
+      logError('Failed to check SMTP configuration:', err)
     }
   }
 

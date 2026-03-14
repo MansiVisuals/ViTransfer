@@ -35,6 +35,8 @@ interface Settings {
   autoApproveProject: boolean | null
   defaultUsePreviewForApprovedPlayback: boolean | null
   defaultAllowClientAssetUpload: boolean | null
+  privacyDisclosureEnabled: boolean | null
+  privacyDisclosureText: string | null
   adminNotificationSchedule: string | null
   adminNotificationTime: string | null
   adminNotificationDay: number | null
@@ -43,6 +45,7 @@ interface Settings {
 interface SecuritySettings {
   id: string
   httpsEnabled: boolean
+  httpsManagedByEnvironment?: boolean
   hotlinkProtection: string
   ipRateLimit: number
   sessionRateLimit: number
@@ -121,6 +124,10 @@ export default function GlobalSettingsPage() {
   const [defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback] = useState(false)
   const [defaultAllowClientAssetUpload, setDefaultAllowClientAssetUpload] = useState(false)
 
+  // Form state for privacy disclosure
+  const [privacyDisclosureEnabled, setPrivacyDisclosureEnabled] = useState(false)
+  const [privacyDisclosureText, setPrivacyDisclosureText] = useState('')
+
   // Form state for admin notification settings
   const [adminNotificationSchedule, setAdminNotificationSchedule] = useState('HOURLY')
   const [adminNotificationTime, setAdminNotificationTime] = useState('09:00')
@@ -129,6 +136,7 @@ export default function GlobalSettingsPage() {
   // Form state for security settings
   const [showSecuritySettings, setShowSecuritySettings] = useState(false)
   const [httpsEnabled, setHttpsEnabled] = useState(false)
+  const [httpsManagedByEnvironment, setHttpsManagedByEnvironment] = useState(false)
   const [hotlinkProtection, setHotlinkProtection] = useState('LOG_ONLY')
   const [ipRateLimit, setIpRateLimit] = useState('1000')
   const [sessionRateLimit, setSessionRateLimit] = useState('600')
@@ -181,6 +189,8 @@ export default function GlobalSettingsPage() {
     setAutoApproveProject(data.autoApproveProject ?? true)
     setDefaultUsePreviewForApprovedPlayback(data.defaultUsePreviewForApprovedPlayback ?? false)
     setDefaultAllowClientAssetUpload(data.defaultAllowClientAssetUpload ?? false)
+    setPrivacyDisclosureEnabled(data.privacyDisclosureEnabled ?? false)
+    setPrivacyDisclosureText(data.privacyDisclosureText || '')
     setTestEmailAddress(data.smtpFromAddress || '')
     setAdminNotificationSchedule(data.adminNotificationSchedule || 'HOURLY')
     setAdminNotificationTime(data.adminNotificationTime || '09:00')
@@ -189,6 +199,7 @@ export default function GlobalSettingsPage() {
 
   const applySecuritySettingsToForm = useCallback((data: SecuritySettings) => {
     setHttpsEnabled(data.httpsEnabled ?? false)
+    setHttpsManagedByEnvironment(data.httpsManagedByEnvironment ?? false)
     setHotlinkProtection(data.hotlinkProtection || 'LOG_ONLY')
     setIpRateLimit(data.ipRateLimit?.toString() || '1000')
     setSessionRateLimit(data.sessionRateLimit?.toString() || '600')
@@ -485,6 +496,8 @@ export default function GlobalSettingsPage() {
         autoApproveProject: autoApproveProject,
         defaultUsePreviewForApprovedPlayback: defaultUsePreviewForApprovedPlayback,
         defaultAllowClientAssetUpload: defaultAllowClientAssetUpload,
+        privacyDisclosureEnabled: privacyDisclosureEnabled,
+        privacyDisclosureText: privacyDisclosureText || null,
         adminNotificationSchedule: adminNotificationSchedule,
         adminNotificationTime: (adminNotificationSchedule === 'DAILY' || adminNotificationSchedule === 'WEEKLY') ? adminNotificationTime : null,
         adminNotificationDay: adminNotificationSchedule === 'WEEKLY' ? adminNotificationDay : null,
@@ -650,6 +663,10 @@ export default function GlobalSettingsPage() {
             logoError={logoError}
             emailHeaderStyle={emailHeaderStyle}
             setEmailHeaderStyle={setEmailHeaderStyle}
+            privacyDisclosureEnabled={privacyDisclosureEnabled}
+            setPrivacyDisclosureEnabled={setPrivacyDisclosureEnabled}
+            privacyDisclosureText={privacyDisclosureText}
+            setPrivacyDisclosureText={setPrivacyDisclosureText}
             show={showBrandingAppearance}
             setShow={setShowBrandingAppearance}
           />
@@ -705,6 +722,7 @@ export default function GlobalSettingsPage() {
             showSecuritySettings={showSecuritySettings}
             setShowSecuritySettings={setShowSecuritySettings}
             httpsEnabled={httpsEnabled}
+            httpsManagedByEnvironment={httpsManagedByEnvironment}
             setHttpsEnabled={setHttpsEnabled}
             hotlinkProtection={hotlinkProtection}
             setHotlinkProtection={setHotlinkProtection}

@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { prisma } from './db'
 import { getClientIpAddress } from './utils'
 import { getRedis } from './redis'
+import { logError, logWarn } from '@/lib/logging'
 
 /**
  * Production-Ready Redis-based Rate Limiting
@@ -66,7 +67,7 @@ async function getRateLimitEntry(identifier: string): Promise<RateLimitEntry | n
   try {
     return JSON.parse(data) as RateLimitEntry
   } catch (error) {
-    console.error('Failed to parse rate limit data:', error)
+    logError('Failed to parse rate limit data:', error)
     return null
   }
 }
@@ -172,7 +173,7 @@ export async function rateLimit(
     await setRateLimitEntry(key, updatedEntry, options.windowMs)
     return null
   } catch (error) {
-    console.error('Rate limiting error:', error)
+    logError('Rate limiting error:', error)
     // Fail closed: return 503 Service Unavailable if Redis is down
     return NextResponse.json(
       { error: 'Rate limiting service unavailable. Please try again later.' },
@@ -214,7 +215,7 @@ export async function checkRateLimit(
 
     return { limited: false }
   } catch (error) {
-    console.error('Rate limit check error:', error)
+    logError('Rate limit check error:', error)
     // Fail closed: treat as rate limited if Redis is unavailable
     return { limited: true, retryAfter: 900 }
   }
@@ -263,7 +264,7 @@ export async function incrementRateLimit(
     await setRateLimitEntry(identifier, updatedEntry, windowMs)
     return { lockedOut: false }
   } catch (error) {
-    console.error('Rate limit increment error:', error)
+    logError('Rate limit increment error:', error)
     // Fail closed for security-sensitive flows (e.g. login/password verification).
     // If the limiter backend is degraded, deny attempts instead of allowing brute-force gaps.
     return { lockedOut: true }
@@ -279,58 +280,8 @@ export async function clearRateLimit(
     const identifier = getIdentifier(request, type, customKey)
     await deleteRateLimitEntry(identifier)
   } catch (error) {
-    console.error('Rate limit clear error:', error)
+    logError('Rate limit clear error:', error)
     // Continue on error - don't block successful login
-  }
-}
-
-/**
- * Unblock a specific IP address from rate limiting
- * Clears all rate limit entries for the given IP
- *
- * @param ipAddress - IP address to unblock
- * @returns Number of rate limit entries cleared
- */
-export async function unblockIpAddress(_ipAddress: string): Promise<number> {
-  try {
-    const redis = getRedis()
-
-    if (redis.status !== 'ready') {
-      await redis.connect()
-    }
-
-    // Use SCAN instead of KEYS to avoid blocking Redis on large datasets
-    let clearedCount = 0
-    let cursor = '0'
-
-    do {
-      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'ratelimit:*', 'COUNT', 100)
-      cursor = nextCursor
-
-      for (const key of keys) {
-        const data = await redis.get(key)
-        if (!data) continue
-
-        try {
-          const entry = JSON.parse(data) as RateLimitEntry
-          // Check if this entry has a lockout (only clear active lockouts)
-          if (entry.lockoutUntil && entry.lockoutUntil > Date.now()) {
-            // We can't directly check IP from the key (it's hashed)
-            // So we delete all lockout entries - admin action
-            await redis.del(key)
-            clearedCount++
-          }
-        } catch (parseError) {
-          // Skip invalid entries
-          continue
-        }
-      }
-    } while (cursor !== '0')
-
-    return clearedCount
-  } catch (error) {
-    console.error('IP unblock error:', error)
-    throw new Error('Failed to unblock IP address')
   }
 }
 
@@ -394,7 +345,7 @@ export async function getRateLimitedEntries(): Promise<Array<{
 
     return lockedEntries
   } catch (error) {
-    console.error('Get rate limited entries error:', error)
+    logError('Get rate limited entries error:', error)
     return []
   }
 }
@@ -415,11 +366,11 @@ export async function clearRateLimitByKey(key: string): Promise<number> {
 
     const deleted = await redis.del(key)
     if (deleted === 0) {
-      console.warn(`Rate limit key not found in Redis: ${key}`)
+      logWarn(`Rate limit key not found in Redis: ${key}`)
     }
     return deleted
   } catch (error) {
-    console.error('Clear rate limit by key error:', error)
+    logError('Clear rate limit by key error:', error)
     return -1
   }
 }
@@ -455,7 +406,7 @@ export async function clearAllRateLimits(): Promise<number> {
 
     return clearedCount
   } catch (error) {
-    console.error('Clear all rate limits error:', error)
+    logError('Clear all rate limits error:', error)
     throw new Error('Failed to clear all rate limits')
   }
 }

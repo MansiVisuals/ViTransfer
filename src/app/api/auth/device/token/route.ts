@@ -10,6 +10,8 @@ import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { safeParseBody } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 /**
  * POST /api/auth/device/token
@@ -174,7 +176,7 @@ export async function POST(request: NextRequest) {
         )
     }
   } catch (error) {
-    console.error('[Device Token] Error polling device token:', error)
+    logError('[Device Token] Error polling device token:', error)
     return NextResponse.json(
       { error: 'server_error' },
       { status: 500 }

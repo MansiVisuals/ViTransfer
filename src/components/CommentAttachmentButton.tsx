@@ -13,6 +13,7 @@ import {
 } from './ui/dialog'
 import * as tus from 'tus-js-client'
 import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
   clearFileContext,
@@ -186,13 +187,13 @@ export default function CommentAttachmentButton({
 
       const tusUpload = new tus.Upload(item.file, {
         endpoint: `${window.location.origin}/api/uploads`,
-        retryDelays: [0, 1000, 3000, 5000, 10000],
+        retryDelays: TUS_RETRY_DELAYS_MS,
         metadata: {
           filename: item.file.name,
           filetype: item.file.type || 'application/octet-stream',
           assetId: assetId,
         },
-        chunkSize: 50 * 1024 * 1024,
+        chunkSize: getTusChunkSizeBytes(item.file.size),
         storeFingerprintForResuming: true,
         removeFingerprintOnSuccess: true,
 

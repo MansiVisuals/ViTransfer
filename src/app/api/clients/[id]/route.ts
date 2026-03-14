@@ -5,6 +5,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ company })
   } catch (error) {
-    console.error('Failed to fetch client company:', error)
+    logError('Failed to fetch client company:', error)
     return NextResponse.json({ error: clientsMessages.failedToFetchClientCompany || 'Failed to fetch client company' }, { status: 500 })
   }
 }
@@ -118,7 +120,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ company })
   } catch (error) {
-    console.error('Failed to update client company:', error)
+    logError('Failed to update client company:', error)
     return NextResponse.json({ error: clientsMessages.failedToUpdateClientCompany || 'Failed to update client company' }, { status: 500 })
   }
 }
@@ -166,7 +168,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to delete client company:', error)
+    logError('Failed to delete client company:', error)
     return NextResponse.json({ error: clientsMessages.failedToDeleteClientCompany || 'Failed to delete client company' }, { status: 500 })
   }
 }

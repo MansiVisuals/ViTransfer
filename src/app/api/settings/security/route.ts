@@ -4,6 +4,10 @@ import { requireApiAdmin } from '@/lib/auth'
 import { invalidateAllShareSessions, clearAllRateLimits } from '@/lib/session-invalidation'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { invalidateSecuritySettingsCache, isHttpsManagedByEnvironment } from '@/lib/settings'
+import { logError, logMessage } from '@/lib/logging'
+import { invalidateSecuritySettingsCache as invalidateVideoAccessSecurityCache } from '@/lib/video-access'
+
 export const runtime = 'nodejs'
 
 function adminTimeoutSeconds(value: number, unit: string): number | null {
@@ -11,6 +15,20 @@ function adminTimeoutSeconds(value: number, unit: string): number | null {
   if (unit === 'MINUTES') return value * 60
   if (unit === 'HOURS') return value * 60 * 60
   return null
+}
+
+function parsePositiveInteger(value: unknown): number | null {
+  const parsed = typeof value === 'number' ? value : parseInt(String(value), 10)
+  if (!Number.isInteger(parsed) || parsed <= 0) return null
+  return parsed
+}
+
+function isHotlinkProtectionValue(value: unknown): value is 'DISABLED' | 'LOG_ONLY' | 'BLOCK_STRICT' {
+  return value === 'DISABLED' || value === 'LOG_ONLY' || value === 'BLOCK_STRICT'
+}
+
+function isClientSessionTimeoutUnit(value: unknown): value is 'MINUTES' | 'HOURS' | 'DAYS' | 'WEEKS' {
+  return value === 'MINUTES' || value === 'HOURS' || value === 'DAYS' || value === 'WEEKS'
 }
 
 
@@ -81,9 +99,12 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(settings)
+    return NextResponse.json({
+      ...settings,
+      httpsManagedByEnvironment: isHttpsManagedByEnvironment(),
+    })
   } catch (error) {
-    console.error('Error fetching security settings:', error)
+    logError('Error fetching security settings:', error)
     return NextResponse.json(
       { error: settingsSecurityMessages.failedToFetchSecuritySettings || 'Failed to fetch security settings' },
       { status: 500 }
@@ -146,6 +167,40 @@ export async function PATCH(request: NextRequest) {
       if (adminSessionTimeoutUnit !== 'MINUTES' && adminSessionTimeoutUnit !== 'HOURS') {
         return NextResponse.json(
           { error: settingsSecurityMessages.adminSessionTimeoutUnitMustBeMinutesOrHours || 'Admin session timeout unit must be MINUTES or HOURS' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (hotlinkProtection !== undefined && hotlinkProtection !== null && !isHotlinkProtectionValue(hotlinkProtection)) {
+      return NextResponse.json(
+        { error: settingsSecurityMessages.invalidHotlinkProtection || 'Hotlink protection must be DISABLED, LOG_ONLY, or BLOCK_STRICT' },
+        { status: 400 }
+      )
+    }
+
+    if (sessionTimeoutUnit !== undefined && sessionTimeoutUnit !== null && !isClientSessionTimeoutUnit(sessionTimeoutUnit)) {
+      return NextResponse.json(
+        { error: settingsSecurityMessages.sessionTimeoutUnitInvalid || 'Client session timeout unit must be MINUTES, HOURS, DAYS, or WEEKS' },
+        { status: 400 }
+      )
+    }
+
+    if (ipRateLimit !== undefined && ipRateLimit !== null) {
+      const val = parsePositiveInteger(ipRateLimit)
+      if (!val || val > 10000) {
+        return NextResponse.json(
+          { error: settingsSecurityMessages.ipRateLimitMustBeBetween1And10000 || 'IP rate limit must be between 1 and 10000 requests per window' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (sessionRateLimit !== undefined && sessionRateLimit !== null) {
+      const val = parsePositiveInteger(sessionRateLimit)
+      if (!val || val > 5000) {
+        return NextResponse.json(
+          { error: settingsSecurityMessages.sessionRateLimitMustBeBetween1And5000 || 'Session rate limit must be between 1 and 5000 requests per window' },
           { status: 400 }
         )
       }
@@ -215,12 +270,15 @@ export async function PATCH(request: NextRequest) {
     const sessionTimeoutChanged = hasSessionTimeoutChanged(currentSettings, sessionTimeoutValue, sessionTimeoutUnit)
     const hotlinkProtectionChanged = hasHotlinkProtectionChanged(currentSettings, hotlinkProtection)
     const passwordAttemptsChanged = hasPasswordAttemptsChanged(currentSettings, passwordAttempts)
+    const effectiveHttpsEnabled = isHttpsManagedByEnvironment()
+      ? process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1'
+      : (httpsEnabled ?? false)
 
     const settings = await prisma.securitySettings.upsert({
       where: { id: 'default' },
       update: {
-        httpsEnabled: httpsEnabled ?? false,
-        hotlinkProtection,
+        httpsEnabled: effectiveHttpsEnabled,
+        hotlinkProtection: hotlinkProtection ?? 'LOG_ONLY',
         ipRateLimit: ipRateLimit ? parseInt(ipRateLimit, 10) : 1000,
         sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit, 10) : 600,
         shareSessionRateLimit: shareSessionRateLimit ? parseInt(shareSessionRateLimit, 10) : 300,
@@ -236,8 +294,8 @@ export async function PATCH(request: NextRequest) {
       },
       create: {
         id: 'default',
-        httpsEnabled: httpsEnabled ?? false,
-        hotlinkProtection,
+        httpsEnabled: effectiveHttpsEnabled,
+        hotlinkProtection: hotlinkProtection ?? 'LOG_ONLY',
         ipRateLimit: ipRateLimit ? parseInt(ipRateLimit, 10) : 1000,
         sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit, 10) : 600,
         shareSessionRateLimit: shareSessionRateLimit ? parseInt(shareSessionRateLimit, 10) : 300,
@@ -253,6 +311,9 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
+    await invalidateSecuritySettingsCache()
+    await invalidateVideoAccessSecurityCache()
+
     // SECURITY: Invalidate sessions when security settings change
     let invalidationLog: string[] = []
 
@@ -262,9 +323,9 @@ export async function PATCH(request: NextRequest) {
       try {
         const count = await invalidateAllShareSessions()
         invalidationLog.push(`Invalidated ${count} share sessions (timeout changed)`)
-        console.log(`[SECURITY] Session timeout changed - invalidated ${count} share sessions`)
+        logMessage(`[SECURITY] Session timeout changed - invalidated ${count} share sessions`)
       } catch (error) {
-        console.error('[SECURITY] Failed to invalidate sessions after timeout change:', error)
+        logError('[SECURITY] Failed to invalidate sessions after timeout change:', error)
         // Don't fail the request if session invalidation fails
       }
     }
@@ -275,9 +336,9 @@ export async function PATCH(request: NextRequest) {
       try {
         const count = await invalidateAllShareSessions()
         invalidationLog.push(`Invalidated ${count} share sessions (hotlink protection strengthened)`)
-        console.log(`[SECURITY] Hotlink protection strengthened - invalidated ${count} share sessions`)
+        logMessage(`[SECURITY] Hotlink protection strengthened - invalidated ${count} share sessions`)
       } catch (error) {
-        console.error('[SECURITY] Failed to invalidate sessions after hotlink change:', error)
+        logError('[SECURITY] Failed to invalidate sessions after hotlink change:', error)
       }
     }
 
@@ -287,19 +348,20 @@ export async function PATCH(request: NextRequest) {
       try {
         const count = await clearAllRateLimits()
         invalidationLog.push(`Cleared ${count} rate limit counters (password attempts changed)`)
-        console.log(`[SECURITY] Password attempts changed - cleared ${count} rate limit entries`)
+        logMessage(`[SECURITY] Password attempts changed - cleared ${count} rate limit entries`)
       } catch (error) {
-        console.error('[SECURITY] Failed to clear rate limits:', error)
+        logError('[SECURITY] Failed to clear rate limits:', error)
       }
     }
 
     // Return settings with invalidation summary
     return NextResponse.json({
       ...settings,
+      httpsManagedByEnvironment: isHttpsManagedByEnvironment(),
       _invalidation: invalidationLog.length > 0 ? invalidationLog : undefined
     })
   } catch (error) {
-    console.error('Error updating security settings:', error)
+    logError('Error updating security settings:', error)
     return NextResponse.json(
       { error: settingsSecurityMessages.failedToUpdateSecuritySettings || 'Failed to update security settings' },
       { status: 500 }

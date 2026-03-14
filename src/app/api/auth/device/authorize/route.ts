@@ -8,6 +8,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 /**
  * POST /api/auth/device/authorize
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[Device Authorize] Error authorizing device:', error)
+    logError('[Device Authorize] Error authorizing device:', error)
     return NextResponse.json(
       { error: authMessages.failedToAuthorizeDevice || 'Failed to authorize device' },
       { status: 500 }

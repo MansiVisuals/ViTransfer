@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { prisma } from './db'
+import { logError } from './logging'
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
 const MAX_AGE_HOURS = 24 // Remove files older than 24 hours
@@ -48,11 +49,11 @@ export async function cleanupOrphanedUploads() {
           skippedCount++
         }
       } catch (error) {
-        console.error(`[Upload Cleanup] Error processing file ${file}:`, error)
+        logError(`[Upload Cleanup] Error processing file ${file}:`, error)
       }
     }
   } catch (error) {
-    console.error('[Upload Cleanup] Error during cleanup:', error)
+    logError('[Upload Cleanup] Error during cleanup:', error)
   }
 }
 
@@ -86,7 +87,7 @@ export async function cleanupStuckUploads() {
       })
     }
   } catch (error) {
-    console.error('[Upload Cleanup] Error during stuck upload cleanup:', error)
+    logError('[Upload Cleanup] Error during stuck upload cleanup:', error)
   }
 }
 

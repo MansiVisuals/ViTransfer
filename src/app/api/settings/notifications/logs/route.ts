@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
       }))
     )
   } catch (error) {
-    console.error('Error fetching notification logs:', error)
+    logError('Error fetching notification logs:', error)
     return NextResponse.json({ error: notificationsMessages.failedToFetchNotificationLogs || 'Failed to fetch notification logs' }, { status: 500 })
   }
 }

@@ -9,6 +9,8 @@ import { getAppUrl } from '@/lib/url'
 import { safeParseBody } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import crypto from 'crypto'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -175,7 +177,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[PASSKEY] Authentication verification error:', error)
+    logError('[PASSKEY] Authentication verification error:', error)
 
     return NextResponse.json(
       {

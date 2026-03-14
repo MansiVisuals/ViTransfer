@@ -13,12 +13,14 @@ import {
 } from '@/lib/otp'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
-import { isSmtpConfigured } from '@/lib/email'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
+import { isSmtpConfigured } from '@/lib/settings'
 import { getAppUrl } from '@/lib/url'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '@/lib/unsubscribe'
 import { safeParseBody } from '@/lib/validation'
 import crypto from 'crypto'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -231,7 +233,7 @@ export async function POST(
       const recipientLocale = await getRecipientLocale(email)
       await sendOTPEmail(email, project.title, code, unsubscribeUrl, recipientLocale)
     } catch (error) {
-      console.error('Error sending OTP email:', error)
+      logError('Error sending OTP email:', error)
       return NextResponse.json(
         { error: shareMessages.failedToSendCode || 'Failed to send verification code. Please try again.' },
         { status: 500 }
@@ -257,7 +259,7 @@ export async function POST(
       message: shareMessages.otpRequestSubmitted || 'If your email is registered for this project, you will receive a verification code shortly',
     })
   } catch (error) {
-    console.error('Error sending OTP:', error)
+    logError('Error sending OTP:', error)
     const locale = await getConfiguredLocale().catch(() => 'en')
     const messages = await loadLocaleMessages(locale).catch(() => null)
     const shareMessages = messages?.share || {}

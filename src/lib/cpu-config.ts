@@ -1,4 +1,5 @@
 import os from 'os'
+import { logMessage } from './logging'
 
 /**
  * Centralized CPU allocation for video processing
@@ -83,8 +84,8 @@ export function getCpuAllocation(): CpuAllocation {
 export function logCpuAllocation(allocation: CpuAllocation): void {
   const utilizationPercent = Math.round((allocation.maxThreadsUsed / allocation.totalThreads) * 100)
 
-  console.log(`[CPU CONFIG] Available threads: ${allocation.totalThreads}`)
-  console.log(`[CPU CONFIG] Video workers: ${allocation.workerConcurrency}, Clean preview: ${allocation.cleanPreviewConcurrency}`)
-  console.log(`[CPU CONFIG] FFmpeg threads per job: ${allocation.threadsPerJob}`)
-  console.log(`[CPU CONFIG] Max thread usage: ${allocation.maxThreadsUsed}/${allocation.totalThreads} (~${utilizationPercent}%)`)
+  logMessage(`[CPU CONFIG] Available threads: ${allocation.totalThreads}`)
+  logMessage(`[CPU CONFIG] Video workers: ${allocation.workerConcurrency}, Clean preview: ${allocation.cleanPreviewConcurrency}`)
+  logMessage(`[CPU CONFIG] FFmpeg threads per job: ${allocation.threadsPerJob}`)
+  logMessage(`[CPU CONFIG] Max thread usage: ${allocation.maxThreadsUsed}/${allocation.totalThreads} (~${utilizationPercent}%)`)
 }

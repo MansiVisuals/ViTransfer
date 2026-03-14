@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { isSmtpConfigured } from '@/lib/email'
 import { handleApprovalNotification } from '@/lib/notifications'
-import { getAutoApproveProject } from '@/lib/settings'
+import { getAutoApproveProject, isSmtpConfigured } from '@/lib/settings'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
+import { logError, logMessage } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -45,8 +46,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { authorName, authorEmail, selectedVideoId } = parsed.data
 
-    console.log('[APPROVAL] Starting approval process for project:', projectId)
-    console.log('[APPROVAL] Selected video:', selectedVideoId)
+    logMessage(`[APPROVAL] Starting approval process for project: ${projectId}`)
+    logMessage(`[APPROVAL] Selected video: ${selectedVideoId}`)
 
     // SECURITY: Validate share password if project is password-protected
     // This allows clients to approve their own projects via the share link
@@ -126,9 +127,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           originalStoragePath: selectedVideo.originalStoragePath,
           resolution: project.previewResolution
         })
-        console.log(`[APPROVAL] Queued clean preview generation for video ${selectedVideoId}`)
+        logMessage(`[APPROVAL] Queued clean preview generation for video ${selectedVideoId}`)
       } catch (queueError) {
-        console.error('[APPROVAL] Failed to queue clean preview job:', queueError)
+        logError('[APPROVAL] Failed to queue clean preview job:', queueError)
         // Don't fail the approval if queue fails
       }
     }
@@ -171,15 +172,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       // They are NOT queued because approvals should notify clients right away
     }
 
-    console.log('[APPROVAL] Video approval complete, preparing notifications')
+    logMessage('[APPROVAL] Video approval complete, preparing notifications')
 
     // Handle approval notifications (will queue and/or send immediately based on schedule)
     try {
       const smtpConfigured = await isSmtpConfigured()
-      console.log('[APPROVAL] SMTP configured:', smtpConfigured)
+      logMessage(`[APPROVAL] SMTP configured: ${smtpConfigured}`)
 
       if (!smtpConfigured) {
-        console.log('[APPROVAL] SMTP not configured, skipping notifications')
+        logMessage('[APPROVAL] SMTP not configured, skipping notifications')
       } else {
         // Determine if this is a complete project approval or partial
         // Complete = ALL unique videos have at least one approved version
@@ -221,13 +222,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         })
       }
     } catch (error) {
-      console.error('[APPROVAL] Error handling approval notifications:', error)
+      logError('[APPROVAL] Error handling approval notifications:', error)
     }
 
-    console.log('[APPROVAL] Approval process complete, returning success')
+    logMessage('[APPROVAL] Approval process complete, returning success')
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[APPROVAL] ERROR in approval route:', error)
+    logError('[APPROVAL] ERROR in approval route:', error)
     return NextResponse.json({ error: projectMessages.failedToApproveProjectApi || 'Failed to approve project' }, { status: 500 })
   }
 }

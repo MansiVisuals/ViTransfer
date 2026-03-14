@@ -8,6 +8,8 @@ import {
 } from '@/lib/email-template-system'
 import { prisma } from '@/lib/db'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
       metadata: TEMPLATE_METADATA,
     })
   } catch (error) {
-    console.error('[API] Failed to list email templates:', error)
+    logError('[API] Failed to list email templates:', error)
     return NextResponse.json(
       { error: templateMessages.failedToLoad || 'Failed to load email templates' },
       { status: 500 }

@@ -4,6 +4,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { NOTIFICATION_EVENT_TYPES } from '@/lib/external-notifications/constants'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ subscriptions: maskedSubscriptions })
   } catch (error) {
-    console.error('[API] Failed to list push subscriptions:', error)
+    logError('[API] Failed to list push subscriptions:', error)
     return NextResponse.json(
       { error: webPushMessages.failedToLoadSubs || 'Failed to list subscriptions' },
       { status: 500 }
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
       deviceName: subscription.deviceName,
     })
   } catch (error) {
-    console.error('[API] Failed to create push subscription:', error)
+    logError('[API] Failed to create push subscription:', error)
     return NextResponse.json(
       { error: webPushMessages.failedToSubscribe || 'Failed to subscribe' },
       { status: 500 }
@@ -234,7 +236,7 @@ export async function PATCH(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[API] Failed to update push subscription:', error)
+    logError('[API] Failed to update push subscription:', error)
     return NextResponse.json(
       { error: webPushMessages.failedToUpdateSub || 'Failed to update subscription' },
       { status: 500 }

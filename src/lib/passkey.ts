@@ -39,6 +39,7 @@ import { prisma } from './db'
 import { getRedis } from './redis'
 import { getWebAuthnConfig } from './settings'
 import { logSecurityEvent } from './video-access'
+import { logError } from './logging'
 import type { AuthUser } from './auth'
 
 /**
@@ -257,7 +258,7 @@ export async function verifyPasskeyRegistration(
       credentialId: passkeyCredential.id,
     }
   } catch (error) {
-    console.error('[PASSKEY] Registration verification error:', error)
+    logError('[PASSKEY] Registration verification error:', error)
 
     // Log failed registration attempt with full details
     await logSecurityEvent({
@@ -311,7 +312,8 @@ export async function generatePasskeyAuthenticationOptions(
     })
 
     if (!user || user.passkeys.length === 0) {
-      throw new Error('No passkeys registered for this account')
+      // SECURITY: Generic error prevents user/email enumeration
+      throw new Error('PassKey authentication is not available')
     }
 
     challengeKey = user.id
@@ -461,7 +463,7 @@ export async function verifyPasskeyAuthentication(
       },
     }
   } catch (error) {
-    console.error('[PASSKEY] Authentication verification error:', error)
+    logError('[PASSKEY] Authentication verification error:', error)
 
     // Log failed authentication attempt with full details
     await logSecurityEvent({
@@ -573,7 +575,7 @@ export async function deletePasskey(
 
     return { success: true }
   } catch (error) {
-    console.error('[PASSKEY] Delete error:', error)
+    logError('[PASSKEY] Delete error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete passkey',
@@ -615,7 +617,7 @@ export async function updatePasskeyName(
 
     return { success: true }
   } catch (error) {
-    console.error('[PASSKEY] Update name error:', error)
+    logError('[PASSKEY] Update name error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update passkey name',

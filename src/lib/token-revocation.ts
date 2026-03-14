@@ -13,6 +13,7 @@
  */
 
 import { getRedis } from './redis'
+import { logWarn } from './logging'
 
 /**
  * Revoke a JWT token by adding it to the blacklist
@@ -43,7 +44,7 @@ export async function revokeToken(token: string, expiresIn: number): Promise<voi
   // Store with TTL equal to token expiration time
   // Value is timestamp of revocation for audit purposes
   if (!Number.isFinite(expiresIn) || expiresIn <= 0) {
-    console.warn('[AUTH] Skipping token revocation due to invalid TTL', { expiresIn, key })
+    logWarn('[AUTH] Skipping token revocation due to invalid TTL', { expiresIn, key })
     return
   }
 

@@ -4,6 +4,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { validateUploadedFile } from '@/lib/file-validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
       videoId: video.id,
     })
   } catch (error) {
-    console.error('Error creating video:', error)
+    logError('Error creating video:', error)
     return NextResponse.json({ error: videoMessages.failedToCreateVideo || 'Failed to create video' }, { status: 500 })
   }
 }

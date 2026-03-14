@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateBlocklistCache } from '@/lib/video-access'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 export const runtime = 'nodejs'
 
 export const dynamic = 'force-dynamic'
@@ -33,7 +35,7 @@ export async function GET(request: NextRequest) {
       count: blockedIPs.length,
     })
   } catch (error) {
-    console.error('Error fetching blocked IPs:', error)
+    logError('Error fetching blocked IPs:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToFetchBlockedIps || 'Failed to fetch blocked IPs' },
       { status: 500 }
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
       blockedIP,
     })
   } catch (error) {
-    console.error('Error blocking IP:', error)
+    logError('Error blocking IP:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToBlockIP || 'Failed to block IP address' },
       { status: 500 }
@@ -152,7 +154,7 @@ export async function DELETE(request: NextRequest) {
       message: settingsMessages.ipAddressUnblockedSuccessfully || 'IP address unblocked successfully',
     })
   } catch (error) {
-    console.error('Error unblocking IP:', error)
+    logError('Error unblocking IP:', error)
     return NextResponse.json(
       { error: settingsMessages.failedToUnblockIpAddress || 'Failed to unblock IP address' },
       { status: 500 }

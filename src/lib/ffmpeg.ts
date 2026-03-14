@@ -4,6 +4,7 @@ import path from 'path'
 import os from 'os'
 import crypto from 'crypto'
 import { getCpuAllocation } from './cpu-config'
+import { logError, logMessage } from './logging'
 
 // Debug mode - outputs verbose FFmpeg logs
 // Enable with: DEBUG_WORKER=true environment variable
@@ -68,8 +69,8 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
     ]
 
     if (DEBUG) {
-      console.log('[FFPROBE DEBUG] Executing:', ffprobePath, args.join(' '))
-      console.log('[FFPROBE DEBUG] Input file:', inputPath)
+      logMessage('[FFPROBE DEBUG] Executing:', ffprobePath, args.join(' '))
+      logMessage('[FFPROBE DEBUG] Input file:', inputPath)
     }
 
     const ffprobe = spawn(ffprobePath, args)
@@ -80,7 +81,7 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
       const text = data.toString()
       stdout += text
       if (DEBUG) {
-        console.log('[FFPROBE STDOUT]', text.trim())
+        logMessage('[FFPROBE STDOUT]', text.trim())
       }
     })
 
@@ -88,13 +89,13 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
       const text = data.toString()
       stderr += text
       if (DEBUG) {
-        console.log('[FFPROBE STDERR]', text.trim())
+        logMessage('[FFPROBE STDERR]', text.trim())
       }
     })
 
     ffprobe.on('close', (code) => {
       if (DEBUG) {
-        console.log('[FFPROBE DEBUG] Process exited with code:', code)
+        logMessage('[FFPROBE DEBUG] Process exited with code:', code)
       }
 
       if (code !== 0) {
@@ -112,7 +113,7 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
           : stderr || 'Unknown error'
 
         if (DEBUG) {
-          console.error('[FFPROBE DEBUG] Error detected:', errorMessage)
+          logError('[FFPROBE DEBUG] Error detected:', errorMessage)
         }
 
         reject(new Error(
@@ -127,12 +128,12 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
         const videoStream = metadata.streams.find((s: any) => s.codec_type === 'video')
 
         if (DEBUG) {
-          console.log('[FFPROBE DEBUG] Parsed metadata:', JSON.stringify(metadata, null, 2))
+          logMessage('[FFPROBE DEBUG] Parsed metadata:', JSON.stringify(metadata, null, 2))
         }
 
         if (!videoStream) {
           if (DEBUG) {
-            console.error('[FFPROBE DEBUG] No video stream found in metadata')
+            logError('[FFPROBE DEBUG] No video stream found in metadata')
           }
           reject(new Error('No video stream found in file. The file may be audio-only or corrupted.'))
           return
@@ -154,13 +155,13 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
         }
 
         if (DEBUG) {
-          console.log('[FFPROBE DEBUG] Extracted video metadata:', result)
+          logMessage('[FFPROBE DEBUG] Extracted video metadata:', result)
         }
 
         resolve(result)
       } catch (error) {
         if (DEBUG) {
-          console.error('[FFPROBE DEBUG] Failed to parse output:', error)
+          logError('[FFPROBE DEBUG] Failed to parse output:', error)
         }
         reject(new Error(`Failed to parse ffprobe output: ${error}. Output was: ${stdout.substring(0, 200)}`))
       }
@@ -192,7 +193,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   } = options
 
   if (DEBUG) {
-    console.log('[FFMPEG DEBUG] Starting transcodeVideo with options:', {
+    logMessage('[FFMPEG DEBUG] Starting transcodeVideo with options:', {
       inputPath,
       outputPath,
       width,
@@ -219,7 +220,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   }
 
   if (DEBUG) {
-    console.log('[FFMPEG DEBUG] CPU optimization:', {
+    logMessage('[FFMPEG DEBUG] CPU optimization:', {
       totalThreads: cpuAllocation.totalThreads,
       threadsPerJob: threads,
       selectedPreset: preset
@@ -231,7 +232,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   const duration = metadata.duration
 
   if (DEBUG) {
-    console.log('[FFMPEG DEBUG] Input video metadata:', metadata)
+    logMessage('[FFMPEG DEBUG] Input video metadata:', metadata)
   }
 
   // Build video filters
@@ -274,7 +275,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   const filterComplex = filters.join(',')
 
   if (DEBUG) {
-    console.log('[FFMPEG DEBUG] Built filter complex:', filterComplex)
+    logMessage('[FFMPEG DEBUG] Built filter complex:', filterComplex)
   }
 
   // Build ffmpeg arguments with optimizations
@@ -300,7 +301,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   ]
 
   if (DEBUG) {
-    console.log('[FFMPEG DEBUG] Executing command:', 'nice -n 10', ffmpegPath, args.join(' '))
+    logMessage('[FFMPEG DEBUG] Executing command:', 'nice -n 10', ffmpegPath, args.join(' '))
   }
 
   return new Promise((resolve, reject) => {
@@ -313,7 +314,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     let stderr = ''
 
     if (DEBUG) {
-      console.log('[FFMPEG DEBUG] FFmpeg process spawned, PID:', ffmpeg.pid)
+      logMessage('[FFMPEG DEBUG] FFmpeg process spawned, PID:', ffmpeg.pid)
     }
 
     ffmpeg.stderr.on('data', (data) => {
@@ -322,7 +323,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
 
       // In debug mode, log all stderr output
       if (DEBUG) {
-        console.log('[FFMPEG STDERR]', text.trim())
+        logMessage('[FFMPEG STDERR]', text.trim())
       }
 
       // Parse progress from stderr
@@ -335,7 +336,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
           const currentTime = hours * 3600 + minutes * 60 + seconds
           const progress = Math.min(currentTime / duration, 1)
           if (DEBUG) {
-            console.log('[FFMPEG DEBUG] Progress:', Math.round(progress * 100) + '%')
+            logMessage('[FFMPEG DEBUG] Progress:', Math.round(progress * 100) + '%')
           }
           onProgress(progress)
         }
@@ -343,7 +344,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
 
       // Log errors and warnings (even when not in debug mode)
       if (!DEBUG && (text.includes('error') || text.includes('Error') || text.includes('failed'))) {
-        console.error('FFmpeg stderr:', text)
+        logError('FFmpeg stderr:', text)
       }
     })
 
@@ -355,26 +356,26 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
           fs.unlinkSync(watermarkTextFile)
           fs.rmdirSync(tmpDir)
           if (DEBUG) {
-            console.log('[FFMPEG DEBUG] Cleaned up watermark temp file:', watermarkTextFile)
+            logMessage('[FFMPEG DEBUG] Cleaned up watermark temp file:', watermarkTextFile)
           }
         } catch (cleanupErr) {
-          console.error('Failed to cleanup watermark temp file:', cleanupErr)
+          logError('Failed to cleanup watermark temp file:', cleanupErr)
         }
       }
 
       if (DEBUG) {
-        console.log('[FFMPEG DEBUG] Process exited with code:', code)
+        logMessage('[FFMPEG DEBUG] Process exited with code:', code)
       }
 
       if (code === 0) {
         if (DEBUG) {
-          console.log('[FFMPEG DEBUG] Transcoding completed successfully')
+          logMessage('[FFMPEG DEBUG] Transcoding completed successfully')
         }
         resolve()
       } else {
         if (DEBUG) {
-          console.error('[FFMPEG DEBUG] Transcoding failed with code:', code)
-          console.error('[FFMPEG DEBUG] Full stderr output:', stderr)
+          logError('[FFMPEG DEBUG] Transcoding failed with code:', code)
+          logError('[FFMPEG DEBUG] Full stderr output:', stderr)
         }
         reject(new Error(`FFmpeg exited with code ${code}: ${stderr}`))
       }
@@ -388,12 +389,12 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
           fs.unlinkSync(watermarkTextFile)
           fs.rmdirSync(tmpDir)
         } catch (cleanupErr) {
-          console.error('Failed to cleanup watermark temp file:', cleanupErr)
+          logError('Failed to cleanup watermark temp file:', cleanupErr)
         }
       }
 
       if (DEBUG) {
-        console.error('[FFMPEG DEBUG] Failed to spawn FFmpeg:', err)
+        logError('[FFMPEG DEBUG] Failed to spawn FFmpeg:', err)
       }
       reject(new Error(`Failed to start FFmpeg: ${err.message}`))
     })
@@ -406,7 +407,7 @@ export async function generateThumbnail(
   timestamp: number = 10
 ): Promise<void> {
   if (DEBUG) {
-    console.log('[FFMPEG DEBUG] Starting generateThumbnail:', {
+    logMessage('[FFMPEG DEBUG] Starting generateThumbnail:', {
       inputPath,
       outputPath,
       timestamp
@@ -425,7 +426,7 @@ export async function generateThumbnail(
   ]
 
   if (DEBUG) {
-    console.log('[FFMPEG DEBUG] Thumbnail command:', 'nice -n 10', ffmpegPath, args.join(' '))
+    logMessage('[FFMPEG DEBUG] Thumbnail command:', 'nice -n 10', ffmpegPath, args.join(' '))
   }
 
   return new Promise((resolve, reject) => {
@@ -436,30 +437,30 @@ export async function generateThumbnail(
     let stderr = ''
 
     if (DEBUG) {
-      console.log('[FFMPEG DEBUG] Thumbnail process spawned, PID:', ffmpeg.pid)
+      logMessage('[FFMPEG DEBUG] Thumbnail process spawned, PID:', ffmpeg.pid)
     }
 
     ffmpeg.stderr.on('data', (data) => {
       const text = data.toString()
       stderr += text
       if (DEBUG) {
-        console.log('[FFMPEG THUMBNAIL STDERR]', text.trim())
+        logMessage('[FFMPEG THUMBNAIL STDERR]', text.trim())
       }
     })
 
     ffmpeg.on('close', (code) => {
       if (DEBUG) {
-        console.log('[FFMPEG DEBUG] Thumbnail process exited with code:', code)
+        logMessage('[FFMPEG DEBUG] Thumbnail process exited with code:', code)
       }
 
       if (code === 0) {
         if (DEBUG) {
-          console.log('[FFMPEG DEBUG] Thumbnail generated successfully')
+          logMessage('[FFMPEG DEBUG] Thumbnail generated successfully')
         }
         resolve()
       } else {
         if (DEBUG) {
-          console.error('[FFMPEG DEBUG] Thumbnail generation failed:', stderr)
+          logError('[FFMPEG DEBUG] Thumbnail generation failed:', stderr)
         }
         reject(new Error(`FFmpeg thumbnail generation failed: ${stderr}`))
       }
@@ -467,7 +468,7 @@ export async function generateThumbnail(
 
     ffmpeg.on('error', (err) => {
       if (DEBUG) {
-        console.error('[FFMPEG DEBUG] Failed to spawn FFmpeg for thumbnail:', err)
+        logError('[FFMPEG DEBUG] Failed to spawn FFmpeg for thumbnail:', err)
       }
       reject(new Error(`Failed to start FFmpeg: ${err.message}`))
     })

@@ -5,6 +5,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/security/html-sanitization'
 import { safeParseBody } from '@/lib/validation'
 import { SUPPORTED_LOCALES, getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 interface RouteParams {
   params: Promise<{ id: string; contactId: string }>
@@ -85,7 +87,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ contact })
   } catch (error) {
-    console.error('Failed to update contact:', error)
+    logError('Failed to update contact:', error)
     return NextResponse.json({ error: contactMessages?.failedToUpdateContact || 'Failed to update contact' }, { status: 500 })
   }
 }
@@ -132,7 +134,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to delete contact:', error)
+    logError('Failed to delete contact:', error)
     return NextResponse.json({ error: contactMessages?.failedToDeleteContact || 'Failed to delete contact' }, { status: 500 })
   }
 }

@@ -4,6 +4,7 @@ import { initStorage, uploadFile, deleteFile, getFilePath } from '@/lib/storage'
 import { prisma } from '@/lib/db'
 import fs from 'fs/promises'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -114,13 +115,15 @@ export async function POST(request: NextRequest) {
       })
     } catch (dbError) {
       // DB upsert failed — remove orphaned file from disk
-      await deleteFile(STORAGE_PATH).catch(() => {})
+      await deleteFile(STORAGE_PATH).catch((cleanupError) => {
+        logError('[SETTINGS:LOGO] Failed to rollback orphaned logo file', cleanupError)
+      })
       throw dbError
     }
 
     return NextResponse.json({ path: '/api/branding/logo' })
   } catch (error) {
-    console.error('[SETTINGS:LOGO] Upload failed:', error)
+    logError('[SETTINGS:LOGO] Upload failed', error)
     return NextResponse.json({ error: settingsMessages.failedToUploadLogo || 'Failed to upload logo' }, { status: 500 })
   }
 }
@@ -146,7 +149,7 @@ export async function DELETE(request: NextRequest) {
     })
     return new NextResponse(null, { status: 204 })
   } catch (error) {
-    console.error('[SETTINGS:LOGO] Delete failed:', error)
+    logError('[SETTINGS:LOGO] Delete failed', error)
     return NextResponse.json({ error: settingsMessages.failedToRemoveLogo || 'Failed to delete logo' }, { status: 500 })
   }
 }

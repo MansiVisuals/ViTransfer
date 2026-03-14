@@ -191,6 +191,7 @@ model VideoAsset {
   // Upload metadata
   uploadedBy     String? // User ID or "client" for client uploads
   uploadedByName String? // Display name of uploader
+  uploadedBySessionId String? // Stable share/admin session identifier for pending asset ownership
 
   // Comment attachment (optional link to comment)
   commentId String?
@@ -201,6 +202,7 @@ model VideoAsset {
 
   @@index([videoId])
   @@index([videoId, category])
+  @@index([videoId, uploadedBySessionId])
   @@index([commentId])
 }
 
@@ -332,6 +334,10 @@ model Settings {
   // Web Push VAPID Keys (auto-generated on first use)
   vapidPublicKey  String? // Public key for browser subscription
   vapidPrivateKey String? // Encrypted private key
+
+  // Privacy Disclosure (shown on client share page)
+  privacyDisclosureEnabled Boolean @default(false)
+  privacyDisclosureText    String? // Custom text; null = use default i18n text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -13,6 +13,7 @@
  */
 
 import IORedis from 'ioredis'
+import { logError, logMessage } from './logging'
 
 let redis: IORedis | null = null
 let redisForQueue: IORedis | null = null
@@ -37,7 +38,7 @@ export function getRedis(): IORedis {
     lazyConnect: true,
     retryStrategy: (times) => {
       if (times > 3) {
-        console.error('Redis connection failed after 3 retries')
+        logError('Redis connection failed after 3 retries')
         return null
       }
       return Math.min(times * 100, 3000)
@@ -45,11 +46,11 @@ export function getRedis(): IORedis {
   })
 
   redis.on('error', (error) => {
-    console.error('Redis error:', error.message)
+    logError('Redis error:', error.message)
   })
 
   redis.on('connect', () => {
-    console.log('Redis connected successfully')
+    logMessage('Redis connected successfully')
   })
 
   return redis
@@ -84,11 +85,11 @@ export function getRedisForQueue(): IORedis {
   })
 
   redisForQueue.on('error', (error) => {
-    console.error('Redis (Queue) error:', error.message)
+    logError('Redis (Queue) error:', error.message)
   })
 
   redisForQueue.on('connect', () => {
-    console.log('Redis (Queue) connected successfully')
+    logMessage('Redis (Queue) connected successfully')
   })
 
   return redisForQueue

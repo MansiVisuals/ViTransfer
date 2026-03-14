@@ -14,6 +14,7 @@ import AnnotationToolbar from './AnnotationToolbar'
 import { useAnnotationDrawing } from '@/hooks/useAnnotationDrawing'
 import { AnnotationData } from '@/types/annotations'
 import { secondsToTimecode } from '@/lib/timecode'
+import { logError } from '@/lib/logging'
 
 type CommentWithReplies = Comment & {
   replies?: Comment[]
@@ -549,7 +550,7 @@ export default function VideoPlayer({
           video.webkitEnterFullscreen()
           setIsFullscreen(true)
         } catch (error) {
-          console.error('Failed to enter fullscreen:', error)
+          logError('Failed to enter fullscreen:', error)
         }
       } else if (isMobile && video.requestFullscreen) {
         // Android Chrome
@@ -557,7 +558,7 @@ export default function VideoPlayer({
           video.requestFullscreen()
           setIsFullscreen(true)
         } catch (error) {
-          console.error('Failed to enter fullscreen:', error)
+          logError('Failed to enter fullscreen:', error)
         }
       } else if (containerRef.current.requestFullscreen) {
         // Desktop browsers
@@ -565,7 +566,7 @@ export default function VideoPlayer({
           containerRef.current.requestFullscreen()
           setIsFullscreen(true)
         } catch (error) {
-          console.error('Failed to enter fullscreen:', error)
+          logError('Failed to enter fullscreen:', error)
         }
       }
     } else {
@@ -574,7 +575,7 @@ export default function VideoPlayer({
         document.exitFullscreen()
         setIsFullscreen(false)
       } catch (error) {
-        console.error('Failed to exit fullscreen:', error)
+        logError('Failed to exit fullscreen:', error)
       }
     }
   }

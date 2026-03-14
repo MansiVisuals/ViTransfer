@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import { TEMP_DIR } from './cleanup'
+import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
 
@@ -22,10 +23,10 @@ export interface AssetProcessingJob {
 export async function processAsset(job: Job<AssetProcessingJob>) {
   const { assetId, storagePath, expectedCategory } = job.data
 
-  console.log(`[WORKER] Processing asset ${assetId}`)
+  logMessage(`[WORKER] Processing asset ${assetId}`)
 
   if (DEBUG) {
-    console.log('[WORKER DEBUG] Asset job data:', JSON.stringify(job.data, null, 2))
+    logMessage(`[WORKER DEBUG] Asset job data: ${JSON.stringify(job.data, null, 2)}`)
   }
 
   let tempFilePath: string | undefined
@@ -35,8 +36,8 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
     tempFilePath = path.join(TEMP_DIR, `${assetId}-asset`)
 
     if (DEBUG) {
-      console.log('[WORKER DEBUG] Downloading asset from:', storagePath)
-      console.log('[WORKER DEBUG] Temp file path:', tempFilePath)
+      logMessage(`[WORKER DEBUG] Downloading asset from: ${storagePath}`)
+      logMessage(`[WORKER DEBUG] Temp file path: ${tempFilePath}`)
     }
 
     const downloadStream = await downloadFile(storagePath)
@@ -48,11 +49,11 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       throw new Error('Downloaded file is empty')
     }
 
-    console.log(`[WORKER] Downloaded asset ${assetId}, size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`)
+    logMessage(`[WORKER] Downloaded asset ${assetId}, size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`)
 
     // Validate magic bytes
     if (DEBUG) {
-      console.log('[WORKER DEBUG] Validating asset magic bytes...')
+      logMessage('[WORKER DEBUG] Validating asset magic bytes...')
     }
 
     const { fileTypeFromFile } = await import('file-type')
@@ -60,7 +61,7 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
 
     if (!fileType) {
       // Some files (like .prproj, .txt) don't have magic bytes
-      console.warn('[ASSET VALIDATION] Could not detect magic bytes for:', tempFilePath)
+      logMessage(`[ASSET VALIDATION] Could not detect magic bytes for: ${tempFilePath}`)
 
       await prisma.videoAsset.update({
         where: { id: assetId },
@@ -70,7 +71,7 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
         }
       })
 
-      console.log(`[WORKER] Asset ${assetId} processed (no magic bytes detected)`)
+      logMessage(`[WORKER] Asset ${assetId} processed (no magic bytes detected)`)
       return
     }
 
@@ -84,10 +85,10 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       if (expectedConfig && expectedConfig.mimeTypes.includes(fileType.mime)) {
         // Expected category is valid and compatible - use it (preserve manual selection)
         finalCategory = expectedCategory
-        console.log(`[WORKER] Asset MIME type ${fileType.mime} is compatible with expected category '${expectedCategory}'`)
+        logMessage(`[WORKER] Asset MIME type ${fileType.mime} is compatible with expected category '${expectedCategory}'`)
       } else {
         // Expected category doesn't support this MIME type - validation failed
-        console.error(`[WORKER ERROR] File MIME type '${fileType.mime}' is not compatible with expected category '${expectedCategory}'`)
+        logMessage(`[WORKER ERROR] File MIME type '${fileType.mime}' is not compatible with expected category '${expectedCategory}'`)
 
         await prisma.videoAsset.update({
           where: { id: assetId },
@@ -110,7 +111,7 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       }
 
       if (!detectedCategory) {
-        console.error(`[WORKER ERROR] File content does not match any allowed asset type. Detected: ${fileType.mime}`)
+        logMessage(`[WORKER ERROR] File content does not match any allowed asset type. Detected: ${fileType.mime}`)
 
         await prisma.videoAsset.update({
           where: { id: assetId },
@@ -125,7 +126,7 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       finalCategory = detectedCategory
     }
 
-    console.log(`[WORKER] Asset magic byte validation passed - type: ${fileType.mime}, category: ${finalCategory}`)
+    logMessage(`[WORKER] Asset magic byte validation passed - type: ${fileType.mime}, category: ${finalCategory}`)
 
     // Update asset with detected file type and final category
     await prisma.videoAsset.update({
@@ -136,10 +137,10 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       }
     })
 
-    console.log(`[WORKER] Asset ${assetId} processed successfully`)
+    logMessage(`[WORKER] Asset ${assetId} processed successfully`)
 
   } catch (error) {
-    console.error(`[WORKER ERROR] Asset processing failed for ${assetId}:`, error)
+    logError(`[WORKER ERROR] Asset processing failed for ${assetId}`, error)
     throw error
   } finally {
     // Cleanup temp file
@@ -147,10 +148,10 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
       try {
         fs.unlinkSync(tempFilePath)
         if (DEBUG) {
-          console.log('[WORKER DEBUG] Cleaned up temp file:', tempFilePath)
+          logMessage(`[WORKER DEBUG] Cleaned up temp file: ${tempFilePath}`)
         }
       } catch (cleanupError) {
-        console.error('[WORKER ERROR] Failed to cleanup temp file:', cleanupError)
+        logError('[WORKER ERROR] Failed to cleanup temp file', cleanupError)
       }
     }
   }

@@ -1,8 +1,10 @@
 import crypto from 'crypto'
 import { prisma } from './db'
-import { renderUnsubscribeSection, sendEmail, escapeHtml, getEmailSettings, renderEmailShell, getEmailBrand } from './email'
+import { renderUnsubscribeSection, sendEmail, getEmailSettings, renderEmailShell, getEmailBrand, processTemplateContent } from './email'
 import { getRedis } from './redis'
 import { loadLocaleMessages } from '@/i18n/locale'
+import { getEmailTemplate, replacePlaceholders } from './email-template-system'
+import { logError } from './logging'
 
 // OTP Configuration
 const OTP_LENGTH = 6
@@ -90,7 +92,7 @@ export async function checkOTPRateLimit(
     try {
       parsed = JSON.parse(data)
     } catch (error) {
-      console.error('Failed to parse OTP rate limit data:', error)
+      logError('Failed to parse OTP rate limit data:', error)
       await redis.del(rateLimitKey)
       return { limited: false }
     }
@@ -144,7 +146,7 @@ async function incrementOTPRateLimit(
         firstAttempt = parsed.firstAttempt
       }
     } catch (error) {
-      console.error('Failed to parse OTP rate limit data:', error)
+      logError('Failed to parse OTP rate limit data:', error)
       await redis.del(rateLimitKey)
       // Continue with default values
     }
@@ -200,50 +202,43 @@ export async function sendOTPEmail(
   const messages = await loadLocaleMessages(locale)
   const otpMessages = messages?.shareOtpEmail || {}
 
-  // SECURITY: Escape HTML to prevent XSS
-  const safeProjectTitle = escapeHtml(projectTitle)
-  const subject = (otpMessages.subject || 'Your verification code for {projectTitle}')
-    .replace('{projectTitle}', safeProjectTitle)
+  const template = await getEmailTemplate('OTP_VERIFICATION', locale)
+  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, messages?.email) : ''
+
+  const placeholderValues: Record<string, string> = {
+    '{{RECIPIENT_NAME}}': 'there',
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{OTP_CODE}}': code,
+    '{{EXPIRY_MINUTES}}': String(OTP_EXPIRY_MINUTES),
+    '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
+    '{{COMPANY_NAME}}': companyName,
+  }
+
+  const subject = replacePlaceholders(template.subject, placeholderValues)
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand)
+
   const title = otpMessages.title || 'Verification Code'
   const preheader = (otpMessages.preheader || 'Your verification code for {projectTitle}')
     .replace('{projectTitle}', projectTitle)
-  const intro = (otpMessages.intro || 'Your verification code for <strong>{projectTitle}</strong> is:')
-    .replace('{projectTitle}', safeProjectTitle)
   const expiry = (otpMessages.expiry || 'This code will expire in {minutes} minutes.')
     .replace('{minutes}', String(OTP_EXPIRY_MINUTES))
-  const ignoreNotice = otpMessages.ignoreNotice || "If you didn't request this code, please ignore this email."
-  const textIntro = (otpMessages.textIntro || 'Your verification code for {projectTitle} is:')
+  const textSubject = (otpMessages.subject || 'Your verification code for {projectTitle}')
     .replace('{projectTitle}', projectTitle)
   const textIgnoreNotice = otpMessages.textIgnoreNotice || "If you didn't request this code, you can safely ignore this email."
+  const textIntro = (otpMessages.textIntro || 'Your verification code for {projectTitle} is:')
+    .replace('{projectTitle}', projectTitle)
 
   const html = renderEmailShell({
     companyName,
     title,
     preheader,
     brand,
-    bodyContent: `
-      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${brand.textSubtle}; line-height: 1.5;">
-        ${intro}
-      </p>
-
-      <div style="background: ${brand.surfaceAlt}; border: 1px solid ${brand.border}; border-radius: 12px; padding: 26px; text-align: center; margin-bottom: 24px;">
-        <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: ${brand.text}; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">
-          ${code}
-        </div>
-      </div>
-
-      <p style="margin: 0 0 10px 0; font-size: 14px; color: ${brand.textSubtle}; line-height: 1.5;">
-        ${expiry}
-      </p>
-
-      <p style="margin: 0; font-size: 13px; color: ${brand.muted}; line-height: 1.5;">
-        ${ignoreNotice}
-      </p>
-      ${unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, messages?.email) : ''}
-    `,
+    bodyContent,
   })
 
   const text = `
+${textSubject}
+
 ${textIntro}
 
 ${code}
@@ -294,7 +289,7 @@ export async function verifyOTP(
   try {
     otpData = JSON.parse(data)
   } catch (error) {
-    console.error('Failed to parse OTP data:', error)
+    logError('Failed to parse OTP data:', error)
     await redis.del(otpKey)
     return {
       success: false,

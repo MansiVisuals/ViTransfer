@@ -7,6 +7,7 @@ import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
 import { getRedis } from './redis'
 import { isShareSessionRevoked } from './session-invalidation'
+import { logError, logWarn } from './logging'
 import { getAdminSessionTimeoutSeconds } from './settings'
 
 export interface AuthUser {
@@ -292,7 +293,7 @@ export async function verifyCredentials(usernameOrEmail: string, password: strin
       role: user.role,
     }
   } catch (error) {
-    console.error('Error verifying credentials:', error)
+    logError('Error verifying credentials:', error)
     return null
   }
 }
@@ -406,13 +407,13 @@ function remainingTtl(token: string, secret: string | undefined | null): number 
   const fallbackTtl = 60 // Ensure a valid TTL even if token parsing fails
 
   if (!secret) {
-    console.warn('[AUTH] Missing JWT secret while computing remaining TTL')
+    logWarn('[AUTH] Missing JWT secret while computing remaining TTL')
     return fallbackTtl
   }
 
   const decoded = jwt.decode(token) as jwt.JwtPayload | null
   if (!decoded?.exp) {
-    console.warn('[AUTH] Token missing exp claim while computing remaining TTL')
+    logWarn('[AUTH] Token missing exp claim while computing remaining TTL')
     return fallbackTtl
   }
 
@@ -431,7 +432,7 @@ async function storeTokenFingerprint(userId: string, refreshToken: string, finge
     const key = `token_fingerprint:${userId}:${hashToken(refreshToken)}`
     await redis.setex(key, REFRESH_TOKEN_DURATION, fingerprintHash)
   } catch (error) {
-    console.error('[AUTH] Failed to store token fingerprint:', error)
+    logError('[AUTH] Failed to store token fingerprint:', error)
   }
 }
 
@@ -442,7 +443,7 @@ async function getTokenFingerprint(userId: string, refreshToken: string): Promis
     const fingerprint = await redis.get(key)
     return fingerprint
   } catch (error) {
-    console.error('[AUTH] Failed to get token fingerprint:', error)
+    logError('[AUTH] Failed to get token fingerprint:', error)
     return null
   }
 }

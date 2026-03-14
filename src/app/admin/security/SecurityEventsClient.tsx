@@ -16,6 +16,7 @@ import { Shield, AlertTriangle, Info, XCircle, Trash2, RefreshCw, ChevronRight, 
 import FilterDropdown from '@/components/FilterDropdown'
 import { formatDateTime } from '@/lib/utils'
 import { apiDelete, apiFetch } from '@/lib/api-client'
+import { logError } from '@/lib/logging'
 import {
   formatSecurityEventType,
   getSecurityEventDescription,
@@ -64,7 +65,8 @@ interface RateLimitEntry {
   type: string
 }
 
-const EVENTS_PER_PAGE = 10
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
+const DEFAULT_PAGE_SIZE = 10
 
 export default function SecurityEventsClient() {
   const t = useTranslations('security')
@@ -76,7 +78,7 @@ export default function SecurityEventsClient() {
   ]
 
   const [events, setEvents] = useState<SecurityEvent[]>([])
-  const [pagination, setPagination] = useState({ page: 1, limit: EVENTS_PER_PAGE, total: 0, pages: 0 })
+  const [pagination, setPagination] = useState({ page: 1, limit: DEFAULT_PAGE_SIZE, total: 0, pages: 0 })
   const [stats, setStats] = useState<Array<{ type: string; count: number }>>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
@@ -124,7 +126,7 @@ export default function SecurityEventsClient() {
         setTypeFilter(new Set(data.stats.map(s => s.type)))
       }
     } catch (error) {
-      console.error('Error loading security events:', error)
+      logError('Error loading security events:', error)
     } finally {
       setLoading(false)
     }
@@ -138,7 +140,7 @@ export default function SecurityEventsClient() {
       const data = await response.json()
       setRateLimits(data.entries || [])
     } catch (error) {
-      console.error('Error loading rate limits:', error)
+      logError('Error loading rate limits:', error)
     }
   }, [t])
 
@@ -471,7 +473,7 @@ export default function SecurityEventsClient() {
             )}
 
             {/* Pagination */}
-            {pagination.pages > 1 && (
+            {(pagination.pages > 1 || pagination.total > DEFAULT_PAGE_SIZE) && (
               <div className="flex items-center justify-between px-3 py-2 border-t">
                 <Button
                   onClick={(e) => { e.stopPropagation(); setPagination(p => ({ ...p, page: p.page - 1 })) }}
@@ -481,9 +483,20 @@ export default function SecurityEventsClient() {
                 >
                   {tc('previous')}
                 </Button>
-                <span className="text-xs text-muted-foreground">
-                  {tc('pageOf', { page: pagination.page, pages: pagination.pages })}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    {tc('pageOf', { page: pagination.page, pages: pagination.pages })}
+                  </span>
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) => setPagination(p => ({ ...p, limit: Number(e.target.value), page: 1 }))}
+                    className="text-xs border rounded px-1.5 py-1 bg-background text-foreground"
+                  >
+                    {PAGE_SIZE_OPTIONS.map(size => (
+                      <option key={size} value={size}>{size} {t('perPage')}</option>
+                    ))}
+                  </select>
+                </div>
                 <Button
                   onClick={(e) => { e.stopPropagation(); setPagination(p => ({ ...p, page: p.page + 1 })) }}
                   disabled={pagination.page === pagination.pages || loading}

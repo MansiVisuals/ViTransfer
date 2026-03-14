@@ -9,6 +9,7 @@ import { apiFetch, apiPost, apiPatch } from '@/lib/api-client'
 import { NOTIFICATION_EVENT_TYPES, type NotificationEventType } from '@/lib/external-notifications/constants'
 import { Bell, BellOff, Send, Trash2, Smartphone, Monitor, Pencil, Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { logError } from '@/lib/logging'
 
 interface PushSubscription {
   id: string
@@ -178,7 +179,7 @@ export function WebPushSection({ active }: { active: boolean }) {
       setSuccess(t('enabledSuccess'))
       await loadSubscriptions()
     } catch (err) {
-      console.error('Subscribe error:', err)
+      logError('Subscribe error:', err)
       setError(err instanceof Error ? err.message : t('failedToSubscribe'))
     }
   }

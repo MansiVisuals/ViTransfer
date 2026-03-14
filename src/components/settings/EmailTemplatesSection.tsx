@@ -5,6 +5,7 @@ import { Mail, ChevronRight, RotateCcw, Save, Eye, Code, Copy, Check, AlertCircl
 import { apiFetch } from '@/lib/api-client'
 import { Label } from '@/components/ui/label'
 import { useTranslations } from 'next-intl'
+import { logError } from '@/lib/logging'
 
 interface PlaceholderDefinition {
   key: string
@@ -68,7 +69,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
       setTemplates(data.templates || [])
     } catch (err) {
       setError(t('failedToLoad'))
-      console.error(err)
+      logError('Failed to load email templates:', err)
     } finally {
       setLoading(false)
     }
@@ -112,7 +113,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
       setPreviewSubject(data.subject)
       setShowPreview(true)
     } catch (err) {
-      console.error('Preview error:', err)
+      logError('Preview error:', err)
     } finally {
       setPreviewLoading(false)
     }
@@ -152,7 +153,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
 
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
-      console.error('Save error:', err)
+      logError('Save error:', err)
     } finally {
       setSaving(false)
     }
@@ -186,7 +187,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
         prev ? { ...prev, subject: data.subject, bodyContent: data.bodyContent, isCustom: false } : null
       )
     } catch (err) {
-      console.error('Reset error:', err)
+      logError('Reset error:', err)
     }
   }, [selectedTemplate, t])
 

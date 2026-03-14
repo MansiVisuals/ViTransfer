@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Building2, Check, Plus } from 'lucide-react'
 import { apiFetch, apiPost } from '@/lib/api-client'
+import { logError } from '@/lib/logging'
 
 interface ClientCompany {
   id: string
@@ -61,7 +62,7 @@ export function CompanyNameInput({
         setCompanies(data.companies || [])
       }
     } catch (err) {
-      console.error('Failed to search companies:', err)
+      logError('Failed to search companies:', err)
     } finally {
       setLoading(false)
     }
@@ -103,7 +104,7 @@ export function CompanyNameInput({
         setShowDropdown(false)
       }
     } catch (err) {
-      console.error('Failed to create company:', err)
+      logError('Failed to create company:', err)
     }
   }
 

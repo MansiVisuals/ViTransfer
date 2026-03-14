@@ -3,6 +3,8 @@ import { requireApiAdmin } from '@/lib/auth'
 import { sendTestNotification } from '@/lib/push-notifications'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error) {
-    console.error('[API] Failed to send test notification:', error)
+    logError('[API] Failed to send test notification:', error)
     return NextResponse.json(
       { error: webPushMessages.failedToSendTestNotification || 'Failed to send test notification' },
       { status: 500 }

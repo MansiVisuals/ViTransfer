@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getVapidPublicKey } from '@/lib/push-notifications'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logError } from '@/lib/logging'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
     const publicKey = await getVapidPublicKey()
     return NextResponse.json({ publicKey })
   } catch (error) {
-    console.error('[API] Failed to get VAPID public key:', error)
+    logError('[API] Failed to get VAPID public key:', error)
     return NextResponse.json(
       { error: webPushMessages.failedToGetVapidKey || 'Failed to get VAPID public key' },
       { status: 500 }

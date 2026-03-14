@@ -1,8 +1,9 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
-import { Monitor, Moon, Sun, Check, Upload, Trash2, Image as ImageIcon, Globe } from 'lucide-react'
+import { Monitor, Moon, Sun, Check, Upload, Trash2, Image as ImageIcon, Globe, ShieldCheck } from 'lucide-react'
 import { useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { EmailTemplatesEditor } from '@/components/settings/EmailTemplatesSection'
@@ -46,6 +47,10 @@ interface AppearanceSectionProps {
   logoError?: string | null
   emailHeaderStyle: string
   setEmailHeaderStyle: (value: string) => void
+  privacyDisclosureEnabled: boolean
+  setPrivacyDisclosureEnabled: (value: boolean) => void
+  privacyDisclosureText: string
+  setPrivacyDisclosureText: (value: string) => void
   show: boolean
   setShow: (value: boolean) => void
 }
@@ -68,6 +73,10 @@ export function AppearanceSection({
   logoError,
   emailHeaderStyle,
   setEmailHeaderStyle,
+  privacyDisclosureEnabled,
+  setPrivacyDisclosureEnabled,
+  privacyDisclosureText,
+  setPrivacyDisclosureText,
   show,
   setShow
 }: AppearanceSectionProps) {
@@ -265,6 +274,40 @@ export function AppearanceSection({
         <p className="text-xs text-muted-foreground">
           {t('language.hint')}
         </p>
+      </div>
+
+      {/* Privacy Disclosure */}
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" />
+              {t('appearance.privacyDisclosure')}
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {t('appearance.privacyDisclosureDescription')}
+            </p>
+          </div>
+          <Switch
+            checked={privacyDisclosureEnabled}
+            onCheckedChange={setPrivacyDisclosureEnabled}
+          />
+        </div>
+        {privacyDisclosureEnabled && (
+          <div className="space-y-2">
+            <Label>{t('appearance.privacyDisclosureCustomText')}</Label>
+            <textarea
+              value={privacyDisclosureText}
+              onChange={(e) => setPrivacyDisclosureText(e.target.value)}
+              placeholder={t('appearance.privacyDisclosurePlaceholder')}
+              rows={4}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('appearance.privacyDisclosureHint')}
+            </p>
+          </div>
+        )}
       </div>
     </CollapsibleSection>
   )

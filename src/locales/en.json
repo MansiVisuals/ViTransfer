@@ -1073,7 +1073,12 @@
       "teal": "Teal",
       "amber": "Amber",
       "stone": "Stone",
-      "gold": "Gold"
+      "gold": "Gold",
+      "privacyDisclosure": "Privacy Disclosure",
+      "privacyDisclosureDescription": "Show a GDPR-compliant privacy notice on client share pages. Visitors must accept or decline before continuing.",
+      "privacyDisclosureCustomText": "Custom Disclosure Text",
+      "privacyDisclosurePlaceholder": "Leave empty to use the default privacy disclosure text",
+      "privacyDisclosureHint": "If left empty, a generic default text covering IP logging, session tracking, and comments will be shown. You can customize this to include a link to your full privacy policy."
     },
 
     "language": {
@@ -2127,5 +2132,15 @@
     "ignoreNotice": "If you didn't request this code, please ignore this email.",
     "textIntro": "Your verification code for {projectTitle} is:",
     "textIgnoreNotice": "If you didn't request this code, you can safely ignore this email."
+  },
+
+  "privacy": {
+    "title": "Privacy Notice",
+    "summary": "This platform processes some of your data to provide the review service.",
+    "readMore": "Read more",
+    "readLess": "Read less",
+    "accept": "Accept",
+    "decline": "Decline",
+    "defaultDisclosureText": "This platform logs access activity including your IP address and browser information for security and functionality purposes. Your session is tracked using local browser storage (no cookies are used). Comments and feedback you provide are stored and shared with the project owner.\n\nThis data is processed based on the legitimate interest of maintaining platform security and enabling the review workflow. For questions about how your data is handled, including requests for access, correction, or deletion, please contact the person who shared this link with you."
   }
 }

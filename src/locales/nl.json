@@ -1028,7 +1028,12 @@
       "teal": "Blauwgroen",
       "amber": "Amber",
       "stone": "Steen",
-      "gold": "Goud"
+      "gold": "Goud",
+      "privacyDisclosure": "Privacyverklaring",
+      "privacyDisclosureDescription": "Toon een AVG-conforme privacyverklaring op de deelpagina's voor klanten. Bezoekers moeten akkoord gaan of weigeren voordat ze verder gaan.",
+      "privacyDisclosureCustomText": "Aangepaste Verklaringstekst",
+      "privacyDisclosurePlaceholder": "Laat leeg om de standaard privacyverklaring te gebruiken",
+      "privacyDisclosureHint": "Indien leeg, wordt een generieke standaardtekst getoond over IP-logging, sessieopslag en reacties. U kunt dit aanpassen om een link naar uw volledige privacybeleid op te nemen."
     },
     "language": {
       "title": "Taal",
@@ -2052,5 +2057,15 @@
     "ignoreNotice": "Heeft u deze code niet aangevraagd? Dan kunt u deze e-mail negeren.",
     "textIntro": "Uw verificatiecode voor {projectTitle} is:",
     "textIgnoreNotice": "Heeft u deze code niet aangevraagd? Dan kunt u deze e-mail veilig negeren."
+  },
+
+  "privacy": {
+    "title": "Privacyverklaring",
+    "summary": "Dit platform verwerkt een aantal van uw gegevens om de reviewservice te kunnen bieden.",
+    "readMore": "Meer lezen",
+    "readLess": "Minder lezen",
+    "accept": "Akkoord",
+    "decline": "Weigeren",
+    "defaultDisclosureText": "Dit platform registreert toegangsactiviteit, waaronder uw IP-adres en browserinformatie, voor beveiligings- en functionaliteitsdoeleinden. Uw sessie wordt bijgehouden via lokale browseropslag (er worden geen cookies gebruikt). Opmerkingen en feedback die u achterlaat worden opgeslagen en gedeeld met de projecteigenaar.\n\nDeze gegevens worden verwerkt op basis van het gerechtvaardigd belang van het handhaven van platformbeveiliging en het mogelijk maken van de reviewworkflow. Voor vragen over hoe uw gegevens worden verwerkt, inclusief verzoeken om inzage, correctie of verwijdering, neem contact op met de persoon die deze link met u heeft gedeeld."
   }
 }

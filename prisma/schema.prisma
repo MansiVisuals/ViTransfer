@@ -335,6 +335,10 @@ model Settings {
   vapidPublicKey  String? // Public key for browser subscription
   vapidPrivateKey String? // Encrypted private key
 
+  // Privacy Disclosure (shown on client share page)
+  privacyDisclosureEnabled Boolean @default(false)
+  privacyDisclosureText    String? // Custom text; null = use default i18n text
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

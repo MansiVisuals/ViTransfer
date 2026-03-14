@@ -138,6 +138,8 @@ export async function PATCH(request: NextRequest) {
       defaultAllowClientAssetUpload,
       emailHeaderStyle,
       maxCommentAttachments,
+      privacyDisclosureEnabled,
+      privacyDisclosureText,
     } = body
 
     // SECURITY: Validate language setting
@@ -393,6 +395,8 @@ export async function PATCH(request: NextRequest) {
       adminNotificationDay: adminNotificationDay !== undefined ? adminNotificationDay : null,
       defaultUsePreviewForApprovedPlayback,
       defaultAllowClientAssetUpload,
+      privacyDisclosureEnabled,
+      privacyDisclosureText: privacyDisclosureText !== undefined ? (privacyDisclosureText || null) : undefined,
     }
 
     // Only update password if it's not the placeholder

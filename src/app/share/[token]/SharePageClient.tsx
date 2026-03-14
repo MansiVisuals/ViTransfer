@@ -18,6 +18,7 @@ import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageToggle from '@/components/LanguageToggle'
 import { ShareTutorial } from '@/components/ShareTutorial'
+import PrivacyBanner from '@/components/PrivacyBanner'
 
 interface SharePageClientProps {
   token: string
@@ -854,6 +855,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   // Show thumbnail grid when in grid view (scrollable)
   if (viewState === 'grid') {
     return (
+      <>
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
         {/* Theme and language toggles for grid view */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
@@ -897,6 +899,12 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           </div>
         </div>
       </div>
+
+      {/* Privacy Disclosure Banner */}
+      {project.settings?.privacyDisclosureEnabled && (
+        <PrivacyBanner customText={project.settings.privacyDisclosureText} />
+      )}
+      </>
     )
   }
 
@@ -1009,6 +1017,11 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           </>
         )}
       </div>
+
+      {/* Privacy Disclosure Banner */}
+      {project.settings?.privacyDisclosureEnabled && (
+        <PrivacyBanner customText={project.settings.privacyDisclosureText} />
+      )}
     </div>
   )
 }

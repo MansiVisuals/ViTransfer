@@ -35,6 +35,8 @@ interface Settings {
   autoApproveProject: boolean | null
   defaultUsePreviewForApprovedPlayback: boolean | null
   defaultAllowClientAssetUpload: boolean | null
+  privacyDisclosureEnabled: boolean | null
+  privacyDisclosureText: string | null
   adminNotificationSchedule: string | null
   adminNotificationTime: string | null
   adminNotificationDay: number | null
@@ -122,6 +124,10 @@ export default function GlobalSettingsPage() {
   const [defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback] = useState(false)
   const [defaultAllowClientAssetUpload, setDefaultAllowClientAssetUpload] = useState(false)
 
+  // Form state for privacy disclosure
+  const [privacyDisclosureEnabled, setPrivacyDisclosureEnabled] = useState(false)
+  const [privacyDisclosureText, setPrivacyDisclosureText] = useState('')
+
   // Form state for admin notification settings
   const [adminNotificationSchedule, setAdminNotificationSchedule] = useState('HOURLY')
   const [adminNotificationTime, setAdminNotificationTime] = useState('09:00')
@@ -183,6 +189,8 @@ export default function GlobalSettingsPage() {
     setAutoApproveProject(data.autoApproveProject ?? true)
     setDefaultUsePreviewForApprovedPlayback(data.defaultUsePreviewForApprovedPlayback ?? false)
     setDefaultAllowClientAssetUpload(data.defaultAllowClientAssetUpload ?? false)
+    setPrivacyDisclosureEnabled(data.privacyDisclosureEnabled ?? false)
+    setPrivacyDisclosureText(data.privacyDisclosureText || '')
     setTestEmailAddress(data.smtpFromAddress || '')
     setAdminNotificationSchedule(data.adminNotificationSchedule || 'HOURLY')
     setAdminNotificationTime(data.adminNotificationTime || '09:00')
@@ -488,6 +496,8 @@ export default function GlobalSettingsPage() {
         autoApproveProject: autoApproveProject,
         defaultUsePreviewForApprovedPlayback: defaultUsePreviewForApprovedPlayback,
         defaultAllowClientAssetUpload: defaultAllowClientAssetUpload,
+        privacyDisclosureEnabled: privacyDisclosureEnabled,
+        privacyDisclosureText: privacyDisclosureText || null,
         adminNotificationSchedule: adminNotificationSchedule,
         adminNotificationTime: (adminNotificationSchedule === 'DAILY' || adminNotificationSchedule === 'WEEKLY') ? adminNotificationTime : null,
         adminNotificationDay: adminNotificationSchedule === 'WEEKLY' ? adminNotificationDay : null,
@@ -653,6 +663,10 @@ export default function GlobalSettingsPage() {
             logoError={logoError}
             emailHeaderStyle={emailHeaderStyle}
             setEmailHeaderStyle={setEmailHeaderStyle}
+            privacyDisclosureEnabled={privacyDisclosureEnabled}
+            setPrivacyDisclosureEnabled={setPrivacyDisclosureEnabled}
+            privacyDisclosureText={privacyDisclosureText}
+            setPrivacyDisclosureText={setPrivacyDisclosureText}
             show={showBrandingAppearance}
             setShow={setShowBrandingAppearance}
           />

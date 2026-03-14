@@ -906,7 +906,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
       {/* Thumbnail Reel - always visible, collapsible */}
-      <div data-tutorial="video-reel">
         <ThumbnailReel
           videosByName={project.videosByName}
           thumbnailsByName={thumbnailsByName}
@@ -932,7 +931,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
             ) : undefined
           }
         />
-      </div>
 
       {/* Main Content Area - scrollable on mobile, fixed on desktop (xl breakpoint for better vertical video support) */}
       <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row p-2 sm:p-3 gap-2 sm:gap-3">

@@ -1148,7 +1148,6 @@ export async function sendAdminCommentNotificationEmail({
     '{{ATTACHMENTS}}': attachmentsHtml,
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
-  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
   // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
@@ -1356,6 +1355,7 @@ export async function sendProjectGeneralNotificationEmail({
     '{{PASSWORD_NOTICE}}': passwordNotice,
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
+  const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
   // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)

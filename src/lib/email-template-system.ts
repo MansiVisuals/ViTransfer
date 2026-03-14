@@ -826,6 +826,7 @@ export async function saveEmailTemplate(
       subject,
       bodyContent,
       isCustom: true,
+      enabled: true,
       updatedAt: new Date(),
     },
   })

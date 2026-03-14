@@ -44,7 +44,6 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
   const [editBody, setEditBody] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [statusUpdating, setStatusUpdating] = useState(false)
 
   // Preview state
   const [previewHtml, setPreviewHtml] = useState('')
@@ -158,37 +157,6 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
       setSaving(false)
     }
   }, [selectedTemplate, editSubject, editBody])
-
-  const handleToggleEnabled = useCallback(async () => {
-    if (!selectedTemplate) return
-
-    setStatusUpdating(true)
-    try {
-      const nextEnabled = !selectedTemplate.enabled
-      const res = await apiFetch(`/api/settings/email-templates/${selectedTemplate.type}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: nextEnabled }),
-      })
-
-      if (!res.ok) throw new Error('Failed to toggle template status')
-
-      setTemplates(prev =>
-        prev.map(t =>
-          t.type === selectedTemplate.type
-            ? { ...t, enabled: nextEnabled }
-            : t
-        )
-      )
-      setSelectedTemplate(prev =>
-        prev ? { ...prev, enabled: nextEnabled } : null
-      )
-    } catch (err) {
-      console.error('Template status update error:', err)
-    } finally {
-      setStatusUpdating(false)
-    }
-  }, [selectedTemplate])
 
   // Reset template to default
   const handleReset = useCallback(async () => {
@@ -448,11 +416,6 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                      {!template.enabled && (
-                        <span className="text-[10px] sm:text-xs bg-muted text-muted-foreground px-1.5 sm:px-2 py-0.5 rounded whitespace-nowrap">
-                          {t('disabled')}
-                        </span>
-                      )}
                       {template.isCustom && (
                         <span className="text-[10px] sm:text-xs bg-primary/10 text-primary px-1.5 sm:px-2 py-0.5 rounded whitespace-nowrap">
                           {t('custom')}
@@ -510,14 +473,6 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
                 </button>
                 <button
                   type="button"
-                  onClick={handleToggleEnabled}
-                  disabled={statusUpdating}
-                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-border rounded-md hover:bg-muted/50 transition-colors disabled:opacity-50"
-                >
-                  {selectedTemplate.enabled ? t('disable') : t('enable')}
-                </button>
-                <button
-                  type="button"
                   onClick={handlePreview}
                   disabled={previewLoading}
                   className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-border rounded-md hover:bg-muted/50 transition-colors"
@@ -529,7 +484,7 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={saving || !selectedTemplate.enabled}
+                  disabled={saving}
                   className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   {saving ? (
@@ -566,7 +521,6 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
                   type="text"
                   value={editSubject}
                   onChange={e => setEditSubject(e.target.value)}
-                  disabled={!selectedTemplate.enabled}
                   className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                   placeholder={t('subjectPlaceholder')}
                 />
@@ -584,7 +538,6 @@ export function EmailTemplatesEditor({ emailHeaderStyle, setEmailHeaderStyle }: 
                 <textarea
                   value={editBody}
                   onChange={e => setEditBody(e.target.value)}
-                  disabled={!selectedTemplate.enabled}
                   rows={20}
                   className="w-full h-[40vh] sm:h-[50vh] px-3 py-2 text-sm font-mono border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
                   placeholder={t('bodyPlaceholder')}

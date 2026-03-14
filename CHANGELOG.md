@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.9.6] - 2026-03-14
 
 ### Added
-- Template enable/disable controls in Settings → Email Templates, including API support and localized UI/status messages.
+- Improved email template management in Settings with clearer save/reset behavior and preview rendering consistency.
 - New customizable email template types: OTP verification, client activity summary, and admin activity summary.
 - Localized default content for the new email templates in both English and Dutch, including preview metadata and placeholder descriptions/examples.
 - Stronger server-side validation for global settings (preview resolution, SMTP port/security/from address, and app domain).

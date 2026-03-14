@@ -4,6 +4,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import {
   replacePlaceholders,
   EMAIL_TEMPLATE_TYPES,
+  getPlaceholdersForType,
   type EmailTemplateType,
 } from '@/lib/email-template-system'
 import {
@@ -14,6 +15,7 @@ import {
   buildBrandingLogoUrl,
   processButtonSyntax,
   processEmailClasses,
+  renderUnsubscribeSection,
   renderTimecodePill,
   type EmailHeaderStyle,
 } from '@/lib/email'
@@ -93,9 +95,18 @@ export async function POST(request: NextRequest) {
     // Generate sample values for placeholders
     const sampleValues = generateSampleValues(templateType, companyName, appDomain, brand, previewMessages, emailCommonMessages)
 
+    // Ensure every declared placeholder has a value to avoid raw {{PLACEHOLDER}} tokens in preview
+    const completeSampleValues = { ...sampleValues }
+    for (const placeholder of getPlaceholdersForType(templateType)) {
+      const key = placeholder.key.replace(/^\{\{|\}\}$/g, '')
+      if (!(key in completeSampleValues)) {
+        completeSampleValues[key] = ''
+      }
+    }
+
     // Replace placeholders in subject and body
-    const processedSubject = replacePlaceholders(subject, sampleValues)
-    let processedBody = replacePlaceholders(bodyContent, sampleValues)
+    const processedSubject = replacePlaceholders(subject, completeSampleValues)
+    let processedBody = replacePlaceholders(bodyContent, completeSampleValues)
 
     // Process {{LOGO}} placeholder
     if (brandingLogoUrl) {
@@ -115,7 +126,7 @@ export async function POST(request: NextRequest) {
     const html = renderEmailShell({
       companyName,
       title: getEmailTitle(templateType, previewMessages),
-      subtitle: getEmailSubtitle(templateType, sampleValues, previewMessages),
+      subtitle: getEmailSubtitle(templateType, completeSampleValues, previewMessages),
       bodyContent: processedBody,
       brand,
       brandingLogoUrl,
@@ -182,6 +193,8 @@ function generateSampleValues(
   // Localized protected project notice
   const protectedNotice = emailCommon?.protectedProjectNotice || 'Use the password sent separately to access this project.'
   const protectedLabel = emailCommon?.protectedProject || 'Protected project:'
+  const attachmentLabel = emailCommon?.attachmentsLabel || 'Attachments'
+  const unsubscribePreview = renderUnsubscribeSection(`${appDomain}/unsubscribe?token=preview`, brand, { common: emailCommon })
 
   const typeValues: Record<EmailTemplateType, Record<string, string>> = {
     NEW_VERSION: {
@@ -191,7 +204,7 @@ function generateSampleValues(
       VERSION_LABEL: ex.VERSION_LABEL || 'v2',
       SHARE_URL: `${appDomain}/share/abc123`,
       PASSWORD_NOTICE: `<div class="protected-note"><strong>${protectedLabel}</strong> ${protectedNotice}</div>`,
-      UNSUBSCRIBE_SECTION: '',
+      UNSUBSCRIBE_SECTION: unsubscribePreview,
     },
     PROJECT_APPROVED: {
       ...base,
@@ -199,7 +212,7 @@ function generateSampleValues(
       VIDEO_NAME: videoName,
       SHARE_URL: `${appDomain}/share/abc123`,
       APPROVAL_MESSAGE: `<strong>${clientName}</strong> ${approvalMessage}`,
-      UNSUBSCRIBE_SECTION: '',
+      UNSUBSCRIBE_SECTION: unsubscribePreview,
     },
     COMMENT_NOTIFICATION: {
       ...base,
@@ -210,7 +223,8 @@ function generateSampleValues(
       COMMENT_CONTENT: commentContent,
       TIMECODE: sampleTcPill1,
       SHARE_URL: `${appDomain}/share/abc123`,
-      UNSUBSCRIBE_SECTION: '',
+      ATTACHMENTS: `<div style="margin-top: 12px; padding: 10px 14px; border-radius: 8px; border: 1px solid ${brand.border}; background: ${brand.surfaceAlt};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted}; margin-bottom: 6px; font-weight: 700;">${attachmentLabel}</div><div style="font-size: 13px; color: ${brand.text}; line-height: 1.8;">Storyboard-v2.pdf</div><div style="font-size: 13px; color: ${brand.text}; line-height: 1.8;">VO-notes.txt</div></div>`,
+      UNSUBSCRIBE_SECTION: unsubscribePreview,
     },
     ADMIN_COMMENT_NOTIFICATION: {
       ...base,
@@ -221,6 +235,7 @@ function generateSampleValues(
       VERSION_LABEL: 'v1',
       COMMENT_CONTENT: commentContent,
       TIMECODE: sampleTcPill2,
+      ATTACHMENTS: `<div style="margin-top: 12px; padding: 10px 14px; border-radius: 8px; border: 1px solid ${brand.border}; background: ${brand.surfaceAlt};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted}; margin-bottom: 6px; font-weight: 700;">${attachmentLabel}</div><div style="font-size: 13px; color: ${brand.text}; line-height: 1.8;">Client-reference.mov</div></div>`,
       ADMIN_URL: `${appDomain}/admin`,
     },
     ADMIN_PROJECT_APPROVED: {
@@ -243,13 +258,13 @@ function generateSampleValues(
         <div style="font-size: 15px; padding: 6px 0;">• Social Media <span style="font-weight: 600;">v1</span></div>
       `,
       PASSWORD_NOTICE: `<div class="protected-note"><strong>${protectedLabel}</strong> ${protectedNotice}</div>`,
-      UNSUBSCRIBE_SECTION: '',
+      UNSUBSCRIBE_SECTION: unsubscribePreview,
     },
     PASSWORD: {
       ...base,
       PROJECT_TITLE: projectTitle,
       PASSWORD: ex.PASSWORD || 'xK9mP2nL',
-      UNSUBSCRIBE_SECTION: '',
+      UNSUBSCRIBE_SECTION: unsubscribePreview,
     },
     PASSWORD_RESET: {
       ...base,
@@ -268,7 +283,7 @@ function generateSampleValues(
       PROJECT_TITLE: projectTitle,
       OTP_CODE: '123456',
       EXPIRY_MINUTES: '10',
-      UNSUBSCRIBE_SECTION: '',
+      UNSUBSCRIBE_SECTION: unsubscribePreview,
     },
     CLIENT_ACTIVITY_SUMMARY: {
       ...base,
@@ -277,7 +292,7 @@ function generateSampleValues(
       PERIOD: 'today',
       SUMMARY_ITEMS: '<div class="secondary-box"><div style="font-size:14px;">• Main Commercial v2 — New comment</div></div>',
       SHARE_URL: `${appDomain}/share/abc123`,
-      UNSUBSCRIBE_SECTION: '',
+      UNSUBSCRIBE_SECTION: unsubscribePreview,
     },
     ADMIN_ACTIVITY_SUMMARY: {
       ...base,

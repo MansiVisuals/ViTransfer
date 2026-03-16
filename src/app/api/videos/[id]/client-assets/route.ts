@@ -264,10 +264,7 @@ export async function DELETE(
 
   try {
     const { searchParams } = new URL(request.url)
-    const assetId = searchParams.get('assetId')
-    if (!assetId) {
-      return NextResponse.json({ error: videosMessages.assetIdRequired || 'Asset ID is required' }, { status: 400 })
-    }
+    const assetId = searchParams.get('assetId') ?? ''
 
     const video = await prisma.video.findUnique({
       where: { id: videoId },

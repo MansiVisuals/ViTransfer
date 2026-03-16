@@ -8,7 +8,7 @@ import { getMaxAuthAttempts } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
 import { signShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
-import { trackSharePageAccess } from '@/lib/share-access-tracking'
+import { trackSharePageAccess, readAnalyticsConsent } from '@/lib/share-access-tracking'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { safeParseBody } from '@/lib/validation'
 import jwt from 'jsonwebtoken'
@@ -253,7 +253,7 @@ export async function POST(
       wasBlocked: false,
     })
 
-    // Track share page access for analytics
+    // Track share page access for analytics (GDPR: respect consent header)
     const shareTokenPayload = jwt.decode(shareToken) as any
     if (shareTokenPayload?.sessionId) {
       await trackSharePageAccess({
@@ -261,6 +261,7 @@ export async function POST(
         accessMethod: 'PASSWORD',
         sessionId: shareTokenPayload.sessionId,
         request,
+        analyticsConsent: readAnalyticsConsent(request),
       })
     }
 

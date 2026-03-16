@@ -526,12 +526,20 @@ export async function DELETE(
           await deleteFile(video.originalStoragePath)
         }
 
-        // Delete preview files
+        // Delete preview files (watermarked)
         if (video.preview1080Path) {
           await deleteFile(video.preview1080Path)
         }
         if (video.preview720Path) {
           await deleteFile(video.preview720Path)
+        }
+
+        // Delete clean preview files (non-watermarked, created after approval)
+        if (video.cleanPreview1080Path) {
+          await deleteFile(video.cleanPreview1080Path)
+        }
+        if (video.cleanPreview720Path) {
+          await deleteFile(video.cleanPreview720Path)
         }
 
         // Delete thumbnail

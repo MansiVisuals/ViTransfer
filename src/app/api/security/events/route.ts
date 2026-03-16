@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { getRedis } from '@/lib/redis'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
@@ -156,6 +157,11 @@ export async function DELETE(request: NextRequest) {
     if (olderThan === 0) {
       // Delete all events
       result = await prisma.securityEvent.deleteMany({})
+
+      // Also clear the Redis recent events list
+      const redis = getRedis()
+      await redis.del('security:events:recent')
+
   message = (securityMessages.deletedAllSecurityEvents || 'Deleted all {count} security events').replace('{count}', String(result.count))
     } else {
       // Delete events older than specified days
@@ -169,6 +175,15 @@ export async function DELETE(request: NextRequest) {
           }
         }
       })
+
+      // Trim Redis recent events list to remove stale entries
+      // (Redis list is capped at 1000 entries with auto-trim, so clearing
+      // the whole list is acceptable — new events will repopulate it)
+      if (result.count > 0) {
+        const redis = getRedis()
+        await redis.del('security:events:recent')
+      }
+
   message = (securityMessages.deletedEventsOlderThanDays || 'Deleted {count} events older than {days} days').replace('{count}', String(result.count)).replace('{days}', String(olderThan))
     }
 

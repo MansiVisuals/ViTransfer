@@ -442,7 +442,7 @@ model SecurityEvent {
   severity String @default("INFO") // INFO, WARNING, CRITICAL
 
   projectId String?
-  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   videoId   String?
   sessionId String?

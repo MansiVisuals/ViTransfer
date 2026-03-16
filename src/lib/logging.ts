@@ -45,39 +45,39 @@ export function formatErrorForLog(error: unknown): string {
 }
 
 export function logMessage(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.log(sanitizeLogValue(output))
+  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
+  process.stdout.write(output + '\n')
 }
 
 export function logInfo(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.info(sanitizeLogValue(output))
+  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
+  process.stdout.write(output + '\n')
 }
 
 export function logWarn(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.warn(sanitizeLogValue(output))
+  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
+  process.stderr.write(output + '\n')
 }
 
 export function logDebug(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.debug(sanitizeLogValue(output))
+  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
+  process.stdout.write(output + '\n')
 }
 
 export function logError(message: string, error?: unknown, ...extra: unknown[]): void {
   const sanitizedMessage = sanitizeLogValue(message).replace(/:\s*$/, '')
 
   if (error === undefined && extra.length === 0) {
-    console.error(sanitizeLogValue(sanitizedMessage))
+    process.stderr.write(sanitizeLogValue(sanitizedMessage) + '\n')
     return
   }
 
   if (extra.length === 0) {
     const errorLine = `${sanitizedMessage}: ${formatErrorForLog(error)}`
-    console.error(sanitizeLogValue(errorLine))
+    process.stderr.write(sanitizeLogValue(errorLine) + '\n')
     return
   }
 
   const output = formatLogParts([`${sanitizedMessage}:`, error, ...extra])
-  console.error(sanitizeLogValue(output))
+  process.stderr.write(sanitizeLogValue(output) + '\n')
 }

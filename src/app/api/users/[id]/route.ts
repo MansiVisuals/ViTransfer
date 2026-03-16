@@ -165,8 +165,12 @@ export async function PATCH(
     // Track if password is being changed (for session regeneration)
     let passwordChanged = false
 
-    // Only update password if provided
-    if (password && password.trim() !== '') {
+    // Process password change - coerce inputs to strings, let validation decide
+    const newPassword = typeof password === 'string' ? password.trim() : ''
+    const oldPasswordStr = typeof oldPassword === 'string' ? oldPassword : ''
+    const passwordValidation = validatePassword(newPassword)
+
+    if (passwordValidation.isValid) {
       // Get user's current password hash
       const userWithPassword = await prisma.user.findUnique({
         where: { id },
@@ -181,8 +185,6 @@ export async function PATCH(
       }
 
       // SECURITY: Verify old password before allowing password change
-      // Coerce to string so bcrypt.compare handles missing/empty values safely (returns false)
-      const oldPasswordStr = typeof oldPassword === 'string' ? oldPassword : ''
       const isOldPasswordValid = await verifyPassword(oldPasswordStr, userWithPassword.password)
       if (!isOldPasswordValid) {
         return NextResponse.json(
@@ -191,16 +193,7 @@ export async function PATCH(
         )
       }
 
-      // Validate new password
-      const passwordValidation = validatePassword(password)
-      if (!passwordValidation.isValid) {
-        return NextResponse.json(
-          { error: usersMessages.passwordDoesNotMeetRequirements || 'Password does not meet requirements', details: passwordValidation.errors },
-          { status: 400 }
-        )
-      }
-
-      updateData.password = await hashPassword(password)
+      updateData.password = await hashPassword(newPassword)
       passwordChanged = true
     }
 

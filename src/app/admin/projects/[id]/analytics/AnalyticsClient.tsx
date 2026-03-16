@@ -311,7 +311,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
                             <span className="text-xs font-medium hidden sm:inline">
                               {event.type === 'AUTH' ? (
                                 event.accessMethod === 'OTP' ? t('otp') :
-                                event.accessMethod === 'PASSWORD' ? tc('password') :
+                                event.accessMethod === 'PASSWORD' ? t('password') :
                                 event.accessMethod === 'GUEST' ? t('guest') : t('public')
                               ) : (
                                 event.assetIds ? t('zip') : event.assetId ? t('asset') : tc('download')

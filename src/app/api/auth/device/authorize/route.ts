@@ -55,17 +55,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userCode } = body
+    const rawUserCode = body?.userCode
 
-    if (!userCode || typeof userCode !== 'string') {
-      return NextResponse.json(
-        { error: authMessages.userCodeRequired || 'User code is required' },
-        { status: 400 }
-      )
-    }
-
-    // Normalize user code (uppercase, trim)
-    const normalizedCode = userCode.toUpperCase().trim()
+    // Normalize user code (uppercase, trim) - coerce to string safely
+    const normalizedCode = (typeof rawUserCode === 'string' ? rawUserCode : '').toUpperCase().trim()
 
     // Validate format: XXXX-XXXX
     if (!/^[A-Z]{4}-[0-9]{4}$/.test(normalizedCode)) {

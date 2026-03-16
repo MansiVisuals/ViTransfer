@@ -167,14 +167,6 @@ export async function PATCH(
 
     // Only update password if provided
     if (password && password.trim() !== '') {
-      // SECURITY: Verify old password before allowing password change
-      if (!oldPassword || oldPassword.trim() === '') {
-        return NextResponse.json(
-          { error: usersMessages.currentPasswordRequiredToChangePassword || 'Current password is required to change password' },
-          { status: 400 }
-        )
-      }
-
       // Get user's current password hash
       const userWithPassword = await prisma.user.findUnique({
         where: { id },
@@ -188,8 +180,10 @@ export async function PATCH(
         )
       }
 
-      // Verify old password
-      const isOldPasswordValid = await verifyPassword(oldPassword, userWithPassword.password)
+      // SECURITY: Verify old password before allowing password change
+      // Coerce to string so bcrypt.compare handles missing/empty values safely (returns false)
+      const oldPasswordStr = typeof oldPassword === 'string' ? oldPassword : ''
+      const isOldPasswordValid = await verifyPassword(oldPasswordStr, userWithPassword.password)
       if (!isOldPasswordValid) {
         return NextResponse.json(
           { error: usersMessages.currentPasswordIncorrect || 'Current password is incorrect' },

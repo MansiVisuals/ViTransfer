@@ -35,12 +35,12 @@ export async function trackSharePageAccess(params: {
   const rawIp = getClientIpAddress(request)
   const rawUserAgent = request.headers.get('user-agent') || undefined
 
-  // GDPR: Only store PII when explicit consent has been given.
-  // If consent is not yet given (null) or declined (false), anonymize.
+  // GDPR: Only store network-identifying PII (IP, user agent) with explicit consent.
+  // OTP email is always stored — it's functional auth/audit data, not analytics.
+  // The user voluntarily provided it to authenticate; the admin needs the audit trail.
   const hasConsent = analyticsConsent === true
   const ipAddress = hasConsent ? rawIp : anonymizeIp(rawIp)
   const userAgent = hasConsent ? rawUserAgent : undefined
-  const storedEmail = hasConsent ? email : undefined
 
   if (settings.trackAnalytics) {
     try {
@@ -48,7 +48,7 @@ export async function trackSharePageAccess(params: {
         data: {
           projectId,
           accessMethod,
-          email: storedEmail,
+          email,
           sessionId,
           ipAddress,
           userAgent,

@@ -64,6 +64,9 @@ model Project {
   previewResolution String  @default("720p") // "720p" or "1080p" (originals can be any resolution including 2160p)
   watermarkEnabled  Boolean @default(true) // Enable/disable watermarks for this project
   watermarkText     String? // Custom watermark text (null = use default format)
+  watermarkPositions String  @default("center") // comma-separated: center, top-left, top-right, bottom-left, bottom-right
+  watermarkOpacity   Int     @default(30) // Opacity percentage (10-100)
+  watermarkFontSize  String  @default("medium") // small, medium, large
 
   // Client share page settings
   allowAssetDownload     Boolean @default(true) // Allow clients to download video assets when project is approved
@@ -308,6 +311,9 @@ model Settings {
   defaultPreviewResolution String? @default("720p")
   defaultWatermarkEnabled  Boolean @default(true)
   defaultWatermarkText     String?
+  defaultWatermarkPositions String  @default("center") // comma-separated: center, top-left, top-right, bottom-left, bottom-right
+  defaultWatermarkOpacity   Int     @default(30) // Opacity percentage (10-100)
+  defaultWatermarkFontSize  String  @default("medium") // small, medium, large
   maxUploadSizeGB          Int      @default(1) // Maximum upload size (GB) for TUS uploads (1-100)
   maxCommentAttachments    Int      @default(10) // Maximum files per comment attachment batch (1-50)
 

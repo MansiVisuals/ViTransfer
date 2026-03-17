@@ -47,6 +47,9 @@ export interface TempFiles {
 export interface ProcessingSettings {
   resolution: string
   watermarkText?: string
+  watermarkPositions?: string
+  watermarkOpacity?: number
+  watermarkFontSize?: string
 }
 
 export interface VideoInfo {
@@ -156,6 +159,9 @@ export async function fetchProcessingSettings(
       previewResolution: true,
       watermarkEnabled: true,
       watermarkText: true,
+      watermarkPositions: true,
+      watermarkOpacity: true,
+      watermarkFontSize: true,
     },
   })
 
@@ -179,7 +185,10 @@ export async function fetchProcessingSettings(
 
   return {
     resolution: project?.previewResolution || '720p',
-    watermarkText
+    watermarkText,
+    watermarkPositions: project?.watermarkPositions || 'center',
+    watermarkOpacity: project?.watermarkOpacity ?? 30,
+    watermarkFontSize: project?.watermarkFontSize || 'medium',
   }
 }
 
@@ -268,6 +277,9 @@ export async function processPreview(
     width: dimensions.width,
     height: dimensions.height,
     watermarkText: settings.watermarkText,
+    watermarkPositions: settings.watermarkPositions,
+    watermarkOpacity: settings.watermarkOpacity,
+    watermarkFontSize: settings.watermarkFontSize as any,
     onProgress: (() => {
       let lastWrite = 0
       let writing = false

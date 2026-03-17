@@ -128,6 +128,9 @@ export async function PATCH(request: NextRequest) {
       defaultPreviewResolution,
       defaultWatermarkEnabled,
       defaultWatermarkText,
+      defaultWatermarkPositions,
+      defaultWatermarkOpacity,
+      defaultWatermarkFontSize,
       maxUploadSizeGB,
       defaultTimestampDisplay,
       autoApproveProject,
@@ -246,6 +249,40 @@ export async function PATCH(request: NextRequest) {
             error: settingsMessages.watermarkTextTooLong || 'Watermark text too long',
             details: settingsMessages.watermarkTextTooLongDetails || 'Watermark text must be 100 characters or less'
           },
+          { status: 400 }
+        )
+      }
+    }
+
+    // SECURITY: Validate watermark positions
+    if (defaultWatermarkPositions !== undefined) {
+      const validPositions = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
+      const positions = String(defaultWatermarkPositions).split(',').map((p: string) => p.trim())
+      if (!positions.every((p: string) => validPositions.includes(p))) {
+        return NextResponse.json(
+          { error: settingsMessages.invalidWatermarkPosition || 'Invalid watermark position(s).' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // SECURITY: Validate watermark opacity
+    if (defaultWatermarkOpacity !== undefined) {
+      const opacity = Number(defaultWatermarkOpacity)
+      if (!Number.isInteger(opacity) || opacity < 10 || opacity > 100) {
+        return NextResponse.json(
+          { error: settingsMessages.invalidWatermarkOpacity || 'Watermark opacity must be between 10 and 100.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // SECURITY: Validate watermark font size
+    if (defaultWatermarkFontSize !== undefined) {
+      const validSizes = ['small', 'medium', 'large']
+      if (!validSizes.includes(defaultWatermarkFontSize)) {
+        return NextResponse.json(
+          { error: settingsMessages.invalidWatermarkFontSize || 'Invalid watermark font size. Must be small, medium, or large.' },
           { status: 400 }
         )
       }
@@ -386,6 +423,9 @@ export async function PATCH(request: NextRequest) {
       defaultPreviewResolution,
       defaultWatermarkEnabled,
       defaultWatermarkText,
+      defaultWatermarkPositions,
+      defaultWatermarkOpacity: defaultWatermarkOpacity !== undefined ? Number(defaultWatermarkOpacity) : undefined,
+      defaultWatermarkFontSize,
       maxUploadSizeGB: maxUploadSizeGB !== undefined && maxUploadSizeGB !== null ? Number(maxUploadSizeGB) : undefined,
       maxCommentAttachments: maxCommentAttachments !== undefined && maxCommentAttachments !== null ? Number(maxCommentAttachments) : undefined,
       defaultTimestampDisplay,

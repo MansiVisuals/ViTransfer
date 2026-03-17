@@ -266,6 +266,12 @@ export const updateProjectSchema = z.object({
   // Watermark settings
   watermarkEnabled: z.boolean().optional(),
   watermarkText: safeStringSchema(0, 100).nullable().optional(),
+  watermarkPositions: z.string().refine(val => {
+    const valid = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
+    return val.split(',').map(p => p.trim()).every(p => valid.includes(p))
+  }, { message: 'Invalid watermark position(s)' }).optional(),
+  watermarkOpacity: z.number().int().min(10).max(100).optional(),
+  watermarkFontSize: z.enum(['small', 'medium', 'large']).optional(),
 
   // Download settings
   allowAssetDownload: z.boolean().optional(),

@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
 import { useTranslations } from 'next-intl'
 
+const WATERMARK_POSITIONS = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
+
 interface VideoProcessingSettingsSectionProps {
   defaultPreviewResolution: string
   setDefaultPreviewResolution: (value: string) => void
@@ -12,6 +14,12 @@ interface VideoProcessingSettingsSectionProps {
   setDefaultWatermarkEnabled: (value: boolean) => void
   defaultWatermarkText: string
   setDefaultWatermarkText: (value: string) => void
+  defaultWatermarkPositions: string
+  setDefaultWatermarkPositions: (value: string) => void
+  defaultWatermarkOpacity: number
+  setDefaultWatermarkOpacity: (value: number) => void
+  defaultWatermarkFontSize: string
+  setDefaultWatermarkFontSize: (value: string) => void
   defaultTimestampDisplay: string
   setDefaultTimestampDisplay: (value: string) => void
   autoApproveProject: boolean
@@ -31,6 +39,12 @@ export function VideoProcessingSettingsSection({
   setDefaultWatermarkEnabled,
   defaultWatermarkText,
   setDefaultWatermarkText,
+  defaultWatermarkPositions,
+  setDefaultWatermarkPositions,
+  defaultWatermarkOpacity,
+  setDefaultWatermarkOpacity,
+  defaultWatermarkFontSize,
+  setDefaultWatermarkFontSize,
   defaultTimestampDisplay,
   setDefaultTimestampDisplay,
   autoApproveProject,
@@ -43,6 +57,21 @@ export function VideoProcessingSettingsSection({
   setShow,
 }: VideoProcessingSettingsSectionProps) {
   const t = useTranslations('settings')
+
+  const selectedPositions = defaultWatermarkPositions.split(',').map(p => p.trim()).filter(Boolean)
+
+  function togglePosition(pos: string) {
+    const current = new Set(selectedPositions)
+    if (current.has(pos)) {
+      current.delete(pos)
+      // Must have at least one position
+      if (current.size === 0) return
+    } else {
+      current.add(pos)
+    }
+    setDefaultWatermarkPositions(Array.from(current).join(','))
+  }
+
   return (
     <CollapsibleSection
       className="border-border"
@@ -94,20 +123,77 @@ export function VideoProcessingSettingsSection({
         </div>
 
         {defaultWatermarkEnabled && (
-          <div className="space-y-2 pt-2 mt-2 border-t border-border">
-            <Label htmlFor="watermark">{t('videoProcessing.customWatermarkText')}</Label>
-            <Input
-              id="watermark"
-              value={defaultWatermarkText}
-              onChange={(e) => setDefaultWatermarkText(e.target.value)}
-              placeholder={t('videoProcessing.watermarkPlaceholder')}
-              maxLength={100}
-            />
-            <p className="text-xs text-muted-foreground">
-              {t('videoProcessing.watermarkHint')}
-              <br />
-              <span className="text-warning">{t('videoProcessing.watermarkCharsAllowed')}</span>
-            </p>
+          <div className="space-y-4 pt-2 mt-2 border-t border-border">
+            <div className="space-y-2">
+              <Label htmlFor="watermark">{t('videoProcessing.customWatermarkText')}</Label>
+              <Input
+                id="watermark"
+                value={defaultWatermarkText}
+                onChange={(e) => setDefaultWatermarkText(e.target.value)}
+                placeholder={t('videoProcessing.watermarkPlaceholder')}
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('videoProcessing.watermarkHint')}
+                <br />
+                <span className="text-warning">{t('videoProcessing.watermarkCharsAllowed')}</span>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('videoProcessing.watermarkPositions')}</Label>
+              <p className="text-xs text-muted-foreground">{t('videoProcessing.watermarkPositionsHint')}</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {WATERMARK_POSITIONS.map((pos) => (
+                  <button
+                    key={pos}
+                    type="button"
+                    onClick={() => togglePosition(pos)}
+                    className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                      selectedPositions.includes(pos)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {t(`videoProcessing.position.${pos}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('videoProcessing.watermarkFontSize')}</Label>
+              <Select value={defaultWatermarkFontSize} onValueChange={setDefaultWatermarkFontSize}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">{t('videoProcessing.fontSizeSmall')}</SelectItem>
+                  <SelectItem value="medium">{t('videoProcessing.fontSizeMedium')}</SelectItem>
+                  <SelectItem value="large">{t('videoProcessing.fontSizeLarge')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>{t('videoProcessing.watermarkOpacity')}</Label>
+                <span className="text-xs text-muted-foreground">{defaultWatermarkOpacity}%</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                step={5}
+                value={defaultWatermarkOpacity}
+                onChange={(e) => setDefaultWatermarkOpacity(Number(e.target.value))}
+                className="w-full accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{t('videoProcessing.opacitySubtle')}</span>
+                <span>{t('videoProcessing.opacityBold')}</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

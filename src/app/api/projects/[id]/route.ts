@@ -275,6 +275,18 @@ export async function PATCH(
       updateData.watermarkText = validatedBody.watermarkText || null
     }
 
+    if (validatedBody.watermarkPositions !== undefined) {
+      updateData.watermarkPositions = validatedBody.watermarkPositions
+    }
+
+    if (validatedBody.watermarkOpacity !== undefined) {
+      updateData.watermarkOpacity = validatedBody.watermarkOpacity
+    }
+
+    if (validatedBody.watermarkFontSize !== undefined) {
+      updateData.watermarkFontSize = validatedBody.watermarkFontSize
+    }
+
     if (validatedBody.allowAssetDownload !== undefined) {
       updateData.allowAssetDownload = validatedBody.allowAssetDownload
     }

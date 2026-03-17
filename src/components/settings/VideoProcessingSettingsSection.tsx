@@ -10,6 +10,8 @@ const WATERMARK_POSITIONS = ['center', 'top-left', 'top-right', 'bottom-left', '
 interface VideoProcessingSettingsSectionProps {
   defaultPreviewResolution: string
   setDefaultPreviewResolution: (value: string) => void
+  defaultSkipTranscoding: boolean
+  setDefaultSkipTranscoding: (value: boolean) => void
   defaultWatermarkEnabled: boolean
   setDefaultWatermarkEnabled: (value: boolean) => void
   defaultWatermarkText: string
@@ -35,6 +37,8 @@ interface VideoProcessingSettingsSectionProps {
 export function VideoProcessingSettingsSection({
   defaultPreviewResolution,
   setDefaultPreviewResolution,
+  defaultSkipTranscoding,
+  setDefaultSkipTranscoding,
   defaultWatermarkEnabled,
   setDefaultWatermarkEnabled,
   defaultWatermarkText,
@@ -82,6 +86,20 @@ export function VideoProcessingSettingsSection({
       contentClassName="space-y-4 border-t pt-4"
     >
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="defaultSkipTranscoding">{t('videoProcessing.skipTranscoding')}</Label>
+            <p className="text-xs text-muted-foreground">{t('videoProcessing.skipTranscodingHint')}</p>
+          </div>
+          <Switch id="defaultSkipTranscoding" checked={defaultSkipTranscoding} onCheckedChange={setDefaultSkipTranscoding} />
+        </div>
+        {defaultSkipTranscoding && (
+          <p className="text-xs text-warning">{t('videoProcessing.skipTranscodingWarning')}</p>
+        )}
+      </div>
+
+      {!defaultSkipTranscoding && (
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
         <Label>{t('videoProcessing.previewResolution')}</Label>
         <Select value={defaultPreviewResolution} onValueChange={setDefaultPreviewResolution}>
           <SelectTrigger>
@@ -96,6 +114,7 @@ export function VideoProcessingSettingsSection({
           {t('videoProcessing.resolutionHint')}
         </p>
       </div>
+      )}
 
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
         <Label>{t('videoProcessing.timestampDisplay')}</Label>
@@ -113,6 +132,7 @@ export function VideoProcessingSettingsSection({
         </p>
       </div>
 
+      {!defaultSkipTranscoding && (
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -197,6 +217,7 @@ export function VideoProcessingSettingsSection({
           </div>
         )}
       </div>
+      )}
 
       <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
         <div className="flex items-center justify-between gap-4">

@@ -43,6 +43,7 @@ interface Project {
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
+  skipTranscoding: boolean
   watermarkPositions: string
   watermarkOpacity: number
   watermarkFontSize: string
@@ -89,6 +90,7 @@ export default function ProjectSettingsPage() {
   const [useCustomSlug, setUseCustomSlug] = useState(false) // Toggle for custom slug
   const [customSlugValue, setCustomSlugValue] = useState('') // Store custom slug value
   const [previewResolution, setPreviewResolution] = useState('720p')
+  const [skipTranscoding, setSkipTranscoding] = useState(false)
   const [watermarkEnabled, setWatermarkEnabled] = useState(true)
   const [watermarkText, setWatermarkText] = useState('')
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
@@ -126,6 +128,7 @@ export default function ProjectSettingsPage() {
   const [originalSettings, setOriginalSettings] = useState({
     title: '',
     previewResolution: '720p',
+    skipTranscoding: false,
     watermarkEnabled: true,
     watermarkText: null as string | null,
     watermarkPositions: 'center',
@@ -180,6 +183,7 @@ export default function ProjectSettingsPage() {
         setHideFeedback(data.hideFeedback || false)
         setTimestampDisplay(data.timestampDisplay || 'TIMECODE')
         setPreviewResolution(data.previewResolution)
+        setSkipTranscoding(data.skipTranscoding ?? false)
         setWatermarkEnabled(data.watermarkEnabled ?? true)
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
@@ -200,6 +204,7 @@ export default function ProjectSettingsPage() {
         setOriginalSettings({
           title: data.title,
           previewResolution: data.previewResolution,
+          skipTranscoding: data.skipTranscoding ?? false,
           watermarkEnabled: data.watermarkEnabled ?? true,
           watermarkText: data.watermarkText,
           watermarkPositions: data.watermarkPositions || 'center',
@@ -297,6 +302,7 @@ export default function ProjectSettingsPage() {
         hideFeedback,
         timestampDisplay,
         previewResolution,
+        skipTranscoding,
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
         watermarkPositions,
@@ -323,6 +329,7 @@ export default function ProjectSettingsPage() {
       const processingSettingsChanged =
         title !== originalSettings.title ||
         previewResolution !== originalSettings.previewResolution ||
+        skipTranscoding !== originalSettings.skipTranscoding ||
         watermarkEnabled !== originalSettings.watermarkEnabled ||
         currentWatermarkText !== originalSettings.watermarkText ||
         watermarkPositions !== originalSettings.watermarkPositions ||
@@ -383,6 +390,7 @@ export default function ProjectSettingsPage() {
         setOriginalSettings({
           title: refreshedData.title,
           previewResolution: refreshedData.previewResolution,
+          skipTranscoding: refreshedData.skipTranscoding ?? false,
           watermarkEnabled: refreshedData.watermarkEnabled ?? true,
           watermarkText: refreshedData.watermarkText,
           watermarkPositions: refreshedData.watermarkPositions || 'center',
@@ -872,6 +880,20 @@ export default function ProjectSettingsPage() {
 	            onOpenChange={setShowVideoProcessing}
 	            contentClassName="space-y-6 border-t pt-4"
 	          >
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="skipTranscoding">{t('skipTranscoding')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('skipTranscodingHint')}</p>
+                  </div>
+                  <Switch id="skipTranscoding" checked={skipTranscoding} onCheckedChange={setSkipTranscoding} />
+                </div>
+                {skipTranscoding && (
+                  <p className="text-xs text-warning">{t('skipTranscodingWarning')}</p>
+                )}
+              </div>
+
+              {!skipTranscoding && (
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="space-y-2">
 	                  <Label>{t('previewResolution')}</Label>
@@ -889,7 +911,9 @@ export default function ProjectSettingsPage() {
                   </p>
                 </div>
               </div>
+              )}
 
+              {!skipTranscoding && (
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -1007,6 +1031,7 @@ export default function ProjectSettingsPage() {
                   </>
                 )}
               </div>
+              )}
 	          </CollapsibleSection>
 
 	          {/* Security Settings */}

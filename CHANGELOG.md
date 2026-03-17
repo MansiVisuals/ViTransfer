@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - German (Deutsch) language support — contributed by [@realjustinde](https://github.com/realjustinde).
 - Customizable watermark position, opacity, and font size — configurable per-project and as global defaults ([#47](https://github.com/MansiVisuals/ViTransfer/issues/47)).
+- Skip transcoding option — serve the original file directly without watermark, resolution change, or codec conversion. Available in global defaults and per-project settings.
 
 ### Security
 - Removed comment edit (PATCH) endpoint — comments are now write-once (post only, admin can delete).

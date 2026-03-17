@@ -263,6 +263,9 @@ export const updateProjectSchema = z.object({
   timestampDisplay: z.enum(['AUTO', 'TIMECODE']).optional(),
   previewResolution: z.enum(['720p', '1080p']).optional(),
 
+  // Transcoding settings
+  skipTranscoding: z.boolean().optional(),
+
   // Watermark settings
   watermarkEnabled: z.boolean().optional(),
   watermarkText: safeStringSchema(0, 100).nullable().optional(),

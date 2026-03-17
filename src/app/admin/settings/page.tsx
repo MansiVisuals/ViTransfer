@@ -27,6 +27,7 @@ interface Settings {
   smtpSecure: string | null
   appDomain: string | null
   defaultPreviewResolution: string | null
+  defaultSkipTranscoding: boolean | null
   defaultWatermarkEnabled: boolean | null
   defaultWatermarkText: string | null
   defaultWatermarkPositions: string | null
@@ -118,6 +119,7 @@ export default function GlobalSettingsPage() {
   const [smtpSecure, setSmtpSecure] = useState('STARTTLS')
   const [appDomain, setAppDomain] = useState('')
   const [defaultPreviewResolution, setDefaultPreviewResolution] = useState('720p')
+  const [defaultSkipTranscoding, setDefaultSkipTranscoding] = useState(false)
   const [defaultWatermarkEnabled, setDefaultWatermarkEnabled] = useState(true)
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
   const [defaultWatermarkPositions, setDefaultWatermarkPositions] = useState('center')
@@ -187,6 +189,7 @@ export default function GlobalSettingsPage() {
     setSmtpSecure(data.smtpSecure || 'STARTTLS')
     setAppDomain(data.appDomain || '')
     setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
+    setDefaultSkipTranscoding(data.defaultSkipTranscoding ?? false)
     setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
     setDefaultWatermarkText(data.defaultWatermarkText || '')
     setDefaultWatermarkPositions(data.defaultWatermarkPositions || 'center')
@@ -497,6 +500,7 @@ export default function GlobalSettingsPage() {
         smtpSecure: smtpSecure || 'STARTTLS',
         appDomain: appDomain || null,
         defaultPreviewResolution: defaultPreviewResolution || '720p',
+        defaultSkipTranscoding,
         defaultWatermarkEnabled: defaultWatermarkEnabled,
         defaultWatermarkText: defaultWatermarkText || null,
         defaultWatermarkPositions: defaultWatermarkPositions || 'center',
@@ -714,6 +718,8 @@ export default function GlobalSettingsPage() {
           <VideoProcessingSettingsSection
             defaultPreviewResolution={defaultPreviewResolution}
             setDefaultPreviewResolution={setDefaultPreviewResolution}
+            defaultSkipTranscoding={defaultSkipTranscoding}
+            setDefaultSkipTranscoding={setDefaultSkipTranscoding}
             defaultWatermarkEnabled={defaultWatermarkEnabled}
             setDefaultWatermarkEnabled={setDefaultWatermarkEnabled}
             defaultWatermarkText={defaultWatermarkText}

@@ -50,37 +50,59 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
     // Stage 3: Fetch processing settings
     const settings = await fetchProcessingSettings(projectId, videoId)
 
-    // Stage 4: Calculate output dimensions
-    const dimensions = calculateOutputDimensions(videoInfo.metadata, settings.resolution)
+    if (settings.skipTranscoding) {
+      // Skip transcoding — only extract metadata and generate thumbnail
+      logMessage(`[WORKER] Skip transcoding enabled for video ${videoId}, generating thumbnail only`)
 
-    // Stage 5: Process preview with watermark
-    const previewPath = await processPreview(
-      videoId,
-      projectId,
-      videoInfo.path,
-      dimensions,
-      settings,
-      tempFiles,
-      videoInfo.metadata.duration
-    )
+      const thumbnailPath = await processThumbnail(
+        videoId,
+        projectId,
+        videoInfo.path,
+        videoInfo.metadata.duration,
+        tempFiles
+      )
 
-    // Stage 6: Generate and upload thumbnail
-    const thumbnailPath = await processThumbnail(
-      videoId,
-      projectId,
-      videoInfo.path,
-      videoInfo.metadata.duration,
-      tempFiles
-    )
+      // Finalize without preview path — original file is served directly
+      await finalizeVideo(
+        videoId,
+        '', // No preview path
+        thumbnailPath,
+        videoInfo.metadata,
+        settings.resolution
+      )
+    } else {
+      // Stage 4: Calculate output dimensions
+      const dimensions = calculateOutputDimensions(videoInfo.metadata, settings.resolution)
 
-    // Stage 7: Finalize - update database with results
-    await finalizeVideo(
-      videoId,
-      previewPath,
-      thumbnailPath,
-      videoInfo.metadata,
-      settings.resolution
-    )
+      // Stage 5: Process preview with watermark
+      const previewPath = await processPreview(
+        videoId,
+        projectId,
+        videoInfo.path,
+        dimensions,
+        settings,
+        tempFiles,
+        videoInfo.metadata.duration
+      )
+
+      // Stage 6: Generate and upload thumbnail
+      const thumbnailPath = await processThumbnail(
+        videoId,
+        projectId,
+        videoInfo.path,
+        videoInfo.metadata.duration,
+        tempFiles
+      )
+
+      // Stage 7: Finalize - update database with results
+      await finalizeVideo(
+        videoId,
+        previewPath,
+        thumbnailPath,
+        videoInfo.metadata,
+        settings.resolution
+      )
+    }
 
     // Success!
     const totalTime = Date.now() - processingStart

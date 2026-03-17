@@ -246,7 +246,8 @@ export async function GET(
           filePath = originalPath
         }
       } else {
-        filePath = video.preview1080Path || video.preview720Path
+        // Fall back to original if no preview exists (e.g. skipTranscoding enabled)
+        filePath = video.preview1080Path || video.preview720Path || originalPath
       }
     }
 

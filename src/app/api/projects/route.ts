@@ -174,6 +174,7 @@ export async function POST(request: NextRequest) {
       where: { id: 'default' },
       select: {
         defaultPreviewResolution: true,
+        defaultSkipTranscoding: true,
         defaultWatermarkEnabled: true,
         defaultWatermarkText: true,
         defaultWatermarkPositions: true,
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest) {
           hideFeedback: isShareOnly ? true : false,
           approvedAt: isShareOnly ? new Date() : null,
           previewResolution: settings?.defaultPreviewResolution || '720p',
+          skipTranscoding: settings?.defaultSkipTranscoding ?? false,
           watermarkEnabled: settings?.defaultWatermarkEnabled ?? true,
           watermarkText: settings?.defaultWatermarkText || null,
           watermarkPositions: settings?.defaultWatermarkPositions || 'center',

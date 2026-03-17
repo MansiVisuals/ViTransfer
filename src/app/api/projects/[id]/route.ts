@@ -240,6 +240,10 @@ export async function PATCH(
       updateData.previewResolution = validatedBody.previewResolution
     }
 
+    if (validatedBody.skipTranscoding !== undefined) {
+      updateData.skipTranscoding = validatedBody.skipTranscoding
+    }
+
     if (validatedBody.watermarkEnabled !== undefined) {
       updateData.watermarkEnabled = validatedBody.watermarkEnabled
     }

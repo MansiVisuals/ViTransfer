@@ -1088,6 +1088,7 @@
       "hint": "This changes the language for all admin pages, client-facing pages, and email notifications. A page reload is required after changing.",
       "en": "English",
       "nl": "Dutch",
+      "de": "German",
       "unsupportedLocale": "Unsupported locale"
     },
 

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import fs from 'fs/promises'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
+import DOMPurify from 'isomorphic-dompurify'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -38,34 +39,36 @@ async function clearAllLogoPngCaches(): Promise<void> {
 }
 
 /**
- * Decode HTML entities so encoded payloads like &#111;nload= are caught
+ * Sanitize SVG using DOMPurify with a strict allowlist.
+ * Returns the sanitized SVG string, or null if the input is not a valid SVG.
  */
-function decodeHtmlEntities(str: string): string {
-  const namedEntities: Record<string, string> = {
-    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'",
-  }
-  return str
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
-    .replace(/&(amp|lt|gt|quot|apos);/gi, (m) => namedEntities[m.toLowerCase()] || m)
-}
+function sanitizeSvg(svgText: string): string | null {
+  const clean = DOMPurify.sanitize(svgText, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    ALLOWED_TAGS: [
+      'svg', 'path', 'g', 'circle', 'rect', 'line', 'polyline',
+      'polygon', 'ellipse', 'text', 'tspan', 'defs', 'clipPath',
+      'linearGradient', 'radialGradient', 'stop', 'mask', 'symbol', 'use',
+      'title', 'desc', 'marker',
+    ],
+    ALLOWED_ATTR: [
+      'viewBox', 'xmlns', 'xmlns:xlink', 'd', 'fill', 'stroke', 'stroke-width',
+      'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'stroke-dashoffset',
+      'transform', 'cx', 'cy', 'r', 'x', 'y', 'width', 'height',
+      'rx', 'ry', 'points', 'id', 'class', 'opacity', 'fill-opacity',
+      'stroke-opacity', 'fill-rule', 'clip-rule', 'clip-path',
+      'offset', 'stop-color', 'stop-opacity', 'gradientUnits', 'gradientTransform',
+      'x1', 'y1', 'x2', 'y2', 'font-size', 'font-family', 'font-weight',
+      'text-anchor', 'dominant-baseline', 'letter-spacing',
+      'marker-start', 'marker-mid', 'marker-end', 'markerWidth', 'markerHeight',
+      'refX', 'refY', 'orient', 'markerUnits',
+      'href', 'xlink:href',
+    ],
+    ALLOW_DATA_ATTR: false,
+  })
 
-function isSafeSvg(svg: string): boolean {
-  // Strip XML declaration if present before checking for <svg
-  const stripped = svg.trim().replace(/^<\?xml[^?]*\?>\s*/i, '')
-  // Basic hardening: must start with <svg, reject scripts/handlers/js urls
-  if (!/^<svg[\s>]/i.test(stripped)) return false
-
-  // Decode HTML entities to catch encoded attacks like &#111;nload=
-  const decoded = decodeHtmlEntities(svg)
-
-  if (/<script[\s>]/i.test(decoded)) return false
-  if (/on[a-zA-Z]+\s*=/i.test(decoded)) return false
-  if (/javascript:/i.test(decoded)) return false
-  // Block SVG animation elements that can inject event handlers via attributeName
-  if (/<set[\s>]/i.test(decoded)) return false
-  if (/<foreignObject[\s>]/i.test(decoded)) return false
-  return true
+  if (!clean || !clean.trim().startsWith('<svg')) return null
+  return clean
 }
 
 export async function POST(request: NextRequest) {
@@ -93,13 +96,15 @@ export async function POST(request: NextRequest) {
   }
 
   const svgText = buffer.toString('utf-8')
-  if (!isSafeSvg(svgText)) {
+  const sanitized = sanitizeSvg(svgText)
+  if (!sanitized) {
     return NextResponse.json({ error: settingsMessages.unsafeSvg || 'Invalid or unsafe SVG content' }, { status: 400 })
   }
 
   try {
     await initStorage()
-    await uploadFile(STORAGE_PATH, buffer, buffer.byteLength, 'image/svg+xml')
+    const sanitizedBuffer = Buffer.from(sanitized, 'utf-8')
+    await uploadFile(STORAGE_PATH, sanitizedBuffer, sanitizedBuffer.byteLength, 'image/svg+xml')
 
     // Clear all cached PNGs so the new logo is used everywhere
     await clearAllLogoPngCaches()

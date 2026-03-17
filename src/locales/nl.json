@@ -1042,6 +1042,7 @@
       "hint": "Dit wijzigt de taal voor alle beheerpagina's, klantgerichte pagina's en e-mailnotificaties. Een paginaverversing is vereist na wijziging.",
       "en": "Engels",
       "nl": "Nederlands",
+      "de": "Duits",
       "unsupportedLocale": "Niet-ondersteunde taal"
     },
     "email": {

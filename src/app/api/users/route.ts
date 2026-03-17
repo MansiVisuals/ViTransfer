@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { hashPassword, validatePassword } from '@/lib/encryption'
 import { rateLimit } from '@/lib/rate-limit'
+import { validateRequest, createUserSchema } from '@/lib/validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 export const runtime = 'nodejs'
 
@@ -83,17 +84,19 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { email, username, password, name } = body
 
-    // Validation
-    if (!email || !password) {
+    // Validate input with Zod schema
+    const validation = validateRequest(createUserSchema, body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: usersMessages.emailAndPasswordRequired || 'Email and password are required' },
+        { error: validation.error, details: validation.details },
         { status: 400 }
       )
     }
 
-    // Validate password strength
+    const { email, username, password, name } = validation.data
+
+    // Validate password strength (additional check beyond Zod format validation)
     const passwordValidation = validatePassword(password)
     if (!passwordValidation.isValid) {
       return NextResponse.json(

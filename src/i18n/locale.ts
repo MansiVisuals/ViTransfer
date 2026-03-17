@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/db'
 
-export const SUPPORTED_LOCALES = ['en', 'nl'] as const
+export const SUPPORTED_LOCALES = ['en', 'nl', 'de'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
 export const LOCALE_NAMES: Record<string, string> = {
   en: 'English',
   nl: 'Nederlands',
+  de: 'Deutsch',
 }
 
 /**

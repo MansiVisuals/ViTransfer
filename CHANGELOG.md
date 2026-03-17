@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-03-17
+
+### Added
+- German (Deutsch) language support — contributed by [@realjustinde](https://github.com/realjustinde).
+
+### Security
+- Removed comment edit (PATCH) endpoint — comments are now write-once (post only, admin can delete).
+- Replaced regex-based SVG sanitization with DOMPurify strict allowlist for logo uploads.
+- Store explicit `isAdmin` flag in video access tokens instead of relying on session ID prefix convention.
+- Randomized session IDs for projects with no authentication (previously embedded client IP).
+- Added Zod schema validation to user creation endpoint.
+- Atomic password reset token consumption via Redis `SETNX` (prevents race condition on concurrent requests).
+- Updated common password blocklist to NordPass Top 200 (2025).
+
+### Fixed
+- Resolved multiple CodeQL alerts across logging, auth guards, and client-asset routes.
+- Always store OTP email in access log as audit data regardless of analytics setting.
+- Fix missing `analytics.password` locale key in project activity.
+- GDPR compliance: consent-gated analytics, cascade deletion, cleanup fixes.
+
 ## [0.9.6] - 2026-03-14
 
 ### Added

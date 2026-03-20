@@ -18,7 +18,7 @@ import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageToggle from '@/components/LanguageToggle'
 import { ShareTutorial } from '@/components/ShareTutorial'
-import PrivacyBanner from '@/components/PrivacyBanner'
+import PrivacyBanner, { PRIVACY_STORAGE_KEY } from '@/components/PrivacyBanner'
 
 interface SharePageClientProps {
   token: string
@@ -70,6 +70,16 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const storageKey = token || ''
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
+
+  /** Read GDPR analytics consent from localStorage for inclusion in auth request headers */
+  const getConsentHeader = (): Record<string, string> => {
+    try {
+      const stored = localStorage.getItem(PRIVACY_STORAGE_KEY)
+      if (stored === 'true') return { 'X-Analytics-Consent': 'true' }
+      if (stored === 'declined') return { 'X-Analytics-Consent': 'false' }
+    } catch { /* ignore */ }
+    return {}
+  }
 
   // Load stored token once (persist across refresh)
   useEffect(() => {
@@ -152,7 +162,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     try {
       const authToken = tokenOverride || shareToken
       const projectResponse = await fetch(`/api/share/${token}`, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined
+        headers: { ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}), ...getConsentHeader() }
       })
       if (projectResponse.ok) {
         const projectData = await projectResponse.json()
@@ -189,7 +199,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     async function loadProject() {
       try {
         const response = await fetch(`/api/share/${token}`, {
-          headers: shareToken ? { Authorization: `Bearer ${shareToken}` } : undefined
+          headers: { ...(shareToken ? { Authorization: `Bearer ${shareToken}` } : {}), ...getConsentHeader() }
         })
 
         if (!isMounted) return
@@ -201,7 +211,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
             try {
               const guestResponse = await fetch(`/api/share/${token}/guest`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...getConsentHeader() },
               })
               if (guestResponse.ok) {
                 const guestData = await guestResponse.json()
@@ -552,7 +562,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     try {
       const response = await fetch(`/api/share/${token}/verify-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getConsentHeader() },
         body: JSON.stringify({ email, code: otp }),
       })
 
@@ -585,7 +595,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     try {
       const response = await fetch(`/api/share/${token}/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getConsentHeader() },
         body: JSON.stringify({ password }),
       })
 
@@ -616,7 +626,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     try {
       const response = await fetch(`/api/share/${token}/guest`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getConsentHeader() },
       })
 
       if (response.ok) {
@@ -902,7 +912,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
       {/* Privacy Disclosure Banner */}
       {project.settings?.privacyDisclosureEnabled && (
-        <PrivacyBanner customText={project.settings.privacyDisclosureText} />
+        <PrivacyBanner customText={project.settings.privacyDisclosureText} slug={token} shareToken={shareToken} />
       )}
       </>
     )
@@ -1020,7 +1030,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
       {/* Privacy Disclosure Banner */}
       {project.settings?.privacyDisclosureEnabled && (
-        <PrivacyBanner customText={project.settings.privacyDisclosureText} />
+        <PrivacyBanner customText={project.settings.privacyDisclosureText} slug={token} shareToken={shareToken} />
       )}
     </div>
   )

@@ -5,7 +5,7 @@ import { getCurrentUserFromRequest, getShareContext, signShareToken, parseBearer
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
 import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
-import { trackSharePageAccess } from '@/lib/share-access-tracking'
+import { trackSharePageAccess, readAnalyticsConsent } from '@/lib/share-access-tracking'
 import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -122,6 +122,7 @@ export async function GET(
           accessMethod: 'NONE',
           sessionId,
           request,
+          analyticsConsent: readAnalyticsConsent(request),
         })
 
         // Set 30-minute deduplication window

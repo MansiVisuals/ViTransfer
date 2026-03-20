@@ -264,10 +264,7 @@ export async function DELETE(
 
   try {
     const { searchParams } = new URL(request.url)
-    const assetId = searchParams.get('assetId')
-    if (!assetId) {
-      return NextResponse.json({ error: videosMessages.assetIdRequired || 'Asset ID is required' }, { status: 400 })
-    }
+    const assetId = searchParams.get('assetId') ?? ''
 
     const video = await prisma.video.findUnique({
       where: { id: videoId },
@@ -300,8 +297,9 @@ export async function DELETE(
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
-    const pendingAssets = await prisma.videoAsset.findMany({
+    const asset = await prisma.videoAsset.findFirst({
       where: {
+        id: assetId,
         videoId,
         uploadedBy: 'client',
         uploadedBySessionId: uploaderSessionId,
@@ -312,8 +310,6 @@ export async function DELETE(
         storagePath: true,
       },
     })
-
-    const asset = pendingAssets.find((pendingAsset) => pendingAsset.id === assetId)
 
     if (!asset) {
       return NextResponse.json({ error: videosMessages.attachmentNotFound || 'Attachment not found' }, { status: 404 })

@@ -137,7 +137,7 @@ export async function GET(
   return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
 
-    // Track download analytics (sessionId check handles admin filtering automatically)
+    // Track download analytics (skip for admin sessions)
     if (sessionId) {
       await trackVideoAccess({
         videoId,
@@ -147,6 +147,7 @@ export async function GET(
         quality: 'assets',
         eventType: 'DOWNLOAD_COMPLETE',
         assetIds: assetIds,
+        isAdmin: tokenData.isAdmin === true,
       }).catch(() => {})
     }
 

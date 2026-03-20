@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Block dangerous protocol schemes in any query parameter value
 const DANGEROUS_PROTOCOL = /^(javascript|data|vbscript):/i
 
 export async function proxy(request: NextRequest) {
   const url = request.nextUrl
 
-  // Sanitize returnUrl on the login page — prevent javascript: XSS and open redirects
+  // Sanitize returnUrl on the login page
   if (url.pathname === '/login') {
     const returnUrl = url.searchParams.get('returnUrl')
     if (returnUrl && (!returnUrl.startsWith('/') || returnUrl.startsWith('//'))) {
@@ -16,8 +15,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Strip any query parameter containing javascript:/data:/vbscript: schemes
-  // Prevents reflected XSS via Next.js RSC payload serialization
+  // Strip dangerous protocol schemes from query parameters
   let sanitized = false
   for (const [key, value] of url.searchParams.entries()) {
     if (DANGEROUS_PROTOCOL.test(value.trim())) {
@@ -29,10 +27,64 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  // Generate nonce for CSP
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+
+  const isHttpsEnabled = process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1'
+  const tusEndpoint = process.env.NEXT_PUBLIC_TUS_ENDPOINT
+  let tusOrigin = ''
+  if (tusEndpoint) {
+    try { tusOrigin = new URL(tusEndpoint).origin } catch {}
+  }
+
+  const connectSrc = [
+    "'self'",
+    'blob:',
+    tusOrigin,
+    'https://ko-fi.com',
+    'https://storage.ko-fi.com',
+    'https://cloudflareinsights.com',
+  ].filter(Boolean).join(' ')
+
+  const cspDirectives = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
+    "script-src-attr 'none'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://storage.ko-fi.com https://*.ko-fi.com",
+    "font-src 'self' data:",
+    `connect-src ${connectSrc}`,
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "frame-src 'self' https://ko-fi.com",
+  ]
+
+  if (isHttpsEnabled) {
+    cspDirectives.push('upgrade-insecure-requests')
+  }
+
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } })
+
+  response.headers.set('Content-Security-Policy', cspDirectives.join('; '))
+  response.headers.set('X-DNS-Prefetch-Control', 'on')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'same-origin')
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()')
+
+  if (isHttpsEnabled) {
+    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  }
+
+  return response
 }
 
 export const config = {
-  // Match all page routes (not API or static assets)
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+  matcher: ['/((?!_next/static|_next/image|brand|favicon|manifest\\.json|robots\\.txt|sw\\.js).*)']
 }

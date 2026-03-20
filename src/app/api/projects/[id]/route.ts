@@ -240,6 +240,10 @@ export async function PATCH(
       updateData.previewResolution = validatedBody.previewResolution
     }
 
+    if (validatedBody.skipTranscoding !== undefined) {
+      updateData.skipTranscoding = validatedBody.skipTranscoding
+    }
+
     if (validatedBody.watermarkEnabled !== undefined) {
       updateData.watermarkEnabled = validatedBody.watermarkEnabled
     }
@@ -273,6 +277,18 @@ export async function PATCH(
       }
 
       updateData.watermarkText = validatedBody.watermarkText || null
+    }
+
+    if (validatedBody.watermarkPositions !== undefined) {
+      updateData.watermarkPositions = validatedBody.watermarkPositions
+    }
+
+    if (validatedBody.watermarkOpacity !== undefined) {
+      updateData.watermarkOpacity = validatedBody.watermarkOpacity
+    }
+
+    if (validatedBody.watermarkFontSize !== undefined) {
+      updateData.watermarkFontSize = validatedBody.watermarkFontSize
     }
 
     if (validatedBody.allowAssetDownload !== undefined) {
@@ -526,12 +542,20 @@ export async function DELETE(
           await deleteFile(video.originalStoragePath)
         }
 
-        // Delete preview files
+        // Delete preview files (watermarked)
         if (video.preview1080Path) {
           await deleteFile(video.preview1080Path)
         }
         if (video.preview720Path) {
           await deleteFile(video.preview720Path)
+        }
+
+        // Delete clean preview files (non-watermarked, created after approval)
+        if (video.cleanPreview1080Path) {
+          await deleteFile(video.cleanPreview1080Path)
+        }
+        if (video.cleanPreview720Path) {
+          await deleteFile(video.cleanPreview720Path)
         }
 
         // Delete thumbnail

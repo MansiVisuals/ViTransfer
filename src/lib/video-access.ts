@@ -43,6 +43,7 @@ interface VideoAccessToken {
   sessionId: string
   ipAddress: string
   createdAt: number
+  isAdmin: boolean
 }
 
 /**
@@ -85,6 +86,7 @@ export async function generateVideoAccessToken(
     sessionId,
     ipAddress,
     createdAt: Date.now(),
+    isAdmin: sessionId.startsWith('admin:'),
   }
 
   const ttlSeconds = await getClientSessionTimeoutSeconds()
@@ -148,7 +150,7 @@ export async function verifyVideoAccessToken(
     return null
   }
 
-  const isAdminSession = sessionId?.startsWith('admin:') || false
+  const isAdminSession = tokenData.isAdmin === true
 
   if (!isAdminSession) {
     if (tokenData.sessionId !== sessionId) {
@@ -294,16 +296,17 @@ export async function trackVideoAccess(params: {
   eventType: 'PAGE_VISIT' | 'DOWNLOAD_COMPLETE'
   assetId?: string // Single asset download
   assetIds?: string[] // Multiple assets downloaded as ZIP
+  isAdmin?: boolean
 }) {
-  const { videoId, projectId, bandwidth: _bandwidth, eventType, sessionId, assetId, assetIds } = params
+  const { videoId, projectId, bandwidth: _bandwidth, eventType, sessionId, assetId, assetIds, isAdmin } = params
 
   const settings = await getSecuritySettings()
   if (!settings.trackAnalytics) {
     return
   }
 
-  // Avoid inflating metrics with admin activity (admin sessions prefixed with "admin:")
-  if (sessionId?.startsWith('admin:')) {
+  // Avoid inflating metrics with admin activity
+  if (isAdmin) {
     return
   }
 

@@ -42,14 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const response = body as RegistrationResponseJSON
-
-    if (!response || !response.id) {
-      return NextResponse.json(
-        { success: false, error: authMessages.invalidRegistrationResponse || 'Invalid registration response' },
-        { status: 400 }
-      )
-    }
+    const response = (body || {}) as RegistrationResponseJSON
 
     // Get client info for security tracking
     const userAgent = request.headers.get('user-agent') || undefined

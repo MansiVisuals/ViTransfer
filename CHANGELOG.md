@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-03-17
+
+### Added
+- German (Deutsch) language support — contributed by [@realjustinde](https://github.com/realjustinde).
+- Customizable watermark position, opacity, and font size — configurable per-project and as global defaults ([#47](https://github.com/MansiVisuals/ViTransfer/issues/47)).
+- Skip transcoding option — serve the original file directly without watermark, resolution change, or codec conversion. Available in global defaults and per-project settings ([#48](https://github.com/MansiVisuals/ViTransfer/issues/48)).
+
+### Security
+- Nonce-based Content Security Policy — replaced `unsafe-inline` in `script-src` with per-request cryptographic nonces via `proxy.ts`.
+- Moved CSP and all security headers from static `next.config.js` to dynamic `proxy.ts` for per-request nonce generation.
+- Removed `https:` wildcards from `style-src` and `font-src` CSP directives.
+- Added `https://static.cloudflareinsights.com` to `script-src` and `https://cloudflareinsights.com` to `connect-src` for Cloudflare analytics.
+- Stripped all comments and console.log statements from `sw.js` to prevent information leakage (CWE-615).
+- Replaced private IP `192.168.1.1` with RFC 5737 documentation IP `198.51.100.1` in locale placeholder strings to prevent private IP disclosure in responses.
+- Added `robots.txt` disallowing `/admin/` and `/api/` paths.
+- Removed comment edit (PATCH) endpoint — comments are now write-once (post only, admin can delete).
+- Replaced regex-based SVG sanitization with DOMPurify strict allowlist for logo uploads.
+- Store explicit `isAdmin` flag in video access tokens instead of relying on session ID prefix convention.
+- Randomized session IDs for projects with no authentication (previously embedded client IP).
+- Added Zod schema validation to user creation endpoint.
+- Atomic password reset token consumption via Redis `SETNX` (prevents race condition on concurrent requests).
+- Updated common password blocklist to NordPass Top 200 (2025).
+
+### Fixed
+- Fixed `process.stderr.write` crash in browser — logging functions now detect the runtime and fall back to `console.log`/`console.error` on the client.
+- Resolved multiple CodeQL alerts across logging, auth guards, and client-asset routes.
+- Always store OTP email in access log as audit data regardless of analytics setting.
+- Fix missing `analytics.password` locale key in project activity.
+- GDPR compliance: consent-gated analytics, cascade deletion, cleanup fixes.
+
 ## [0.9.6] - 2026-03-14
 
 ### Added

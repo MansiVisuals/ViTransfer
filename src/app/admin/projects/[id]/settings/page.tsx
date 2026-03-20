@@ -43,6 +43,10 @@ interface Project {
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
+  skipTranscoding: boolean
+  watermarkPositions: string
+  watermarkOpacity: number
+  watermarkFontSize: string
   allowAssetDownload: boolean
   allowClientAssetUpload: boolean
   clientCanApprove: boolean
@@ -86,9 +90,13 @@ export default function ProjectSettingsPage() {
   const [useCustomSlug, setUseCustomSlug] = useState(false) // Toggle for custom slug
   const [customSlugValue, setCustomSlugValue] = useState('') // Store custom slug value
   const [previewResolution, setPreviewResolution] = useState('720p')
+  const [skipTranscoding, setSkipTranscoding] = useState(false)
   const [watermarkEnabled, setWatermarkEnabled] = useState(true)
   const [watermarkText, setWatermarkText] = useState('')
   const [useCustomWatermark, setUseCustomWatermark] = useState(false)
+  const [watermarkPositions, setWatermarkPositions] = useState('center')
+  const [watermarkOpacity, setWatermarkOpacity] = useState(30)
+  const [watermarkFontSize, setWatermarkFontSize] = useState('medium')
   const [allowAssetDownload, setAllowAssetDownload] = useState(true)
   const [allowClientAssetUpload, setAllowClientAssetUpload] = useState(false)
   const [clientCanApprove, setClientCanApprove] = useState(true)
@@ -120,8 +128,12 @@ export default function ProjectSettingsPage() {
   const [originalSettings, setOriginalSettings] = useState({
     title: '',
     previewResolution: '720p',
+    skipTranscoding: false,
     watermarkEnabled: true,
     watermarkText: null as string | null,
+    watermarkPositions: 'center',
+    watermarkOpacity: 30,
+    watermarkFontSize: 'medium',
   })
 
   // Reprocessing state
@@ -171,9 +183,13 @@ export default function ProjectSettingsPage() {
         setHideFeedback(data.hideFeedback || false)
         setTimestampDisplay(data.timestampDisplay || 'TIMECODE')
         setPreviewResolution(data.previewResolution)
+        setSkipTranscoding(data.skipTranscoding ?? false)
         setWatermarkEnabled(data.watermarkEnabled ?? true)
         setWatermarkText(data.watermarkText || '')
         setUseCustomWatermark(!!data.watermarkText)
+        setWatermarkPositions(data.watermarkPositions || 'center')
+        setWatermarkOpacity(data.watermarkOpacity ?? 30)
+        setWatermarkFontSize(data.watermarkFontSize || 'medium')
         setAllowAssetDownload(data.allowAssetDownload ?? true)
         setAllowClientAssetUpload(data.allowClientAssetUpload ?? false)
         setClientCanApprove(data.clientCanApprove ?? true)
@@ -188,8 +204,12 @@ export default function ProjectSettingsPage() {
         setOriginalSettings({
           title: data.title,
           previewResolution: data.previewResolution,
+          skipTranscoding: data.skipTranscoding ?? false,
           watermarkEnabled: data.watermarkEnabled ?? true,
           watermarkText: data.watermarkText,
+          watermarkPositions: data.watermarkPositions || 'center',
+          watermarkOpacity: data.watermarkOpacity ?? 30,
+          watermarkFontSize: data.watermarkFontSize || 'medium',
         })
 
         // Check if slug was manually customized (different from auto-generated from title)
@@ -282,8 +302,12 @@ export default function ProjectSettingsPage() {
         hideFeedback,
         timestampDisplay,
         previewResolution,
+        skipTranscoding,
         watermarkEnabled,
         watermarkText: useCustomWatermark ? watermarkText : null,
+        watermarkPositions,
+        watermarkOpacity,
+        watermarkFontSize,
         allowAssetDownload,
         allowClientAssetUpload,
         clientCanApprove,
@@ -305,8 +329,12 @@ export default function ProjectSettingsPage() {
       const processingSettingsChanged =
         title !== originalSettings.title ||
         previewResolution !== originalSettings.previewResolution ||
+        skipTranscoding !== originalSettings.skipTranscoding ||
         watermarkEnabled !== originalSettings.watermarkEnabled ||
-        currentWatermarkText !== originalSettings.watermarkText
+        currentWatermarkText !== originalSettings.watermarkText ||
+        watermarkPositions !== originalSettings.watermarkPositions ||
+        watermarkOpacity !== originalSettings.watermarkOpacity ||
+        watermarkFontSize !== originalSettings.watermarkFontSize
 
       // If processing settings changed, show modal
       if (processingSettingsChanged) {
@@ -354,13 +382,20 @@ export default function ProjectSettingsPage() {
         setWatermarkEnabled(refreshedData.watermarkEnabled ?? true)
         setWatermarkText(refreshedData.watermarkText || '')
         setUseCustomWatermark(!!refreshedData.watermarkText)
+        setWatermarkPositions(refreshedData.watermarkPositions || 'center')
+        setWatermarkOpacity(refreshedData.watermarkOpacity ?? 30)
+        setWatermarkFontSize(refreshedData.watermarkFontSize || 'medium')
 
         // Update original settings
         setOriginalSettings({
           title: refreshedData.title,
           previewResolution: refreshedData.previewResolution,
+          skipTranscoding: refreshedData.skipTranscoding ?? false,
           watermarkEnabled: refreshedData.watermarkEnabled ?? true,
           watermarkText: refreshedData.watermarkText,
+          watermarkPositions: refreshedData.watermarkPositions || 'center',
+          watermarkOpacity: refreshedData.watermarkOpacity ?? 30,
+          watermarkFontSize: refreshedData.watermarkFontSize || 'medium',
         })
       }
 
@@ -845,6 +880,20 @@ export default function ProjectSettingsPage() {
 	            onOpenChange={setShowVideoProcessing}
 	            contentClassName="space-y-6 border-t pt-4"
 	          >
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="skipTranscoding">{t('skipTranscoding')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('skipTranscodingHint')}</p>
+                  </div>
+                  <Switch id="skipTranscoding" checked={skipTranscoding} onCheckedChange={setSkipTranscoding} />
+                </div>
+                {skipTranscoding && (
+                  <p className="text-xs text-warning">{t('skipTranscodingWarning')}</p>
+                )}
+              </div>
+
+              {!skipTranscoding && (
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="space-y-2">
 	                  <Label>{t('previewResolution')}</Label>
@@ -862,7 +911,9 @@ export default function ProjectSettingsPage() {
                   </p>
                 </div>
               </div>
+              )}
 
+              {!skipTranscoding && (
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -910,9 +961,77 @@ export default function ProjectSettingsPage() {
                         </p>
                       </div>
                     )}
+
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <Label>{t('watermarkPositions')}</Label>
+                      <p className="text-xs text-muted-foreground">{t('watermarkPositionsHint')}</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {(['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((pos) => {
+                          const selected = watermarkPositions.split(',').map(p => p.trim()).includes(pos)
+                          return (
+                            <button
+                              key={pos}
+                              type="button"
+                              onClick={() => {
+                                const current = new Set(watermarkPositions.split(',').map(p => p.trim()).filter(Boolean))
+                                if (current.has(pos)) {
+                                  current.delete(pos)
+                                  if (current.size === 0) return
+                                } else {
+                                  current.add(pos)
+                                }
+                                setWatermarkPositions(Array.from(current).join(','))
+                              }}
+                              className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                                selected
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/50'
+                              }`}
+                            >
+                              {t(`position.${pos}`)}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t('watermarkFontSize')}</Label>
+                      <Select value={watermarkFontSize} onValueChange={setWatermarkFontSize}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="small">{t('fontSizeSmall')}</SelectItem>
+                          <SelectItem value="medium">{t('fontSizeMedium')}</SelectItem>
+                          <SelectItem value="large">{t('fontSizeLarge')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>{t('watermarkOpacity')}</Label>
+                        <span className="text-xs text-muted-foreground">{watermarkOpacity}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={10}
+                        max={100}
+                        step={5}
+                        value={watermarkOpacity}
+                        onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
+                        className="w-full accent-primary"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{t('opacitySubtle')}</span>
+                        <span>{t('opacityBold')}</span>
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
+              )}
 	          </CollapsibleSection>
 
 	          {/* Security Settings */}

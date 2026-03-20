@@ -128,6 +128,7 @@ export async function POST(
       ipAddress,
       userAgentHash,
       createdAt: Date.now(),
+      isAdmin: accessCheck.isAdmin || false,
     }
 
     await redis.setex(

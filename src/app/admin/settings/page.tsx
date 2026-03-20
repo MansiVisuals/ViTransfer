@@ -27,8 +27,12 @@ interface Settings {
   smtpSecure: string | null
   appDomain: string | null
   defaultPreviewResolution: string | null
+  defaultSkipTranscoding: boolean | null
   defaultWatermarkEnabled: boolean | null
   defaultWatermarkText: string | null
+  defaultWatermarkPositions: string | null
+  defaultWatermarkOpacity: number | null
+  defaultWatermarkFontSize: string | null
   maxUploadSizeGB: number | null
   maxCommentAttachments: number | null
   defaultTimestampDisplay: string | null
@@ -115,8 +119,12 @@ export default function GlobalSettingsPage() {
   const [smtpSecure, setSmtpSecure] = useState('STARTTLS')
   const [appDomain, setAppDomain] = useState('')
   const [defaultPreviewResolution, setDefaultPreviewResolution] = useState('720p')
+  const [defaultSkipTranscoding, setDefaultSkipTranscoding] = useState(false)
   const [defaultWatermarkEnabled, setDefaultWatermarkEnabled] = useState(true)
   const [defaultWatermarkText, setDefaultWatermarkText] = useState('')
+  const [defaultWatermarkPositions, setDefaultWatermarkPositions] = useState('center')
+  const [defaultWatermarkOpacity, setDefaultWatermarkOpacity] = useState(30)
+  const [defaultWatermarkFontSize, setDefaultWatermarkFontSize] = useState('medium')
   const [maxUploadSizeGB, setMaxUploadSizeGB] = useState('1')
   const [maxCommentAttachments, setMaxCommentAttachments] = useState('10')
   const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
@@ -181,8 +189,12 @@ export default function GlobalSettingsPage() {
     setSmtpSecure(data.smtpSecure || 'STARTTLS')
     setAppDomain(data.appDomain || '')
     setDefaultPreviewResolution(data.defaultPreviewResolution || '720p')
+    setDefaultSkipTranscoding(data.defaultSkipTranscoding ?? false)
     setDefaultWatermarkEnabled(data.defaultWatermarkEnabled ?? true)
     setDefaultWatermarkText(data.defaultWatermarkText || '')
+    setDefaultWatermarkPositions(data.defaultWatermarkPositions || 'center')
+    setDefaultWatermarkOpacity(data.defaultWatermarkOpacity ?? 30)
+    setDefaultWatermarkFontSize(data.defaultWatermarkFontSize || 'medium')
     setMaxUploadSizeGB(data.maxUploadSizeGB?.toString() || '1')
     setMaxCommentAttachments(data.maxCommentAttachments?.toString() || '10')
     setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
@@ -488,8 +500,12 @@ export default function GlobalSettingsPage() {
         smtpSecure: smtpSecure || 'STARTTLS',
         appDomain: appDomain || null,
         defaultPreviewResolution: defaultPreviewResolution || '720p',
+        defaultSkipTranscoding,
         defaultWatermarkEnabled: defaultWatermarkEnabled,
         defaultWatermarkText: defaultWatermarkText || null,
+        defaultWatermarkPositions: defaultWatermarkPositions || 'center',
+        defaultWatermarkOpacity: defaultWatermarkOpacity,
+        defaultWatermarkFontSize: defaultWatermarkFontSize || 'medium',
         maxUploadSizeGB: parseInt(maxUploadSizeGB, 10) || 1,
         maxCommentAttachments: parseInt(maxCommentAttachments, 10) || 10,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
@@ -702,10 +718,18 @@ export default function GlobalSettingsPage() {
           <VideoProcessingSettingsSection
             defaultPreviewResolution={defaultPreviewResolution}
             setDefaultPreviewResolution={setDefaultPreviewResolution}
+            defaultSkipTranscoding={defaultSkipTranscoding}
+            setDefaultSkipTranscoding={setDefaultSkipTranscoding}
             defaultWatermarkEnabled={defaultWatermarkEnabled}
             setDefaultWatermarkEnabled={setDefaultWatermarkEnabled}
             defaultWatermarkText={defaultWatermarkText}
             setDefaultWatermarkText={setDefaultWatermarkText}
+            defaultWatermarkPositions={defaultWatermarkPositions}
+            setDefaultWatermarkPositions={setDefaultWatermarkPositions}
+            defaultWatermarkOpacity={defaultWatermarkOpacity}
+            setDefaultWatermarkOpacity={setDefaultWatermarkOpacity}
+            defaultWatermarkFontSize={defaultWatermarkFontSize}
+            setDefaultWatermarkFontSize={setDefaultWatermarkFontSize}
             defaultTimestampDisplay={defaultTimestampDisplay}
             setDefaultTimestampDisplay={setDefaultTimestampDisplay}
             autoApproveProject={autoApproveProject}

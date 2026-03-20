@@ -99,14 +99,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if token has already been used (single-use enforcement)
+    // Atomically mark token as used (single-use enforcement via SETNX)
     const redis = getRedis()
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
     const tokenKey = `password_reset_used:${tokenHash}`
-    
-    const tokenUsed = await redis.get(tokenKey)
-    if (tokenUsed) {
-      // Log attempt to reuse token
+
+    const wasSet = await redis.set(tokenKey, '1', 'EX', 30 * 60, 'NX')
+    if (!wasSet) {
+      // Token was already consumed by a prior request
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
         severity: 'WARNING',
@@ -165,10 +165,6 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: { password: hashedPassword },
     })
-
-    // Mark token as used (30 minutes TTL to match token expiration)
-    // This prevents the same token from being used multiple times
-    await redis.set(tokenKey, '1', 'EX', 30 * 60)
 
     // Invalidate all sessions for this user (security: force re-login everywhere)
     await invalidateAdminSessions(user.id)

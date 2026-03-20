@@ -98,8 +98,8 @@ export async function GET(
     // Use token's session ID for all users
     const sessionId = preliminaryTokenData.sessionId
 
-    // Determine if this is an admin request (JWT token OR admin session ID)
-    const isAdminRequest = authContext.isAdmin || sessionId?.startsWith('admin:')
+    // Determine if this is an admin request (JWT token OR explicit isAdmin flag in token data)
+    const isAdminRequest = authContext.isAdmin || preliminaryTokenData.isAdmin === true
 
     // For admin users, verify they have access to the project
     if (isAdminRequest) {
@@ -246,7 +246,8 @@ export async function GET(
           filePath = originalPath
         }
       } else {
-        filePath = video.preview1080Path || video.preview720Path
+        // Fall back to original if no preview exists (e.g. skipTranscoding enabled)
+        filePath = video.preview1080Path || video.preview720Path || originalPath
       }
     }
 

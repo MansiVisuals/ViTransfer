@@ -46,7 +46,11 @@ export interface TempFiles {
 
 export interface ProcessingSettings {
   resolution: string
+  skipTranscoding: boolean
   watermarkText?: string
+  watermarkPositions?: string
+  watermarkOpacity?: number
+  watermarkFontSize?: string
 }
 
 export interface VideoInfo {
@@ -154,8 +158,12 @@ export async function fetchProcessingSettings(
     select: {
       title: true,
       previewResolution: true,
+      skipTranscoding: true,
       watermarkEnabled: true,
       watermarkText: true,
+      watermarkPositions: true,
+      watermarkOpacity: true,
+      watermarkFontSize: true,
     },
   })
 
@@ -179,7 +187,11 @@ export async function fetchProcessingSettings(
 
   return {
     resolution: project?.previewResolution || '720p',
-    watermarkText
+    skipTranscoding: project?.skipTranscoding ?? false,
+    watermarkText,
+    watermarkPositions: project?.watermarkPositions || 'center',
+    watermarkOpacity: project?.watermarkOpacity ?? 30,
+    watermarkFontSize: project?.watermarkFontSize || 'medium',
   }
 }
 
@@ -268,6 +280,9 @@ export async function processPreview(
     width: dimensions.width,
     height: dimensions.height,
     watermarkText: settings.watermarkText,
+    watermarkPositions: settings.watermarkPositions,
+    watermarkOpacity: settings.watermarkOpacity,
+    watermarkFontSize: settings.watermarkFontSize as any,
     onProgress: (() => {
       let lastWrite = 0
       let writing = false
@@ -404,10 +419,10 @@ export async function finalizeVideo(
     codec: metadata.codec,
   }
 
-  // Store preview path in correct field based on resolution
-  if (resolution === '720p') {
+  // Store preview path in correct field based on resolution (skip if no transcoding)
+  if (previewPath && resolution === '720p') {
     updateData.preview720Path = previewPath
-  } else if (resolution === '1080p') {
+  } else if (previewPath && resolution === '1080p') {
     updateData.preview1080Path = previewPath
   }
 

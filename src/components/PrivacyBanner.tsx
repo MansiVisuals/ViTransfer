@@ -8,31 +8,53 @@ import { Button } from '@/components/ui/button'
 interface PrivacyBannerProps {
   /** Custom text from admin settings; null = use default i18n text */
   customText?: string | null
+  /** Share page slug (needed for consent API) */
+  slug?: string
+  /** Current share token (needed for consent API auth) */
+  shareToken?: string | null
 }
 
-const STORAGE_KEY = 'vt-privacy-accepted'
+export const PRIVACY_STORAGE_KEY = 'vt-privacy-accepted'
 
-export default function PrivacyBanner({ customText }: PrivacyBannerProps) {
+export default function PrivacyBanner({ customText, slug, shareToken }: PrivacyBannerProps) {
   const t = useTranslations('privacy')
-  const [accepted, setAccepted] = useState(true) // default true to avoid flash
+  const [dismissed, setDismissed] = useState(true) // default true to avoid flash
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    setAccepted(stored === 'true')
+    const stored = localStorage.getItem(PRIVACY_STORAGE_KEY)
+    // Show banner only if user hasn't made a choice yet
+    setDismissed(stored === 'true' || stored === 'declined')
   }, [])
 
+  const sendConsent = (consent: boolean) => {
+    if (!slug || !shareToken) return
+    // Fire-and-forget: don't block the UI for the consent API call
+    fetch(`/api/share/${slug}/consent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${shareToken}`,
+      },
+      body: JSON.stringify({ analyticsConsent: consent }),
+    }).catch(() => {
+      // Consent API failure should never block the UX
+    })
+  }
+
   const handleAccept = () => {
-    localStorage.setItem(STORAGE_KEY, 'true')
-    setAccepted(true)
+    localStorage.setItem(PRIVACY_STORAGE_KEY, 'true')
+    sendConsent(true)
+    setDismissed(true)
   }
 
   const handleDecline = () => {
-    localStorage.setItem(STORAGE_KEY, 'declined')
-    setAccepted(true) // hide the banner (they still see the page—security logging is legitimate interest)
+    localStorage.setItem(PRIVACY_STORAGE_KEY, 'declined')
+    sendConsent(false)
+    setDismissed(true)
   }
 
-  if (accepted) return null
+  if (dismissed) return null
 
   const disclosureText = customText || t('defaultDisclosureText')
 

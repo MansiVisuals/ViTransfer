@@ -1,5 +1,8 @@
 export function sanitizeLogValue(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ')
+  return value
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '')
 }
 
 function stringifyLogPart(value: unknown): string {
@@ -41,39 +44,52 @@ export function formatErrorForLog(error: unknown): string {
   }
 }
 
+const isServer = typeof process !== 'undefined' && typeof process.stdout?.write === 'function'
+
+function writeStdout(line: string): void {
+  if (isServer) {
+    process.stdout.write(line + '\n')
+  } else {
+    console.log(line)
+  }
+}
+
+function writeStderr(line: string): void {
+  if (isServer) {
+    process.stderr.write(line + '\n')
+  } else {
+    console.error(line)
+  }
+}
+
 export function logMessage(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.log(output)
+  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logInfo(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.info(output)
+  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logWarn(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.warn(output)
+  writeStderr(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logDebug(message: string, ...extra: unknown[]): void {
-  const output = formatLogParts([message, ...extra])
-  console.debug(output)
+  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logError(message: string, error?: unknown, ...extra: unknown[]): void {
   const sanitizedMessage = sanitizeLogValue(message).replace(/:\s*$/, '')
 
   if (error === undefined && extra.length === 0) {
-    console.error(sanitizedMessage)
+    writeStderr(sanitizeLogValue(sanitizedMessage))
     return
   }
 
   if (extra.length === 0) {
-    console.error(`${sanitizedMessage}: ${formatErrorForLog(error)}`)
+    writeStderr(sanitizeLogValue(`${sanitizedMessage}: ${formatErrorForLog(error)}`))
     return
   }
 
-  const output = formatLogParts([`${sanitizedMessage}:`, error, ...extra])
-  console.error(output)
+  writeStderr(sanitizeLogValue(formatLogParts([`${sanitizedMessage}:`, error, ...extra])))
 }

@@ -173,12 +173,18 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
   })
 }
 
+export type WatermarkPosition = 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+export type WatermarkFontSize = 'small' | 'medium' | 'large'
+
 export interface TranscodeOptions {
   inputPath: string
   outputPath: string
   width: number
   height: number
   watermarkText?: string
+  watermarkPositions?: string // comma-separated positions, e.g. "center,bottom-right"
+  watermarkOpacity?: number // 10-100
+  watermarkFontSize?: WatermarkFontSize
   onProgress?: (progress: number) => void
 }
 
@@ -253,23 +259,46 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     watermarkTextFile = path.join(tmpDir, 'text.txt')
     fs.writeFileSync(watermarkTextFile, validatedText, 'utf-8')
 
+    // Parse positions (comma-separated, default: center)
+    const positionsStr = options.watermarkPositions || 'center'
+    const positions = positionsStr.split(',').map(p => p.trim()).filter(Boolean) as WatermarkPosition[]
+
+    // Convert opacity 10-100 to FFmpeg alpha 0.1-1.0
+    const rawOpacity = Math.max(10, Math.min(100, options.watermarkOpacity ?? 30))
+    const alpha = (rawOpacity / 100).toFixed(2)
+    const shadowAlpha = (rawOpacity / 200).toFixed(2)
+
+    // Font size multipliers relative to video width
+    const fontSize = options.watermarkFontSize || 'medium'
     const isVertical = height > width
-    const centerFontSize = isVertical ? Math.round(width * 0.08) : Math.round(width * 0.04)
-    const cornerFontSize = isVertical ? Math.round(width * 0.05) : Math.round(width * 0.025)
+    const sizeMultipliers = {
+      small:  { center: isVertical ? 0.05 : 0.025, corner: isVertical ? 0.035 : 0.018 },
+      medium: { center: isVertical ? 0.08 : 0.04,  corner: isVertical ? 0.05  : 0.025 },
+      large:  { center: isVertical ? 0.12 : 0.06,  corner: isVertical ? 0.07  : 0.035 },
+    }
+    const multiplier = sizeMultipliers[fontSize] || sizeMultipliers.medium
+    const centerFontPx = Math.round(width * multiplier.center)
+    const cornerFontPx = Math.round(width * multiplier.corner)
 
-    // Center watermark - use textfile instead of inline text
-    filters.push(
-      `drawtext=textfile='${watermarkTextFile}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${centerFontSize}:fontcolor=white@0.3:x=(w-text_w)/2:y=(h-text_h)/2:shadowcolor=black@0.5:shadowx=2:shadowy=2`
-    )
-
-    // Corner watermarks
     const spacing = isVertical ? 30 : 50
-    filters.push(
-      `drawtext=textfile='${watermarkTextFile}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${cornerFontSize}:fontcolor=white@0.2:x=${spacing}:y=${spacing}:shadowcolor=black@0.3:shadowx=1:shadowy=1`
-    )
-    filters.push(
-      `drawtext=textfile='${watermarkTextFile}':fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:fontsize=${cornerFontSize}:fontcolor=white@0.2:x=w-text_w-${spacing}:y=h-text_h-${spacing}:shadowcolor=black@0.3:shadowx=1:shadowy=1`
-    )
+    const font = `/usr/share/fonts/dejavu/DejaVuSans.ttf`
+
+    // Position coordinate map
+    const positionMap: Record<WatermarkPosition, { x: string; y: string; fs: number; shadow: number }> = {
+      'center':       { x: '(w-text_w)/2', y: '(h-text_h)/2', fs: centerFontPx, shadow: 2 },
+      'top-left':     { x: `${spacing}`, y: `${spacing}`, fs: cornerFontPx, shadow: 1 },
+      'top-right':    { x: `w-text_w-${spacing}`, y: `${spacing}`, fs: cornerFontPx, shadow: 1 },
+      'bottom-left':  { x: `${spacing}`, y: `h-text_h-${spacing}`, fs: cornerFontPx, shadow: 1 },
+      'bottom-right': { x: `w-text_w-${spacing}`, y: `h-text_h-${spacing}`, fs: cornerFontPx, shadow: 1 },
+    }
+
+    for (const pos of positions) {
+      const coords = positionMap[pos]
+      if (!coords) continue
+      filters.push(
+        `drawtext=textfile='${watermarkTextFile}':fontfile=${font}:fontsize=${coords.fs}:fontcolor=white@${alpha}:x=${coords.x}:y=${coords.y}:shadowcolor=black@${shadowAlpha}:shadowx=${coords.shadow}:shadowy=${coords.shadow}`
+      )
+    }
   }
 
   const filterComplex = filters.join(',')

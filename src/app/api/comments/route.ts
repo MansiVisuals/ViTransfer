@@ -45,14 +45,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const projectId = searchParams.get('projectId')
-
-    if (!projectId) {
-      return NextResponse.json(
-        { error: commentsMessages.projectIdRequired || 'Project ID is required' },
-        { status: 400 }
-      )
-    }
+    const projectId = searchParams.get('projectId') ?? ''
 
     // Fetch the project to check password protection
     const project = await prisma.project.findUnique({

@@ -263,9 +263,18 @@ export const updateProjectSchema = z.object({
   timestampDisplay: z.enum(['AUTO', 'TIMECODE']).optional(),
   previewResolution: z.enum(['720p', '1080p']).optional(),
 
+  // Transcoding settings
+  skipTranscoding: z.boolean().optional(),
+
   // Watermark settings
   watermarkEnabled: z.boolean().optional(),
   watermarkText: safeStringSchema(0, 100).nullable().optional(),
+  watermarkPositions: z.string().refine(val => {
+    const valid = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
+    return val.split(',').map(p => p.trim()).every(p => valid.includes(p))
+  }, { message: 'Invalid watermark position(s)' }).optional(),
+  watermarkOpacity: z.number().int().min(10).max(100).optional(),
+  watermarkFontSize: z.enum(['small', 'medium', 'large']).optional(),
 
   // Download settings
   allowAssetDownload: z.boolean().optional(),
@@ -393,7 +402,14 @@ export const updateSettingsSchema = z.object({
   smtpSecure: z.enum(['STARTTLS', 'TLS', 'NONE']).optional(),
   appDomain: urlSchema.optional(),
   defaultPreviewResolution: z.enum(['720p', '1080p']).optional(),
+  defaultSkipTranscoding: z.boolean().optional(),
   defaultWatermarkText: safeStringSchema(0, 100).optional(),
+  defaultWatermarkPositions: z.string().refine(val => {
+    const valid = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
+    return val.split(',').map(p => p.trim()).every(p => valid.includes(p))
+  }, { message: 'Invalid watermark position(s)' }).optional(),
+  defaultWatermarkOpacity: z.number().int().min(10).max(100).optional(),
+  defaultWatermarkFontSize: z.enum(['small', 'medium', 'large']).optional(),
   maxUploadSizeGB: z.number().int().min(1).max(100).optional(), // 1GB to 100GB
   maxCommentAttachments: z.number().int().min(1).max(50).optional() // 1-50 files per comment batch
 })

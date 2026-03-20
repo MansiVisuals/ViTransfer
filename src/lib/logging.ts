@@ -47,20 +47,18 @@ export function formatErrorForLog(error: unknown): string {
 const isServer = typeof process !== 'undefined' && typeof process.stdout?.write === 'function'
 
 function writeStdout(line: string): void {
-  const safe = sanitizeLogValue(line)
   if (isServer) {
-    process.stdout.write(safe + '\n')
+    process.stdout.write(sanitizeLogValue(line) + '\n')
   } else {
-    console.log(safe)
+    console.log(sanitizeLogValue(line))
   }
 }
 
 function writeStderr(line: string): void {
-  const safe = sanitizeLogValue(line)
   if (isServer) {
-    process.stderr.write(safe + '\n')
+    process.stderr.write(sanitizeLogValue(line) + '\n')
   } else {
-    console.error(safe)
+    console.error(sanitizeLogValue(line))
   }
 }
 

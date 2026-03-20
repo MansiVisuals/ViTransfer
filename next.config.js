@@ -13,8 +13,8 @@ const nextConfig = {
     }
   },
 
-  // Security headers are set in src/middleware.ts (nonce-based CSP)
-  // Static asset headers below cover paths that bypass middleware
+  // Security headers are set in src/proxy.ts (nonce-based CSP)
+  // Static asset headers below cover paths that bypass proxy
   async headers() {
     return [
       {

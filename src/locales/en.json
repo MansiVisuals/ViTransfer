@@ -1392,7 +1392,7 @@
       "hotlinkBlocklists": "Hotlink Blocklists",
       "refreshing": "Refreshing...",
       "blockedIPs": "Blocked IP Addresses",
-      "ipPlaceholder": "IP Address (e.g., 192.168.1.1)",
+      "ipPlaceholder": "IP Address (e.g., 198.51.100.1)",
       "reasonPlaceholder": "Reason (optional)",
       "noBlockedIPs": "No blocked IPs",
       "blockedDomains": "Blocked Domains",

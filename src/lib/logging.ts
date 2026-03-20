@@ -44,40 +44,52 @@ export function formatErrorForLog(error: unknown): string {
   }
 }
 
+const isServer = typeof process !== 'undefined' && typeof process.stdout?.write === 'function'
+
+function writeStdout(line: string): void {
+  if (isServer) {
+    process.stdout.write(line + '\n')
+  } else {
+    console.log(line)
+  }
+}
+
+function writeStderr(line: string): void {
+  if (isServer) {
+    process.stderr.write(line + '\n')
+  } else {
+    console.error(line)
+  }
+}
+
 export function logMessage(message: string, ...extra: unknown[]): void {
-  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
-  process.stdout.write(output + '\n')
+  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logInfo(message: string, ...extra: unknown[]): void {
-  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
-  process.stdout.write(output + '\n')
+  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logWarn(message: string, ...extra: unknown[]): void {
-  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
-  process.stderr.write(output + '\n')
+  writeStderr(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logDebug(message: string, ...extra: unknown[]): void {
-  const output = sanitizeLogValue(formatLogParts([message, ...extra]))
-  process.stdout.write(output + '\n')
+  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logError(message: string, error?: unknown, ...extra: unknown[]): void {
   const sanitizedMessage = sanitizeLogValue(message).replace(/:\s*$/, '')
 
   if (error === undefined && extra.length === 0) {
-    process.stderr.write(sanitizeLogValue(sanitizedMessage) + '\n')
+    writeStderr(sanitizeLogValue(sanitizedMessage))
     return
   }
 
   if (extra.length === 0) {
-    const errorLine = `${sanitizedMessage}: ${formatErrorForLog(error)}`
-    process.stderr.write(sanitizeLogValue(errorLine) + '\n')
+    writeStderr(sanitizeLogValue(`${sanitizedMessage}: ${formatErrorForLog(error)}`))
     return
   }
 
-  const output = formatLogParts([`${sanitizedMessage}:`, error, ...extra])
-  process.stderr.write(sanitizeLogValue(output) + '\n')
+  writeStderr(sanitizeLogValue(formatLogParts([`${sanitizedMessage}:`, error, ...extra])))
 }

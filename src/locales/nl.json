@@ -1340,7 +1340,7 @@
       "hotlinkBlocklists": "Hotlink-blokkeerlijsten",
       "refreshing": "Vernieuwen...",
       "blockedIPs": "Geblokkeerde IP-adressen",
-      "ipPlaceholder": "IP-adres (bijv. 192.168.1.1)",
+      "ipPlaceholder": "IP-adres (bijv. 198.51.100.1)",
       "reasonPlaceholder": "Reden (optioneel)",
       "noBlockedIPs": "Geen geblokkeerde IP-adressen",
       "blockedDomains": "Geblokkeerde Domeinen",

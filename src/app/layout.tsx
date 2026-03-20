@@ -5,6 +5,7 @@ import { AccentColorProvider } from "@/components/AccentColorProvider";
 import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -65,20 +66,22 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Fetch admin appearance settings and locale server-side
+  // Fetch admin appearance settings, locale, and nonce server-side
   const appearance = await getAppearanceSettings()
   const locale = await getLocale()
   const messages = await getMessages()
+  const headersList = await headers()
+  const nonce = headersList.get('x-nonce') || ''
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  // Server-injected admin defaults (used when no localStorage cache)
                   var serverDefaultTheme = '${appearance.defaultTheme}';
                   var serverAccentColor = '${appearance.accentColor}';
 

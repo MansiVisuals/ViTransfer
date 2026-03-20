@@ -1392,7 +1392,7 @@
       "hotlinkBlocklists": "Hotlink-Sperrlisten",
       "refreshing": "Wird aktualisiert...",
       "blockedIPs": "Gesperrte IP-Adressen",
-      "ipPlaceholder": "IP-Adresse (z. B. 192.168.1.1)",
+      "ipPlaceholder": "IP-Adresse (z. B. 198.51.100.1)",
       "reasonPlaceholder": "Grund (optional)",
       "noBlockedIPs": "Keine gesperrten IPs",
       "blockedDomains": "Gesperrte Domains",

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.8] - 2026-03-22
+
+### Security
+- Upgraded Alpine packages (zlib, expat) to patch critical and medium CVEs.
+- Upgraded bundled npm to latest to fix 6 HIGH CVEs in minimatch and tar.
+
+### Dependencies
+- Updated `wheel` to `0.46.3`.
+- Updated `apprise` to `1.9.9`.
+- Updated `filelock` to `≥3.25.2`.
+- Updated `virtualenv` to `≥21.2.0`.
+
 ## [0.9.7] - 2026-03-17
 
 ### Added

@@ -7,13 +7,15 @@ ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG BUILDPLATFORM
 
-# Install system dependencies
+# Install system dependencies + patch known CVEs
 RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache \
         openssl openssl-dev \
         ffmpeg ffmpeg-libs fontconfig ttf-dejavu \
         bash curl ca-certificates shadow su-exec \
-    && apk add --no-cache --upgrade cjson libsndfile giflib orc \
+    && apk add --no-cache --upgrade cjson libsndfile giflib orc zlib expat \
+    && npm install -g npm@latest \
+    && npm cache clean --force \
     && ffmpeg -version
 
 # === Dependencies ===
@@ -63,9 +65,9 @@ ENV NODE_ENV=production
 # Python for Apprise notifications (with security updates)
 RUN apk add --no-cache python3 py3-pip py3-virtualenv \
     && python3 -m venv /opt/apprise-venv \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip==26.0.1 wheel==0.46.2 \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 "filelock>=3.20.3" "virtualenv>=20.36.1" \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.9.7 \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip==26.0.1 wheel==0.46.3 \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 "filelock>=3.25.2" "virtualenv>=21.2.0" \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.9.9 \
     && apk del --no-cache py3-pip py3-virtualenv
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3

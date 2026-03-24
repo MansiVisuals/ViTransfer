@@ -22,6 +22,8 @@
 | `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
 | `NEXT_PUBLIC_TUS_ENDPOINT` | No | If TUS is on another origin, add it to connect-src | _none_ | |
 | `CPU_THREADS` | No | Override CPU thread count used by the worker/FFmpeg | auto-detect | `8` |
+| `DEBUG_WORKER` | No | Enable verbose worker logging | `false` | `true` |
+| `DEBUG_EXTERNAL_NOTIFICATIONS` | No | Enable verbose external notification logging | `false` | `true` |
 
 ### Notes
 - Use `openssl rand -hex 32` for database passwords (URL-safe).

@@ -80,13 +80,29 @@
 8. On mobile, side-by-side mode stacks vertically (top/bottom). Slider mode works as-is.
 9. Press **Escape** or the X button to close the comparison view.
 
+## Configuring privacy disclosure
+1. Go to **Settings** in the admin panel.
+2. Enable **Privacy Disclosure** under the Privacy section.
+3. Optionally enter custom disclosure text (leave blank to use the default i18n text).
+4. Clients will see a privacy banner on share pages and can accept or decline analytics tracking.
+
+## Setting up activity summary emails
+1. Go to **Settings > Notifications**.
+2. Set **Admin Notification Schedule** to DAILY or WEEKLY for periodic admin digests.
+3. Configure the time and day for scheduled deliveries.
+4. Per-project client notification schedules can be set under project settings (DAILY/WEEKLY with specific time and day).
+5. Customize the email content via **Settings > Email Templates** (CLIENT_ACTIVITY_SUMMARY and ADMIN_ACTIVITY_SUMMARY templates).
+
 ## Admin tips
 - Use custom URLs for memorable share links.
 - Enable revision tracking for complex projects.
-- Configure watermarks globally or per-project.
+- Configure watermarks globally or per-project (text, opacity, font size, positions).
 - Monitor analytics to track engagement.
 - Use Security Logs to track access attempts.
 - Set due dates and use the calendar view to manage project deadlines.
+- Enable privacy disclosure for GDPR compliance.
+- Use skip-transcoding mode for projects that don't need watermarked previews.
+- Set admin session inactivity timeout for enhanced security.
 
 ---
 Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Client Guide](Client-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Contributing](Contributing) | [License](License)

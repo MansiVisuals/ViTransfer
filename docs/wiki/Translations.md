@@ -8,6 +8,7 @@ ViTransfer supports multiple languages. The language is set by an admin under **
 |------|-----------|--------|
 | `en` | English   | ✅ Complete (default) |
 | `nl` | Nederlands | ✅ Complete |
+| `de` | Deutsch   | ✅ Complete |
 
 Want to add your language? It's easy — you only need to translate one JSON file and send it to us.
 

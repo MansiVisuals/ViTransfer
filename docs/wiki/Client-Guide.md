@@ -20,9 +20,13 @@ Enter your email address and click **Send Code**. Check your inbox for a 6-digit
 Both options are shown. You can use either one.
 
 **Guest access**
-Some projects allow guest viewing. Click **Continue as Guest** to enter without credentials. Guest access is view-only — you cannot comment, approve, or download.
+Some projects allow guest viewing. Click **Continue as Guest** to enter without credentials. Guest access is view-only — you cannot comment, approve, or download. Depending on the project settings, guests may only see the latest version of each video.
 
 After logging in, your session is saved so you can refresh the page without re-entering credentials.
+
+## Privacy banner
+
+Some projects display a privacy disclosure banner on first visit. You can read the full disclosure and choose to accept or decline analytics tracking. Your preference is stored for the session.
 
 ## Video grid
 
@@ -34,6 +38,8 @@ After authentication you see a thumbnail grid of all videos in the project:
 - Click any thumbnail to open the video player.
 
 Above the grid you can see the project title, your name, and an optional project description.
+
+If this is your first visit, an interactive tutorial overlay may guide you through the main features of the review page.
 
 ## Video player
 
@@ -162,7 +168,7 @@ Unapproved videos cannot be downloaded — only the watermarked preview is shown
 In the top-right corner of the page you can:
 
 - **Switch theme**: Toggle between light and dark mode.
-- **Switch language**: Change the interface language (e.g. English, Dutch).
+- **Switch language**: Change the interface language (English, Dutch, or German).
 
 Your preference is saved for future visits.
 

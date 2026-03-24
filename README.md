@@ -39,11 +39,22 @@ Full docs live in the GitHub Wiki and are mirrored in `docs/wiki` (v0.9.5).
 ### Login
 <img src="docs/screenshots/Login Page.png" alt="Login Page" width="600">
 
-### Admin Dashboard
+### Dashboard
+<img src="docs/screenshots/Dashboard.png" alt="Dashboard" width="600">
+
+### Project View
 <img src="docs/screenshots/Project View.png" alt="Project View" width="600">
 
-### Client Share Page
+### Video Review
+<img src="docs/screenshots/Share Page - Player View.png" alt="Share Page - Player View" width="600">
+
+### Version Compare
+<img src="docs/screenshots/Share Page - Slider Compare.png" alt="Share Page - Slider Compare" width="600">
+
+### Approved Project
 <img src="docs/screenshots/Share Page - Approved.png" alt="Share Page - Approved" width="600">
+
+See all screenshots in the [wiki](docs/wiki/Screenshots.md).
 
 ## Contributing
 We’re community-driven — feedback, issues, and PRs are more than welcome.

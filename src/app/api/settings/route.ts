@@ -311,9 +311,9 @@ export async function PATCH(request: NextRequest) {
 
     if (maxUploadSizeGB !== undefined && maxUploadSizeGB !== null) {
       const parsed = Number(maxUploadSizeGB)
-      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 1000) {
         return NextResponse.json(
-          { error: settingsMessages.maxUploadSizeMustBeIntegerBetween1And100Gb || 'Max upload size must be an integer between 1 and 100 GB.' },
+          { error: settingsMessages.maxUploadSizeMustBeIntegerBetween1And1000Gb || 'Max upload size must be an integer between 1 and 1000 GB.' },
           { status: 400 }
         )
       }

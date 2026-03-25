@@ -79,24 +79,39 @@ else
 
     # Only remap if needed
     if [ "$CURRENT_UID" != "$PUID" ] || [ "$CURRENT_GID" != "$PGID" ]; then
+        # Temporarily move home dir away from /app before usermod.
+        # usermod recursively chowns the home directory which includes
+        # node_modules (100k+ files) and takes minutes.
+        USERHOME=$(grep "^app:" /etc/passwd | cut -d ":" -f6)
+        usermod -d /tmp app 2>/dev/null || true
+
         # Update group ID if needed
         if [ "$CURRENT_GID" != "$PGID" ]; then
             groupmod -o -g "$PGID" app 2>/dev/null || true
         fi
 
-        # Update user ID if needed
+        # Update user ID (fast — home dir is /tmp, not /app)
         if [ "$CURRENT_UID" != "$PUID" ]; then
-            echo "  Updating user permissions (this may take a moment...)"
             usermod -o -u "$PUID" app 2>/dev/null || true
         fi
 
-        # Fix ownership of internal app files only (not mounted volumes!)
-        chown -R app:app /app/.next /app/public /app/node_modules /app/src 2>/dev/null || true
+        # Restore home directory
+        usermod -d "${USERHOME}" app 2>/dev/null || true
 
         echo "[OK] User permissions updated"
     else
         echo "[OK] User permissions already correct"
     fi
+
+    # Fix ownership of writable runtime dirs and mounted volumes
+    chown app:app /app /app/.next /app/public /app/src 2>/dev/null || true
+    chown -R app:app /app/.next /app/public 2>/dev/null || true
+
+    # Ensure uploads volume is owned by app user (Docker mounts as root)
+    if [ -d /app/uploads ]; then
+        chown app:app /app/uploads 2>/dev/null || true
+    fi
+
     echo ""
 
     SKIP_SU_EXEC=false

@@ -64,5 +64,5 @@ website.html
 documentation.html
 about.html
 
-# Screenshot capture script
+# Screenshot tooling
 docs/screenshots/capture.mjs

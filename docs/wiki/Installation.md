@@ -1,9 +1,34 @@
 # Installation
 
-## Prerequisites
-- Docker and Docker Compose
-- At least 4GB RAM
-- 20GB+ free disk space (more for video storage)
+## Requirements
+
+### System
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| CPU | 2 cores | 4+ cores |
+| RAM | 4 GB | 8 GB |
+| Disk | 20 GB | Depends on video library size |
+| Storage type | HDD | SSD strongly recommended |
+| Architecture | x86_64 (amd64) or ARM64 | — |
+| OS | Any Linux with Docker, macOS, or Windows (WSL2) | Linux |
+
+**Why SSD?** ViTransfer is I/O intensive across the stack. PostgreSQL and Redis perform frequent small reads/writes for sessions, job queues, and metadata. FFmpeg reads large source files and writes transcoded output simultaneously. During upload, TUS writes chunks to disk in real-time. On a spinning disk these operations compete for the same read/write head, creating bottlenecks that slow down transcoding, increase upload latency, and can cause BullMQ job timeouts. An SSD eliminates this bottleneck with parallel random I/O.
+
+### Software
+
+| Dependency | Version | Notes |
+|------------|---------|-------|
+| Docker | 20.10+ | Required |
+| Docker Compose | v2+ | Included with Docker Desktop |
+
+No other software is needed. The Docker image bundles everything internally: Node.js, FFmpeg, PostgreSQL client, Redis client, and all application dependencies.
+
+### Network
+
+- **Port 4321** (default, configurable via `APP_PORT`) must be available on the host.
+- All internal services (PostgreSQL, Redis) communicate over an isolated Docker network and are not exposed to the host.
+- For production use behind a reverse proxy, see the [Security](Security) page for HTTPS and header configuration.
 
 ## Method 1: Docker Hub (recommended)
 

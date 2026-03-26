@@ -77,7 +77,7 @@ Configure in the admin panel under Settings.
 - Watermark font size: small, medium, or large.
 - Watermark positions: center, top-left, top-right, bottom-left, bottom-right (multiple positions supported via comma separation).
 - Skip transcoding: serve original files directly without FFmpeg processing.
-- Max upload size: 1-100 GB per file (default: 1 GB).
+- Max upload size: 1-1000 GB per file (default: 1 GB).
 - Max comment attachments: 1-50 files per comment (default: 10).
 
 ## Project behavior

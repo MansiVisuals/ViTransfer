@@ -316,7 +316,7 @@ model Settings {
   defaultWatermarkPositions String  @default("center") // comma-separated: center, top-left, top-right, bottom-left, bottom-right
   defaultWatermarkOpacity   Int     @default(30) // Opacity percentage (10-100)
   defaultWatermarkFontSize  String  @default("medium") // small, medium, large
-  maxUploadSizeGB          Int      @default(1) // Maximum upload size (GB) for TUS uploads (1-100)
+  maxUploadSizeGB          Int      @default(1) // Maximum upload size (GB) for TUS uploads (1-1000)
   maxCommentAttachments    Int      @default(10) // Maximum files per comment attachment batch (1-50)
 
   // Default Comment Timestamp Display

@@ -375,7 +375,7 @@ export function SecuritySettingsSection({
                   id="maxUploadSizeGB"
                   type="number"
                   min={1}
-                  max={100}
+                  max={1000}
                   value={maxUploadSizeGB}
                   onChange={(e) => setMaxUploadSizeGB(e.target.value)}
                   placeholder="1"

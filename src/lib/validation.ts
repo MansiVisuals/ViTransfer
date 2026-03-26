@@ -410,7 +410,7 @@ export const updateSettingsSchema = z.object({
   }, { message: 'Invalid watermark position(s)' }).optional(),
   defaultWatermarkOpacity: z.number().int().min(10).max(100).optional(),
   defaultWatermarkFontSize: z.enum(['small', 'medium', 'large']).optional(),
-  maxUploadSizeGB: z.number().int().min(1).max(100).optional(), // 1GB to 100GB
+  maxUploadSizeGB: z.number().int().min(1).max(1000).optional(), // 1GB to 1000GB
   maxCommentAttachments: z.number().int().min(1).max(50).optional() // 1-50 files per comment batch
 })
 

@@ -11,7 +11,7 @@ import { logError, logMessage } from '@/lib/logging'
 
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
-const ABSOLUTE_MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024 * 1024 // 100 GB hard safety cap
+const ABSOLUTE_MAX_UPLOAD_SIZE_BYTES = 1000 * 1024 * 1024 * 1024 // 1000 GB hard safety cap
 
 if (!fs.existsSync(TUS_UPLOAD_DIR)) {
   fs.mkdirSync(TUS_UPLOAD_DIR, { recursive: true })

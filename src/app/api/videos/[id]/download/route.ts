@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader, getVideoContentType } from '@/lib/storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -89,6 +89,7 @@ export async function GET(
     // Use the original filename from the database, guard against missing values
     const originalFilename = video.originalFileName || 'video.mp4'
     const safeFilename = sanitizeFilenameForHeader(originalFilename)
+    const contentType = getVideoContentType(originalFilename)
 
     const range = request.headers.get('range')
 
@@ -119,7 +120,7 @@ export async function GET(
       return new NextResponse(readableStream, {
         status: 206,
         headers: {
-          'Content-Type': 'video/mp4',
+          'Content-Type': contentType,
           'Content-Disposition': `attachment; filename="${safeFilename}"`,
           'Content-Length': chunkSize.toString(),
           'Content-Range': `bytes ${start}-${end}/${stat.size}`,
@@ -147,7 +148,7 @@ export async function GET(
     // Return file with proper headers for download
     return new NextResponse(readableStream, {
       headers: {
-        'Content-Type': 'video/mp4',
+        'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${safeFilename}"`,
         'Content-Length': stat.size.toString(),
         'Accept-Ranges': 'bytes',

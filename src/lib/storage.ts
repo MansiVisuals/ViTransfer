@@ -120,6 +120,23 @@ export function getFilePath(filePath: string): string {
 }
 
 /**
+ * Derive video Content-Type from filename extension
+ */
+const VIDEO_MIME_MAP: Record<string, string> = {
+  '.mp4': 'video/mp4',
+  '.mov': 'video/quicktime',
+  '.avi': 'video/x-msvideo',
+  '.webm': 'video/webm',
+  '.mkv': 'video/x-matroska',
+}
+
+export function getVideoContentType(filename: string): string {
+  if (!filename) return 'video/mp4'
+  const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
+  return VIDEO_MIME_MAP[ext] || 'video/mp4'
+}
+
+/**
  * Sanitize filename for Content-Disposition header
  * Prevents CRLF injection and other header injection attacks
  *

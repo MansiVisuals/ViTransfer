@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.9] - 2026-03-26
+
+### Fixed
+- Video downloads now preserve the original file format (e.g. .mov files no longer get served as .mp4).
+- Correct Content-Type headers for all video formats (MP4, MOV, AVI, WebM, MKV) on both the share page and project page.
+
+### Changed
+- Increased maximum upload size limit from 100 GB to 1000 GB.
+- Improved Docker entrypoint to avoid unnecessary `chown` on node_modules during user setup.
+
+### Documentation
+- Added system requirements section to the Installation wiki (CPU, RAM, disk, SSD recommendation).
+- Added CPU thread allocation reference to the Configuration wiki.
+- Updated screenshots for v0.9.8.
+
+### Dependencies
+- Updated Next.js, BullMQ, ioredis, SimpleWebAuthn, file-type, isomorphic-dompurify, and eslint-config-next to latest minor versions.
+
 ## [0.9.8] - 2026-03-22
 
 ### Security

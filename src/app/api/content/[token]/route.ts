@@ -3,7 +3,7 @@ import { verifyVideoAccessToken, detectHotlinking, trackVideoAccess, logSecurity
 import { getRedis } from '@/lib/redis'
 import { prisma } from '@/lib/db'
 import { createReadStream, existsSync, statSync, ReadStream } from 'fs'
-import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader, getVideoContentType } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getAuthContext } from '@/lib/auth'
@@ -202,7 +202,7 @@ export async function GET(
     const originalPath = video.originalStoragePath
     let filePath: string | null = null
     let filename: string | null = null
-    let contentType = 'video/mp4'
+    let contentType = getVideoContentType(video.originalFileName || '')
 
     // Handle asset download
     if (assetId && isDownload) {
@@ -278,12 +278,12 @@ export async function GET(
       // Use asset filename if available, otherwise generate from video info
       const rawFilename = filename || (video.approved
         ? video.originalFileName
-        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}.mp4`)
+        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}${(video.originalFileName || '.mp4').slice((video.originalFileName || '.mp4').lastIndexOf('.'))}`)
       const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
 
-      // For non-asset streams, determine Content-Type based on quality
+      // For non-asset downloads, use original file's content type
       if (!assetId) {
-        contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+        contentType = isThumbnail ? 'image/jpeg' : getVideoContentType(video.originalFileName || '')
       }
 
       const trackDownloadOnce = async () => {
@@ -371,9 +371,15 @@ export async function GET(
       const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
       const readableStream = createWebReadableStream(fileStream)
 
-      // For non-asset streams, determine Content-Type based on quality
+      // For non-asset streams, determine Content-Type
       if (!assetId) {
-        contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+        if (isThumbnail) {
+          contentType = 'image/jpeg'
+        } else if (filePath === originalPath) {
+          contentType = getVideoContentType(video.originalFileName || '')
+        } else {
+          contentType = 'video/mp4' // transcoded previews are always mp4
+        }
       }
 
       return new NextResponse(readableStream, {
@@ -395,9 +401,15 @@ export async function GET(
     const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
     const readableStream = createWebReadableStream(fileStream)
 
-    // For non-asset streams, determine Content-Type based on quality
+    // For non-asset streams, determine Content-Type
     if (!assetId) {
-      contentType = isThumbnail ? 'image/jpeg' : 'video/mp4'
+      if (isThumbnail) {
+        contentType = 'image/jpeg'
+      } else if (filePath === originalPath) {
+        contentType = getVideoContentType(video.originalFileName || '')
+      } else {
+        contentType = 'video/mp4' // transcoded previews are always mp4
+      }
     }
 
     return new NextResponse(readableStream, {

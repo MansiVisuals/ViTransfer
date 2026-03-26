@@ -63,3 +63,6 @@ AGENTS.md
 website.html
 documentation.html
 about.html
+
+# Screenshot tooling
+docs/screenshots/capture.mjs

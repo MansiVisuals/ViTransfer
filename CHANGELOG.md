@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.10] - 2026-03-28
+
+### Security
+- Downgraded `@tus/server` to 2.0.0 to eliminate a moderate middleware auth-bypass vulnerability (GHSA-p36q-q72m-gchr) introduced via `srvx` in 2.1.0+.
+
+### Dependencies
+- Upgraded `bcryptjs` to v3 (ESM). Updated lazy-loader in `encryption.ts` to use `await import()` instead of `require()`. Removed `@types/bcryptjs` (types now bundled).
+- Upgraded `nodemailer` to v8. Removed `@types/nodemailer` (types now bundled).
+- Upgraded `isomorphic-dompurify` to v3.
+- Upgraded `file-type` to v22.
+
 ## [0.9.9] - 2026-03-26
 
 ### Fixed

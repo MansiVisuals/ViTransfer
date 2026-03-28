@@ -13,9 +13,24 @@ function getCrypto(): typeof import('crypto') {
   }
 
   // Safe to require because all callers run on the server (Node.js)
-   
+
   cryptoModule = require('crypto') as typeof import('crypto')
   return cryptoModule
+}
+
+// Lazy-load bcryptjs (ESM in v3) so it isn't pulled into Edge bundles.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let bcryptModule: any = null
+
+async function getBcrypt() {
+  if (bcryptModule) return bcryptModule
+  if (isEdgeRuntime) {
+    throw new Error('Encryption utilities require the Node.js runtime. Set runtime = \"nodejs\" for routes that use them.')
+  }
+  const mod = await import('bcryptjs')
+  // bcryptjs v3 is ESM — the bcrypt object is on mod.default
+  bcryptModule = mod.default ?? mod
+  return bcryptModule
 }
 
 // Encryption key REQUIRED in production (see README for setup instructions)
@@ -148,7 +163,7 @@ export function decrypt(encryptedText: string): string {
  * @returns Hashed password
  */
 export async function hashPassword(password: string): Promise<string> {
-  const bcrypt = require('bcryptjs')
+  const bcrypt = await getBcrypt()
   const salt = await bcrypt.genSalt(14)
   return bcrypt.hash(password, salt)
 }
@@ -160,7 +175,7 @@ export async function hashPassword(password: string): Promise<string> {
  * @returns True if password matches
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const bcrypt = require('bcryptjs')
+  const bcrypt = await getBcrypt()
   return bcrypt.compare(password, hash)
 }
 

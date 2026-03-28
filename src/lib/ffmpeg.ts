@@ -301,6 +301,12 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     }
   }
 
+  // Convert to BT.709 limited-range yuv420p first — this matches what a decoded
+  // H.264 proxy would look like, which is what the LUT was calibrated against.
+  // Then apply the LUT to those normalised values as the very last step.
+  filters.push('format=yuv420p')
+  filters.push('lut3d=/usr/share/ffmpeg/proxylut.cube')
+
   const filterComplex = filters.join(',')
 
   if (DEBUG) {

@@ -92,6 +92,7 @@ COPY --from=builder --link /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --link /app/next.config.js ./next.config.js
 COPY --from=builder --link /app/worker.mjs ./worker.mjs
 COPY --link docker-entrypoint.sh /usr/local/bin/
+COPY --link proxylut.cube /usr/share/ffmpeg/proxylut.cube
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
     chown -R app:app /app && \

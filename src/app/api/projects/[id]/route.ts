@@ -291,6 +291,10 @@ export async function PATCH(
       updateData.watermarkFontSize = validatedBody.watermarkFontSize
     }
 
+    if (validatedBody.applyPreviewLut !== undefined) {
+      updateData.applyPreviewLut = validatedBody.applyPreviewLut
+    }
+
     if (validatedBody.allowAssetDownload !== undefined) {
       updateData.allowAssetDownload = validatedBody.allowAssetDownload
     }

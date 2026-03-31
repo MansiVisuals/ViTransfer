@@ -339,12 +339,18 @@ export default function ProjectInfo({
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                       <span className="text-muted-foreground">{t('playbackStatus')}</span>
                       <span className="font-medium break-words">
-                        {isVideoApproved
-                          ? usePreviewForApprovedPlayback
-                            ? t('approvedPreview', { quality: defaultQuality })
-                            : t('approvedOriginal')
-                          : t('downscaledPreview', { quality: defaultQuality, watermark: watermarkEnabled ? t('withWatermark') : '' })
-                        }
+                        {(() => {
+                          const hasPreview = !!(selectedVideo.preview720Path || selectedVideo.preview1080Path)
+                          if (isVideoApproved) {
+                            return usePreviewForApprovedPlayback
+                              ? t('approvedPreview', { quality: defaultQuality })
+                              : t('approvedOriginal')
+                          }
+                          if (!hasPreview) {
+                            return t('originalQuality')
+                          }
+                          return t('downscaledPreview', { quality: defaultQuality, watermark: watermarkEnabled ? t('withWatermark') : '' })
+                        })()}
                       </span>
                     </div>
                   </div>

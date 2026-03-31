@@ -42,6 +42,7 @@ export function VideoAssetDownloadModal({
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const [downloadingAll, setDownloadingAll] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchAssets = useCallback(async () => {
@@ -174,6 +175,43 @@ export function VideoAssetDownloadModal({
     }
   }
 
+  const downloadAll = async () => {
+    if (downloadingAll || assets.length === 0) return
+
+    try {
+      setDownloadingAll(true)
+      setError(null)
+
+      const response = await fetch(`/api/videos/${videoId}/assets/download-zip-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildAuthHeaders(shareToken, isAdmin),
+        },
+        body: JSON.stringify({
+          assetIds: assets.map((a) => a.id),
+          includeVideo: true,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || t('downloadFailed'))
+      }
+
+      const { url: downloadUrl } = await response.json()
+      triggerDownload(downloadUrl)
+
+      setTimeout(() => {
+        onClose()
+      }, 500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('downloadFailed'))
+    } finally {
+      setDownloadingAll(false)
+    }
+  }
+
   const formatFileSizeBigInt = (bytes: string) => {
     return formatFileSize(Number(bytes))
   }
@@ -227,6 +265,27 @@ export function VideoAssetDownloadModal({
                 </div>
               </div>
             </button>
+            {!loading && assets.length > 0 && (
+              <button
+                onClick={downloadAll}
+                disabled={downloadingAll}
+                className="w-full p-4 border-2 border-primary rounded-lg hover:bg-primary/5 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  {downloadingAll ? (
+                    <Loader2 className="h-5 w-5 text-primary flex-shrink-0 animate-spin" />
+                  ) : (
+                    <Download className="h-5 w-5 text-primary flex-shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-medium">{t('downloadAll')}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t('downloadAllDescription', { count: assets.length })}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Assets section */}

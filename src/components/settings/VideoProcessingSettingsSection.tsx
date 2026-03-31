@@ -22,6 +22,8 @@ interface VideoProcessingSettingsSectionProps {
   setDefaultWatermarkOpacity: (value: number) => void
   defaultWatermarkFontSize: string
   setDefaultWatermarkFontSize: (value: string) => void
+  defaultApplyPreviewLut: boolean
+  setDefaultApplyPreviewLut: (value: boolean) => void
   defaultTimestampDisplay: string
   setDefaultTimestampDisplay: (value: string) => void
   autoApproveProject: boolean
@@ -49,6 +51,8 @@ export function VideoProcessingSettingsSection({
   setDefaultWatermarkOpacity,
   defaultWatermarkFontSize,
   setDefaultWatermarkFontSize,
+  defaultApplyPreviewLut,
+  setDefaultApplyPreviewLut,
   defaultTimestampDisplay,
   setDefaultTimestampDisplay,
   autoApproveProject,
@@ -91,7 +95,13 @@ export function VideoProcessingSettingsSection({
             <Label htmlFor="defaultSkipTranscoding">{t('videoProcessing.skipTranscoding')}</Label>
             <p className="text-xs text-muted-foreground">{t('videoProcessing.skipTranscodingHint')}</p>
           </div>
-          <Switch id="defaultSkipTranscoding" checked={defaultSkipTranscoding} onCheckedChange={setDefaultSkipTranscoding} />
+          <Switch id="defaultSkipTranscoding" checked={defaultSkipTranscoding} onCheckedChange={(checked) => {
+            setDefaultSkipTranscoding(checked)
+            if (checked) {
+              setDefaultWatermarkEnabled(false)
+              setDefaultApplyPreviewLut(false)
+            }
+          }} />
         </div>
         {defaultSkipTranscoding && (
           <p className="text-xs text-warning">{t('videoProcessing.skipTranscodingWarning')}</p>
@@ -113,6 +123,18 @@ export function VideoProcessingSettingsSection({
         <p className="text-xs text-muted-foreground">
           {t('videoProcessing.resolutionHint')}
         </p>
+      </div>
+      )}
+
+      {!defaultSkipTranscoding && (
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="defaultApplyPreviewLut">{t('videoProcessing.applyPreviewLut')}</Label>
+            <p className="text-xs text-muted-foreground">{t('videoProcessing.applyPreviewLutHint')}</p>
+          </div>
+          <Switch id="defaultApplyPreviewLut" checked={defaultApplyPreviewLut} onCheckedChange={setDefaultApplyPreviewLut} />
+        </div>
       </div>
       )}
 

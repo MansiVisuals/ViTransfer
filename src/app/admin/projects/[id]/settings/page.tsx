@@ -47,6 +47,7 @@ interface Project {
   watermarkPositions: string
   watermarkOpacity: number
   watermarkFontSize: string
+  applyPreviewLut: boolean
   allowAssetDownload: boolean
   allowClientAssetUpload: boolean
   clientCanApprove: boolean
@@ -97,6 +98,7 @@ export default function ProjectSettingsPage() {
   const [watermarkPositions, setWatermarkPositions] = useState('center')
   const [watermarkOpacity, setWatermarkOpacity] = useState(30)
   const [watermarkFontSize, setWatermarkFontSize] = useState('medium')
+  const [applyPreviewLut, setApplyPreviewLut] = useState(true)
   const [allowAssetDownload, setAllowAssetDownload] = useState(true)
   const [allowClientAssetUpload, setAllowClientAssetUpload] = useState(false)
   const [clientCanApprove, setClientCanApprove] = useState(true)
@@ -134,6 +136,7 @@ export default function ProjectSettingsPage() {
     watermarkPositions: 'center',
     watermarkOpacity: 30,
     watermarkFontSize: 'medium',
+    applyPreviewLut: true,
   })
 
   // Reprocessing state
@@ -190,6 +193,7 @@ export default function ProjectSettingsPage() {
         setWatermarkPositions(data.watermarkPositions || 'center')
         setWatermarkOpacity(data.watermarkOpacity ?? 30)
         setWatermarkFontSize(data.watermarkFontSize || 'medium')
+        setApplyPreviewLut(data.applyPreviewLut ?? true)
         setAllowAssetDownload(data.allowAssetDownload ?? true)
         setAllowClientAssetUpload(data.allowClientAssetUpload ?? false)
         setClientCanApprove(data.clientCanApprove ?? true)
@@ -210,6 +214,7 @@ export default function ProjectSettingsPage() {
           watermarkPositions: data.watermarkPositions || 'center',
           watermarkOpacity: data.watermarkOpacity ?? 30,
           watermarkFontSize: data.watermarkFontSize || 'medium',
+          applyPreviewLut: data.applyPreviewLut ?? true,
         })
 
         // Check if slug was manually customized (different from auto-generated from title)
@@ -308,6 +313,7 @@ export default function ProjectSettingsPage() {
         watermarkPositions,
         watermarkOpacity,
         watermarkFontSize,
+        applyPreviewLut,
         allowAssetDownload,
         allowClientAssetUpload,
         clientCanApprove,
@@ -334,7 +340,8 @@ export default function ProjectSettingsPage() {
         currentWatermarkText !== originalSettings.watermarkText ||
         watermarkPositions !== originalSettings.watermarkPositions ||
         watermarkOpacity !== originalSettings.watermarkOpacity ||
-        watermarkFontSize !== originalSettings.watermarkFontSize
+        watermarkFontSize !== originalSettings.watermarkFontSize ||
+        applyPreviewLut !== originalSettings.applyPreviewLut
 
       // If processing settings changed, show modal
       if (processingSettingsChanged) {
@@ -385,6 +392,7 @@ export default function ProjectSettingsPage() {
         setWatermarkPositions(refreshedData.watermarkPositions || 'center')
         setWatermarkOpacity(refreshedData.watermarkOpacity ?? 30)
         setWatermarkFontSize(refreshedData.watermarkFontSize || 'medium')
+        setApplyPreviewLut(refreshedData.applyPreviewLut ?? true)
 
         // Update original settings
         setOriginalSettings({
@@ -396,6 +404,7 @@ export default function ProjectSettingsPage() {
           watermarkPositions: refreshedData.watermarkPositions || 'center',
           watermarkOpacity: refreshedData.watermarkOpacity ?? 30,
           watermarkFontSize: refreshedData.watermarkFontSize || 'medium',
+          applyPreviewLut: refreshedData.applyPreviewLut ?? true,
         })
       }
 
@@ -886,7 +895,13 @@ export default function ProjectSettingsPage() {
                     <Label htmlFor="skipTranscoding">{t('skipTranscoding')}</Label>
                     <p className="text-xs text-muted-foreground">{t('skipTranscodingHint')}</p>
                   </div>
-                  <Switch id="skipTranscoding" checked={skipTranscoding} onCheckedChange={setSkipTranscoding} />
+                  <Switch id="skipTranscoding" checked={skipTranscoding} onCheckedChange={(checked) => {
+                    setSkipTranscoding(checked)
+                    if (checked) {
+                      setWatermarkEnabled(false)
+                      setApplyPreviewLut(false)
+                    }
+                  }} />
                 </div>
                 {skipTranscoding && (
                   <p className="text-xs text-warning">{t('skipTranscodingWarning')}</p>
@@ -1030,6 +1045,18 @@ export default function ProjectSettingsPage() {
                     </div>
                   </>
                 )}
+              </div>
+              )}
+
+              {!skipTranscoding && (
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="applyPreviewLut">{t('applyPreviewLut')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('applyPreviewLutHint')}</p>
+                  </div>
+                  <Switch id="applyPreviewLut" checked={applyPreviewLut} onCheckedChange={setApplyPreviewLut} />
+                </div>
               </div>
               )}
 	          </CollapsibleSection>

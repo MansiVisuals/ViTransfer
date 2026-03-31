@@ -495,6 +495,8 @@
     "resolution720p": "720p (1280x720 or 720x1280 for vertical)",
     "resolution1080p": "1080p (1920x1080 or 1080x1920 for vertical)",
     "previewResolutionHint": "Higher resolutions take longer to process and use more storage. Vertical videos automatically adjust dimensions while maintaining aspect ratio.",
+    "applyPreviewLut": "Apply Preview LUT",
+    "applyPreviewLutHint": "Apply the color LUT during transcoding for color-calibrated previews. Disable if your footage does not benefit from the LUT.",
     "enableWatermarks": "Enable Watermarks",
     "enableWatermarksDescription": "Add watermarks to processed videos",
     "customWatermarkText": "Custom Watermark Text",
@@ -676,6 +678,8 @@
     "quickDownload": "Quick Download",
     "downloadVideoOnly": "Download Video Only",
     "downloadVideoDescription": "Download the approved video file",
+    "downloadAll": "Download All",
+    "downloadAllDescription": "Video + {count} assets as ZIP",
     "additionalAssets": "Additional Assets",
     "noAdditionalAssets": "No additional assets available for this video",
     "downloadThisFile": "Download this file",
@@ -741,6 +745,7 @@
     "playbackStatus": "Playback Status",
     "approvedPreview": "Approved - Preview ({quality})",
     "approvedOriginal": "Approved - Original Quality",
+    "originalQuality": "Original Quality",
     "downscaledPreview": "Downscaled Preview ({quality}){watermark}",
     "withWatermark": " with Watermark",
     "downloadOriginal": "Download original quality video",
@@ -864,7 +869,9 @@
     "invalidAttachments": "One or more attachments are invalid or no longer available. Please attach the file again.",
     "commentNotFound": "Comment not found",
     "commentsDisabled": "Comments are disabled for this project",
-    "failedToDeleteComment": "Failed to delete comment"
+    "failedToDeleteComment": "Failed to delete comment",
+    "downloadAllVideos": "Download All {count} Videos as ZIP",
+    "noApprovedVideos": "No approved videos available for download"
   },
 
   "tutorial": {
@@ -1343,6 +1350,8 @@
       "timecode": "Timecode (HH:MM:SS:FF)",
       "simpleTime": "Simple Time (MM:SS / HH:MM:SS)",
       "timestampHint": "Used for new projects by default. You can change this per project in Project Settings.",
+      "applyPreviewLut": "Apply Preview LUT",
+      "applyPreviewLutHint": "Apply the color LUT during transcoding for color-calibrated previews. Disable to skip the LUT by default for new projects.",
       "enableWatermarks": "Enable Watermarks",
       "enableWatermarksHint": "Add watermarks to processed videos",
       "customWatermarkText": "Custom Watermark Text",

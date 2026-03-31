@@ -51,6 +51,7 @@ export interface ProcessingSettings {
   watermarkPositions?: string
   watermarkOpacity?: number
   watermarkFontSize?: string
+  applyLut: boolean
 }
 
 export interface VideoInfo {
@@ -164,6 +165,7 @@ export async function fetchProcessingSettings(
       watermarkPositions: true,
       watermarkOpacity: true,
       watermarkFontSize: true,
+      applyPreviewLut: true,
     },
   })
 
@@ -192,6 +194,7 @@ export async function fetchProcessingSettings(
     watermarkPositions: project?.watermarkPositions || 'center',
     watermarkOpacity: project?.watermarkOpacity ?? 30,
     watermarkFontSize: project?.watermarkFontSize || 'medium',
+    applyLut: project?.applyPreviewLut ?? true,
   }
 }
 
@@ -283,6 +286,7 @@ export async function processPreview(
     watermarkPositions: settings.watermarkPositions,
     watermarkOpacity: settings.watermarkOpacity,
     watermarkFontSize: settings.watermarkFontSize as any,
+    applyLut: settings.applyLut,
     onProgress: (() => {
       let lastWrite = 0
       let writing = false

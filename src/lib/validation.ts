@@ -266,6 +266,9 @@ export const updateProjectSchema = z.object({
   // Transcoding settings
   skipTranscoding: z.boolean().optional(),
 
+  // Preview LUT settings
+  applyPreviewLut: z.boolean().optional(),
+
   // Watermark settings
   watermarkEnabled: z.boolean().optional(),
   watermarkText: safeStringSchema(0, 100).nullable().optional(),

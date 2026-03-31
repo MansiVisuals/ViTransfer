@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
-import { Lock, Check, Mail, KeyRound } from 'lucide-react'
+import { Lock, Check, Mail, KeyRound, Download, Loader2 } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -68,6 +68,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
+  const [downloadingAll, setDownloadingAll] = useState(false)
   const storageKey = token || ''
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
 
@@ -522,6 +523,41 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     router.replace(newUrl || '', { scroll: false })
   }, [searchParams, pathname, router])
 
+  const handleDownloadAll = useCallback(async () => {
+    if (downloadingAll || !shareToken) return
+
+    try {
+      setDownloadingAll(true)
+
+      const response = await fetch(`/api/share/${token}/download-all-token`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${shareToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Download failed')
+      }
+
+      const { url } = await response.json()
+
+      const link = document.createElement('a')
+      link.href = url
+      link.download = ''
+      link.rel = 'noopener'
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch {
+      // Silently fail - user can retry
+    } finally {
+      setDownloadingAll(false)
+    }
+  }, [downloadingAll, shareToken, token])
+
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault()
     if (!email) return
@@ -896,6 +932,30 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               clientName={isGuest ? undefined : project.clientName}
             />
           </div>
+          {/* Download All approved videos */}
+          {(() => {
+            if (isGuest || !project.allowAssetDownload || !project.videosByName) return null
+            const approvedCount = Object.values(project.videosByName as Record<string, any[]>)
+              .filter((versions) => versions.some((v: any) => v.approved))
+              .length
+            if (approvedCount < 2) return null
+            return (
+              <div className="px-3 sm:px-6 lg:px-8 pb-4">
+                <button
+                  onClick={handleDownloadAll}
+                  disabled={downloadingAll}
+                  className="w-full max-w-md mx-auto flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-primary text-primary hover:bg-primary/5 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  {downloadingAll ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  {t('downloadAllVideos', { count: approvedCount })}
+                </button>
+              </div>
+            )
+          })()}
           {/* Powered by footer */}
           <div className="pb-4 text-center">
             <a

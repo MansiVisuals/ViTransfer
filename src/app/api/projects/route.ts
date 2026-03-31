@@ -183,6 +183,7 @@ export async function POST(request: NextRequest) {
         defaultTimestampDisplay: true,
         defaultUsePreviewForApprovedPlayback: true,
         defaultAllowClientAssetUpload: true,
+        defaultApplyPreviewLut: true,
       },
     })
 
@@ -219,6 +220,7 @@ export async function POST(request: NextRequest) {
           timestampDisplay: settings?.defaultTimestampDisplay || 'TIMECODE',
           usePreviewForApprovedPlayback: settings?.defaultUsePreviewForApprovedPlayback ?? false,
           allowClientAssetUpload: settings?.defaultAllowClientAssetUpload ?? false,
+          applyPreviewLut: settings?.defaultApplyPreviewLut ?? true,
           dueDate: dueDate ? new Date(dueDate) : null,
           dueReminder: dueReminder || null,
           createdById: admin.id,

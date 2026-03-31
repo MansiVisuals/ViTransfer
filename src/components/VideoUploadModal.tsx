@@ -10,7 +10,7 @@ import { cn, formatFileSize } from '@/lib/utils'
 import * as tus from 'tus-js-client'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
-import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { getTusUploadErrorMessage, createTusAfterResponseHandler, createTusShouldRetryHandler, resetTusAuthRetry } from '@/lib/tus-error'
 import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
@@ -250,6 +250,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
       // TUS upload
       let lastLoaded = 0
       let lastTime = Date.now()
+      const tusRef: { current: tus.Upload | null } = { current: null }
 
       const upload = new tus.Upload(file, {
         endpoint: `${window.location.origin}/api/uploads`,
@@ -275,6 +276,9 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
           }
         },
 
+        onAfterResponse: createTusAfterResponseHandler(tusRef),
+        onShouldRetry: createTusShouldRetryHandler(tusRef),
+
         onProgress: (bytesUploaded, bytesTotal) => {
           const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
           const now = Date.now()
@@ -298,6 +302,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
           clearFileContext(file)
           clearUploadMetadata(file)
           clearTUSFingerprint(file)
+          resetTusAuthRetry(tusRef.current)
           uploadRefs.current.delete(id)
 
           setPendingUploads(prev => prev.map(u =>
@@ -325,12 +330,15 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
             clearTUSFingerprint(file)
           }
 
+          resetTusAuthRetry(tusRef.current)
           uploadRefs.current.delete(id)
           setPendingUploads(prev => prev.map(u =>
             u.id === id ? { ...u, status: 'error', error: errorMessage } : u
           ))
         },
       })
+
+      tusRef.current = upload
 
       const previousUploads = await upload.findPreviousUploads()
       if (previousUploads.length > 0) {

@@ -92,9 +92,10 @@ COPY --from=builder --link /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --link /app/next.config.js ./next.config.js
 COPY --from=builder --link /app/worker.mjs ./worker.mjs
 COPY --link docker-entrypoint.sh /usr/local/bin/
-COPY --link proxylut.cube /usr/share/ffmpeg/proxylut.cube
+COPY --link previewlut.cube /usr/share/ffmpeg/previewlut.cube
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
+    chmod a+r /usr/share/ffmpeg/previewlut.cube && \
     chown -R app:app /app && \
     chmod -R a+rX /app/src /app/.next /app/node_modules /app/public /app/prisma
 

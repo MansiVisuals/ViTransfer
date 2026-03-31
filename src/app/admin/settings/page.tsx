@@ -33,6 +33,7 @@ interface Settings {
   defaultWatermarkPositions: string | null
   defaultWatermarkOpacity: number | null
   defaultWatermarkFontSize: string | null
+  defaultApplyPreviewLut: boolean | null
   maxUploadSizeGB: number | null
   maxCommentAttachments: number | null
   defaultTimestampDisplay: string | null
@@ -125,6 +126,7 @@ export default function GlobalSettingsPage() {
   const [defaultWatermarkPositions, setDefaultWatermarkPositions] = useState('center')
   const [defaultWatermarkOpacity, setDefaultWatermarkOpacity] = useState(30)
   const [defaultWatermarkFontSize, setDefaultWatermarkFontSize] = useState('medium')
+  const [defaultApplyPreviewLut, setDefaultApplyPreviewLut] = useState(true)
   const [maxUploadSizeGB, setMaxUploadSizeGB] = useState('1')
   const [maxCommentAttachments, setMaxCommentAttachments] = useState('10')
   const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
@@ -195,6 +197,7 @@ export default function GlobalSettingsPage() {
     setDefaultWatermarkPositions(data.defaultWatermarkPositions || 'center')
     setDefaultWatermarkOpacity(data.defaultWatermarkOpacity ?? 30)
     setDefaultWatermarkFontSize(data.defaultWatermarkFontSize || 'medium')
+    setDefaultApplyPreviewLut(data.defaultApplyPreviewLut ?? true)
     setMaxUploadSizeGB(data.maxUploadSizeGB?.toString() || '1')
     setMaxCommentAttachments(data.maxCommentAttachments?.toString() || '10')
     setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
@@ -506,6 +509,7 @@ export default function GlobalSettingsPage() {
         defaultWatermarkPositions: defaultWatermarkPositions || 'center',
         defaultWatermarkOpacity: defaultWatermarkOpacity,
         defaultWatermarkFontSize: defaultWatermarkFontSize || 'medium',
+        defaultApplyPreviewLut,
         maxUploadSizeGB: parseInt(maxUploadSizeGB, 10) || 1,
         maxCommentAttachments: parseInt(maxCommentAttachments, 10) || 10,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
@@ -730,6 +734,8 @@ export default function GlobalSettingsPage() {
             setDefaultWatermarkOpacity={setDefaultWatermarkOpacity}
             defaultWatermarkFontSize={defaultWatermarkFontSize}
             setDefaultWatermarkFontSize={setDefaultWatermarkFontSize}
+            defaultApplyPreviewLut={defaultApplyPreviewLut}
+            setDefaultApplyPreviewLut={setDefaultApplyPreviewLut}
             defaultTimestampDisplay={defaultTimestampDisplay}
             setDefaultTimestampDisplay={setDefaultTimestampDisplay}
             autoApproveProject={autoApproveProject}

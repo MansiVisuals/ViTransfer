@@ -110,7 +110,7 @@ function withAuthHeader(init?: RequestInit): RequestInit {
   return { ...init, headers }
 }
 
-async function attemptRefresh(): Promise<boolean> {
+export async function attemptRefresh(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight
 
   const refreshToken = getRefreshToken()

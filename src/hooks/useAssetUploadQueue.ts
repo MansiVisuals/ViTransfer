@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import * as tus from 'tus-js-client'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
-import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { getTusUploadErrorMessage, createTusAfterResponseHandler, createTusShouldRetryHandler, resetTusAuthRetry } from '@/lib/tus-error'
 import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
@@ -157,6 +157,7 @@ export function useAssetUploadQueue({
       const startTime = Date.now()
       let lastLoaded = 0
       let lastTime = startTime
+      const tusRef: { current: tus.Upload | null } = { current: null }
 
       const tusUpload = new tus.Upload(upload.file, {
         endpoint: `${window.location.origin}/api/uploads`,
@@ -169,6 +170,9 @@ export function useAssetUploadQueue({
         chunkSize: getTusChunkSizeBytes(upload.file.size),
         storeFingerprintForResuming: true,
         removeFingerprintOnSuccess: true,
+
+        onAfterResponse: createTusAfterResponseHandler(tusRef),
+        onShouldRetry: createTusShouldRetryHandler(tusRef),
 
         onProgress: (bytesUploaded, bytesTotal) => {
           const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
@@ -201,6 +205,8 @@ export function useAssetUploadQueue({
         },
 
         onSuccess: () => {
+          resetTusAuthRetry(tusRef.current)
+
           setQueue(prev => prev.map(u =>
             u.id === uploadId
               ? { ...u, status: 'completed' as const, progress: 100, completedAt: Date.now() }
@@ -251,6 +257,7 @@ export function useAssetUploadQueue({
               : u
           ))
 
+          resetTusAuthRetry(tusRef.current)
           uploadRefsMap.current.delete(uploadId)
         },
 
@@ -265,6 +272,8 @@ export function useAssetUploadQueue({
           }
         },
       })
+
+      tusRef.current = tusUpload
 
       const previousUploads = await tusUpload.findPreviousUploads()
       if (previousUploads.length > 0) {

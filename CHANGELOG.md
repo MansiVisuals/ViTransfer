@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Preview LUT support — a 3D LUT (`previewlut.cube`) is applied during transcoding for color-calibrated previews. Toggleable per-project and as a global default in settings. LUT crafted and provided for ViTransfer by colorist Fred ([@fredflx](https://github.com/fredflx) — [yechandocolor.com](https://yechandocolor.com)).
+- "Download All" button in the download modal — downloads the video and all assets together as a single ZIP file.
+- "Download All Videos" button on the share page grid view — downloads all approved videos as a single ZIP file.
+
+### Changed
+- Replaced the admin header email display and standalone sign out button with a compact icon-only user button with dropdown menu showing name, email, role, and sign out option.
+
+### Fixed
+- Toggling "Skip Transcoding" now correctly disables watermarks and preview LUT instead of leaving them enabled in the background.
+- Share page playback status now shows "Original Quality" when transcoding is skipped, instead of incorrectly displaying "Downscaled Preview with Watermark".
+- Uploading multiple videos or assets at once no longer fails with "Authentication failed". TUS uploads now automatically refresh expired tokens and retry.
+- Fixed Docker entrypoint not setting ownership of top-level app files (e.g. `package.json`) when remapping PUID/PGID, causing startup permission errors.
+- Keyboard shortcuts button in the comment panel no longer disappears after approving a video.
+
 ## [0.9.10] - 2026-03-28
 
 ### Security

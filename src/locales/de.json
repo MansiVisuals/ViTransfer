@@ -495,6 +495,8 @@
     "resolution720p": "720p (1280x720 oder 720x1280 für Hochformat)",
     "resolution1080p": "1080p (1920x1080 oder 1080x1920 für Hochformat)",
     "previewResolutionHint": "Höhere Auflösungen brauchen länger zur Verarbeitung und belegen mehr Speicher. Hochformatvideos passen Abmessungen automatisch an und behalten das Seitenverhältnis bei.",
+    "applyPreviewLut": "Preview-LUT anwenden",
+    "applyPreviewLutHint": "Wendet die Preview-LUT beim Transkodieren auf Videos an für farbgenaue Vorschauen. Deaktivieren, wenn die Videos keine LUT-Anpassung benötigen.",
     "enableWatermarks": "Wasserzeichen aktivieren",
     "enableWatermarksDescription": "Wasserzeichen zu verarbeiteten Videos hinzufügen",
     "customWatermarkText": "Benutzerdefinierter Wasserzeichentext",
@@ -676,6 +678,8 @@
     "quickDownload": "Schnell-Download",
     "downloadVideoOnly": "Nur Video herunterladen",
     "downloadVideoDescription": "Freigegebene Videodatei herunterladen",
+    "downloadAll": "Alles Herunterladen",
+    "downloadAllDescription": "Video + {count} Dateien als ZIP",
     "additionalAssets": "Zusätzliche Assets",
     "noAdditionalAssets": "Keine zusätzlichen Assets für dieses Video verfügbar",
     "downloadThisFile": "Diese Datei herunterladen",
@@ -741,6 +745,7 @@
     "playbackStatus": "Wiedergabestatus",
     "approvedPreview": "Freigegeben – Vorschau ({quality})",
     "approvedOriginal": "Freigegeben – Originalqualität",
+    "originalQuality": "Originalqualität",
     "downscaledPreview": "Herunterskalierte Vorschau ({quality}){watermark}",
     "withWatermark": " mit Wasserzeichen",
     "downloadOriginal": "Video in Originalqualität herunterladen",
@@ -864,7 +869,9 @@
     "invalidAttachments": "Ein oder mehrere Anhänge sind ungültig oder nicht mehr verfügbar. Bitte die Datei erneut anhängen.",
     "commentNotFound": "Kommentar nicht gefunden",
     "commentsDisabled": "Kommentare sind für dieses Projekt deaktiviert",
-    "failedToDeleteComment": "Kommentar konnte nicht gelöscht werden"
+    "failedToDeleteComment": "Kommentar konnte nicht gelöscht werden",
+    "downloadAllVideos": "Alle {count} Videos als ZIP herunterladen",
+    "noApprovedVideos": "Keine freigegebenen Videos zum Herunterladen verfügbar"
   },
 
   "tutorial": {
@@ -1343,6 +1350,8 @@
       "timecode": "Timecode (HH:MM:SS:FF)",
       "simpleTime": "Einfache Zeit (MM:SS / HH:MM:SS)",
       "timestampHint": "Standardmäßig für neue Projekte verwendet. Kann in den Projekteinstellungen pro Projekt geändert werden.",
+      "applyPreviewLut": "Preview-LUT anwenden",
+      "applyPreviewLutHint": "Wendet die Preview-LUT standardmäßig auf Videos in neuen Projekten an. Kann pro Projekt überschrieben werden.",
       "enableWatermarks": "Wasserzeichen aktivieren",
       "enableWatermarksHint": "Wasserzeichen zu verarbeiteten Videos hinzufügen",
       "customWatermarkText": "Benutzerdefinierter Wasserzeichentext",

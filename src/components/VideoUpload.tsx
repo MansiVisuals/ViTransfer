@@ -11,7 +11,7 @@ import * as tus from 'tus-js-client'
 import { formatFileSize } from '@/lib/utils'
 import { apiPost, apiDelete } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
-import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { getTusUploadErrorMessage, createTusAfterResponseHandler, createTusShouldRetryHandler, resetTusAuthRetry } from '@/lib/tus-error'
 import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
@@ -231,6 +231,10 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
           }
         },
 
+        // Refresh token on 401/403 so the retry uses a fresh token
+        onAfterResponse: createTusAfterResponseHandler(uploadRef),
+        onShouldRetry: createTusShouldRetryHandler(uploadRef),
+
         // Progress callback
         onProgress: (bytesUploaded, bytesTotal) => {
           const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
@@ -259,6 +263,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
           clearFileContext(file)
           clearUploadMetadata(file)
           clearTUSFingerprint(file)
+          resetTusAuthRetry(uploadRef.current)
 
           setFile(null)
           setVersionLabel('')
@@ -292,6 +297,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
 
           setError(errorMessage)
           setUploading(false)
+          resetTusAuthRetry(uploadRef.current)
           uploadRef.current = null
         },
       })

@@ -103,9 +103,10 @@ else
         echo "[OK] User permissions already correct"
     fi
 
-    # Fix ownership of writable runtime dirs and mounted volumes
-    chown app:app /app /app/.next /app/public /app/src 2>/dev/null || true
-    chown -R app:app /app/.next /app/public 2>/dev/null || true
+    # Fix ownership of top-level app files (package.json, config, etc.)
+    # Uses maxdepth 1 to avoid slow recursive chown of node_modules
+    find /app -maxdepth 1 -exec chown app:app {} + 2>/dev/null || true
+    chown -R app:app /app/.next /app/public /app/src /app/prisma 2>/dev/null || true
 
     # Ensure uploads volume is owned by app user (Docker mounts as root)
     if [ -d /app/uploads ]; then

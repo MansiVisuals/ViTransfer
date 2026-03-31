@@ -6,7 +6,7 @@ import { Bug, Building2, Calendar, CircleHelp, Coffee, Container, ExternalLink, 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '@/lib/api-client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { useTranslations } from 'next-intl'
@@ -15,6 +15,7 @@ export default function AdminHeader() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const [showSecurityDashboard, setShowSecurityDashboard] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const t = useTranslations('nav')
   const ta = useTranslations('auth')
 
@@ -34,6 +35,20 @@ export default function AdminHeader() {
 
     fetchSecuritySettings()
   }, [])
+
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false)
+      }
+    }
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showUserMenu])
 
   if (!user) return null
 
@@ -84,10 +99,6 @@ export default function AdminHeader() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-              <User className="w-4 h-4" />
-              <span className="max-w-[150px] lg:max-w-none truncate">{user.email}</span>
-            </div>
             <ThemeToggle />
             <Dialog>
               <DialogTrigger asChild>
@@ -159,15 +170,34 @@ export default function AdminHeader() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button
-              variant="outline"
-              size="default"
-              onClick={logout}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">{ta('signOut')}</span>
-            </Button>
+            <div ref={userMenuRef} className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
+                aria-label={user.name || user.email}
+                title={user.name || user.email}
+              >
+                <User className="h-5 w-5 text-foreground" />
+              </button>
+              {showUserMenu && (
+                <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-border bg-card shadow-elevation-lg z-50">
+                  <div className="px-3 py-2.5 border-b border-border">
+                    <p className="text-sm font-medium truncate">{user.name || user.email}</p>
+                    {user.name && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
+                    <p className="text-xs text-muted-foreground mt-0.5">{user.role}</p>
+                  </div>
+                  <div className="p-1">
+                    <button
+                      onClick={() => { setShowUserMenu(false); logout() }}
+                      className="flex w-full items-center gap-2 px-2 py-1.5 text-sm rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      {ta('signOut')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

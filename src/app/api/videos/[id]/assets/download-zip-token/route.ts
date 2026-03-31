@@ -14,6 +14,7 @@ export const runtime = 'nodejs'
 
 const downloadZipTokenSchema = z.object({
   assetIds: z.array(z.string().min(1)).min(1, 'No assets selected').max(50, 'Too many assets requested'),
+  includeVideo: z.boolean().optional(),
 })
 
 /**
@@ -45,7 +46,7 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
     }
-    const { assetIds } = parsed.data
+    const { assetIds, includeVideo } = parsed.data
 
     // Get video with project info
     const video = await prisma.video.findUnique({
@@ -124,6 +125,7 @@ export async function POST(
       videoId,
       projectId: project.id,
       assetIds,
+      includeVideo: includeVideo || false,
       sessionId,
       ipAddress,
       userAgentHash,

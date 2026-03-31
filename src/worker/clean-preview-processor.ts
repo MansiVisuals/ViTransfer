@@ -83,6 +83,7 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
       width: dimensions.width,
       height: dimensions.height,
       watermarkText: undefined, // No watermark for clean preview!
+      applyLut: video.project?.applyPreviewLut ?? true,
       onProgress: async (progress) => {
         await job.updateProgress(progress * 100)
         debugLog(`Transcode progress: ${(progress * 100).toFixed(1)}%`)

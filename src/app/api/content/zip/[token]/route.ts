@@ -85,7 +85,7 @@ export async function GET(
     }
 
     const tokenData = JSON.parse(rawTokenData)
-    const { videoId, projectId, assetIds, sessionId, ipAddress, userAgentHash } = tokenData
+    const { videoId, projectId, assetIds, includeVideo, sessionId, ipAddress, userAgentHash } = tokenData
 
     // Bind token usage to the requester fingerprint that generated it
     const requestIp = getClientIpAddress(request)
@@ -160,8 +160,21 @@ export async function GET(
       logError('ZIP archive error:', err)
     })
 
-    // Add files to archive
+    // Add video file to archive if requested
     let appendedCount = 0
+    if (includeVideo && video.originalStoragePath) {
+      try {
+        const ext = video.originalFileName?.match(/\.[^.]+$/)?.[0] || '.mp4'
+        const videoFileName = `${video.name}_${video.versionLabel}${ext}`
+        const videoStream = await downloadFile(video.originalStoragePath)
+        archive.append(videoStream, { name: videoFileName })
+        appendedCount += 1
+      } catch (error) {
+        logError(`Error adding video ${video.name} to archive:`, error)
+      }
+    }
+
+    // Add asset files to archive
     for (const asset of assets) {
       try {
         const fileStream = await downloadFile(asset.storagePath)
@@ -185,8 +198,9 @@ export async function GET(
 
     // Generate filename
     const sanitizedVideoName = video.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const suffix = includeVideo ? 'complete' : 'assets'
     const zipFilename = sanitizeFilenameForHeader(
-      `${sanitizedVideoName}_${video.versionLabel}_assets.zip`
+      `${sanitizedVideoName}_${video.versionLabel}_${suffix}.zip`
     )
 
     // Stream ZIP directly to browser (no memory loading)

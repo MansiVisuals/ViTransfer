@@ -185,6 +185,7 @@ export interface TranscodeOptions {
   watermarkPositions?: string // comma-separated positions, e.g. "center,bottom-right"
   watermarkOpacity?: number // 10-100
   watermarkFontSize?: WatermarkFontSize
+  applyLut?: boolean // Apply preview LUT for color-calibrated previews (default: true)
   onProgress?: (progress: number) => void
 }
 
@@ -301,11 +302,14 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     }
   }
 
+  // Apply preview LUT unless explicitly disabled.
   // Convert to BT.709 limited-range yuv420p first — this matches what a decoded
   // H.264 proxy would look like, which is what the LUT was calibrated against.
   // Then apply the LUT to those normalised values as the very last step.
-  filters.push('format=yuv420p')
-  filters.push('lut3d=/usr/share/ffmpeg/proxylut.cube')
+  if (options.applyLut !== false) {
+    filters.push('format=yuv420p')
+    filters.push('lut3d=/usr/share/ffmpeg/previewlut.cube')
+  }
 
   const filterComplex = filters.join(',')
 

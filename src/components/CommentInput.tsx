@@ -115,7 +115,26 @@ export default function CommentInput({
   const t = useTranslations('comments')
   const tCommon = useTranslations('common')
 
-  if (commentsDisabled) return null
+  if (commentsDisabled) {
+    // Still show the shortcuts button when comments are disabled (e.g. after approval)
+    if (showShortcutsButton && onShowShortcuts) {
+      return (
+        <div className="p-3 flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onShowShortcuts}
+            className="hidden lg:inline-flex"
+          >
+            <Keyboard className="w-4 h-4 lg:mr-2" />
+            <span className="hidden lg:inline">{t('shortcuts')}</span>
+          </Button>
+        </div>
+      )
+    }
+    return null
+  }
 
   // Check if name selection is required but not provided
   const isNameRequired = showAuthorInput && namedRecipients.length > 0 && nameSource === 'none'

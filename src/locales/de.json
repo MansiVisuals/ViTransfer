@@ -869,9 +869,7 @@
     "invalidAttachments": "Ein oder mehrere Anhänge sind ungültig oder nicht mehr verfügbar. Bitte die Datei erneut anhängen.",
     "commentNotFound": "Kommentar nicht gefunden",
     "commentsDisabled": "Kommentare sind für dieses Projekt deaktiviert",
-    "failedToDeleteComment": "Kommentar konnte nicht gelöscht werden",
-    "downloadAllVideos": "Alle {count} Videos als ZIP herunterladen",
-    "noApprovedVideos": "Keine freigegebenen Videos zum Herunterladen verfügbar"
+    "failedToDeleteComment": "Kommentar konnte nicht gelöscht werden"
   },
 
   "tutorial": {
@@ -1008,7 +1006,9 @@
     "approving": "Wird freigegeben...",
     "downloadOriginal": "Video in Originalqualität herunterladen",
     "downloadNotAvailable": "Download ist nur für freigegebene Projekte verfügbar",
-    "info": "Info"
+    "info": "Info",
+    "downloadAllVideos": "Alle {count} Videos als ZIP herunterladen",
+    "noApprovedVideos": "Keine freigegebenen Videos zum Herunterladen verfügbar"
   },
 
   "settings": {

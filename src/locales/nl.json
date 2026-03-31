@@ -829,9 +829,7 @@
     "invalidAttachments": "Een of meer bijlagen zijn ongeldig of niet meer beschikbaar. Voeg het bestand opnieuw toe.",
     "commentNotFound": "Opmerking niet gevonden",
     "commentsDisabled": "Reacties zijn uitgeschakeld voor dit project",
-    "failedToDeleteComment": "Opmerking verwijderen mislukt",
-    "downloadAllVideos": "Alle {count} Video's Downloaden als ZIP",
-    "noApprovedVideos": "Geen goedgekeurde video's beschikbaar om te downloaden"
+    "failedToDeleteComment": "Opmerking verwijderen mislukt"
   },
   "tutorial": {
     "welcomeTitle": "Welkom",
@@ -965,7 +963,9 @@
     "approving": "Goedkeuren...",
     "downloadOriginal": "Video in originele kwaliteit downloaden",
     "downloadNotAvailable": "Downloaden is alleen beschikbaar voor goedgekeurde projecten",
-    "info": "Info"
+    "info": "Info",
+    "downloadAllVideos": "Alle {count} Video's Downloaden als ZIP",
+    "noApprovedVideos": "Geen goedgekeurde video's beschikbaar om te downloaden"
   },
   "settings": {
     "title": "Algemene Instellingen",

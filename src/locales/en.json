@@ -869,9 +869,7 @@
     "invalidAttachments": "One or more attachments are invalid or no longer available. Please attach the file again.",
     "commentNotFound": "Comment not found",
     "commentsDisabled": "Comments are disabled for this project",
-    "failedToDeleteComment": "Failed to delete comment",
-    "downloadAllVideos": "Download All {count} Videos as ZIP",
-    "noApprovedVideos": "No approved videos available for download"
+    "failedToDeleteComment": "Failed to delete comment"
   },
 
   "tutorial": {
@@ -1008,7 +1006,9 @@
     "approving": "Approving...",
     "downloadOriginal": "Download original quality video",
     "downloadNotAvailable": "Download is only available for approved projects",
-    "info": "Info"
+    "info": "Info",
+    "downloadAllVideos": "Download All {count} Videos as ZIP",
+    "noApprovedVideos": "No approved videos available for download"
   },
 
   "settings": {

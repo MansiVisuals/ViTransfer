@@ -353,19 +353,6 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
             <span>{t('assets')} ({assets.length})</span>
             <ChevronUp className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-2">
-            {assets.length > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCopyModal(true)}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                {t('copyToVersion')}
-              </Button>
-            )}
-          </div>
         </div>
 
         {/* Bulk action bar */}
@@ -377,12 +364,16 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
             </button>
             <div className="flex-1" />
             <Button type="button" variant="outline" size="sm" onClick={handleBulkDownload} disabled={bulkDownloading || bulkDeleting}>
-              {bulkDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-              {t('downloadAsset')}
+              {bulkDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin sm:mr-1" /> : <Download className="h-3.5 w-3.5 sm:mr-1" />}
+              <span className="hidden sm:inline">{t('downloadAsset')}</span>
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowCopyModal(true)} disabled={bulkDownloading || bulkDeleting}>
+              <Copy className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">{t('copyToVersion')}</span>
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting || bulkDownloading} className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60">
-              {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
-              {t('deleteAsset')}
+              {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin sm:mr-1" /> : <Trash2 className="h-3.5 w-3.5 sm:mr-1" />}
+              <span className="hidden sm:inline">{t('deleteAsset')}</span>
             </Button>
           </div>
         )}
@@ -411,7 +402,7 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                   <span>•</span>
                   <span>{getCategoryLabel(asset.category)}</span>
                   {asset.uploadedBy === 'client' && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
+                    <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">
                       {t('clientUpload')}
                     </span>
                   )}
@@ -469,10 +460,12 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
         currentVideoName={videoName}
         currentVersionLabel={versionLabel}
         projectId={projectId}
+        preSelectedAssetIds={Array.from(selectedIds)}
         isOpen={showCopyModal}
         onClose={() => setShowCopyModal(false)}
         onComplete={() => {
           setShowCopyModal(false)
+          setSelectedIds(new Set())
           if (onAssetDeleted) {
             onAssetDeleted()
           }

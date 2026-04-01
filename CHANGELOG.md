@@ -16,8 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Replaced the admin header email display and standalone sign out button with a compact icon-only user button with dropdown menu showing name, email, role, and sign out option.
+- "Copy to Version" is now accessible via the bulk action bar after selecting assets — the standalone header button is removed. The target version picker is now scoped to other versions of the same video only, not all videos in the project.
+
+- Share page and admin share page grid view: replaced floating absolute-positioned buttons with a full-width sticky toolbar (menubar). Left side: Download All / Submit Files (share page) or Back to Project (admin). Right side: language, theme, and tutorial toggles.
+- Asset bulk action bar (Download, Copy to Version, Delete) shows icon-only on mobile to prevent overflow.
+- "Client Upload" badge in the asset list is hidden on mobile to reduce clutter.
 
 ### Fixed
+- Version count label in the video group header now renders with correct spacing.
 - Toggling "Skip Transcoding" now correctly disables watermarks and preview LUT instead of leaving them enabled in the background.
 - Share page playback status now shows "Original Quality" when transcoding is skipped, instead of incorrectly displaying "Downscaled Preview with Watermark".
 - Uploading multiple videos or assets at once no longer fails with "Authentication failed". TUS uploads now automatically refresh expired tokens and retry.

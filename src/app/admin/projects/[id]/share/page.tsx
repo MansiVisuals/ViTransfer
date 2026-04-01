@@ -457,24 +457,23 @@ export default function AdminSharePage() {
   if (viewState === 'grid') {
     return (
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
-        {/* Theme toggle for grid view */}
-        <div className="absolute top-3 right-3 z-20">
-          <ThemeToggle />
-        </div>
-        {/* Back button */}
-        <div className="absolute top-3 left-3 z-20">
+        {/* Grid view toolbar */}
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm z-20 flex-shrink-0">
+          {/* Left: back to project */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.push(projectUrl)}
-            className="bg-card/95 backdrop-blur-sm"
             title={t('backToProject')}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">{t('backToProject')}</span>
-            <span className="sm:hidden">{tc('back')}</span>
           </Button>
+
+          {/* Right: theme toggle */}
+          <ThemeToggle />
         </div>
+
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
             <ThumbnailGrid

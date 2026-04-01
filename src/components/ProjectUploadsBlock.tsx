@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { FolderUp, Download, Trash2, Loader2, FileIcon, Square, CheckSquare } from 'lucide-react'
+import { FolderUp, Download, Trash2, Loader2, FileIcon, FileImage, FileVideo, FileMusic, FileArchive, FileText, FilePlay, Square, CheckSquare } from 'lucide-react'
 import { Button } from './ui/button'
 import { apiFetch } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
@@ -36,6 +36,37 @@ function formatDate(dateStr: string): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function getCategoryLabel(category: string | null): string {
+  if (!category) return 'Other'
+  return category.charAt(0).toUpperCase() + category.slice(1)
+}
+
+function getUploadIcon(fileType: string, fileName: string, category: string | null) {
+  const ft = fileType?.toLowerCase() || ''
+  const fn = fileName.toLowerCase()
+  const cat = category?.toLowerCase() || ''
+
+  if (cat === 'thumbnail' || ft.startsWith('image/')) {
+    return <FileImage className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+  }
+  if (cat === 'project') {
+    return <FilePlay className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+  }
+  if (ft.startsWith('video/')) {
+    return <FileVideo className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+  }
+  if (ft.startsWith('audio/')) {
+    return <FileMusic className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+  }
+  if (ft === 'application/zip' || ft === 'application/x-zip-compressed' || fn.endsWith('.zip') || fn.endsWith('.rar') || fn.endsWith('.7z')) {
+    return <FileArchive className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+  }
+  if (ft.startsWith('text/') || fn.endsWith('.srt') || fn.endsWith('.vtt') || fn.endsWith('.txt') || fn.endsWith('.pdf') || fn.endsWith('.doc') || fn.endsWith('.docx')) {
+    return <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+  }
+  return <FileIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 }
 
 export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockProps) {
@@ -217,13 +248,19 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
                   {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
                 </button>
 
-                <FileIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                {getUploadIcon(upload.fileType, upload.fileName, upload.category)}
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{upload.fileName}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {formatFileSize(Number(upload.fileSize))} · {uploader} · {formatDate(upload.createdAt)}
-                  </p>
+                  <div className="flex gap-2 text-xs text-muted-foreground items-center flex-wrap">
+                    <span>{formatFileSize(Number(upload.fileSize))}</span>
+                    <span>•</span>
+                    <span>{getCategoryLabel(upload.category)}</span>
+                    <span>•</span>
+                    <span className="truncate">{uploader}</span>
+                    <span>•</span>
+                    <span className="truncate">{formatDate(upload.createdAt)}</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">

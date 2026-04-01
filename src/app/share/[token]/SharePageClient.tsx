@@ -904,57 +904,63 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return (
       <>
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
-        {/* Theme and language toggles for grid view */}
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
-          <LanguageToggle />
-          <ThemeToggle />
-          {project.showClientTutorial && (
-            <ShareTutorial
-              projectId={project.id || token}
-              showTutorial={project.showClientTutorial}
-              watermarkEnabled={project.watermarkEnabled}
-              hideFeedback={project.hideFeedback}
-              clientCanApprove={project.clientCanApprove}
-              allowAssetDownload={project.allowAssetDownload}
-              allowReverseShare={project.allowReverseShare}
-              isGuest={isGuest}
-              inPlayerView={false}
-            />
-          )}
+        {/* Grid view toolbar */}
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm z-20 flex-shrink-0">
+          {/* Left: download all + reverse share upload */}
+          <div className="flex items-center gap-2" data-tutorial="grid-actions">
+            {(() => {
+              if (isGuest) return null
+              const approvedCount = project.videosByName
+                ? Object.values(project.videosByName as Record<string, any[]>)
+                    .filter((versions) => versions.some((v: any) => v.approved))
+                    .length
+                : 0
+              const showDownloadAll = project.allowAssetDownload && approvedCount >= 2
+              const showUpload = project.allowReverseShare && shareToken
+              if (!showDownloadAll && !showUpload) return null
+              return (
+                <>
+                  {showDownloadAll && (
+                    <button
+                      onClick={handleDownloadAll}
+                      disabled={downloadingAll}
+                      className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {downloadingAll ? <Loader2 className="h-5 w-5 text-foreground animate-spin" /> : <Download className="h-5 w-5 text-foreground" />}
+                      <span className="hidden sm:inline text-sm font-medium text-foreground">{t('downloadAllVideos', { count: approvedCount })}</span>
+                    </button>
+                  )}
+                  {showUpload && (
+                    <ReverseShareUploadPanel
+                      shareToken={shareToken}
+                      shareSlug={token}
+                    />
+                  )}
+                </>
+              )
+            })()}
+          </div>
+
+          {/* Right: language, theme, tutorial */}
+          <div className="flex items-center gap-2 ml-auto">
+            <LanguageToggle />
+            <ThemeToggle />
+            {project.showClientTutorial && (
+              <ShareTutorial
+                projectId={project.id || token}
+                showTutorial={project.showClientTutorial}
+                watermarkEnabled={project.watermarkEnabled}
+                hideFeedback={project.hideFeedback}
+                clientCanApprove={project.clientCanApprove}
+                allowAssetDownload={project.allowAssetDownload}
+                allowReverseShare={project.allowReverseShare}
+                isGuest={isGuest}
+                inPlayerView={false}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Download all + reverse share upload — top-left, mirroring the toggles */}
-        {(() => {
-          if (isGuest) return null
-          const approvedCount = project.videosByName
-            ? Object.values(project.videosByName as Record<string, any[]>)
-                .filter((versions) => versions.some((v: any) => v.approved))
-                .length
-            : 0
-          const showDownloadAll = project.allowAssetDownload && approvedCount >= 2
-          const showUpload = project.allowReverseShare && shareToken
-          if (!showDownloadAll && !showUpload) return null
-          return (
-            <div className="absolute top-3 left-3 z-20 flex items-center gap-2" data-tutorial="grid-actions">
-              {showDownloadAll && (
-                <button
-                  onClick={handleDownloadAll}
-                  disabled={downloadingAll}
-                  className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {downloadingAll ? <Loader2 className="h-5 w-5 text-foreground animate-spin" /> : <Download className="h-5 w-5 text-foreground" />}
-                  <span className="hidden sm:inline text-sm font-medium text-foreground">{t('downloadAllVideos', { count: approvedCount })}</span>
-                </button>
-              )}
-              {showUpload && (
-                <ReverseShareUploadPanel
-                  shareToken={shareToken}
-                  shareSlug={token}
-                />
-              )}
-            </div>
-          )
-        })()}
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8" data-tutorial="video-grid">
             <ThumbnailGrid

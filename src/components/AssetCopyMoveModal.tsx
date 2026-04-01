@@ -30,6 +30,7 @@ interface AssetCopyMoveModalProps {
   currentVideoName: string
   currentVersionLabel: string
   projectId: string
+  preSelectedAssetIds?: string[]
   onClose: () => void
   onComplete?: () => void
   isOpen: boolean
@@ -40,6 +41,7 @@ export function AssetCopyMoveModal({
   currentVideoName,
   currentVersionLabel,
   projectId,
+  preSelectedAssetIds,
   onClose,
   onComplete,
   isOpen,
@@ -60,13 +62,18 @@ export function AssetCopyMoveModal({
       setLoading(true)
       setError(null)
 
-      // Fetch assets for current video
-      const assetsResponse = await apiFetch(`/api/videos/${currentVideoId}/assets`)
-      if (!assetsResponse.ok) {
-        throw new Error(t('failedToFetchAssets'))
+      // If assets are pre-selected from parent, skip fetching the asset list
+      if (!preSelectedAssetIds) {
+        const assetsResponse = await apiFetch(`/api/videos/${currentVideoId}/assets`)
+        if (!assetsResponse.ok) {
+          throw new Error(t('failedToFetchAssets'))
+        }
+        const assetsData = await assetsResponse.json()
+        setAssets(assetsData.assets)
+        setSelectedAssets(new Set(assetsData.assets.map((a: VideoAsset) => a.id)))
+      } else {
+        setSelectedAssets(new Set(preSelectedAssetIds))
       }
-      const assetsData = await assetsResponse.json()
-      setAssets(assetsData.assets)
 
       // Fetch all videos in project to choose target
       const videosResponse = await apiFetch(`/api/projects/${projectId}`)
@@ -75,15 +82,17 @@ export function AssetCopyMoveModal({
       }
       const videosData = await videosResponse.json()
 
-      // Filter out current video and only show other versions
-      const otherVideos = videosData.videos.filter((v: Video) => v.id !== currentVideoId)
-      setVideos(otherVideos)
+      // Only show other versions of the SAME video (same name, different id)
+      const sameNameVersions = videosData.videos.filter(
+        (v: Video) => v.id !== currentVideoId && v.name === currentVideoName
+      )
+      setVideos(sameNameVersions)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToLoadData'))
     } finally {
       setLoading(false)
     }
-  }, [currentVideoId, projectId, t])
+  }, [currentVideoId, currentVideoName, projectId, preSelectedAssetIds, t])
 
   useEffect(() => {
     if (isOpen) {
@@ -150,7 +159,7 @@ export function AssetCopyMoveModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="w-5 h-5 text-primary" />
@@ -161,7 +170,7 @@ export function AssetCopyMoveModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-6 py-4">
+        <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -193,8 +202,9 @@ export function AssetCopyMoveModal({
                 )}
               </div>
 
-              {/* Assets selection */}
-              {assets.length === 0 ? (
+              {/* Assets selection — only shown when no pre-selection from parent */}
+              {!preSelectedAssetIds && (
+                assets.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {t('noAssetsToCopy')}
                 </div>
@@ -232,7 +242,7 @@ export function AssetCopyMoveModal({
                     ))}
                   </div>
                 </div>
-              )}
+              ))}
 
               {/* Success message */}
               {success && (

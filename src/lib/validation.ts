@@ -285,6 +285,9 @@ export const updateProjectSchema = z.object({
   // Client asset upload
   allowClientAssetUpload: z.boolean().optional(),
 
+  // Reverse share
+  allowReverseShare: z.boolean().optional(),
+
   // Approval settings
   clientCanApprove: z.boolean().optional(),
 

@@ -299,6 +299,7 @@ export async function GET(
 
       allowAssetDownload: project.allowAssetDownload,
       allowClientAssetUpload: project.allowClientAssetUpload,
+      allowReverseShare: project.allowReverseShare,
       clientCanApprove: project.clientCanApprove,
       showClientTutorial: project.showClientTutorial ?? true,
 

@@ -327,10 +327,11 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
   // Render expanded version (full card)
   const renderExpandedVersion = (video: Video, isLatest: boolean) => (
-    <div key={video.id} className="border rounded-lg p-2 sm:p-3 space-y-2">
-      {/* Top row: Approved badge + Version label + Action buttons */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+    <div key={video.id} className="border rounded-lg p-2 space-y-1.5">
+      {/* Top row: text block + action icons — mirrors ProjectUploadsBlock layout */}
+      <div className="flex items-center gap-2">
+        {/* Text block: version label row + filename */}
+        <div className="flex-1 min-w-0">
           {editingId === video.id ? (
             <InlineEdit
               value={editValue}
@@ -338,62 +339,64 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
               onSave={() => handleSaveEdit(video.id)}
               onCancel={handleCancelEdit}
               disabled={savingId === video.id}
-              inputClassName="h-8 w-full sm:w-48"
+              inputClassName="h-7 w-full"
             />
           ) : (
             <>
-              {(video as any).approved && (
-                <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
-              )}
-              <h4 className="font-medium truncate">{video.versionLabel}</h4>
-              {isLatest && videos.length > 1 && (
-                <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                  {t('latest')}
-                </span>
-              )}
-              {isAdmin && video.status === 'READY' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:bg-primary-visible hover:text-primary"
-                  onClick={() => handleStartEdit(video.id, video.versionLabel)}
-                  title={t('editVersionLabel')}
-                >
-                  <Pencil className="w-3 h-3" />
-                </Button>
-              )}
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                {(video as any).approved && (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success flex-shrink-0" />
+                )}
+                <span className="font-medium text-sm truncate min-w-0">{video.versionLabel}</span>
+                {isLatest && videos.length > 1 && (
+                  <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary flex-shrink-0">
+                    {t('latest')}
+                  </span>
+                )}
+                {(video.status === 'PROCESSING' || video.status === 'ERROR') && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-xs font-medium flex items-center gap-1 flex-shrink-0 ${
+                      video.status === 'PROCESSING'
+                        ? 'bg-primary-visible text-primary border border-primary-visible'
+                        : 'bg-destructive-visible text-destructive border border-destructive-visible'
+                    }`}
+                  >
+                    {video.status === 'PROCESSING' && (
+                      <div className="animate-spin rounded-full h-2.5 w-2.5 border-b-2 border-primary" />
+                    )}
+                    {video.status}
+                  </span>
+                )}
+                {isAdmin && video.status === 'READY' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 flex-shrink-0 text-muted-foreground hover:bg-primary-visible hover:text-primary"
+                    onClick={() => handleStartEdit(video.id, video.versionLabel)}
+                    title={t('editVersionLabel')}
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground truncate">{video.originalFileName}</p>
             </>
           )}
         </div>
-        {/* Action icons - wrap on mobile */}
+
+        {/* Action icons — icon buttons only, fixed width, never overflow */}
         {editingId !== video.id && (
-          <div className="flex items-center gap-1 flex-shrink-0 flex-wrap">
-            {/* Collapse button for non-latest versions */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
             {videos.length > 1 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-7 w-7"
                 onClick={() => toggleVersion(video.id)}
                 title={t('collapseVersion')}
               >
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp className="w-3.5 h-3.5" />
               </Button>
-            )}
-            {/* Only show status badge for PROCESSING and ERROR states */}
-            {(video.status === 'PROCESSING' || video.status === 'ERROR') && (
-              <span
-                className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
-                  video.status === 'PROCESSING'
-                    ? 'bg-primary-visible text-primary border-2 border-primary-visible'
-                    : 'bg-destructive-visible text-destructive border-2 border-destructive-visible'
-                }`}
-              >
-                {video.status === 'PROCESSING' && (
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
-                )}
-                {video.status}
-              </span>
             )}
             {isAdmin && video.status === 'READY' && (
               <Button
@@ -401,16 +404,16 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
                 size="icon"
                 onClick={() => handleToggleApproval(video.id, (video as any).approved || false)}
                 disabled={approvingId === video.id}
-                className={`h-8 w-8 ${(video as any).approved
+                className={`h-7 w-7 ${(video as any).approved
                   ? "text-warning hover:text-warning hover:bg-warning-visible"
                   : "text-success hover:text-success hover:bg-success-visible"
                 }`}
                 title={(video as any).approved ? t('unapproveVideo') : t('approveVideo')}
               >
                 {(video as any).approved ? (
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-3.5 h-3.5" />
                 ) : (
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                 )}
               </Button>
             )}
@@ -418,47 +421,40 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 onClick={() => setUploadingAssetsFor(uploadingAssetsFor === video.id ? null : video.id)}
                 title={t('uploadAssets')}
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-3.5 h-3.5" />
               </Button>
             )}
             {isAdmin && video.status === 'READY' && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
                 onClick={() => handleDownloadVideo(video.id)}
                 disabled={downloadingId === video.id}
                 title={t('downloadVideo')}
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
               </Button>
             )}
             {isAdmin && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive-visible"
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive-visible"
                 onClick={() => handleDelete(video.id)}
                 disabled={deletingId === video.id}
                 title={t('deleteVideo')}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             )}
           </div>
         )}
       </div>
-
-      {/* Bottom row: Filename */}
-      {editingId !== video.id && (
-        <div>
-          <p className="text-sm text-muted-foreground break-all">{video.originalFileName}</p>
-        </div>
-      )}
 
       {video.status === 'PROCESSING' && (
         <div className="space-y-1">
@@ -483,7 +479,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
       )}
 
       {video.status === 'READY' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <div>
             <p className="text-muted-foreground">{t('duration')}</p>
             <p className="font-medium">{formatDuration(video.duration)}</p>
@@ -507,9 +503,9 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
       {/* Asset upload section */}
       {isAdmin && uploadingAssetsFor === video.id && video.status === 'READY' && (
-        <div className="mt-4 pt-4 border-t space-y-4">
+        <div className="mt-2 pt-2 border-t space-y-2">
           <div>
-            <h5 className="text-sm font-medium mb-3">{t('uploadAdditionalAssets')}</h5>
+            <h5 className="text-sm font-medium mb-2">{t('uploadAdditionalAssets')}</h5>
             <VideoAssetUploadQueue
               videoId={video.id}
               maxConcurrent={3}
@@ -524,7 +520,7 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
       {/* Asset list section - always visible for READY videos if admin */}
       {isAdmin && video.status === 'READY' && (
-        <div className="mt-4 pt-4 border-t">
+        <div className="mt-1.5 pt-1.5 border-t">
           <VideoAssetList
             videoId={video.id}
             videoName={video.name}

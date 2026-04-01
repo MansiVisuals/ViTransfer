@@ -74,6 +74,7 @@ model Project {
   allowAssetDownload     Boolean @default(true) // Allow clients to download video assets when project is approved
   allowClientAssetUpload Boolean @default(false) // Allow clients to upload file attachments on comments
   clientCanApprove       Boolean @default(true) // Allow clients to approve videos (false = admin only)
+  allowReverseShare      Boolean @default(false) // Allow clients to upload files directly to the project (reverse share)
 
   // Approved playback settings
   usePreviewForApprovedPlayback Boolean @default(false) // Use browser-compatible preview instead of original after approval
@@ -106,6 +107,7 @@ model Project {
   recipients        ProjectRecipient[] // Multiple email recipients
   notificationQueue NotificationQueue[] // Pending notifications
   sharePageAccesses SharePageAccess[] // Share page authentication tracking
+  projectUploads    ProjectUpload[] // Client-submitted files via reverse share
 
   @@index([clientCompanyId])
 }
@@ -209,6 +211,30 @@ model VideoAsset {
   @@index([videoId, category])
   @@index([videoId, uploadedBySessionId])
   @@index([commentId])
+}
+
+// Client-submitted files via the reverse share feature (project-level, not attached to a video)
+model ProjectUpload {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  fileName    String
+  fileSize    BigInt
+  fileType    String  @default("application/octet-stream")
+  storagePath String
+  category    String?
+
+  uploadedBySessionId String?
+  uploadedByName      String?
+  uploadedByEmail     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([projectId, createdAt])
+  @@index([uploadedBySessionId])
 }
 
 enum VideoStatus {

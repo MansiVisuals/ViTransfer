@@ -54,8 +54,8 @@ const tusServer: Server = new Server({
           }
         }
 
-        // Share tokens can only upload assets (not videos)
-        if (!upload.metadata?.assetId) {
+        // Share tokens can only upload assets or project uploads (not videos)
+        if (!upload.metadata?.assetId && !upload.metadata?.projectUploadId) {
           throw {
             status_code: 403,
             body: 'Share tokens can only upload assets'
@@ -78,66 +78,79 @@ const tusServer: Server = new Server({
           }
         }
 
-        // Verify the asset belongs to the share token's project and is a client asset
-        const asset = await prisma.videoAsset.findUnique({
-          where: { id: upload.metadata.assetId as string },
-          select: {
-            uploadedBy: true,
-            uploadedBySessionId: true,
-            video: { select: { projectId: true } },
-          },
-        })
+        if (upload.metadata?.projectUploadId) {
+          // Reverse share upload — verify the ProjectUpload record
+          const projectUpload = await prisma.projectUpload.findUnique({
+            where: { id: upload.metadata.projectUploadId as string },
+            select: { projectId: true, uploadedBySessionId: true },
+          })
 
-        if (!asset) {
-          throw {
-            status_code: 404,
-            body: 'Asset record not found'
+          if (!projectUpload) {
+            throw { status_code: 404, body: 'Upload record not found' }
           }
-        }
 
-        // Prevent share tokens from uploading to admin-created asset records
-        if (asset.uploadedBy !== 'client') {
-          throw {
-            status_code: 403,
-            body: 'Access denied'
+          if (projectUpload.projectId !== sharePayload.projectId) {
+            throw { status_code: 403, body: 'Upload does not belong to your project' }
           }
-        }
 
-        if (asset.video.projectId !== sharePayload.projectId) {
-          throw {
-            status_code: 403,
-            body: 'Asset does not belong to your project'
+          if (projectUpload.uploadedBySessionId !== sharePayload.sessionId) {
+            throw { status_code: 403, body: 'Upload does not belong to your session' }
           }
-        }
 
-        if (asset.uploadedBySessionId !== sharePayload.sessionId) {
-          throw {
-            status_code: 403,
-            body: 'Asset does not belong to your session'
+          const project = await prisma.project.findUnique({
+            where: { id: sharePayload.projectId },
+            select: { allowReverseShare: true },
+          })
+
+          if (!project?.allowReverseShare) {
+            throw { status_code: 403, body: 'File submissions are not enabled for this project' }
           }
-        }
+        } else {
+          // Comment attachment upload — verify VideoAsset record
+          const asset = await prisma.videoAsset.findUnique({
+            where: { id: upload.metadata.assetId as string },
+            select: {
+              uploadedBy: true,
+              uploadedBySessionId: true,
+              video: { select: { projectId: true } },
+            },
+          })
 
-        // Check that client asset upload is enabled for this project
-        const project = await prisma.project.findUnique({
-          where: { id: sharePayload.projectId },
-          select: { allowClientAssetUpload: true },
-        })
+          if (!asset) {
+            throw { status_code: 404, body: 'Asset record not found' }
+          }
 
-        if (!project?.allowClientAssetUpload) {
-          throw {
-            status_code: 403,
-            body: 'File attachments are not enabled for this project'
+          if (asset.uploadedBy !== 'client') {
+            throw { status_code: 403, body: 'Access denied' }
+          }
+
+          if (asset.video.projectId !== sharePayload.projectId) {
+            throw { status_code: 403, body: 'Asset does not belong to your project' }
+          }
+
+          if (asset.uploadedBySessionId !== sharePayload.sessionId) {
+            throw { status_code: 403, body: 'Asset does not belong to your session' }
+          }
+
+          const project = await prisma.project.findUnique({
+            where: { id: sharePayload.projectId },
+            select: { allowClientAssetUpload: true },
+          })
+
+          if (!project?.allowClientAssetUpload) {
+            throw { status_code: 403, body: 'File attachments are not enabled for this project' }
           }
         }
       }
 
       const videoId = upload.metadata?.videoId as string
       const assetId = upload.metadata?.assetId as string
+      const projectUploadId = upload.metadata?.projectUploadId as string
 
-      if (!videoId && !assetId) {
+      if (!videoId && !assetId && !projectUploadId) {
         throw {
           status_code: 400,
-          body: 'Missing required metadata: videoId or assetId'
+          body: 'Missing required metadata: videoId, assetId, or projectUploadId'
         }
       }
 
@@ -213,6 +226,21 @@ const tusServer: Server = new Server({
         }
       }
 
+      if (projectUploadId && isAdmin) {
+        // Admin project upload — verify record exists
+        const projectUpload = await prisma.projectUpload.findUnique({
+          where: { id: projectUploadId },
+          select: { id: true },
+        })
+
+        if (!projectUpload) {
+          throw {
+            status_code: 404,
+            body: 'Upload record not found'
+          }
+        }
+      }
+
       return { metadata: upload.metadata }
     } catch (error) {
       logError('[UPLOAD] Error in onUploadCreate:', error)
@@ -224,14 +252,17 @@ const tusServer: Server = new Server({
     const tusFilePath = path.join(TUS_UPLOAD_DIR, upload.id)
     const videoId = upload.metadata?.videoId as string
     const assetId = upload.metadata?.assetId as string
+    const projectUploadId = upload.metadata?.projectUploadId as string
 
     try {
       if (videoId) {
         return await handleVideoUploadFinish(tusFilePath, upload, videoId, tusServer)
       } else if (assetId) {
         return await handleAssetUploadFinish(tusFilePath, upload, assetId, tusServer)
+      } else if (projectUploadId) {
+        return await handleProjectUploadFinish(tusFilePath, upload, projectUploadId, tusServer)
       } else {
-        logMessage('[UPLOAD] No videoId or assetId in upload metadata')
+        logMessage('[UPLOAD] No videoId, assetId, or projectUploadId in upload metadata')
         return {}
       }
     } catch (error) {
@@ -344,6 +375,44 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
   })
 
   logMessage(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
+
+  await cleanupTUSFile(tusFilePath)
+
+  return {}
+}
+
+async function handleProjectUploadFinish(tusFilePath: string, upload: any, projectUploadId: string, tusServer: any) {
+  const projectUpload = await prisma.projectUpload.findUnique({
+    where: { id: projectUploadId }
+  })
+
+  if (!projectUpload) {
+    logMessage(`[UPLOAD] ProjectUpload not found: ${projectUploadId}`)
+    await cleanupTUSFile(tusFilePath)
+    throw new Error(`Upload record not found: ${projectUploadId}`)
+  }
+
+  const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
+
+  await validateAssetFile(tusFilePath, upload.metadata?.filename as string)
+
+  const { uploadFile, initStorage } = await import('@/lib/storage')
+  await initStorage()
+
+  const fileStream = (tusServer.datastore as any).read(upload.id)
+  const actualFileType = upload.metadata?.filetype as string || 'application/octet-stream'
+
+  await uploadFile(projectUpload.storagePath, fileStream, fileSize, actualFileType)
+
+  await prisma.projectUpload.update({
+    where: { id: projectUploadId },
+    data: {
+      fileType: actualFileType,
+      fileSize: BigInt(fileSize),
+    },
+  })
+
+  logMessage(`[UPLOAD] ProjectUpload complete: ${projectUploadId}`)
 
   await cleanupTUSFile(tusFilePath)
 

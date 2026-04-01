@@ -50,6 +50,7 @@ interface Project {
   applyPreviewLut: boolean
   allowAssetDownload: boolean
   allowClientAssetUpload: boolean
+  allowReverseShare: boolean
   clientCanApprove: boolean
   usePreviewForApprovedPlayback: boolean
   showClientTutorial: boolean
@@ -101,6 +102,7 @@ export default function ProjectSettingsPage() {
   const [applyPreviewLut, setApplyPreviewLut] = useState(true)
   const [allowAssetDownload, setAllowAssetDownload] = useState(true)
   const [allowClientAssetUpload, setAllowClientAssetUpload] = useState(false)
+  const [allowReverseShare, setAllowReverseShare] = useState(false)
   const [clientCanApprove, setClientCanApprove] = useState(true)
   const [usePreviewForApprovedPlayback, setUsePreviewForApprovedPlayback] = useState(false)
   const [showClientTutorial, setShowClientTutorial] = useState(true)
@@ -196,6 +198,7 @@ export default function ProjectSettingsPage() {
         setApplyPreviewLut(data.applyPreviewLut ?? true)
         setAllowAssetDownload(data.allowAssetDownload ?? true)
         setAllowClientAssetUpload(data.allowClientAssetUpload ?? false)
+        setAllowReverseShare(data.allowReverseShare ?? false)
         setClientCanApprove(data.clientCanApprove ?? true)
         setUsePreviewForApprovedPlayback(data.usePreviewForApprovedPlayback ?? false)
         setShowClientTutorial(data.showClientTutorial ?? true)
@@ -316,6 +319,7 @@ export default function ProjectSettingsPage() {
         applyPreviewLut,
         allowAssetDownload,
         allowClientAssetUpload,
+        allowReverseShare,
         clientCanApprove,
         usePreviewForApprovedPlayback,
         showClientTutorial,
@@ -797,6 +801,19 @@ export default function ProjectSettingsPage() {
                   />
                 </div>
 
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="allowReverseShare">{t('allowReverseShare')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('allowReverseShareDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowReverseShare"
+                    checked={allowReverseShare}
+                    onCheckedChange={setAllowReverseShare}
+                  />
+                </div>
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
                     <Label htmlFor="showClientTutorial">{t('showClientTutorial')}</Label>

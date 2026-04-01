@@ -16,6 +16,7 @@ interface ShareTutorialProps {
   hideFeedback?: boolean
   clientCanApprove?: boolean
   allowAssetDownload?: boolean
+  allowReverseShare?: boolean
   isGuest?: boolean
   /** Whether the player view is active (vs grid view) */
   inPlayerView: boolean
@@ -28,6 +29,7 @@ export function ShareTutorial({
   hideFeedback = false,
   clientCanApprove = true,
   allowAssetDownload = true,
+  allowReverseShare = false,
   isGuest = false,
   inPlayerView,
 }: ShareTutorialProps) {
@@ -80,6 +82,19 @@ export function ShareTutorial({
             description: t('gridDescription'),
           },
         })
+      }
+
+      if (!isGuest && (allowAssetDownload || allowReverseShare)) {
+        const actionsEl = document.querySelector('[data-tutorial="grid-actions"]')
+        if (actionsEl) {
+          steps.push({
+            element: '[data-tutorial="grid-actions"]',
+            popover: {
+              title: t('gridActionsTitle'),
+              description: t('gridActionsDescription'),
+            },
+          })
+        }
       }
     } else {
       // Player view steps
@@ -212,12 +227,12 @@ export function ShareTutorial({
     steps.push({
       popover: {
         title: t('doneTitle'),
-        description: t('doneDescription'),
+        description: `${t('doneDescription')} <a href="https://github.com/MansiVisuals/ViTransfer/wiki/Client-Guide" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;opacity:0.8">${t('doneLearnMore')}</a>`,
       },
     })
 
     return steps
-  }, [inPlayerView, watermarkEnabled, hideFeedback, clientCanApprove, allowAssetDownload, isGuest, t, stepKey])
+  }, [inPlayerView, watermarkEnabled, hideFeedback, clientCanApprove, allowAssetDownload, allowReverseShare, isGuest, t, stepKey])
 
   const runDriver = useCallback((steps: DriveStep[], onComplete?: () => void) => {
     if (steps.length === 0) return

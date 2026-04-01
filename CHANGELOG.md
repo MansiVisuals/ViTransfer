@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preview LUT support — a 3D LUT (`previewlut.cube`) is applied during transcoding for color-calibrated previews. Toggleable per-project and as a global default in settings. LUT crafted and provided for ViTransfer by colorist Fred ([@fredflx](https://github.com/fredflx) — [yechandocolor.com](https://yechandocolor.com)).
 - "Download All" button in the download modal — downloads the video and all assets together as a single ZIP file.
 - "Download All Videos" button on the share page grid view — downloads all approved videos as a single ZIP file.
+- Reverse share — projects can now accept client file uploads via the share page. Enable per-project in settings. Uploaded files appear in a dedicated "Client Uploads" block on the admin project page.
+- Bulk select on the admin project page — video assets and client uploads now support multi-select with a bulk action bar for downloading or deleting multiple files at once.
 
 ### Changed
 - Replaced the admin header email display and standalone sign out button with a compact icon-only user button with dropdown menu showing name, email, role, and sign out option.

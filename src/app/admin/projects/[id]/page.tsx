@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
-import { ArrowLeft, Settings, ArrowUpDown, Video, Upload } from 'lucide-react'
+import ProjectUploadsBlock from '@/components/ProjectUploadsBlock'
+import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { useTranslations } from 'next-intl'
 import { logError } from '@/lib/logging'
@@ -218,6 +219,21 @@ export default function ProjectPage() {
               />
             </div>
           </div>
+
+          {/* Client Uploads block — only shown when reverse share is enabled */}
+          {project.allowReverseShare && (
+            <div className="min-w-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <span className={iconBadgeClassName}>
+                    <FolderUp className={iconBadgeIconClassName} />
+                  </span>
+                  {t('clientUploads')}
+                </h2>
+              </div>
+              <ProjectUploadsBlock projectId={project.id} />
+            </div>
+          )}
         </div>
       </div>
     </div>

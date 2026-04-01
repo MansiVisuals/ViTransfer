@@ -19,6 +19,7 @@ import ThemeToggle from '@/components/ThemeToggle'
 import LanguageToggle from '@/components/LanguageToggle'
 import { ShareTutorial } from '@/components/ShareTutorial'
 import PrivacyBanner, { PRIVACY_STORAGE_KEY } from '@/components/PrivacyBanner'
+import ReverseShareUploadPanel from '@/components/ReverseShareUploadPanel'
 
 interface SharePageClientProps {
   token: string
@@ -915,11 +916,45 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               hideFeedback={project.hideFeedback}
               clientCanApprove={project.clientCanApprove}
               allowAssetDownload={project.allowAssetDownload}
+              allowReverseShare={project.allowReverseShare}
               isGuest={isGuest}
               inPlayerView={false}
             />
           )}
         </div>
+
+        {/* Download all + reverse share upload — top-left, mirroring the toggles */}
+        {(() => {
+          if (isGuest) return null
+          const approvedCount = project.videosByName
+            ? Object.values(project.videosByName as Record<string, any[]>)
+                .filter((versions) => versions.some((v: any) => v.approved))
+                .length
+            : 0
+          const showDownloadAll = project.allowAssetDownload && approvedCount >= 2
+          const showUpload = project.allowReverseShare && shareToken
+          if (!showDownloadAll && !showUpload) return null
+          return (
+            <div className="absolute top-3 left-3 z-20 flex items-center gap-2" data-tutorial="grid-actions">
+              {showDownloadAll && (
+                <button
+                  onClick={handleDownloadAll}
+                  disabled={downloadingAll}
+                  className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {downloadingAll ? <Loader2 className="h-5 w-5 text-foreground animate-spin" /> : <Download className="h-5 w-5 text-foreground" />}
+                  <span className="hidden sm:inline text-sm font-medium text-foreground">{t('downloadAllVideos', { count: approvedCount })}</span>
+                </button>
+              )}
+              {showUpload && (
+                <ReverseShareUploadPanel
+                  shareToken={shareToken}
+                  shareSlug={token}
+                />
+              )}
+            </div>
+          )
+        })()}
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8" data-tutorial="video-grid">
             <ThumbnailGrid
@@ -932,30 +967,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               clientName={isGuest ? undefined : project.clientName}
             />
           </div>
-          {/* Download All approved videos */}
-          {(() => {
-            if (isGuest || !project.allowAssetDownload || !project.videosByName) return null
-            const approvedCount = Object.values(project.videosByName as Record<string, any[]>)
-              .filter((versions) => versions.some((v: any) => v.approved))
-              .length
-            if (approvedCount < 2) return null
-            return (
-              <div className="px-3 sm:px-6 lg:px-8 pb-4">
-                <button
-                  onClick={handleDownloadAll}
-                  disabled={downloadingAll}
-                  className="w-full max-w-md mx-auto flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-primary text-primary hover:bg-primary/5 transition-colors text-sm font-medium disabled:opacity-50"
-                >
-                  {downloadingAll ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  {t('downloadAllVideos', { count: approvedCount })}
-                </button>
-              </div>
-            )
-          })()}
           {/* Powered by footer */}
           <div className="pb-4 text-center">
             <a
@@ -1003,6 +1014,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 hideFeedback={project.hideFeedback}
                 clientCanApprove={project.clientCanApprove}
                 allowAssetDownload={project.allowAssetDownload}
+                allowReverseShare={project.allowReverseShare}
                 isGuest={isGuest}
                 inPlayerView={true}
               />

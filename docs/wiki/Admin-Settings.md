@@ -183,6 +183,7 @@ Subscribe to project deadlines from any calendar app (Google Calendar, Apple Cal
 - Max comment attachments override.
 - Allow downloads.
 - Allow client asset uploads.
+- Allow client file submissions (reverse share): clients can upload files directly to the project from the share page without attaching them to a comment. Uploaded files are visible in a "Client Uploads" block on the admin project page.
 - Client can approve (disable for admin-only approval).
 - Hide feedback from other clients.
 - Restrict comments to latest version only.

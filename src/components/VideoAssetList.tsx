@@ -17,7 +17,9 @@ import {
   Copy,
   Package,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Square,
+  CheckSquare,
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { formatFileSize } from '@/lib/utils'
@@ -54,6 +56,9 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   const [error, setError] = useState<string | null>(null)
   const [currentThumbnailPath, setCurrentThumbnailPath] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(!defaultCollapsed)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDownloading, setBulkDownloading] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const fetchAssets = useCallback(async () => {
     try {
@@ -239,6 +244,52 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
       })
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === assets.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(assets.map(a => a.id)))
+    }
+  }
+
+  const handleBulkDownload = async () => {
+    setBulkDownloading(true)
+    for (const assetId of Array.from(selectedIds)) {
+      await new Promise<void>((resolve) => {
+        apiFetch(`/api/videos/${videoId}/assets/${assetId}/download-token`, { method: 'POST' })
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(({ url }) => { triggerDownload(url) })
+          .catch(() => {})
+          .finally(resolve)
+      })
+    }
+    setBulkDownloading(false)
+  }
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`${t('deleteAssetConfirm')} (${selectedIds.size})?`)) return
+    setBulkDeleting(true)
+    const toDelete = Array.from(selectedIds)
+    for (const assetId of toDelete) {
+      try {
+        await apiDelete(`/api/videos/${videoId}/assets/${assetId}`)
+        setAssets(prev => prev.filter(a => a.id !== assetId))
+        setSelectedIds(prev => { const next = new Set(prev); next.delete(assetId); return next })
+      } catch {}
+    }
+    setBulkDeleting(false)
+    if (onAssetDeleted) onAssetDeleted()
+  }
+
   const isCurrentThumbnail = (asset: VideoAsset) => {
     if (!currentThumbnailPath) return false
     // Check if this asset's storage path matches the video's thumbnailPath
@@ -287,6 +338,9 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
   }
 
   // Expanded view - full asset list
+  const allSelected = assets.length > 0 && selectedIds.size === assets.length
+  const someSelected = selectedIds.size > 0
+
   return (
     <>
       <div className="space-y-2">
@@ -299,24 +353,56 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
             <span>{t('assets')} ({assets.length})</span>
             <ChevronUp className="h-4 w-4" />
           </button>
-          {assets.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCopyModal(true)}
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              {t('copyToVersion')}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {assets.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCopyModal(true)}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                {t('copyToVersion')}
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Bulk action bar */}
+        {someSelected && (
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/60 border text-sm mb-2">
+            <button type="button" onClick={toggleSelectAll} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+              {allSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+              <span>{selectedIds.size} / {assets.length}</span>
+            </button>
+            <div className="flex-1" />
+            <Button type="button" variant="outline" size="sm" onClick={handleBulkDownload} disabled={bulkDownloading || bulkDeleting}>
+              {bulkDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+              {t('downloadAsset')}
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting || bulkDownloading} className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60">
+              {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+              {t('deleteAsset')}
+            </Button>
+          </div>
+        )}
+
         <div className="space-y-2">
-          {assets.map((asset) => (
+          {assets.map((asset) => {
+            const isSelected = selectedIds.has(asset.id)
+            return (
             <div
               key={asset.id}
-              className="flex items-center gap-3 rounded-md border bg-card p-2 transition-colors hover:bg-accent/50"
+              className={`flex items-center gap-3 rounded-md border bg-card p-2 transition-colors hover:bg-accent/50 ${isSelected ? 'ring-1 ring-primary/30 bg-primary/5' : ''}`}
             >
+              <button
+                type="button"
+                onClick={() => toggleSelect(asset.id)}
+                className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                aria-label="Select"
+              >
+                {isSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
+              </button>
               {getAssetIcon(asset)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{asset.fileName}</p>
@@ -373,7 +459,8 @@ export function VideoAssetList({ videoId, videoName, versionLabel, projectId, on
                 </Button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 

@@ -303,6 +303,10 @@ export async function PATCH(
       updateData.allowClientAssetUpload = validatedBody.allowClientAssetUpload
     }
 
+    if (validatedBody.allowReverseShare !== undefined) {
+      updateData.allowReverseShare = validatedBody.allowReverseShare
+    }
+
     if (validatedBody.clientCanApprove !== undefined) {
       updateData.clientCanApprove = validatedBody.clientCanApprove
     }

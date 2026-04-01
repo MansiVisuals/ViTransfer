@@ -168,7 +168,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
             <CardHeader
               className={cn(
                 'cursor-pointer hover:bg-accent/50 transition-colors',
-                'flex flex-row items-center justify-between space-y-0 py-3'
+                'flex flex-row items-center justify-between space-y-0 py-3 px-3 sm:px-6'
               )}
               onClick={() => toggleGroup(groupName)}
             >
@@ -241,7 +241,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
             </CardHeader>
 
             {isExpanded && (
-              <CardContent className="border-t border-border pt-0 space-y-4">
+              <CardContent className="border-t border-border pt-0 px-3 sm:px-6 space-y-4">
                 {/* Upload new version for this video */}
                 {projectStatus !== 'APPROVED' && (
                   <div className="mt-4">

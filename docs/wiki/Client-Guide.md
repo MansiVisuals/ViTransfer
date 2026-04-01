@@ -39,6 +39,11 @@ After authentication you see a thumbnail grid of all videos in the project:
 
 Above the grid you can see the project title, your name, and an optional project description.
 
+In the top-left corner of the grid, depending on what the project admin has enabled, you may see:
+
+- **Download All Videos** — downloads all approved videos as a single ZIP file.
+- **Submit Files** — opens an upload panel to send files directly to the project (see [Submitting files](#submitting-files-to-the-project) below).
+
 If this is your first visit, an interactive tutorial overlay may guide you through the main features of the review page.
 
 ## Video player
@@ -154,12 +159,25 @@ After approval:
 
 If the project has auto-approve enabled, the entire project is automatically marked as approved once all videos are approved.
 
+## Submitting files to the project
+
+If the project admin has enabled file submissions, a **Submit Files** button appears in the top-left corner of the video grid.
+
+1. Click **Submit Files** to open the upload panel.
+2. Drag and drop files into the panel, or click inside it to browse.
+3. Up to 10 files can be queued at once. Unsupported file types are flagged immediately.
+4. Click **Submit Files** in the panel footer to start uploading. Progress is shown per file.
+5. Once all files are uploaded, click **Done** to close the panel.
+
+Files you submit are visible to the project admin but are not attached to any specific video or comment — they go directly to the project.
+
 ## Downloading
 
 Download options appear after a video has been approved (not available in guest mode):
 
 - Click the **Download** button to download the original file.
 - If the project has additional assets (images, audio, project files), a download dialog lets you select which files to download.
+- If the project has multiple approved videos and downloads are enabled, a **Download All Videos** button appears in the top-left corner of the grid to download everything as a single ZIP.
 
 Unapproved videos cannot be downloaded — only the watermarked preview is shown for review.
 

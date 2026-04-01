@@ -93,7 +93,35 @@
 4. Per-project client notification schedules can be set under project settings (DAILY/WEEKLY with specific time and day).
 5. Customize the email content via **Settings > Email Templates** (CLIENT_ACTIVITY_SUMMARY and ADMIN_ACTIVITY_SUMMARY templates).
 
+## Using reverse share (client file submissions)
+
+Reverse share lets clients upload files directly to a project from the share page — useful for collecting raw footage, audio, project files, or any deliverable without requiring a comment.
+
+**Enabling it:**
+1. Open the project, go to **Settings**.
+2. Under **Client Share Page**, enable **Allow Client File Submissions**.
+3. Save. A "Submit Files" button now appears in the top-left corner of the client share page.
+
+**Viewing submitted files (admin):**
+1. Open the project page in the admin panel.
+2. A **Client Uploads** block appears below the videos section.
+3. Each entry shows the file name, size, uploader name/email (if authenticated), and upload date.
+4. Click the download icon to download a single file, or the trash icon to delete it.
+
+## Bulk selecting assets and client uploads
+
+Both the **video asset list** (per video) and the **Client Uploads** block support multi-select for bulk download or delete.
+
+1. Click the checkbox on the left of any row to start selecting.
+2. A bulk action bar appears at the top of the list showing the count of selected items.
+3. Click the count to toggle **Select All / Deselect All**.
+4. Click **Download** to download all selected files sequentially.
+5. Click **Delete** to delete all selected files after a single confirmation prompt.
+6. Individual per-row actions still work as before.
+
 ## Admin tips
+- Enable reverse share to collect raw files or deliverables from clients without needing a comment.
+- Use bulk select on video assets and client uploads to download or delete multiple files at once.
 - Use custom URLs for memorable share links.
 - Enable revision tracking for complex projects.
 - Configure watermarks globally or per-project (text, opacity, font size, positions).

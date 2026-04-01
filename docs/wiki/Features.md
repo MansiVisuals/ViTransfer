@@ -1,4 +1,4 @@
-# Features (v0.9.8)
+# Features
 
 ## Core functionality
 - Video upload with resumable TUS uploads; originals preserved at any resolution.
@@ -14,6 +14,8 @@
 - Automated due date reminders via push, external providers, and email (day before or week before).
 - Video version comparison: side-by-side and slider overlay modes with synced playback.
 - Client asset uploads: allow clients to upload files to projects (configurable per project).
+- Reverse share: allow clients to upload files directly to a project without attaching them to a comment. Toggled per project. Uploaded files appear in a dedicated admin block with download and delete.
+- Bulk select on admin project page: multi-select video assets and client uploads for bulk download or bulk delete.
 - Email notifications with scheduling (immediate, hourly, daily, weekly).
 - Activity summary emails: periodic digests for admins and clients.
 - Per-recipient unsubscribe for project emails.
@@ -48,6 +50,7 @@
 - Guest controls (view-only, latest-version restriction).
 - Asset management: images, audio, subtitles, project files, and documents with content validation.
 - Per-version thumbnails from uploaded image assets.
+- Client uploads block: view, download, and delete files submitted by clients via reverse share, with multi-select bulk actions.
 - Configurable global defaults for new projects (resolution, watermark, downloads, comments, approval).
 - Per-project overrides for global settings.
 - Video reprocessing: re-transcode videos when settings change (resolution, watermark).

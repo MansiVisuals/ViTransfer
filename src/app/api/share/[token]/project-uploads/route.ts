@@ -72,6 +72,14 @@ export async function POST(
       return NextResponse.json({ error: 'Valid fileSize is required' }, { status: 400 })
     }
 
+    // Validate optional submitter fields at the system boundary
+    if (authorName !== undefined && authorName !== null && (typeof authorName !== 'string' || authorName.length > 100)) {
+      return NextResponse.json({ error: 'Invalid author name' }, { status: 400 })
+    }
+    if (authorEmail !== undefined && authorEmail !== null && (typeof authorEmail !== 'string' || authorEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authorEmail))) {
+      return NextResponse.json({ error: 'Invalid author email' }, { status: 400 })
+    }
+
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
       select: { maxUploadSizeGB: true },

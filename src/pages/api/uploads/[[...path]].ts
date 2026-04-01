@@ -1,13 +1,15 @@
 import { Server } from '@tus/server'
 import { FileStore } from '@tus/file-store'
 import { prisma } from '@/lib/db'
-import { videoQueue } from '@/lib/queue'
+import { videoQueue, getAssetQueue } from '@/lib/queue'
 import { ALL_ALLOWED_EXTENSIONS } from '@/lib/asset-validation'
+import { uploadFile, initStorage } from '@/lib/storage'
 import path from 'path'
 import fs from 'fs'
 import { Readable } from 'stream'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { logError, logMessage } from '@/lib/logging'
+import { parseBearerToken, verifyAdminAccessToken, verifyShareToken } from '@/lib/auth'
 
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
@@ -29,7 +31,6 @@ const tusServer: Server = new Server({
 
   async onUploadCreate(req, upload) {
     try {
-      const { parseBearerToken, verifyAdminAccessToken, verifyShareToken } = await import('@/lib/auth')
       const bearer = parseBearerToken(req as any)
 
       if (!bearer) {
@@ -292,7 +293,6 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
 
   await validateVideoFile(tusFilePath, upload.metadata?.filename as string)
 
-  const { uploadFile, initStorage } = await import('@/lib/storage')
   await initStorage()
 
   const fileStream = (tusServer.datastore as any).read(upload.id)
@@ -341,9 +341,8 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
 
   const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
 
-  await validateAssetFile(tusFilePath, upload.metadata?.filename as string)
+  await validateUploadedAssetFile(tusFilePath, upload.metadata?.filename as string)
 
-  const { uploadFile, initStorage } = await import('@/lib/storage')
   await initStorage()
 
   const fileStream = (tusServer.datastore as any).read(upload.id)
@@ -365,7 +364,6 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
   })
 
   // Queue asset for magic byte validation in worker
-  const { getAssetQueue } = await import('@/lib/queue')
   const assetQueue = getAssetQueue()
 
   await assetQueue.add('process-asset', {
@@ -394,9 +392,8 @@ async function handleProjectUploadFinish(tusFilePath: string, upload: any, proje
 
   const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
 
-  await validateAssetFile(tusFilePath, upload.metadata?.filename as string)
+  await validateUploadedAssetFile(tusFilePath, upload.metadata?.filename as string)
 
-  const { uploadFile, initStorage } = await import('@/lib/storage')
   await initStorage()
 
   const fileStream = (tusServer.datastore as any).read(upload.id)
@@ -458,7 +455,7 @@ async function validateVideoFile(tusFilePath: string, filename?: string) {
   logMessage(`[UPLOAD] File extension validation passed, magic byte check will run in worker`)
 }
 
-async function validateAssetFile(tusFilePath: string, filename?: string) {
+async function validateUploadedAssetFile(tusFilePath: string, filename?: string) {
   // Validate file extension
   if (filename) {
     const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))

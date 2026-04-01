@@ -218,22 +218,22 @@ export default function ProjectPage() {
                 enableRevisions={project.enableRevisions}
               />
             </div>
-          </div>
 
-          {/* Client Uploads block — only shown when reverse share is enabled */}
-          {project.allowReverseShare && (
-            <div className="min-w-0">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <span className={iconBadgeClassName}>
-                    <FolderUp className={iconBadgeIconClassName} />
-                  </span>
-                  {t('clientUploads')}
-                </h2>
+            {/* Client Uploads block — only shown when reverse share is enabled */}
+            {project.allowReverseShare && (
+              <div className="min-w-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span className={iconBadgeClassName}>
+                      <FolderUp className={iconBadgeIconClassName} />
+                    </span>
+                    {t('clientUploads')}
+                  </h2>
+                </div>
+                <ProjectUploadsBlock projectId={project.id} />
               </div>
-              <ProjectUploadsBlock projectId={project.id} />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -222,8 +222,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
                   </div>
                   {editingGroupName !== groupName && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      {groupVideos.length} {groupVideos.length === 1 ? t('versionSingular') : t('versions')} •
-                      {t('latestLabel')} {latestVideo.versionLabel || `v${latestVideo.version}`}
+                      {groupVideos.length} {groupVideos.length === 1 ? t('versionSingular') : t('versions')} • {t('latestLabel')} {latestVideo.versionLabel || `v${latestVideo.version}`}
                       {enableRevisions && maxRevisions && (
                         <> • {t('revisionsLabel')} {groupVideos.length}/{maxRevisions}</>
                       )}

@@ -199,6 +199,7 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
             </div>
           )}
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {uploads.map((upload) => {
             const uploader = upload.uploadedByName || upload.uploadedByEmail || t('unknownUploader')
             const isSelected = selectedIds.has(upload.id)
@@ -254,6 +255,7 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
               </div>
             )
           })}
+          </div>
         </div>
       )}
     </div>

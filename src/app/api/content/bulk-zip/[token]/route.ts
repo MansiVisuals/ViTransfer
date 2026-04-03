@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
-import { getRedis } from '@/lib/redis'
+import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { logSecurityEvent, trackVideoAccess } from '@/lib/video-access'
 import archiver from 'archiver'
@@ -13,31 +13,6 @@ import { logError, logMessage } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-async function consumeTokenAtomically(
-  redis: ReturnType<typeof getRedis>,
-  tokenKey: string,
-  expectedValue: string
-): Promise<boolean> {
-  const result = await redis.eval(
-    `
-      local current = redis.call('GET', KEYS[1])
-      if not current then
-        return 0
-      end
-      if current ~= ARGV[1] then
-        return -1
-      end
-      redis.call('DEL', KEYS[1])
-      return 1
-    `,
-    1,
-    tokenKey,
-    expectedValue
-  )
-
-  return Number(result) === 1
-}
 
 /**
  * Stream ZIP of all approved videos directly to browser.

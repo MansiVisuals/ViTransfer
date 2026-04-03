@@ -101,6 +101,35 @@ export function getRedisForQueue(): IORedis {
 export const getRedisConnection = getRedis
 
 /**
+ * Atomically consume a single-use Redis token via Lua script.
+ * Returns true if the token was present, matched, and deleted; false otherwise.
+ */
+export async function consumeTokenAtomically(
+  redis: IORedis,
+  tokenKey: string,
+  expectedValue: string
+): Promise<boolean> {
+  const result = await redis.eval(
+    `
+      local current = redis.call('GET', KEYS[1])
+      if not current then
+        return 0
+      end
+      if current ~= ARGV[1] then
+        return -1
+      end
+      redis.call('DEL', KEYS[1])
+      return 1
+    `,
+    1,
+    tokenKey,
+    expectedValue
+  )
+
+  return Number(result) === 1
+}
+
+/**
  * Close Redis connection gracefully
  * Should be called on application shutdown
  */

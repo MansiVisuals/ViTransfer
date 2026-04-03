@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
-import { getRedis } from '@/lib/redis'
+import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { logSecurityEvent, trackVideoAccess } from '@/lib/video-access'
 import archiver from 'archiver'
@@ -11,34 +11,8 @@ import crypto from 'crypto'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError, logMessage } from '@/lib/logging'
 
-
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-async function consumeTokenAtomically(
-  redis: ReturnType<typeof getRedis>,
-  tokenKey: string,
-  expectedValue: string
-): Promise<boolean> {
-  const result = await redis.eval(
-    `
-      local current = redis.call('GET', KEYS[1])
-      if not current then
-        return 0
-      end
-      if current ~= ARGV[1] then
-        return -1
-      end
-      redis.call('DEL', KEYS[1])
-      return 1
-    `,
-    1,
-    tokenKey,
-    expectedValue
-  )
-
-  return Number(result) === 1
-}
 
 /**
  * Stream ZIP file directly to browser - NO memory loading
@@ -79,9 +53,8 @@ export async function GET(
     const rawTokenData = await redis.get(tokenKey)
 
     if (!rawTokenData) {
-      // Invalid/expired download token - not a security event, just expired link
       logMessage('[DOWNLOAD] Invalid or expired zip download token')
-  return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
 
     const tokenData = JSON.parse(rawTokenData)
@@ -105,7 +78,7 @@ export async function GET(
         details: { reason: 'zip-token-fingerprint-mismatch' },
         wasBlocked: true,
       })
-  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     // Get video with project
@@ -115,7 +88,7 @@ export async function GET(
     })
 
     if (!video || video.projectId !== projectId) {
-  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
     // Get all requested assets
@@ -127,14 +100,14 @@ export async function GET(
     })
 
     if (assets.length === 0) {
-  return NextResponse.json({ error: shareMessages.noValidAssetsFound || 'No valid assets found' }, { status: 404 })
+      return NextResponse.json({ error: shareMessages.noValidAssetsFound || 'No valid assets found' }, { status: 404 })
     }
 
     // Atomically consume token after all authorization checks pass.
     // This prevents invalid requesters from burning the token and avoids replay races.
     const consumed = await consumeTokenAtomically(redis, tokenKey, rawTokenData)
     if (!consumed) {
-  return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
+      return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
 
     // Track download analytics (skip for admin sessions)
@@ -187,7 +160,7 @@ export async function GET(
     }
 
     if (appendedCount === 0) {
-  return NextResponse.json({ error: shareMessages.noDownloadableAssetsAvailable || 'No downloadable assets available' }, { status: 404 })
+      return NextResponse.json({ error: shareMessages.noDownloadableAssetsAvailable || 'No downloadable assets available' }, { status: 404 })
     }
 
     // Finalize archive (must be called before streaming)

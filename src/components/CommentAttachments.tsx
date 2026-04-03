@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { FileText, Image, Music, Film, Download, Loader2 } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
+import { formatFileSize } from '@/lib/utils'
 
 interface CommentAsset {
   id: string
@@ -18,14 +19,6 @@ interface CommentAttachmentsProps {
   assets: CommentAsset[]
   videoId: string
   shareToken?: string | null
-}
-
-function formatFileSize(bytes: string | number): string {
-  const size = typeof bytes === 'string' ? parseInt(bytes, 10) : bytes
-  if (isNaN(size) || size === 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(size) / Math.log(1024))
-  return `${(size / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`
 }
 
 function getCategoryIcon(category: string | null, fileType: string) {
@@ -101,7 +94,7 @@ export default function CommentAttachments({
             <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <span className="truncate flex-1 text-foreground">{asset.fileName}</span>
             <span className="text-xs text-muted-foreground flex-shrink-0">
-              {formatFileSize(asset.fileSize)}
+              {formatFileSize(Number(asset.fileSize))}
             </span>
             {isDownloading ? (
               <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin flex-shrink-0" />

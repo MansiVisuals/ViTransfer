@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
-import { initStorage, deleteFile } from '@/lib/storage'
+import { deleteFile } from '@/lib/storage'
 import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
@@ -86,7 +86,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
     }
 
-    await initStorage()
     await deleteFile(upload.storagePath)
     await prisma.projectUpload.delete({ where: { id: upload.id } })
 

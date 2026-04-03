@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { FolderUp, Download, Trash2, Loader2, FileIcon, FileImage, FileVideo, FileMusic, FileArchive, FileText, FilePlay, Square, CheckSquare } from 'lucide-react'
+import { formatFileSize } from '@/lib/utils'
 import { Button } from './ui/button'
 import { apiFetch } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
@@ -20,12 +21,6 @@ interface ProjectUpload {
 
 interface ProjectUploadsBlockProps {
   projectId: string
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
 function formatDate(dateStr: string): string {

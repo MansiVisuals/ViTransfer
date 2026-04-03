@@ -1,12 +1,12 @@
 export const ALLOWED_ASSET_EXTENSIONS = {
   thumbnail: ['.jpg', '.jpeg', '.png'],
-  image: ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.psd', '.ai', '.eps'],
-  audio: ['.wav', '.mp3', '.aac', '.flac', '.m4a'],
+  image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tif', '.tiff', '.psd', '.ai', '.eps'],
+  audio: ['.wav', '.mp3', '.aac', '.flac', '.m4a', '.ogg', '.wma'],
   video: ['.mp4', '.mov', '.avi', '.mkv', '.mxf', '.prores'],
   subtitle: ['.srt', '.vtt', '.ass', '.ssa', '.sub'],
-  project: ['.prproj', '.drp', '.drt', '.dra', '.fcpbundle', '.fcpxml'],
-  document: ['.pdf', '.txt', '.md', '.doc', '.docx'],
-  archive: ['.zip']
+  project: ['.prproj', '.aep', '.fcp', '.drp', '.drt', '.dra', '.fcpbundle', '.fcpxml'],
+  document: ['.pdf', '.txt', '.md', '.doc', '.docx', '.rtf'],
+  archive: ['.zip', '.rar', '.7z', '.tar', '.gz']
 } as const
 
 export const ALL_ALLOWED_EXTENSIONS = [
@@ -19,6 +19,9 @@ export const ALL_ALLOWED_EXTENSIONS = [
   ...ALLOWED_ASSET_EXTENSIONS.document,
   ...ALLOWED_ASSET_EXTENSIONS.archive
 ] as string[]
+
+/** Deduplicated comma-separated string for HTML input accept attribute. */
+export const ACCEPTED_FILE_INPUT = [...new Set(ALL_ALLOWED_EXTENSIONS)].join(',')
 
 export function validateAssetExtension(
   filename: string,

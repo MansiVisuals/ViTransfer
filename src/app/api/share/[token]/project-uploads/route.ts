@@ -4,7 +4,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { getShareContext } from '@/lib/auth'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
-import { initStorage, deleteFile } from '@/lib/storage'
+import { deleteFile } from '@/lib/storage'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
@@ -204,7 +204,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
     }
 
-    await initStorage()
     await deleteFile(upload.storagePath)
     await prisma.projectUpload.delete({ where: { id: upload.id } })
 

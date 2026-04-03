@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { Upload, Loader2, CheckCircle2, AlertCircle, FileIcon, X, RotateCcw, FolderUp } from 'lucide-react'
+import { formatFileSize } from '@/lib/utils'
 import { Button } from './ui/button'
 import {
   Dialog,
@@ -22,24 +23,9 @@ import {
 } from '@/lib/tus-context'
 import { useS3MultipartUpload } from '@/hooks/useS3MultipartUpload'
 import { useStorageProvider } from '@/components/StorageConfigProvider'
+import { ALL_ALLOWED_EXTENSIONS, ACCEPTED_FILE_INPUT } from '@/lib/asset-validation'
 
-const ALLOWED_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff',
-  '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma',
-  '.mp4', '.mov', '.avi', '.mkv', '.mxf', '.prores',
-  '.srt', '.vtt', '.ass', '.ssa', '.sub',
-  '.prproj', '.aep', '.fcp', '.drp', '.drt', '.dra',
-  '.zip', '.rar', '.7z', '.tar', '.gz',
-  '.pdf', '.doc', '.docx', '.txt', '.rtf',
-])
-
-const ACCEPTED_INPUT = Array.from(ALLOWED_EXTENSIONS).join(',')
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-}
+const ALLOWED_EXTENSIONS = new Set(ALL_ALLOWED_EXTENSIONS)
 
 function getFileExtension(filename: string): string {
   const lastDot = filename.lastIndexOf('.')
@@ -353,7 +339,7 @@ export default function ReverseShareUploadPanel({
                 {atLimit ? t('maxFilesReached') : t('dragDropFiles')}
               </p>
               <p className="text-xs text-muted-foreground/60 text-center">{t('supportedFileTypes')}</p>
-              <input ref={fileInputRef} type="file" className="hidden" accept={ACCEPTED_INPUT} multiple onChange={handleFileChange} />
+              <input ref={fileInputRef} type="file" className="hidden" accept={ACCEPTED_FILE_INPUT} multiple onChange={handleFileChange} />
             </div>
           )}
 

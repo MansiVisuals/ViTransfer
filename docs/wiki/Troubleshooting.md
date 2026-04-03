@@ -52,13 +52,35 @@ docker compose logs -f         # Follow all logs in real-time
 
 **Upload fails or times out**
 - Check your reverse proxy body size limit (nginx: `client_max_body_size`, Traefik: `maxRequestBodyBytes`).
-- ViTransfer uses TUS resumable uploads — the upload should resume after a network interruption.
-- Check available disk space on the uploads volume.
-- Verify the uploads directory has correct permissions (writable by the container user).
+- **Local storage**: ViTransfer uses TUS resumable uploads — the upload should resume after a network interruption. Check available disk space and directory permissions.
+- **S3 storage**: uploads use browser-direct multipart presigned URLs. Check your bucket CORS policy and see the [S3 storage](#s3-storage) section above.
 
 **Upload progress stalls**
 - Check network connectivity between client and server.
 - Resumable uploads will continue from where they stopped — refresh and retry.
+
+## S3 storage
+
+**Uploads fail with "Part returned no ETag"**
+- Your bucket CORS policy must expose the `ETag` header. Add `"ExposeHeaders": ["ETag"]` to the CORS configuration. See [Configuration — CORS](Configuration#cors-configuration).
+
+**Uploads fail with CORS errors**
+- The bucket must allow `PUT` requests from your app origin. Check your CORS `AllowedOrigins` matches the URL you use to access ViTransfer (including protocol and port).
+
+**Presigned upload URLs expire before upload completes**
+- Presigned part URLs are valid for 1 hour. Very large files on slow connections may hit this limit. Consider increasing your upload speed or breaking the file into smaller parts (handled automatically by the client).
+
+**Downloads return 404 in S3 mode**
+- Verify the file exists in the bucket at the expected path (e.g. `projects/<id>/videos/...`).
+- Check that the S3 credentials have `GetObject` permission on the bucket.
+
+**Worker fails to process videos**
+- Ensure the S3 credentials have both `GetObject` and `PutObject` permissions.
+- Check worker logs for SDK errors: `docker compose logs worker`.
+- Verify `S3_ENDPOINT`, `S3_BUCKET`, and `S3_REGION` are correct.
+
+**ZIP downloads are slow in S3 mode**
+- ZIP downloads (Download All, single-video-with-assets) stream through the server since the archive must be assembled. Download speed depends on the connection between your server and the S3 store. Co-locating the server and bucket in the same region helps.
 
 ## Email and notifications
 

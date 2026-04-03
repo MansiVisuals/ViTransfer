@@ -12,7 +12,7 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 [![Clean Install Test](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-clean-install.yml/badge.svg)](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-clean-install.yml)
 [![Upgrade Test](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-upgrade.yml/badge.svg)](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-upgrade.yml)
 
-⚠️ **ACTIVE DEVELOPMENT:** ViTransfer is under active development with frequent updates. While fully functional and used in production, features may be replaced, modified, or removed as we work towards v1.0. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
+**v1.0:** ViTransfer is production-ready and used in production by many users. Development continues with occasional improvements and fixes as the platform is near feature-complete. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
 
 💖 **Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
 
@@ -25,7 +25,7 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 4. Open `http://localhost:4321` and login.
 
 ## Documentation (Wiki)
-Full docs live in the GitHub Wiki and are mirrored in `docs/wiki` (v0.9.5).
+Full docs live in the GitHub Wiki and are mirrored in `docs/wiki` (v1.0.0).
 
 - GitHub Wiki: https://github.com/MansiVisuals/ViTransfer/wiki
 - Start here: [docs/wiki/Home.md](docs/wiki/Home.md)

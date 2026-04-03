@@ -3,12 +3,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Settings as SettingsIcon, Save } from 'lucide-react'
+import { Settings as SettingsIcon, Save, Palette, Mail, Video, Shield, Building2, ShieldCheck, FolderCog, Ban } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import { AppearanceSection } from '@/components/settings/AppearanceSection'
+import { BrandingSection } from '@/components/settings/BrandingSection'
+import { PrivacySection } from '@/components/settings/PrivacySection'
 import { NotificationsSection } from '@/components/settings/NotificationsSection'
 import { VideoProcessingSettingsSection } from '@/components/settings/VideoProcessingSettingsSection'
+import { ProjectDefaultsSection } from '@/components/settings/ProjectDefaultsSection'
 import { SecuritySettingsSection } from '@/components/settings/SecuritySettingsSection'
+import { BlocklistSection } from '@/components/settings/BlocklistSection'
 import { apiPatch, apiPost, apiFetch } from '@/lib/api-client'
 
 interface Settings {
@@ -168,10 +173,17 @@ export default function GlobalSettingsPage() {
   const [newDomainReason, setNewDomainReason] = useState('')
   const [blocklistsLoading, setBlocklistsLoading] = useState(false)
 
-  // Collapsible section state (all collapsed by default)
-  const [showBrandingAppearance, setShowBrandingAppearance] = useState(false)
+  // Collapsible section state (all collapsed by default, used on mobile)
+  const [showAppearance, setShowAppearance] = useState(false)
+  const [showBranding, setShowBranding] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
+  const [showProjectDefaults, setShowProjectDefaults] = useState(false)
+  const [showBlocklist, setShowBlocklist] = useState(false)
+
+  // Desktop sidebar navigation
+  const [activeSection, setActiveSection] = useState('appearance')
 
   const applySettingsToForm = useCallback((data: Settings) => {
     setLanguage(data.language || 'en')
@@ -350,10 +362,10 @@ export default function GlobalSettingsPage() {
   }
 
   useEffect(() => {
-    if (showSecuritySettings) {
+    if (showSecuritySettings || showBlocklist || activeSection === 'blocklist') {
       loadBlocklists()
     }
-  }, [showSecuritySettings])
+  }, [showSecuritySettings, showBlocklist, activeSection])
 
   const handleAddIP = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -629,10 +641,89 @@ export default function GlobalSettingsPage() {
     )
   }
 
+  const settingSections = [
+    { id: 'appearance', label: t('appearance.title'), icon: Palette },
+    { id: 'branding', label: t('branding.title'), icon: Building2 },
+    { id: 'privacy', label: t('privacy.title'), icon: ShieldCheck },
+    { id: 'notifications', label: t('notifications.title'), icon: Mail },
+    { id: 'video-processing', label: t('videoProcessing.title'), icon: Video },
+    { id: 'project-defaults', label: t('projectDefaults.title'), icon: FolderCog },
+    { id: 'security', label: t('security.title'), icon: Shield },
+    { id: 'blocklist', label: t('blocklist.title'), icon: Ban },
+  ]
+
+  const appearanceProps = {
+    language, setLanguage, defaultTheme, setDefaultTheme, accentColor, setAccentColor,
+  }
+
+  const brandingProps = {
+    companyName, setCompanyName, appDomain, setAppDomain,
+    brandingLogoUrl: brandingLogoPreview, onUploadLogo: handleLogoUpload,
+    onRemoveLogo: handleLogoRemove, logoUploading, logoError,
+    emailHeaderStyle, setEmailHeaderStyle,
+  }
+
+  const privacyProps = {
+    privacyDisclosureEnabled, setPrivacyDisclosureEnabled,
+    privacyDisclosureText, setPrivacyDisclosureText,
+  }
+
+  const notificationsProps = {
+    smtpServer, setSmtpServer, smtpPort, setSmtpPort,
+    smtpUsername, setSmtpUsername, smtpPassword, setSmtpPassword,
+    smtpFromAddress, setSmtpFromAddress, smtpSecure, setSmtpSecure,
+    testEmailAddress, setTestEmailAddress, testEmailSending, testEmailResult, handleTestEmail,
+    adminNotificationSchedule, setAdminNotificationSchedule,
+    adminNotificationTime, setAdminNotificationTime,
+    adminNotificationDay, setAdminNotificationDay,
+  }
+
+  const videoProcessingProps = {
+    defaultPreviewResolution, setDefaultPreviewResolution,
+    defaultSkipTranscoding, setDefaultSkipTranscoding,
+    defaultWatermarkEnabled, setDefaultWatermarkEnabled,
+    defaultWatermarkText, setDefaultWatermarkText,
+    defaultWatermarkPositions, setDefaultWatermarkPositions,
+    defaultWatermarkOpacity, setDefaultWatermarkOpacity,
+    defaultWatermarkFontSize, setDefaultWatermarkFontSize,
+    defaultApplyPreviewLut, setDefaultApplyPreviewLut,
+  }
+
+  const projectDefaultsProps = {
+    defaultTimestampDisplay, setDefaultTimestampDisplay,
+    autoApproveProject, setAutoApproveProject,
+    defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback,
+    defaultAllowClientAssetUpload, setDefaultAllowClientAssetUpload,
+    defaultWatermarkEnabled,
+  }
+
+  const securityProps = {
+    httpsEnabled, httpsManagedByEnvironment, setHttpsEnabled,
+    hotlinkProtection, setHotlinkProtection,
+    ipRateLimit, setIpRateLimit, sessionRateLimit, setSessionRateLimit,
+    shareSessionRateLimit, setShareSessionRateLimit,
+    shareTokenTtlSeconds, setShareTokenTtlSeconds,
+    passwordAttempts, setPasswordAttempts,
+    maxUploadSizeGB, setMaxUploadSizeGB, maxCommentAttachments, setMaxCommentAttachments,
+    sessionTimeoutValue, setSessionTimeoutValue, sessionTimeoutUnit, setSessionTimeoutUnit,
+    adminSessionTimeoutValue, setAdminSessionTimeoutValue,
+    adminSessionTimeoutUnit, setAdminSessionTimeoutUnit,
+    trackAnalytics, setTrackAnalytics, trackSecurityLogs, setTrackSecurityLogs,
+    viewSecurityEvents, setViewSecurityEvents,
+  }
+
+  const blocklistProps = {
+    blockedIPs, blockedDomains,
+    newIP, setNewIP, newIPReason, setNewIPReason,
+    newDomain, setNewDomain, newDomainReason, setNewDomainReason,
+    onAddIP: handleAddIP, onRemoveIP: handleRemoveIP,
+    onAddDomain: handleAddDomain, onRemoveDomain: handleRemoveDomain,
+    blocklistsLoading,
+  }
+
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <div className="max-w-4xl mx-auto">
         <div className="mb-4 sm:mb-6">
           <div className="flex justify-between items-center gap-4">
             <div>
@@ -664,165 +755,90 @@ export default function GlobalSettingsPage() {
           </div>
         )}
 
-        <div className="space-y-4 sm:space-y-6">
-          <AppearanceSection
-            language={language}
-            setLanguage={setLanguage}
-            defaultTheme={defaultTheme}
-            setDefaultTheme={setDefaultTheme}
-            accentColor={accentColor}
-            setAccentColor={setAccentColor}
-            companyName={companyName}
-            setCompanyName={setCompanyName}
-            appDomain={appDomain}
-            setAppDomain={setAppDomain}
-            brandingLogoUrl={brandingLogoPreview}
-            onUploadLogo={handleLogoUpload}
-            onRemoveLogo={handleLogoRemove}
-            logoUploading={logoUploading}
-            logoError={logoError}
-            emailHeaderStyle={emailHeaderStyle}
-            setEmailHeaderStyle={setEmailHeaderStyle}
-            privacyDisclosureEnabled={privacyDisclosureEnabled}
-            setPrivacyDisclosureEnabled={setPrivacyDisclosureEnabled}
-            privacyDisclosureText={privacyDisclosureText}
-            setPrivacyDisclosureText={setPrivacyDisclosureText}
-            show={showBrandingAppearance}
-            setShow={setShowBrandingAppearance}
-          />
-
-          <NotificationsSection
-            smtpServer={smtpServer}
-            setSmtpServer={setSmtpServer}
-            smtpPort={smtpPort}
-            setSmtpPort={setSmtpPort}
-            smtpUsername={smtpUsername}
-            setSmtpUsername={setSmtpUsername}
-            smtpPassword={smtpPassword}
-            setSmtpPassword={setSmtpPassword}
-            smtpFromAddress={smtpFromAddress}
-            setSmtpFromAddress={setSmtpFromAddress}
-            smtpSecure={smtpSecure}
-            setSmtpSecure={setSmtpSecure}
-            testEmailAddress={testEmailAddress}
-            setTestEmailAddress={setTestEmailAddress}
-            testEmailSending={testEmailSending}
-            testEmailResult={testEmailResult}
-            handleTestEmail={handleTestEmail}
-            adminNotificationSchedule={adminNotificationSchedule}
-            setAdminNotificationSchedule={setAdminNotificationSchedule}
-            adminNotificationTime={adminNotificationTime}
-            setAdminNotificationTime={setAdminNotificationTime}
-            adminNotificationDay={adminNotificationDay}
-            setAdminNotificationDay={setAdminNotificationDay}
-            show={showNotifications}
-            setShow={setShowNotifications}
-          />
-
-          <VideoProcessingSettingsSection
-            defaultPreviewResolution={defaultPreviewResolution}
-            setDefaultPreviewResolution={setDefaultPreviewResolution}
-            defaultSkipTranscoding={defaultSkipTranscoding}
-            setDefaultSkipTranscoding={setDefaultSkipTranscoding}
-            defaultWatermarkEnabled={defaultWatermarkEnabled}
-            setDefaultWatermarkEnabled={setDefaultWatermarkEnabled}
-            defaultWatermarkText={defaultWatermarkText}
-            setDefaultWatermarkText={setDefaultWatermarkText}
-            defaultWatermarkPositions={defaultWatermarkPositions}
-            setDefaultWatermarkPositions={setDefaultWatermarkPositions}
-            defaultWatermarkOpacity={defaultWatermarkOpacity}
-            setDefaultWatermarkOpacity={setDefaultWatermarkOpacity}
-            defaultWatermarkFontSize={defaultWatermarkFontSize}
-            setDefaultWatermarkFontSize={setDefaultWatermarkFontSize}
-            defaultApplyPreviewLut={defaultApplyPreviewLut}
-            setDefaultApplyPreviewLut={setDefaultApplyPreviewLut}
-            defaultTimestampDisplay={defaultTimestampDisplay}
-            setDefaultTimestampDisplay={setDefaultTimestampDisplay}
-            autoApproveProject={autoApproveProject}
-            setAutoApproveProject={setAutoApproveProject}
-            defaultUsePreviewForApprovedPlayback={defaultUsePreviewForApprovedPlayback}
-            setDefaultUsePreviewForApprovedPlayback={setDefaultUsePreviewForApprovedPlayback}
-            defaultAllowClientAssetUpload={defaultAllowClientAssetUpload}
-            setDefaultAllowClientAssetUpload={setDefaultAllowClientAssetUpload}
-            show={showVideoProcessing}
-            setShow={setShowVideoProcessing}
-          />
-
+        {/* Mobile: stacked collapsible cards */}
+        <div className="lg:hidden space-y-4 sm:space-y-6">
+          <AppearanceSection {...appearanceProps} show={showAppearance} setShow={setShowAppearance} />
+          <BrandingSection {...brandingProps} show={showBranding} setShow={setShowBranding} />
+          <PrivacySection {...privacyProps} show={showPrivacy} setShow={setShowPrivacy} />
+          <NotificationsSection {...notificationsProps} show={showNotifications} setShow={setShowNotifications} />
+          <VideoProcessingSettingsSection {...videoProcessingProps} show={showVideoProcessing} setShow={setShowVideoProcessing} />
+          <ProjectDefaultsSection {...projectDefaultsProps} show={showProjectDefaults} setShow={setShowProjectDefaults} />
           <SecuritySettingsSection
+            {...securityProps}
             showSecuritySettings={showSecuritySettings}
             setShowSecuritySettings={setShowSecuritySettings}
-            httpsEnabled={httpsEnabled}
-            httpsManagedByEnvironment={httpsManagedByEnvironment}
-            setHttpsEnabled={setHttpsEnabled}
-            hotlinkProtection={hotlinkProtection}
-            setHotlinkProtection={setHotlinkProtection}
-            ipRateLimit={ipRateLimit}
-            setIpRateLimit={setIpRateLimit}
-            sessionRateLimit={sessionRateLimit}
-            setSessionRateLimit={setSessionRateLimit}
-            shareSessionRateLimit={shareSessionRateLimit}
-            setShareSessionRateLimit={setShareSessionRateLimit}
-            shareTokenTtlSeconds={shareTokenTtlSeconds}
-            setShareTokenTtlSeconds={setShareTokenTtlSeconds}
-            passwordAttempts={passwordAttempts}
-            setPasswordAttempts={setPasswordAttempts}
-            maxUploadSizeGB={maxUploadSizeGB}
-            setMaxUploadSizeGB={setMaxUploadSizeGB}
-            maxCommentAttachments={maxCommentAttachments}
-            setMaxCommentAttachments={setMaxCommentAttachments}
-            sessionTimeoutValue={sessionTimeoutValue}
-            setSessionTimeoutValue={setSessionTimeoutValue}
-            sessionTimeoutUnit={sessionTimeoutUnit}
-            setSessionTimeoutUnit={setSessionTimeoutUnit}
-            adminSessionTimeoutValue={adminSessionTimeoutValue}
-            setAdminSessionTimeoutValue={setAdminSessionTimeoutValue}
-            adminSessionTimeoutUnit={adminSessionTimeoutUnit}
-            setAdminSessionTimeoutUnit={setAdminSessionTimeoutUnit}
-            trackAnalytics={trackAnalytics}
-            setTrackAnalytics={setTrackAnalytics}
-            trackSecurityLogs={trackSecurityLogs}
-            setTrackSecurityLogs={setTrackSecurityLogs}
-            viewSecurityEvents={viewSecurityEvents}
-            setViewSecurityEvents={setViewSecurityEvents}
-            blockedIPs={blockedIPs}
-            blockedDomains={blockedDomains}
-            newIP={newIP}
-            setNewIP={setNewIP}
-            newIPReason={newIPReason}
-            setNewIPReason={setNewIPReason}
-            newDomain={newDomain}
-            setNewDomain={setNewDomain}
-            newDomainReason={newDomainReason}
-            setNewDomainReason={setNewDomainReason}
-            onAddIP={handleAddIP}
-            onRemoveIP={handleRemoveIP}
-            onAddDomain={handleAddDomain}
-            onRemoveDomain={handleRemoveDomain}
-            blocklistsLoading={blocklistsLoading}
           />
+          <BlocklistSection {...blocklistProps} show={showBlocklist} setShow={setShowBlocklist} />
         </div>
 
-        {/* Error notification at bottom */}
+        {/* Desktop: sidebar nav + content panel */}
+        <div className="hidden lg:flex gap-6">
+          <div className="w-56 flex-shrink-0">
+            <nav className="space-y-1 sticky top-6">
+              {settingSections.map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={cn(
+                    'w-full text-left px-3 py-2.5 rounded-md text-sm flex items-center gap-2.5 transition-colors',
+                    activeSection === section.id
+                      ? 'bg-accent text-accent-foreground font-medium'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                  )}
+                >
+                  <section.icon className="w-4 h-4 flex-shrink-0" />
+                  {section.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {activeSection === 'appearance' && (
+              <AppearanceSection {...appearanceProps} show={true} setShow={() => {}} collapsible={false} />
+            )}
+            {activeSection === 'branding' && (
+              <BrandingSection {...brandingProps} show={true} setShow={() => {}} collapsible={false} />
+            )}
+            {activeSection === 'privacy' && (
+              <PrivacySection {...privacyProps} show={true} setShow={() => {}} collapsible={false} />
+            )}
+            {activeSection === 'notifications' && (
+              <NotificationsSection {...notificationsProps} show={true} setShow={() => {}} collapsible={false} />
+            )}
+            {activeSection === 'video-processing' && (
+              <VideoProcessingSettingsSection {...videoProcessingProps} show={true} setShow={() => {}} collapsible={false} />
+            )}
+            {activeSection === 'project-defaults' && (
+              <ProjectDefaultsSection {...projectDefaultsProps} show={true} setShow={() => {}} collapsible={false} />
+            )}
+            {activeSection === 'security' && (
+              <SecuritySettingsSection {...securityProps} showSecuritySettings={true} setShowSecuritySettings={() => {}} collapsible={false} />
+            )}
+            {activeSection === 'blocklist' && (
+              <BlocklistSection {...blocklistProps} show={true} setShow={() => {}} collapsible={false} />
+            )}
+          </div>
+        </div>
+
+        {/* Bottom notifications + save */}
         {error && (
           <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-destructive-visible border-2 border-destructive-visible rounded-lg">
             <p className="text-xs sm:text-sm text-destructive font-medium">{error}</p>
           </div>
         )}
 
-        {/* Success notification at bottom */}
         {success && (
           <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-success-visible border-2 border-success-visible rounded-lg">
             <p className="text-xs sm:text-sm text-success font-medium">{t('savedSuccessfully')}</p>
           </div>
         )}
 
-        {/* Save button at bottom */}
         <div className="mt-6 sm:mt-8 pb-20 lg:pb-24 flex justify-end">
           <Button onClick={handleSave} variant="default" disabled={saving} size="default">
             <Save className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">{saving ? tc('saving') : tc('saveChanges')}</span>
           </Button>
-        </div>
         </div>
       </div>
     </div>

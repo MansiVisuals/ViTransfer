@@ -10,9 +10,10 @@ import { useTranslations } from 'next-intl'
 interface NotificationsSectionProps extends EmailSettingsContentProps {
   show: boolean
   setShow: (value: boolean) => void
+  collapsible?: boolean
 }
 
-export function NotificationsSection({ show, setShow, ...emailProps }: NotificationsSectionProps) {
+export function NotificationsSection({ show, setShow, collapsible, ...emailProps }: NotificationsSectionProps) {
   const [activeTab, setActiveTab] = useState<'email' | 'external' | 'browser'>('email')
   const t = useTranslations('settings')
 
@@ -24,6 +25,7 @@ export function NotificationsSection({ show, setShow, ...emailProps }: Notificat
       open={show}
       onOpenChange={setShow}
       contentClassName="space-y-6 border-t pt-6"
+      collapsible={collapsible}
     >
           <div
             role="tablist"

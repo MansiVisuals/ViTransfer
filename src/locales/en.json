@@ -1081,9 +1081,25 @@
     "testEmailSuccess": "Test email sent successfully! Check your inbox.",
     "failedToSendTest": "Failed to send test email",
 
+    "branding": {
+      "title": "Branding",
+      "description": "Company identity, logo, domain, and email templates"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "description": "GDPR privacy disclosure settings for client pages"
+    },
+    "projectDefaults": {
+      "title": "Project Defaults",
+      "description": "Default behavior settings for new projects"
+    },
+    "blocklist": {
+      "title": "Blocklist",
+      "description": "Manage blocked IP addresses and domains"
+    },
     "appearance": {
-      "title": "Branding & Appearance",
-      "description": "Configure company identity, domain, theme, accent colors, and email templates",
+      "title": "Appearance",
+      "description": "Language, theme, and accent color settings",
       "companyName": "Company Name",
       "companyNamePlaceholder": "e.g., Studio, Your Company Name",
       "companyNameHint": "Displayed in email notifications and throughout the application",
@@ -1354,8 +1370,8 @@
     },
 
     "videoProcessing": {
-      "title": "Default Project Settings",
-      "description": "Defaults applied when creating new projects",
+      "title": "Video Processing",
+      "description": "Transcoding, resolution, LUT, and watermark settings",
       "skipTranscoding": "Skip Transcoding",
       "skipTranscodingHint": "Serve the original file directly without any processing. No watermark, resolution change, or codec conversion will be applied.",
       "skipTranscodingWarning": "Videos will not be transcoded. Playback may not work in all browsers if the original uses unsupported codecs (e.g., ProRes, HEVC).",

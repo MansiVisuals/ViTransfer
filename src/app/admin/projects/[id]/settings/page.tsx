@@ -20,7 +20,8 @@ import { sanitizeSlug, generateRandomSlug, generateSecurePassword } from '@/lib/
 import { apiPatch, apiPost } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
 import Link from 'next/link'
-import { ArrowLeft, Save, RefreshCw, Copy, Check, Calendar } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Copy, Check, Calendar, FileText, Users, Share2, Video, Shield } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 
 interface Project {
@@ -121,12 +122,15 @@ export default function ProjectSettingsPage() {
   const [recipients, setRecipients] = useState<any[]>([])
   const hasRecipientWithEmail = recipients?.some((r: any) => r.email && r.email.trim() !== '') || false
 
-  // Collapsible section state (all collapsed by default)
+  // Collapsible section state (all collapsed by default, used on mobile)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
   const [showClientInfo, setShowClientInfo] = useState(false)
   const [showClientSharePage, setShowClientSharePage] = useState(false)
   const [showVideoProcessing, setShowVideoProcessing] = useState(false)
   const [showSecurity, setShowSecurity] = useState(false)
+
+  // Desktop sidebar navigation
+  const [activeSection, setActiveSection] = useState('project-details')
 
   // Track original processing settings for change detection
   const [originalSettings, setOriginalSettings] = useState({
@@ -453,10 +457,17 @@ export default function ProjectSettingsPage() {
     )
   }
 
+  const settingSections = [
+    { id: 'project-details', label: t('projectDetails'), icon: FileText },
+    { id: 'client-info', label: t('clientInfoNotifications'), icon: Users },
+    { id: 'client-share', label: t('clientSharePage'), icon: Share2 },
+    { id: 'video-processing', label: t('videoProcessing'), icon: Video },
+    { id: 'security', label: t('security'), icon: Shield },
+  ]
+
   return (
     <div className="flex-1 min-h-0 bg-background">
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
-        <div className="max-w-4xl mx-auto">
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
@@ -492,16 +503,11 @@ export default function ProjectSettingsPage() {
           </div>
         )}
 
-	        <div className="space-y-4 sm:space-y-6">
-	          {/* Project Details */}
-	          <CollapsibleSection
-	            className="border-border"
-	            title={t('projectDetails')}
-	            description={t('projectDetailsDescription')}
-	            open={showProjectDetails}
-	            onOpenChange={setShowProjectDetails}
-	            contentClassName="space-y-4 border-t pt-4"
-	          >
+        {/* Section content (shared between mobile and desktop layouts) */}
+        {(() => {
+          // Project Details content
+          const projectDetailsContent = (
+            <>
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="space-y-2">
 	                  <Label htmlFor="title">{t('titleLabel')}</Label>
@@ -696,17 +702,12 @@ export default function ProjectSettingsPage() {
                   )}
                 </div>
               </div>
-	          </CollapsibleSection>
+            </>
+          )
 
-	          {/* Client Information & Notifications */}
-	          <CollapsibleSection
-	            className="border-border"
-	            title={t('clientInfoNotifications')}
-	            description={t('clientInfoNotificationsDescription')}
-	            open={showClientInfo}
-	            onOpenChange={setShowClientInfo}
-	            contentClassName="space-y-6 border-t pt-4"
-	          >
+          // Client Info & Notifications content
+          const clientInfoContent = (
+            <>
               {/* Company/Brand Selection */}
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="space-y-2">
@@ -747,17 +748,12 @@ export default function ProjectSettingsPage() {
 	                  description={t('clientNotificationScheduleDescription')}
 	                />
 	              </div>
-	          </CollapsibleSection>
+            </>
+          )
 
-	          {/* Client Share Page */}
-	          <CollapsibleSection
-	            className="border-border"
-	            title={t('clientSharePage')}
-	            description={t('clientSharePageDescription')}
-	            open={showClientSharePage}
-	            onOpenChange={setShowClientSharePage}
-	            contentClassName="space-y-6 border-t pt-4"
-	          >
+          // Client Share Page content
+          const clientShareContent = (
+            <>
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
@@ -895,17 +891,12 @@ export default function ProjectSettingsPage() {
 	                  </p>
 	                </div>
 	              </div>
-	          </CollapsibleSection>
+            </>
+          )
 
-	          {/* Video Processing Settings */}
-	          <CollapsibleSection
-	            className="border-border"
-	            title={t('videoProcessing')}
-	            description={t('videoProcessingDescription')}
-	            open={showVideoProcessing}
-	            onOpenChange={setShowVideoProcessing}
-	            contentClassName="space-y-6 border-t pt-4"
-	          >
+          // Video Processing content
+          const videoProcessingContent = (
+            <>
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -1076,17 +1067,12 @@ export default function ProjectSettingsPage() {
                 </div>
               </div>
               )}
-	          </CollapsibleSection>
+            </>
+          )
 
-	          {/* Security Settings */}
-	          <CollapsibleSection
-	            className="border-border"
-	            title={t('security')}
-	            description={t('securityDescription')}
-	            open={showSecurity}
-	            onOpenChange={setShowSecurity}
-	            contentClassName="space-y-4 border-t pt-4"
-	          >
+          // Security content
+          const securityContent = (
+            <>
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
 	                <div className="space-y-2">
 	                  <Label>{t('authMethod')}</Label>
@@ -1231,9 +1217,101 @@ export default function ProjectSettingsPage() {
 	                </div>
 	              </div>
 	              )}
-	          </CollapsibleSection>
+            </>
+          )
 
-	        </div>
+          // Helper to wrap content in a CollapsibleSection
+          const Section = ({ id, title, description, open, onOpenChange, collapsible, contentClassName, children }: {
+            id: string; title: string; description: string; open: boolean; onOpenChange: (v: boolean) => void; collapsible?: boolean; contentClassName?: string; children: React.ReactNode
+          }) => (
+            <CollapsibleSection
+              key={id}
+              className="border-border"
+              title={title}
+              description={description}
+              open={open}
+              onOpenChange={onOpenChange}
+              contentClassName={contentClassName || "space-y-4 border-t pt-4"}
+              collapsible={collapsible}
+            >
+              {children}
+            </CollapsibleSection>
+          )
+
+          return (
+            <>
+              {/* Mobile: stacked collapsible cards */}
+              <div className="lg:hidden space-y-4 sm:space-y-6">
+                <Section id="project-details" title={t('projectDetails')} description={t('projectDetailsDescription')} open={showProjectDetails} onOpenChange={setShowProjectDetails}>
+                  {projectDetailsContent}
+                </Section>
+                <Section id="client-info" title={t('clientInfoNotifications')} description={t('clientInfoNotificationsDescription')} open={showClientInfo} onOpenChange={setShowClientInfo} contentClassName="space-y-6 border-t pt-4">
+                  {clientInfoContent}
+                </Section>
+                <Section id="client-share" title={t('clientSharePage')} description={t('clientSharePageDescription')} open={showClientSharePage} onOpenChange={setShowClientSharePage} contentClassName="space-y-6 border-t pt-4">
+                  {clientShareContent}
+                </Section>
+                <Section id="video-processing" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={showVideoProcessing} onOpenChange={setShowVideoProcessing} contentClassName="space-y-6 border-t pt-4">
+                  {videoProcessingContent}
+                </Section>
+                <Section id="security" title={t('security')} description={t('securityDescription')} open={showSecurity} onOpenChange={setShowSecurity}>
+                  {securityContent}
+                </Section>
+              </div>
+
+              {/* Desktop: sidebar nav + content panel */}
+              <div className="hidden lg:flex gap-6">
+                <div className="w-56 flex-shrink-0">
+                  <nav className="space-y-1 sticky top-6">
+                    {settingSections.map((section) => (
+                      <button
+                        key={section.id}
+                        onClick={() => setActiveSection(section.id)}
+                        className={cn(
+                          'w-full text-left px-3 py-2.5 rounded-md text-sm flex items-center gap-2.5 transition-colors',
+                          activeSection === section.id
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                        )}
+                      >
+                        <section.icon className="w-4 h-4 flex-shrink-0" />
+                        {section.label}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  {activeSection === 'project-details' && (
+                    <Section id="project-details" title={t('projectDetails')} description={t('projectDetailsDescription')} open={true} onOpenChange={() => {}} collapsible={false}>
+                      {projectDetailsContent}
+                    </Section>
+                  )}
+                  {activeSection === 'client-info' && (
+                    <Section id="client-info" title={t('clientInfoNotifications')} description={t('clientInfoNotificationsDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
+                      {clientInfoContent}
+                    </Section>
+                  )}
+                  {activeSection === 'client-share' && (
+                    <Section id="client-share" title={t('clientSharePage')} description={t('clientSharePageDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
+                      {clientShareContent}
+                    </Section>
+                  )}
+                  {activeSection === 'video-processing' && (
+                    <Section id="video-processing" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
+                      {videoProcessingContent}
+                    </Section>
+                  )}
+                  {activeSection === 'security' && (
+                    <Section id="security" title={t('security')} description={t('securityDescription')} open={true} onOpenChange={() => {}} collapsible={false}>
+                      {securityContent}
+                    </Section>
+                  )}
+                </div>
+              </div>
+            </>
+          )
+        })()}
 
         {/* Error notification at bottom */}
         {error && (
@@ -1269,7 +1347,6 @@ export default function ProjectSettingsPage() {
           saving={saving}
           reprocessing={reprocessing}
         />
-        </div>
       </div>
     </div>
   )

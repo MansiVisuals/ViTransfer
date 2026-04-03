@@ -43,12 +43,15 @@
 
 Set `STORAGE_PROVIDER=s3` to have uploads and downloads bypass Node.js and go directly between the browser and your object store. No rebuild needed — the setting is read at runtime.
 
-**Compatible stores:** AWS S3, Cloudflare R2, Backblaze B2, MinIO AIStor, Garage, and any S3-compatible API.
+**Tested with:** MinIO AIStor (self-hosted Docker container). Other S3-compatible stores (AWS S3, Cloudflare R2, Backblaze B2, Garage, etc.) should work but have not been tested — please [open an issue](https://github.com/MansiVisuals/ViTransfer/issues) if you run into any problems.
 
 **How it works:**
-- **Uploads** — the browser requests presigned part URLs from ViTransfer, then PUTs each chunk straight to the store. Node.js never touches the file bytes.
-- **Downloads / streaming** — the server generates a short-lived presigned GET URL and issues a 302 redirect. Node.js proxies nothing.
+- **Uploads** — the browser requests presigned part URLs from ViTransfer, then PUTs each chunk straight to the store. Node.js never touches the file bytes. This applies to all uploads: videos, comment attachments, and client file submissions (reverse share).
+- **Individual downloads** — the server generates a short-lived presigned GET URL and issues a 302 redirect. Node.js proxies nothing. This covers single video downloads, asset downloads, and client upload downloads.
+- **ZIP downloads** — "Download All Videos" and single-video-with-assets ZIPs stream file data from S3 through the server, since the archive must be assembled before delivery. The ZIP is streamed to the browser as it is built (not buffered in memory).
 - **Worker** — FFmpeg jobs stream directly from/to object storage via the SDK; no shared volume is needed.
+
+**Important:** Local and S3 storage cannot be mixed. Switching from one to the other does not move or delete any files — they remain where they are — but ViTransfer will only read from the active backend. Projects stored in the previous backend will not work until their files are manually migrated to the new storage. There is no built-in migration tool. This is by design.
 
 **Requirements:**
 1. Create the bucket before starting ViTransfer.

@@ -16,6 +16,8 @@ export interface CollapsibleSectionProps {
   headerClassName?: string
   contentClassName?: string
   iconClassName?: string
+  /** When false, section is always open with no toggle chevron. Default true. */
+  collapsible?: boolean
 }
 
 export function CollapsibleSection({
@@ -28,43 +30,47 @@ export function CollapsibleSection({
   headerClassName,
   contentClassName,
   iconClassName,
+  collapsible = true,
 }: CollapsibleSectionProps) {
   const contentId = React.useId()
+  const isOpen = collapsible ? open : true
 
   const toggle = React.useCallback(() => {
-    onOpenChange(!open)
-  }, [onOpenChange, open])
+    if (collapsible) onOpenChange(!open)
+  }, [collapsible, onOpenChange, open])
 
   return (
     <Card className={className}>
       <CardHeader
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        aria-controls={contentId}
-        className={cn("cursor-pointer hover:bg-accent/50 transition-colors", headerClassName)}
-        onClick={toggle}
-        onKeyDown={(event) => {
+        role={collapsible ? "button" : undefined}
+        tabIndex={collapsible ? 0 : undefined}
+        aria-expanded={collapsible ? isOpen : undefined}
+        aria-controls={collapsible ? contentId : undefined}
+        className={cn(collapsible && "cursor-pointer hover:bg-accent/50 transition-colors", headerClassName)}
+        onClick={collapsible ? toggle : undefined}
+        onKeyDown={collapsible ? (event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault()
             toggle()
           }
-        }}
+        } : undefined}
       >
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>{title}</CardTitle>
             {description ? <CardDescription>{description}</CardDescription> : null}
           </div>
-          {open ? (
-            <ChevronUp className={cn("w-5 h-5 text-muted-foreground flex-shrink-0", iconClassName)} />
-          ) : (
-            <ChevronDown className={cn("w-5 h-5 text-muted-foreground flex-shrink-0", iconClassName)} />
+          {collapsible && (
+            isOpen ? (
+              <ChevronUp className={cn("w-5 h-5 text-muted-foreground flex-shrink-0", iconClassName)} />
+            ) : (
+              <ChevronDown className={cn("w-5 h-5 text-muted-foreground flex-shrink-0", iconClassName)} />
+            )
           )}
         </div>
       </CardHeader>
 
-      {open ? (
+      {isOpen ? (
         <CardContent id={contentId} className={contentClassName}>
           {children}
         </CardContent>

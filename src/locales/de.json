@@ -1081,9 +1081,25 @@
     "testEmailSuccess": "Test-E-Mail erfolgreich gesendet! Prüfe deinen Posteingang.",
     "failedToSendTest": "Test-E-Mail konnte nicht gesendet werden",
 
+    "branding": {
+      "title": "Branding",
+      "description": "Unternehmensidentität, Logo, Domain und E-Mail-Vorlagen"
+    },
+    "privacy": {
+      "title": "Datenschutz",
+      "description": "DSGVO-Datenschutzhinweise für Kundenseiten"
+    },
+    "projectDefaults": {
+      "title": "Projektstandards",
+      "description": "Standardverhalten für neue Projekte"
+    },
+    "blocklist": {
+      "title": "Sperrliste",
+      "description": "Gesperrte IP-Adressen und Domains verwalten"
+    },
     "appearance": {
-      "title": "Branding & Erscheinungsbild",
-      "description": "Unternehmensidentität, Domain, Design, Akzentfarben und E-Mail-Vorlagen konfigurieren",
+      "title": "Erscheinungsbild",
+      "description": "Sprache, Design und Akzentfarbe",
       "companyName": "Unternehmensname",
       "companyNamePlaceholder": "z. B. Studio, Dein Unternehmensname",
       "companyNameHint": "Wird in E-Mail-Benachrichtigungen und in der gesamten Anwendung angezeigt",
@@ -1354,8 +1370,8 @@
     },
 
     "videoProcessing": {
-      "title": "Standard-Projekteinstellungen",
-      "description": "Standardwerte beim Erstellen neuer Projekte",
+      "title": "Videoverarbeitung",
+      "description": "Transkodierung, Auflösung, LUT und Wasserzeichen-Einstellungen",
       "skipTranscoding": "Transkodierung Überspringen",
       "skipTranscodingHint": "Die Originaldatei direkt bereitstellen, ohne jegliche Verarbeitung. Kein Wasserzeichen, keine Auflösungsänderung oder Codec-Konvertierung wird angewendet.",
       "skipTranscodingWarning": "Videos werden nicht transkodiert. Die Wiedergabe funktioniert möglicherweise nicht in allen Browsern, wenn das Original nicht unterstützte Codecs verwendet (z. B. ProRes, HEVC).",

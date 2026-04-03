@@ -1036,9 +1036,25 @@
     "fillSmtpFields": "Vul alle SMTP-velden in voordat je test",
     "testEmailSuccess": "Test-e-mail succesvol verzonden! Controleer je inbox.",
     "failedToSendTest": "Test-e-mail verzenden mislukt",
+    "branding": {
+      "title": "Huisstijl",
+      "description": "Bedrijfsidentiteit, logo, domein en e-mailtemplates"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "description": "AVG-privacyverklaring voor klantpagina's"
+    },
+    "projectDefaults": {
+      "title": "Projectstandaarden",
+      "description": "Standaard gedragsinstellingen voor nieuwe projecten"
+    },
+    "blocklist": {
+      "title": "Blokkeerlijst",
+      "description": "Beheer geblokkeerde IP-adressen en domeinen"
+    },
     "appearance": {
-      "title": "Huisstijl & Uiterlijk",
-      "description": "Beheer je bedrijfsidentiteit, domein, thema, accentkleuren en e-mailtemplates",
+      "title": "Uiterlijk",
+      "description": "Taal, thema en accentkleur instellingen",
       "companyName": "Bedrijfsnaam",
       "companyNamePlaceholder": "bijv. Studio, Je bedrijfsnaam",
       "companyNameHint": "Wordt weergegeven in e-mailnotificaties en in de hele applicatie",
@@ -1303,8 +1319,8 @@
       "browserPushDescription": "Ontvang pushnotificaties rechtstreeks in je browser. Werkt op al je apparaten."
     },
     "videoProcessing": {
-      "title": "Standaard Projectinstellingen",
-      "description": "Standaardinstellingen voor nieuwe projecten",
+      "title": "Videoverwerking",
+      "description": "Transcodering, resolutie, LUT en watermerkinstellingen",
       "skipTranscoding": "Transcodering Overslaan",
       "skipTranscodingHint": "Het originele bestand direct aanbieden zonder enige verwerking. Geen watermerk, resolutiewijziging of codec-conversie wordt toegepast.",
       "skipTranscodingWarning": "Video's worden niet getranscodeerd. Afspelen werkt mogelijk niet in alle browsers als het origineel niet-ondersteunde codecs gebruikt (bijv. ProRes, HEVC).",

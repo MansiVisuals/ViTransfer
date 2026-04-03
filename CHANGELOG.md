@@ -5,10 +5,16 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-04-03
+
+ViTransfer is production-ready and near feature-complete.
+
+**Thank you** to everyone who has contributed to getting ViTransfer to v1.0 — whether you contributed code, joined a discussion, helped debug an issue, opened a bug report, or submitted a feature request. Every bit of involvement has helped shape this project.
+
+A special thanks to [@thinkvp](https://github.com/thinkvp) (Simon), who has been part of the journey since the very first 0.1.0 release. The countless conversations and feedback in those early months helped shape ViTransfer massively. Simon has since created his own hard fork in which he has built a full CRM package around ViTransfer's core — it is absolutely amazing to see a project like ViTransfer inspire people to experiment and make something completely their own.
 
 ### Added
-- S3-compatible storage support. Set `STORAGE_PROVIDER=s3` to route file uploads and downloads directly between the browser and any S3-compatible store (MinIO AIStor, AWS S3, Cloudflare R2, etc.), bypassing Node.js entirely for file data. Uploads use multipart presigned URLs; downloads and video streaming redirect the browser directly to signed object URLs. The local filesystem remains the default.
+- S3-compatible object storage. Set `STORAGE_PROVIDER=s3` to use any S3-compatible store. Uploads use browser-direct multipart presigned URLs; individual downloads redirect via presigned GET URLs; ZIP downloads stream through the server. Tested with MinIO AIStor (self-hosted Docker). Other providers (AWS S3, Cloudflare R2, Backblaze B2, etc.) should work but are untested — [open an issue](https://github.com/MansiVisuals/ViTransfer/issues) if you run into problems. Local storage remains the default. Local and S3 cannot be mixed; switching backends does not migrate files.
 - Preview LUT support — a 3D LUT (`previewlut.cube`) is applied during transcoding for color-calibrated previews. Toggleable per-project and as a global default in settings. LUT crafted and provided for ViTransfer by colorist Fred ([@fredflx](https://github.com/fredflx) — [yechandocolor.com](https://yechandocolor.com)).
 - "Download All" button in the download modal — downloads the video and all assets together as a single ZIP file.
 - "Download All Videos" button on the share page grid view — downloads all approved videos as a single ZIP file.
@@ -16,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bulk select on the admin project page — video assets and client uploads now support multi-select with a bulk action bar for downloading or deleting multiple files at once.
 
 ### Changed
+- Redesigned admin settings pages with sidebar navigation on desktop and collapsible cards on mobile. Global settings split from 4 into 8 focused sections (Appearance, Branding, Privacy, Notifications, Video Processing, Project Defaults, Security, Blocklist). Project settings follow the same pattern with 5 sidebar sections.
 - Replaced the admin header email display and standalone sign out button with a compact icon-only user button with dropdown menu showing name, email, role, and sign out option.
 - "Copy to Version" is now accessible via the bulk action bar after selecting assets — the standalone header button is removed. The target version picker is now scoped to other versions of the same video only, not all videos in the project.
 - Share page and admin share page grid view: replaced floating absolute-positioned buttons with a full-width sticky toolbar (menubar). Left side: Download All / Submit Files (share page) or Back to Project (admin). Right side: language, theme, and tutorial toggles.
@@ -29,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Uploading multiple videos or assets at once no longer fails with "Authentication failed". TUS uploads now automatically refresh expired tokens and retry.
 - Fixed Docker entrypoint not setting ownership of top-level app files (e.g. `package.json`) when remapping PUID/PGID, causing startup permission errors.
 - Keyboard shortcuts button in the comment panel no longer disappears after approving a video.
+- Redis lazy connect race condition causing 500 on first request.
 
 ## [0.9.10] - 2026-03-28
 

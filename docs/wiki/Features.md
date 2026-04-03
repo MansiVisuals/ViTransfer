@@ -66,8 +66,9 @@
 - Next.js 16 + React 19 UI; worker uses CPU-aware FFmpeg presets.
 - BullMQ + Redis background processing for transcoding and notifications.
 - PostgreSQL + Prisma ORM for data access.
+- S3-compatible object storage: optional S3 backend (AWS S3, Cloudflare R2, Backblaze B2, MinIO, etc.) with browser-direct multipart uploads and presigned download redirects. No rebuild needed — switch at runtime via `STORAGE_PROVIDER=s3`.
 - JWT refresh rotation, bearer-only auth, and passkey support.
-- Resumable uploads with progress tracking.
+- Resumable uploads with progress tracking (TUS for local storage, S3 multipart presigned for object storage).
 - Deep linking support (video, version, timestamp, and comment parameters in share URLs).
 - IP anonymization for GDPR-compliant analytics.
 

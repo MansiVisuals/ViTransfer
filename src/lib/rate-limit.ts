@@ -56,11 +56,6 @@ function getIdentifier(request: NextRequest, prefix: string = '', customKey?: st
 
 async function getRateLimitEntry(identifier: string): Promise<RateLimitEntry | null> {
   const redis = getRedis()
-  
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
-  
   const data = await redis.get(identifier)
   if (!data) return null
 
@@ -78,22 +73,12 @@ async function setRateLimitEntry(
   ttlMs: number
 ): Promise<void> {
   const redis = getRedis()
-  
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
-  
   const ttlSeconds = Math.ceil(ttlMs / 1000)
   await redis.setex(identifier, ttlSeconds, JSON.stringify(entry))
 }
 
 async function deleteRateLimitEntry(identifier: string): Promise<void> {
   const redis = getRedis()
-  
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
-  
   await redis.del(identifier)
 }
 
@@ -300,10 +285,6 @@ export async function getRateLimitedEntries(): Promise<Array<{
   try {
     const redis = getRedis()
 
-    if (redis.status !== 'ready') {
-      await redis.connect()
-    }
-
     // Use SCAN instead of KEYS to avoid blocking Redis on large datasets
     const lockedEntries: Array<{
       key: string
@@ -359,11 +340,6 @@ export async function getRateLimitedEntries(): Promise<Array<{
 export async function clearRateLimitByKey(key: string): Promise<number> {
   try {
     const redis = getRedis()
-
-    if (redis.status !== 'ready') {
-      await redis.connect()
-    }
-
     const deleted = await redis.del(key)
     if (deleted === 0) {
       logWarn(`Rate limit key not found in Redis: ${key}`)
@@ -386,10 +362,6 @@ export async function clearRateLimitByKey(key: string): Promise<number> {
 export async function clearAllRateLimits(): Promise<number> {
   try {
     const redis = getRedis()
-
-    if (redis.status !== 'ready') {
-      await redis.connect()
-    }
 
     let clearedCount = 0
     let cursor = '0'

@@ -31,10 +31,6 @@ import { logWarn } from './logging'
 export async function revokeToken(token: string, expiresIn: number): Promise<void> {
   const redis = getRedis()
   
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
-
   // Use the token signature (last part) as the key to save space
   // Format: blacklist:token:{signature}
   const tokenParts = token.split('.')
@@ -63,9 +59,6 @@ export async function revokeToken(token: string, expiresIn: number): Promise<voi
 export async function isTokenRevoked(token: string): Promise<boolean> {
   const redis = getRedis()
   
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
 
   const tokenParts = token.split('.')
   const signature = tokenParts[tokenParts.length - 1]
@@ -90,9 +83,6 @@ export async function isTokenRevoked(token: string): Promise<boolean> {
 export async function revokeAllUserTokens(userId: string): Promise<void> {
   const redis = getRedis()
 
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
 
   // Store a flag that user's session is invalidated
   // This can be checked before validating any token
@@ -116,9 +106,6 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
 export async function isUserTokensRevoked(userId: string, tokenIssuedAt?: number): Promise<boolean> {
   const redis = getRedis()
 
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
 
   const key = `blacklist:user:${userId}`
   const revocationTimestamp = await redis.get(key)
@@ -149,9 +136,6 @@ export async function isUserTokensRevoked(userId: string, tokenIssuedAt?: number
 export async function clearUserRevocation(userId: string): Promise<void> {
   const redis = getRedis()
 
-  if (redis.status !== 'ready') {
-    await redis.connect()
-  }
 
   const key = `blacklist:user:${userId}`
   await redis.del(key)

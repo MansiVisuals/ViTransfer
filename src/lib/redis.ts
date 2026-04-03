@@ -35,7 +35,6 @@ export function getRedis(): IORedis {
     password: process.env.REDIS_PASSWORD,
     maxRetriesPerRequest: 3,
     enableReadyCheck: true,
-    lazyConnect: true,
     retryStrategy: (times) => {
       if (times > 3) {
         logError('Redis connection failed after 3 retries')

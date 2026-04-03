@@ -280,6 +280,7 @@ export default function ThumbnailReel({
                             sizes="(min-width: 1024px) 150px, (min-width: 640px) 110px, 80px"
                             className="object-contain"
                             draggable={false}
+                            unoptimized
                           />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center bg-muted">

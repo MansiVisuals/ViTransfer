@@ -3,7 +3,8 @@ import { verifyVideoAccessToken, detectHotlinking, trackVideoAccess, logSecurity
 import { getRedis } from '@/lib/redis'
 import { prisma } from '@/lib/db'
 import { createReadStream, existsSync, statSync, ReadStream } from 'fs'
-import { getFilePath, sanitizeFilenameForHeader, getVideoContentType } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader, getVideoContentType, isS3Mode } from '@/lib/storage'
+import { s3GetPresignedDownloadUrl, s3GetPresignedStreamUrl, s3FileExists } from '@/lib/s3-storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
 import { getAuthContext } from '@/lib/auth'
@@ -254,7 +255,60 @@ export async function GET(
     if (!filePath) {
   return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
     }
-    
+
+    // ── S3 mode: redirect browser directly to MinIO ───────────────────────────
+    if (isS3Mode()) {
+      const fileExistsOnS3 = await s3FileExists(filePath)
+      if (!fileExistsOnS3) {
+        return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
+      }
+
+      // Track non-range access before redirecting
+      if (!isRangeRequest && !isAdminRequest) {
+        await trackVideoAccess({
+          videoId: verifiedToken.videoId,
+          projectId: verifiedToken.projectId,
+          sessionId,
+          tokenId: token,
+          request,
+          quality: verifiedToken.quality,
+          bandwidth: 0,
+          eventType: isDownload ? 'DOWNLOAD_COMPLETE' : 'PAGE_VISIT',
+          assetId: assetId || undefined,
+        }).catch(() => {})
+      }
+
+      if (isDownload) {
+        const rawFilename = filename || (video.approved
+          ? video.originalFileName
+          : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}${(video.originalFileName || '.mp4').slice((video.originalFileName || '.mp4').lastIndexOf('.'))}`)
+        const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
+        const ct = assetId ? contentType : getVideoContentType(video.originalFileName || '')
+        const presignedUrl = await s3GetPresignedDownloadUrl(filePath, 3600, sanitizedFilename, ct)
+        return NextResponse.redirect(presignedUrl, {
+          status: 302,
+          headers: { 'Cache-Control': 'no-store' },
+        })
+      } else if (verifiedToken.quality === 'thumbnail') {
+        // Thumbnails are static images that load in under a second — short-lived URL
+        // minimizes the window if the presigned URL leaks.
+        const presignedUrl = await s3GetPresignedStreamUrl(filePath, 300, 'image/jpeg')
+        return NextResponse.redirect(presignedUrl, {
+          status: 302,
+          headers: { 'Cache-Control': 'no-store' },
+        })
+      } else {
+        // Streaming (video player): long-lived presigned URL so range requests hit S3 directly
+        const ct = getVideoContentType(video.originalFileName || '')
+        const presignedUrl = await s3GetPresignedStreamUrl(filePath, 14400, ct)
+        return NextResponse.redirect(presignedUrl, {
+          status: 302,
+          headers: { 'Cache-Control': 'no-store' },
+        })
+      }
+    }
+    // ── End S3 mode ───────────────────────────────────────────────────────────
+
     const fullPath = getFilePath(filePath)
     
     if (!existsSync(fullPath)) {

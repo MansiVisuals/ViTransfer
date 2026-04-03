@@ -4,7 +4,7 @@ After=vitransfer-postgres.service vitransfer-redis.service
 Requires=vitransfer-postgres.service vitransfer-redis.service
 
 [Container]
-Image=docker.io/crypt010/vitransfer:latest
+Image=docker.io/crypt010/vitransfer:dev-0.9.11
 ContainerName=vitransfer-app
 AutoUpdate=registry
 
@@ -44,6 +44,15 @@ Environment=SHARE_TOKEN_SECRET=CHANGE_THIS_SHARE_SECRET
 
 # HTTPS Enforcement (Optional) - Set to 'true' when using reverse proxy with HTTPS
 Environment=HTTPS_ENABLED=false
+
+# S3-compatible storage (optional - default: local)
+# Set to 's3' and fill in the vars below to use MinIO/S3 instead of local disk
+Environment=STORAGE_PROVIDER=local
+#Environment=S3_ENDPOINT=http://minio:9000
+#Environment=S3_BUCKET=vitransfer
+#Environment=S3_REGION=us-east-1
+#Environment=S3_ACCESS_KEY_ID=
+#Environment=S3_SECRET_ACCESS_KEY=
 
 # Volumes - bind mount to /podman/vitransfer
 Volume=/podman/vitransfer/uploads:/app/uploads:Z

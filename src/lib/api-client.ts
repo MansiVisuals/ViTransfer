@@ -102,10 +102,15 @@ export async function apiDelete<T = any>(
 }
 
 function withAuthHeader(init?: RequestInit): RequestInit {
-  const token = getAccessToken()
   const headers = new Headers(init?.headers || {})
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
+  // Only inject the stored admin token when no Authorization header was
+  // explicitly provided.  Share-page uploads pass their own bearer token;
+  // overwriting it with a stale admin token would break auth.
+  if (!headers.has('Authorization')) {
+    const token = getAccessToken()
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
   }
   return { ...init, headers }
 }

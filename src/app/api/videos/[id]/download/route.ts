@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getFilePath, sanitizeFilenameForHeader, getVideoContentType } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader, getVideoContentType, isS3Mode } from '@/lib/storage'
+import { s3GetPresignedDownloadUrl, s3FileExists } from '@/lib/s3-storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -77,6 +78,28 @@ export async function GET(
       return NextResponse.json({ error: videoMessages.fileNotFound || 'File not found' }, { status: 404 })
     }
 
+    // Use the original filename from the database, guard against missing values
+    const originalFilename = video.originalFileName || 'video.mp4'
+    const safeFilename = sanitizeFilenameForHeader(originalFilename)
+    const contentType = getVideoContentType(originalFilename)
+
+    // ── S3 mode: redirect directly to MinIO ────────────────────────────────────
+    if (isS3Mode()) {
+      const exists = await s3FileExists(filePath)
+      if (!exists) {
+        return NextResponse.json({ error: videoMessages.fileNotFound || 'File not found' }, { status: 404 })
+      }
+      const presignedUrl = await s3GetPresignedDownloadUrl(filePath, 3600, safeFilename, contentType)
+      return NextResponse.redirect(presignedUrl, {
+        status: 302,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Referrer-Policy': 'strict-origin-when-cross-origin',
+        },
+      })
+    }
+    // ── End S3 mode ───────────────────────────────────────────────────────────
+
     // Get the full file path
     const fullPath = getFilePath(filePath)
 
@@ -87,10 +110,6 @@ export async function GET(
     }
 
     // Use the original filename from the database, guard against missing values
-    const originalFilename = video.originalFileName || 'video.mp4'
-    const safeFilename = sanitizeFilenameForHeader(originalFilename)
-    const contentType = getVideoContentType(originalFilename)
-
     const range = request.headers.get('range')
 
     if (range) {

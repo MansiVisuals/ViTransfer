@@ -20,6 +20,8 @@ import {
   storeUploadMetadata,
   clearUploadMetadata,
 } from '@/lib/tus-context'
+import { useStorageProvider } from '@/components/StorageConfigProvider'
+import { useS3MultipartUpload } from '@/hooks/useS3MultipartUpload'
 
 interface PendingUpload {
   id: string
@@ -44,10 +46,14 @@ interface VideoUploadModalProps {
 export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete }: VideoUploadModalProps) {
   const t = useTranslations('videos')
   const tc = useTranslations('common')
+  const storageProvider = useStorageProvider()
+  const { startUpload: startS3Upload, abortUpload: abortS3Upload, pauseUpload: pauseS3Upload, resumeUpload: resumeS3Upload } = useS3MultipartUpload()
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadRefs = useRef<Map<string, tus.Upload>>(new Map())
+  // Tracks the S3 upload key per item ID so we can abort them on remove
+  const s3UploadKeys = useRef<Map<string, string>>(new Map())
 
   // Maximum length for video names (fits comfortably in modal)
   const MAX_VIDEO_NAME_LENGTH = 50
@@ -160,10 +166,15 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
   }
 
   const handleRemove = (id: string) => {
-    const upload = uploadRefs.current.get(id)
-    if (upload) {
-      upload.abort(true)
+    const tusUpload = uploadRefs.current.get(id)
+    if (tusUpload) {
+      tusUpload.abort(true)
       uploadRefs.current.delete(id)
+    }
+    const s3Key = s3UploadKeys.current.get(id)
+    if (s3Key) {
+      abortS3Upload(s3Key)
+      s3UploadKeys.current.delete(id)
     }
     setPendingUploads(prev => prev.filter(u => u.id !== id))
   }
@@ -247,7 +258,59 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
         u.id === id ? { ...u, videoId } : u
       ))
 
-      // TUS upload
+      if (storageProvider === 's3') {
+        // ── S3 direct multipart upload ────────────────────────────────────────
+        const s3Key = `s3-video-${videoId}`
+        s3UploadKeys.current.set(id, s3Key)
+        let lastLoaded = 0
+        let lastTime = Date.now()
+
+        await startS3Upload(
+          file,
+          { videoId },
+          {
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
+              const now = Date.now()
+              const timeDiff = (now - lastTime) / 1000
+              const bytesDiff = bytesUploaded - lastLoaded
+              let speed = 0
+              if (timeDiff > 0.5) {
+                const speedMBps = (bytesDiff / timeDiff) / (1024 * 1024)
+                speed = speedMBps > 0.05 ? Math.round(speedMBps * 10) / 10 : 0
+                lastLoaded = bytesUploaded
+                lastTime = now
+              }
+              setPendingUploads(prev => prev.map(u =>
+                u.id === id ? { ...u, progress: percentage, speed: speed || u.speed } : u
+              ))
+            },
+            onSuccess: () => {
+              clearFileContext(file)
+              clearUploadMetadata(file)
+              s3UploadKeys.current.delete(id)
+              setPendingUploads(prev => prev.map(u =>
+                u.id === id ? { ...u, status: 'completed', progress: 100 } : u
+              ))
+              onUploadComplete(trimmedVideoName, videoId)
+            },
+            onError: async (err) => {
+              if (createdVideoRecord) {
+                try { await apiDelete(`/api/videos/${videoId}`) } catch {}
+                clearUploadMetadata(file)
+              }
+              s3UploadKeys.current.delete(id)
+              setPendingUploads(prev => prev.map(u =>
+                u.id === id ? { ...u, status: 'error', error: err.message } : u
+              ))
+            },
+          },
+          s3Key
+        )
+        return
+      }
+
+      // ── TUS resumable upload ─────────────────────────────────────────────────
       let lastLoaded = 0
       let lastTime = Date.now()
       const tusRef: { current: tus.Upload | null } = { current: null }
@@ -356,22 +419,37 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
   }
 
   const handlePauseResume = (id: string) => {
-    const upload = uploadRefs.current.get(id)
-    if (!upload) return
-
     const item = pendingUploads.find(u => u.id === id)
     if (!item) return
 
-    if (item.paused) {
-      upload.start()
-      setPendingUploads(prev => prev.map(u =>
-        u.id === id ? { ...u, paused: false } : u
-      ))
+    if (storageProvider === 's3') {
+      const s3Key = s3UploadKeys.current.get(id)
+      if (!s3Key) return
+      if (item.paused) {
+        resumeS3Upload(s3Key)
+        setPendingUploads(prev => prev.map(u =>
+          u.id === id ? { ...u, paused: false } : u
+        ))
+      } else {
+        pauseS3Upload(s3Key)
+        setPendingUploads(prev => prev.map(u =>
+          u.id === id ? { ...u, paused: true } : u
+        ))
+      }
     } else {
-      upload.abort()
-      setPendingUploads(prev => prev.map(u =>
-        u.id === id ? { ...u, paused: true } : u
-      ))
+      const upload = uploadRefs.current.get(id)
+      if (!upload) return
+      if (item.paused) {
+        upload.start()
+        setPendingUploads(prev => prev.map(u =>
+          u.id === id ? { ...u, paused: false } : u
+        ))
+      } else {
+        upload.abort()
+        setPendingUploads(prev => prev.map(u =>
+          u.id === id ? { ...u, paused: true } : u
+        ))
+      }
     }
   }
 

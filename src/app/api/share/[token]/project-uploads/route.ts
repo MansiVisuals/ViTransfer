@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
+import { getShareContext } from '@/lib/auth'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
 import { initStorage, deleteFile } from '@/lib/storage'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -107,6 +108,24 @@ export async function POST(
     const storagePath = `projects/${project.id}/uploads/${Date.now()}-${finalFileName}`
     const category = assetValidation.detectedCategory || 'other'
 
+    // Resolve uploader identity from OTP-authenticated recipient if not explicitly provided
+    let resolvedName: string | null = authorName || null
+    let resolvedEmail: string | null = authorEmail || null
+
+    if (!resolvedName && !resolvedEmail) {
+      const shareContext = await getShareContext(request)
+      if (shareContext?.recipientId) {
+        const recipient = await prisma.projectRecipient.findUnique({
+          where: { id: shareContext.recipientId },
+          select: { name: true, email: true },
+        })
+        if (recipient) {
+          resolvedName = recipient.name || null
+          resolvedEmail = recipient.email || null
+        }
+      }
+    }
+
     const upload = await prisma.projectUpload.create({
       data: {
         projectId: project.id,
@@ -116,8 +135,8 @@ export async function POST(
         storagePath,
         category,
         uploadedBySessionId: sessionId,
-        uploadedByName: authorName || null,
-        uploadedByEmail: authorEmail || null,
+        uploadedByName: resolvedName,
+        uploadedByEmail: resolvedEmail,
       },
     })
 

@@ -20,6 +20,8 @@ import {
   clearUploadMetadata,
   clearTUSFingerprint,
 } from '@/lib/tus-context'
+import { useS3MultipartUpload } from '@/hooks/useS3MultipartUpload'
+import { useStorageProvider } from '@/components/StorageConfigProvider'
 
 interface PendingAttachment {
   assetId: string
@@ -105,6 +107,9 @@ export default function CommentAttachmentButton({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadingRef = useRef(false)
   const tusUploadsRef = useRef<Map<string, tus.Upload>>(new Map())
+  const s3AbortKeysRef = useRef<Map<string, string>>(new Map())
+  const { startUpload: startS3Upload, abortUpload: abortS3Upload } = useS3MultipartUpload()
+  const storageProvider = useStorageProvider()
 
   const allDone = items.length > 0 && items.every((i) => i.status === 'completed' || i.status === 'error')
   const hasFiles = items.length > 0
@@ -130,14 +135,22 @@ export default function CommentAttachmentButton({
   }, [MAX_FILES])
 
   const removeFile = useCallback((id: string) => {
-    // Abort any in-progress TUS upload
-    const tusUpload = tusUploadsRef.current.get(id)
-    if (tusUpload) {
-      tusUpload.abort(true)
-      tusUploadsRef.current.delete(id)
+    if (storageProvider === 's3') {
+      const s3Key = s3AbortKeysRef.current.get(id)
+      if (s3Key) {
+        abortS3Upload(s3Key).catch(() => {})
+        s3AbortKeysRef.current.delete(id)
+      }
+    } else {
+      // Abort any in-progress TUS upload
+      const tusUpload = tusUploadsRef.current.get(id)
+      if (tusUpload) {
+        tusUpload.abort(true)
+        tusUploadsRef.current.delete(id)
+      }
     }
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [])
+  }, [abortS3Upload])
 
   const uploadFile = async (item: FileUploadItem): Promise<boolean> => {
     // Step 1: Create asset record via JSON POST
@@ -180,10 +193,44 @@ export default function CommentAttachmentButton({
       return false
     }
 
-    // Step 2: Upload file via TUS
+    // Step 2: Upload file — S3 direct or TUS
     return new Promise<boolean>((resolve) => {
-      // Ensure fresh upload context
-      ensureFreshUploadOnContextChange(item.file, `client:${videoId}:${assetId}`)
+      if (storageProvider === 's3') {
+        // ── S3 direct multipart upload ──────────────────────────────
+        const s3Key = `s3-comment-${item.id}`
+        s3AbortKeysRef.current.set(item.id, s3Key)
+        startS3Upload(
+          item.file,
+          { assetId, bearerToken: shareToken || undefined },
+          {
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const pct = Math.round((bytesUploaded / bytesTotal) * 100)
+              setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, progress: pct } : i)))
+            },
+            onSuccess: () => {
+              setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: 'completed', progress: 100, assetId } : i)))
+              s3AbortKeysRef.current.delete(item.id)
+              clearFileContext(item.file)
+              clearUploadMetadata(item.file)
+              onAttachmentAdded({ assetId, videoId, fileName, fileSize: item.file.size.toString(), fileType: item.file.type || 'application/octet-stream', category })
+              resolve(true)
+            },
+            onError: (err) => {
+              setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: 'error', error: err.message, assetId } : i)))
+              s3AbortKeysRef.current.delete(item.id)
+              clearUploadMetadata(item.file)
+              const deleteHeaders: Record<string, string> = {}
+              if (shareToken) deleteHeaders['Authorization'] = `Bearer ${shareToken}`
+              fetch(`/api/videos/${videoId}/client-assets?assetId=${assetId}`, { method: 'DELETE', headers: deleteHeaders }).catch(() => {})
+              resolve(false)
+            },
+          },
+          s3Key
+        )
+      } else {
+        // ── TUS resumable upload ──────────────────────────────────────
+        // Ensure fresh upload context
+        ensureFreshUploadOnContextChange(item.file, `client:${videoId}:${assetId}`)
 
       const tusUpload = new tus.Upload(item.file, {
         endpoint: `${window.location.origin}/api/uploads`,
@@ -270,6 +317,7 @@ export default function CommentAttachmentButton({
         }
         tusUpload.start()
       })
+      } // end TUS else block
     })
   }
 
@@ -316,9 +364,11 @@ export default function CommentAttachmentButton({
     }
     setOpen(next)
     if (!next && !uploadingRef.current) {
-      // Abort any remaining TUS uploads
+      // Abort any remaining uploads
       tusUploadsRef.current.forEach((upload) => upload.abort(true))
       tusUploadsRef.current.clear()
+      s3AbortKeysRef.current.forEach((key) => abortS3Upload(key).catch(() => {}))
+      s3AbortKeysRef.current.clear()
       setItems([])
       setUploadProgress({ current: 0, total: 0 })
     }

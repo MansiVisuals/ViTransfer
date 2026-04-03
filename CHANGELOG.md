@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- S3-compatible storage support. Set `STORAGE_PROVIDER=s3` to route file uploads and downloads directly between the browser and any S3-compatible store (MinIO AIStor, AWS S3, Cloudflare R2, etc.), bypassing Node.js entirely for file data. Uploads use multipart presigned URLs; downloads and video streaming redirect the browser directly to signed object URLs. The local filesystem remains the default.
 - Preview LUT support — a 3D LUT (`previewlut.cube`) is applied during transcoding for color-calibrated previews. Toggleable per-project and as a global default in settings. LUT crafted and provided for ViTransfer by colorist Fred ([@fredflx](https://github.com/fredflx) — [yechandocolor.com](https://yechandocolor.com)).
 - "Download All" button in the download modal — downloads the video and all assets together as a single ZIP file.
 - "Download All Videos" button on the share page grid view — downloads all approved videos as a single ZIP file.
@@ -17,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Replaced the admin header email display and standalone sign out button with a compact icon-only user button with dropdown menu showing name, email, role, and sign out option.
 - "Copy to Version" is now accessible via the bulk action bar after selecting assets — the standalone header button is removed. The target version picker is now scoped to other versions of the same video only, not all videos in the project.
-
 - Share page and admin share page grid view: replaced floating absolute-positioned buttons with a full-width sticky toolbar (menubar). Left side: Download All / Submit Files (share page) or Back to Project (admin). Right side: language, theme, and tutorial toggles.
 - Asset bulk action bar (Download, Copy to Version, Delete) shows icon-only on mobile to prevent overflow.
 - "Client Upload" badge in the asset list is hidden on mobile to reduce clutter.

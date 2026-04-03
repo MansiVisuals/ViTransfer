@@ -21,6 +21,8 @@ import {
   storeUploadMetadata,
   clearUploadMetadata,
 } from '@/lib/tus-context'
+import { useS3MultipartUpload } from '@/hooks/useS3MultipartUpload'
+import { useStorageProvider } from '@/components/StorageConfigProvider'
 
 interface VideoUploadProps {
   projectId: string
@@ -36,6 +38,9 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadRef = useRef<tus.Upload | null>(null)
   const videoIdRef = useRef<string | null>(null)
+  const s3UploadKey = useRef<string | null>(null)
+  const { startUpload: startS3Upload, abortUpload: abortS3Upload } = useS3MultipartUpload()
+  const storageProvider = useStorageProvider()
 
   const [file, setFile] = useState<File | null>(initialFile || null)
   const [uploading, setUploading] = useState(false)
@@ -193,101 +198,153 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         })
       }
 
-      // Step 2: Upload with TUS protocol
-      const startTime = Date.now()
-      let lastLoaded = 0
-      let lastTime = startTime
+      // Step 2: Upload — S3 direct or TUS depending on storage provider
+      if (storageProvider === 's3') {
+        // ── S3 direct multipart upload ────────────────────────────────────────
+        const key = `s3-video-${videoIdRef.current}`
+        s3UploadKey.current = key
+        let lastLoaded = 0
+        let lastTime = Date.now()
 
-      const upload = new tus.Upload(file, {
-        // TUS server endpoint (absolute URL for fingerprint consistency)
-        endpoint: `${window.location.origin}/api/uploads`,
+        await startS3Upload(
+          file,
+          { videoId: videoIdRef.current! },
+          {
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
+              setProgress(percentage)
 
-        // Retry configuration - exponential backoff
-        retryDelays: TUS_RETRY_DELAYS_MS,
+              const now = Date.now()
+              const timeDiff = (now - lastTime) / 1000
+              const bytesDiff = bytesUploaded - lastLoaded
+              if (timeDiff > 0.5) {
+                const speedMBps = (bytesDiff / timeDiff) / (1024 * 1024)
+                setUploadSpeed(speedMBps > 0.05 ? Math.round(speedMBps * 10) / 10 : 0)
+                lastLoaded = bytesUploaded
+                lastTime = now
+              }
+            },
+            onSuccess: () => {
+              setUploading(false)
+              setProgress(100)
+              clearFileContext(file)
+              clearUploadMetadata(file)
+              setFile(null)
+              setVersionLabel('')
+              s3UploadKey.current = null
+              videoIdRef.current = null
+              router.refresh()
+              onUploadComplete?.()
+            },
+            onError: async (err) => {
+              if (createdVideoRecord && videoIdRef.current) {
+                try { await apiDelete(`/api/videos/${videoIdRef.current}`) } catch {}
+                videoIdRef.current = null
+                clearUploadMetadata(file)
+              }
+              setError(err.message)
+              setUploading(false)
+              s3UploadKey.current = null
+            },
+          },
+          key
+        )
+      } else {
+        // ── TUS resumable upload ───────────────────────────────────────────────
+        const startTime = Date.now()
+        let lastLoaded = 0
+        let lastTime = startTime
 
-        // Metadata
-        metadata: {
-          filename: file.name,
-          filetype: file.type || 'video/mp4',
-          videoId: videoIdRef.current!,
-        },
+        const upload = new tus.Upload(file, {
+          // TUS server endpoint (absolute URL for fingerprint consistency)
+          endpoint: `${window.location.origin}/api/uploads`,
 
-        chunkSize: getTusChunkSizeBytes(file.size),
+          // Retry configuration - exponential backoff
+          retryDelays: TUS_RETRY_DELAYS_MS,
 
-        // Store upload URL in localStorage for resume after browser close
-        storeFingerprintForResuming: true,
-        removeFingerprintOnSuccess: true,
+          // Metadata
+          metadata: {
+            filename: file.name,
+            filetype: file.type || 'video/mp4',
+            videoId: videoIdRef.current!,
+          },
 
-        // Ensure auth header is sent for resume/HEAD requests too
-        onBeforeRequest: (req) => {
-          const xhr = req.getUnderlyingObject()
-          const token = getAccessToken()
-          if (token) {
-            if (xhr?.setRequestHeader) {
-              xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-            } else {
-              req.setHeader('Authorization', `Bearer ${token}`)
+          chunkSize: getTusChunkSizeBytes(file.size),
+
+          // Store upload URL in localStorage for resume after browser close
+          storeFingerprintForResuming: true,
+          removeFingerprintOnSuccess: true,
+
+          // Ensure auth header is sent for resume/HEAD requests too
+          onBeforeRequest: (req) => {
+            const xhr = req.getUnderlyingObject()
+            const token = getAccessToken()
+            if (token) {
+              if (xhr?.setRequestHeader) {
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+              } else {
+                req.setHeader('Authorization', `Bearer ${token}`)
+              }
             }
-          }
-        },
+          },
 
-        // Refresh token on 401/403 so the retry uses a fresh token
-        onAfterResponse: createTusAfterResponseHandler(uploadRef),
-        onShouldRetry: createTusShouldRetryHandler(uploadRef),
+          // Refresh token on 401/403 so the retry uses a fresh token
+          onAfterResponse: createTusAfterResponseHandler(uploadRef),
+          onShouldRetry: createTusShouldRetryHandler(uploadRef),
 
-        // Progress callback
-        onProgress: (bytesUploaded, bytesTotal) => {
-          const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
-          setProgress(percentage)
+          // Progress callback
+          onProgress: (bytesUploaded, bytesTotal) => {
+            const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
+            setProgress(percentage)
 
-          // Calculate upload speed
-          const now = Date.now()
-          const timeDiff = (now - lastTime) / 1000 // seconds
-          const bytesDiff = bytesUploaded - lastLoaded
+            // Calculate upload speed
+            const now = Date.now()
+            const timeDiff = (now - lastTime) / 1000 // seconds
+            const bytesDiff = bytesUploaded - lastLoaded
 
-          if (timeDiff > 0.5) { // Update every 0.5 seconds
-            const speedMBps = (bytesDiff / timeDiff) / (1024 * 1024)
-            const stableSpeed = speedMBps > 0.05 ? Math.round(speedMBps * 10) / 10 : 0
-            setUploadSpeed(stableSpeed)
-            lastLoaded = bytesUploaded
-            lastTime = now
-          }
-        },
+            if (timeDiff > 0.5) { // Update every 0.5 seconds
+              const speedMBps = (bytesDiff / timeDiff) / (1024 * 1024)
+              const stableSpeed = speedMBps > 0.05 ? Math.round(speedMBps * 10) / 10 : 0
+              setUploadSpeed(stableSpeed)
+              lastLoaded = bytesUploaded
+              lastTime = now
+            }
+          },
 
-        // Success callback
-        onSuccess: () => {
-          setUploading(false)
-          setProgress(100)
+          // Success callback
+          onSuccess: () => {
+            setUploading(false)
+            setProgress(100)
 
-          // Clear file context since upload completed
-          clearFileContext(file)
-          clearUploadMetadata(file)
-          clearTUSFingerprint(file)
-          resetTusAuthRetry(uploadRef.current)
-
-          setFile(null)
-          setVersionLabel('')
-          uploadRef.current = null
-          videoIdRef.current = null
-          router.refresh()
-          // Notify parent component
-          onUploadComplete?.()
-        },
-
-        // Error callback
-        onError: async (error) => {
-          let errorMessage = getTusUploadErrorMessage(error)
-
-          const statusCode = (error as any)?.originalResponse?.getStatus?.()
-
-          // If we tried to resume an old session and it's gone, clear local resume data
-          if (canResumeExisting && (statusCode === 404 || statusCode === 410)) {
+            // Clear file context since upload completed
+            clearFileContext(file)
             clearUploadMetadata(file)
             clearTUSFingerprint(file)
-            errorMessage = t('uploadExpired')
-          } else if (createdVideoRecord && videoIdRef.current) {
-            // Only clean up DB record if we created it in this attempt
-            try {
+            resetTusAuthRetry(uploadRef.current)
+
+            setFile(null)
+            setVersionLabel('')
+            uploadRef.current = null
+            videoIdRef.current = null
+            router.refresh()
+            // Notify parent component
+            onUploadComplete?.()
+          },
+
+          // Error callback
+          onError: async (error) => {
+            let errorMessage = getTusUploadErrorMessage(error)
+
+            const statusCode = (error as any)?.originalResponse?.getStatus?.()
+
+            // If we tried to resume an old session and it's gone, clear local resume data
+            if (canResumeExisting && (statusCode === 404 || statusCode === 410)) {
+              clearUploadMetadata(file)
+              clearTUSFingerprint(file)
+              errorMessage = t('uploadExpired')
+            } else if (createdVideoRecord && videoIdRef.current) {
+              // Only clean up DB record if we created it in this attempt
+              try {
               await apiDelete(`/api/videos/${videoIdRef.current}`)
               videoIdRef.current = null
             } catch {}
@@ -316,6 +373,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
 
       // Start the upload
       upload.start()
+      } // end TUS else block
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Upload failed')
@@ -338,9 +396,16 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
   }
 
   async function handleCancel() {
-    if (uploadRef.current) {
-      uploadRef.current.abort(true) // true = permanent abort
-      uploadRef.current = null
+    if (storageProvider === 's3') {
+      if (s3UploadKey.current) {
+        await abortS3Upload(s3UploadKey.current)
+        s3UploadKey.current = null
+      }
+    } else {
+      if (uploadRef.current) {
+        uploadRef.current.abort(true) // true = permanent abort
+        uploadRef.current = null
+      }
     }
 
     // Delete the video record from database if it was created

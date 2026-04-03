@@ -291,3 +291,17 @@ export function validateAssetFile(
     error: `Unsupported file type: ${ext}. Please upload images, audio, documents, or project files.`
   }
 }
+
+/**
+ * Sanitize a MIME content-type string.
+ * Strips parameters (e.g. "; charset=utf-8") and lowercases.
+ * Returns 'application/octet-stream' for empty/invalid input.
+ */
+export function sanitizeContentType(raw: string | undefined | null): string {
+  if (!raw || typeof raw !== 'string') return 'application/octet-stream'
+  const base = raw.split(';')[0].trim().toLowerCase()
+  if (!base || !/^[a-z0-9][a-z0-9!#$&\-^_]*\/[a-z0-9][a-z0-9!#$&\-^_.+]*$/.test(base)) {
+    return 'application/octet-stream'
+  }
+  return base
+}

@@ -31,16 +31,17 @@ export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
 
   const isHttpsEnabled = process.env.HTTPS_ENABLED === 'true' || process.env.HTTPS_ENABLED === '1'
-  const tusEndpoint = process.env.NEXT_PUBLIC_TUS_ENDPOINT
-  let tusOrigin = ''
-  if (tusEndpoint) {
-    try { tusOrigin = new URL(tusEndpoint).origin } catch {}
+
+  // Derive S3 origin for CSP — presigned redirects go directly to the S3 endpoint
+  let s3Origin = ''
+  if (process.env.STORAGE_PROVIDER === 's3' && process.env.S3_ENDPOINT) {
+    try { s3Origin = new URL(process.env.S3_ENDPOINT).origin } catch {}
   }
 
   const connectSrc = [
     "'self'",
     'blob:',
-    tusOrigin,
+    s3Origin,
     'https://ko-fi.com',
     'https://storage.ko-fi.com',
     'https://cloudflareinsights.com',
@@ -51,10 +52,10 @@ export async function proxy(request: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
     "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://storage.ko-fi.com https://*.ko-fi.com",
+    `img-src 'self' data: blob: https://storage.ko-fi.com https://*.ko-fi.com${s3Origin ? ` ${s3Origin}` : ''}`,
     "font-src 'self' data:",
     `connect-src ${connectSrc}`,
-    "media-src 'self' blob:",
+    `media-src 'self' blob:${s3Origin ? ` ${s3Origin}` : ''}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

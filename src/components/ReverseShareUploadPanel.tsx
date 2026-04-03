@@ -20,6 +20,8 @@ import {
   clearUploadMetadata,
   clearTUSFingerprint,
 } from '@/lib/tus-context'
+import { useS3MultipartUpload } from '@/hooks/useS3MultipartUpload'
+import { useStorageProvider } from '@/components/StorageConfigProvider'
 
 const ALLOWED_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff',
@@ -77,6 +79,9 @@ export default function ReverseShareUploadPanel({
   const [allDone, setAllDone] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const tusUploadsRef = useRef<Map<string, tus.Upload>>(new Map())
+  const s3AbortKeysRef = useRef<Map<string, string>>(new Map())
+  const { startUpload: startS3Upload, abortUpload: abortS3Upload } = useS3MultipartUpload()
+  const storageProvider = useStorageProvider()
 
   const atLimit = items.length >= MAX_FILES
   const hasFiles = items.length > 0
@@ -105,13 +110,21 @@ export default function ReverseShareUploadPanel({
   }, [MAX_FILES])
 
   const removeFile = useCallback((id: string) => {
-    const tusUpload = tusUploadsRef.current.get(id)
-    if (tusUpload) {
-      tusUpload.abort(true)
-      tusUploadsRef.current.delete(id)
+    if (storageProvider === 's3') {
+      const s3Key = s3AbortKeysRef.current.get(id)
+      if (s3Key) {
+        abortS3Upload(s3Key).catch(() => {})
+        s3AbortKeysRef.current.delete(id)
+      }
+    } else {
+      const tusUpload = tusUploadsRef.current.get(id)
+      if (tusUpload) {
+        tusUpload.abort(true)
+        tusUploadsRef.current.delete(id)
+      }
     }
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [])
+  }, [abortS3Upload])
 
   const retryFile = useCallback((id: string) => {
     setAllDone(false)
@@ -147,7 +160,41 @@ export default function ReverseShareUploadPanel({
     }
 
     return new Promise<boolean>((resolve) => {
-      ensureFreshUploadOnContextChange(item.file, `reverse-share:${shareSlug}:${uploadId}`)
+      if (storageProvider === 's3') {
+        // ── S3 direct multipart upload ──────────────────────────────────────
+        const s3Key = `s3-rev-share-${item.id}`
+        s3AbortKeysRef.current.set(item.id, s3Key)
+        startS3Upload(
+          item.file,
+          { projectUploadId: uploadId, bearerToken: shareToken },
+          {
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const pct = Math.round((bytesUploaded / bytesTotal) * 100)
+              setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, progress: pct } : i)))
+            },
+            onSuccess: () => {
+              setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: 'completed', progress: 100, uploadId } : i)))
+              s3AbortKeysRef.current.delete(item.id)
+              clearFileContext(item.file)
+              clearUploadMetadata(item.file)
+              resolve(true)
+            },
+            onError: (err) => {
+              setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: 'error', error: err.message, uploadId } : i)))
+              s3AbortKeysRef.current.delete(item.id)
+              clearUploadMetadata(item.file)
+              fetch(`/api/share/${shareSlug}/project-uploads?uploadId=${uploadId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${shareToken}` },
+              }).catch(() => {})
+              resolve(false)
+            },
+          },
+          s3Key
+        )
+      } else {
+        // ── TUS resumable upload ─────────────────────────────────────────────
+        ensureFreshUploadOnContextChange(item.file, `reverse-share:${shareSlug}:${uploadId}`)
 
       const tusUpload = new tus.Upload(item.file, {
         endpoint: `${window.location.origin}/api/uploads`,
@@ -200,6 +247,7 @@ export default function ReverseShareUploadPanel({
         if (previousUploads.length > 0) tusUpload.resumeFromPreviousUpload(previousUploads[0])
         tusUpload.start()
       })
+      } // end TUS else block
     })
   }
 
@@ -212,7 +260,12 @@ export default function ReverseShareUploadPanel({
       await uploadFile(item)
     }
     setIsUploading(false)
-    setAllDone(true)
+    // Only show success banner when no files ended in error
+    setItems((prev) => {
+      const hasErrors = prev.some((i) => i.status === 'error')
+      setAllDone(!hasErrors)
+      return prev
+    })
   }
 
   const handleDone = () => {
@@ -225,8 +278,13 @@ export default function ReverseShareUploadPanel({
     if (!next && isUploading) return
     setOpen(next)
     if (!next && !isUploading) {
-      tusUploadsRef.current.forEach((u) => u.abort(true))
-      tusUploadsRef.current.clear()
+      if (storageProvider === 's3') {
+        s3AbortKeysRef.current.forEach((key) => abortS3Upload(key).catch(() => {}))
+        s3AbortKeysRef.current.clear()
+      } else {
+        tusUploadsRef.current.forEach((u) => u.abort(true))
+        tusUploadsRef.current.clear()
+      }
       setItems([])
       setAllDone(false)
     }
@@ -302,7 +360,7 @@ export default function ReverseShareUploadPanel({
           {isUploading && (
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
-              {tc('loading')}
+              {tc('uploading')}
             </p>
           )}
 
@@ -372,7 +430,7 @@ export default function ReverseShareUploadPanel({
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {tc('loading')}
+                    {tc('uploading')}
                   </>
                 ) : (
                   t('submitFiles')

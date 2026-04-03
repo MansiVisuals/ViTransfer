@@ -20,10 +20,15 @@
 | `ADMIN_NAME` | No | Initial admin display name | `Admin` | `Jane Doe` |
 | `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens | _none_ | |
 | `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
-| `NEXT_PUBLIC_TUS_ENDPOINT` | No | If TUS is on another origin, add it to connect-src | _none_ | |
 | `CPU_THREADS` | No | Override CPU thread count used by the worker/FFmpeg | auto-detect | `8` |
 | `DEBUG_WORKER` | No | Enable verbose worker logging | `false` | `true` |
 | `DEBUG_EXTERNAL_NOTIFICATIONS` | No | Enable verbose external notification logging | `false` | `true` |
+| `STORAGE_PROVIDER` | No | Storage backend: `local` or `s3` | `local` | `s3` |
+| `S3_ENDPOINT` | When `STORAGE_PROVIDER=s3` | S3-compatible endpoint URL | — | `https://s3.amazonaws.com` |
+| `S3_BUCKET` | When `STORAGE_PROVIDER=s3` | Bucket name (must already exist) | — | `vitransfer` |
+| `S3_REGION` | When `STORAGE_PROVIDER=s3` | AWS region or any value for region-agnostic stores | `us-east-1` | `us-east-1` |
+| `S3_ACCESS_KEY_ID` | When `STORAGE_PROVIDER=s3` | Access key ID | — | |
+| `S3_SECRET_ACCESS_KEY` | When `STORAGE_PROVIDER=s3` | Secret access key | — | |
 
 ### Notes
 - Use `openssl rand -hex 32` for database passwords (URL-safe).
@@ -31,6 +36,74 @@
 - Avoid special characters in `ADMIN_PASSWORD` due to JSON parsing.
 - `HTTPS_ENABLED` always overrides the admin setting.
 - Set `TZ` for correct notification scheduling and due date reminder timing.
+
+---
+
+## S3-Compatible Storage
+
+Set `STORAGE_PROVIDER=s3` to have uploads and downloads bypass Node.js and go directly between the browser and your object store. No rebuild needed — the setting is read at runtime.
+
+**Compatible stores:** AWS S3, Cloudflare R2, Backblaze B2, MinIO AIStor, Garage, and any S3-compatible API.
+
+**How it works:**
+- **Uploads** — the browser requests presigned part URLs from ViTransfer, then PUTs each chunk straight to the store. Node.js never touches the file bytes.
+- **Downloads / streaming** — the server generates a short-lived presigned GET URL and issues a 302 redirect. Node.js proxies nothing.
+- **Worker** — FFmpeg jobs stream directly from/to object storage via the SDK; no shared volume is needed.
+
+**Requirements:**
+1. Create the bucket before starting ViTransfer.
+2. Configure CORS on the bucket to allow `PUT` requests from your app origin (required for presigned multipart uploads from the browser).
+3. Set `STORAGE_PROVIDER=s3` and the `S3_*` variables in your `.env`.
+
+**Example `.env`:**
+```
+STORAGE_PROVIDER=s3
+S3_ENDPOINT=https://s3.amazonaws.com        # or your store's endpoint
+S3_BUCKET=vitransfer
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=your-access-key
+S3_SECRET_ACCESS_KEY=your-secret-key
+```
+
+### Provider notes
+
+**MinIO AIStor** — uses path-style addressing, which ViTransfer enables automatically when `S3_ENDPOINT` is set. Set `S3_ENDPOINT` to your MinIO hostname (e.g. `http://minio:9000`).
+
+**AWS S3** — set `S3_ENDPOINT=https://s3.amazonaws.com` and the correct `S3_REGION`.
+
+**Cloudflare R2** — endpoint is `https://<account-id>.r2.cloudflarestorage.com`. Set `S3_REGION=auto`.
+
+**Backblaze B2** — endpoint is `https://s3.<region>.backblazeb2.com`. Use your B2 application key ID and key.
+
+### CORS configuration
+
+The browser must be allowed to `PUT` parts directly to your store **and** read the `ETag` response header (required for multipart upload completion).
+
+**MinIO AIStor** — CORS is typically permissive by default, but if you've locked it down:
+```bash
+mc alias set myminio http://minio:9000 <access-key> <secret-key>
+mc admin config set myminio/ api cors_allow_origin=https://vitransfer.example.com
+mc admin service restart myminio/
+```
+
+**AWS S3 / R2 / B2** — configure the bucket CORS policy via the provider's console or CLI. The policy must:
+- Allow `PUT` from your app origin
+- Expose the `ETag` header (browsers block it otherwise)
+
+Example JSON CORS policy for AWS S3 / R2:
+```json
+[
+  {
+    "AllowedOrigins": ["https://vitransfer.example.com"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+If `ETag` is not exposed, uploads will fail with "Part returned no ETag".
 
 ---
 

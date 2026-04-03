@@ -70,6 +70,13 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
       SHARE_TOKEN_SECRET: ${SHARE_TOKEN_SECRET:?SHARE_TOKEN_SECRET is required}
       HTTPS_ENABLED: ${HTTPS_ENABLED:-false}
+      # S3-compatible storage (optional, default: local)
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
     ports:
       - "4321:4321"
     volumes:
@@ -111,6 +118,13 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       SHARE_TOKEN_SECRET: ${SHARE_TOKEN_SECRET}
+      # S3-compatible storage (must match app service)
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
     volumes:
       - /mnt/tank/apps/vitransfer/uploads:/app/uploads
     networks:

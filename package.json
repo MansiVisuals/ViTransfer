@@ -11,6 +11,8 @@
     "worker": "tsx src/worker/index.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1022.0",
+    "@aws-sdk/s3-request-presigner": "^3.1022.0",
     "@prisma/client": "^6.19.0",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-label": "^2.1.8",
@@ -34,7 +36,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.563.0",
     "next": "^16.1.6",
-    "next-intl": "^4.8.3",
+    "next-intl": "^4.9.0",
     "nodemailer": "^8.0.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
@@ -48,9 +50,9 @@
   "devDependencies": {
     "@types/archiver": "^7.0.0",
     "@types/html-to-text": "^9.0.4",
-    "@types/nodemailer": "^6.4.17",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.9",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",

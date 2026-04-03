@@ -12,6 +12,8 @@ import {
   clearUploadMetadata,
   clearTUSFingerprint,
 } from '@/lib/tus-context'
+import { useS3MultipartUpload } from '@/hooks/useS3MultipartUpload'
+import { useStorageProvider } from '@/components/StorageConfigProvider'
 
 export interface QueuedUpload {
   id: string
@@ -49,7 +51,10 @@ export function useAssetUploadQueue({
   const [queue, setQueue] = useState<QueuedUpload[]>([])
   const uploadRefsMap = useRef<Map<string, tus.Upload>>(new Map())
   const assetIdsMap = useRef<Map<string, string>>(new Map())
+  const s3AbortKeysMap = useRef<Map<string, string>>(new Map())
   const queueRef = useRef(queue)
+  const { startUpload: startS3Upload, abortUpload: abortS3Upload, pauseUpload: pauseS3Upload, resumeUpload: resumeS3Upload } = useS3MultipartUpload()
+  const storageProvider = useStorageProvider()
 
   // Keep queueRef in sync with queue state
   useEffect(() => {
@@ -153,11 +158,55 @@ export function useAssetUploadQueue({
         })
       }
 
-      // Start TUS upload
-      const startTime = Date.now()
-      let lastLoaded = 0
-      let lastTime = startTime
-      const tusRef: { current: tus.Upload | null } = { current: null }
+      // Start upload — S3 direct or TUS
+      if (storageProvider === 's3') {
+        // ── S3 direct multipart upload ──────────────────────────────────────
+        const s3Key = `s3-asset-${uploadId}`
+        s3AbortKeysMap.current.set(uploadId, s3Key)
+
+        await startS3Upload(
+          upload.file,
+          { assetId },
+          {
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
+              setQueue(prev => prev.map(u =>
+                u.id === uploadId ? { ...u, progress: percentage } : u
+              ))
+            },
+            onSuccess: () => {
+              setQueue(prev => prev.map(u =>
+                u.id === uploadId
+                  ? { ...u, status: 'completed' as const, progress: 100, completedAt: Date.now() }
+                  : u
+              ))
+              s3AbortKeysMap.current.delete(uploadId)
+              assetIdsMap.current.delete(uploadId)
+              clearFileContext(upload.file)
+              clearUploadMetadata(upload.file)
+              onUploadComplete?.()
+            },
+            onError: async (err) => {
+              const currentAssetId = assetIdsMap.current.get(uploadId)
+              if (currentAssetId && createdAssetRecord) {
+                try { await apiDelete(`/api/videos/${videoId}/assets/${currentAssetId}`) } catch {}
+                clearUploadMetadata(upload.file)
+              }
+              setQueue(prev => prev.map(u =>
+                u.id === uploadId ? { ...u, status: 'error' as const, error: err.message } : u
+              ))
+              s3AbortKeysMap.current.delete(uploadId)
+              assetIdsMap.current.delete(uploadId)
+            },
+          },
+          s3Key
+        )
+      } else {
+        // ── TUS resumable upload ─────────────────────────────────────────────
+        const startTime = Date.now()
+        let lastLoaded = 0
+        let lastTime = startTime
+        const tusRef: { current: tus.Upload | null } = { current: null }
 
       const tusUpload = new tus.Upload(upload.file, {
         endpoint: `${window.location.origin}/api/uploads`,
@@ -286,6 +335,7 @@ export function useAssetUploadQueue({
 
       uploadRefsMap.current.set(uploadId, tusUpload)
       tusUpload.start()
+      } // end TUS else block
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed'
       setQueue(prev => prev.map(u =>
@@ -314,31 +364,60 @@ export function useAssetUploadQueue({
 
   // Pause an upload
   const pauseUpload = useCallback((uploadId: string) => {
-    const tusUpload = uploadRefsMap.current.get(uploadId)
-    if (tusUpload) {
-      tusUpload.abort()
-      setQueue(prev => prev.map(u =>
-        u.id === uploadId ? { ...u, status: 'paused' as const } : u
-      ))
+    if (storageProvider === 's3') {
+      const s3Key = s3AbortKeysMap.current.get(uploadId)
+      if (s3Key) {
+        pauseS3Upload(s3Key)
+        setQueue(prev => prev.map(u =>
+          u.id === uploadId ? { ...u, status: 'paused' as const } : u
+        ))
+      }
+    } else {
+      const tusUpload = uploadRefsMap.current.get(uploadId)
+      if (tusUpload) {
+        tusUpload.abort()
+        setQueue(prev => prev.map(u =>
+          u.id === uploadId ? { ...u, status: 'paused' as const } : u
+        ))
+      }
     }
-  }, [])
+  }, [storageProvider, pauseS3Upload])
 
   // Resume an upload
   const resumeUpload = useCallback((uploadId: string) => {
-    const tusUpload = uploadRefsMap.current.get(uploadId)
-    if (tusUpload) {
-      tusUpload.start()
-      setQueue(prev => prev.map(u =>
-        u.id === uploadId ? { ...u, status: 'uploading' as const } : u
-      ))
+    if (storageProvider === 's3') {
+      const s3Key = s3AbortKeysMap.current.get(uploadId)
+      if (s3Key) {
+        resumeS3Upload(s3Key)
+        setQueue(prev => prev.map(u =>
+          u.id === uploadId ? { ...u, status: 'uploading' as const } : u
+        ))
+      }
+    } else {
+      const tusUpload = uploadRefsMap.current.get(uploadId)
+      if (tusUpload) {
+        tusUpload.start()
+        setQueue(prev => prev.map(u =>
+          u.id === uploadId ? { ...u, status: 'uploading' as const } : u
+        ))
+      }
     }
-  }, [])
+  }, [storageProvider, resumeS3Upload])
 
   // Cancel an upload
   const cancelUpload = useCallback(async (uploadId: string) => {
-    const tusUpload = uploadRefsMap.current.get(uploadId)
-    if (tusUpload) {
-      tusUpload.abort(true)
+    if (storageProvider === 's3') {
+      const s3Key = s3AbortKeysMap.current.get(uploadId)
+      if (s3Key) {
+        await abortS3Upload(s3Key)
+        s3AbortKeysMap.current.delete(uploadId)
+      }
+    } else {
+      const tusUpload = uploadRefsMap.current.get(uploadId)
+      if (tusUpload) {
+        tusUpload.abort(true)
+      }
+      uploadRefsMap.current.delete(uploadId)
     }
 
     // Clean up asset record
@@ -349,7 +428,6 @@ export function useAssetUploadQueue({
       } catch {}
     }
 
-    uploadRefsMap.current.delete(uploadId)
     assetIdsMap.current.delete(uploadId)
 
     // Remove from queue
@@ -363,7 +441,7 @@ export function useAssetUploadQueue({
     }
 
     // useEffect will auto-start next queued upload
-  }, [videoId])
+  }, [videoId, abortS3Upload])
 
   // Remove completed upload from queue
   const removeCompleted = useCallback((uploadId: string) => {
@@ -375,18 +453,14 @@ export function useAssetUploadQueue({
     setQueue(prev => prev.filter(u => u.status !== 'completed'))
   }, [])
 
-  // Retry failed upload
+  // Retry failed upload — sets status to 'queued' so the auto-start useEffect picks it up
   const retryUpload = useCallback((uploadId: string) => {
     setQueue(prev => prev.map(u =>
       u.id === uploadId
         ? { ...u, status: 'queued' as const, error: null, progress: 0, uploadSpeed: 0 }
         : u
     ))
-
-    setTimeout(() => {
-      startUpload(uploadId)
-    }, 100)
-  }, [startUpload])
+  }, [])
 
   // Get queue statistics
   const stats = {

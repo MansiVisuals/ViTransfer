@@ -28,23 +28,13 @@ function getEffectiveNetworkType(): string | undefined {
 export function getTusChunkSizeBytes(fileSize: number): number {
   const effectiveType = getEffectiveNetworkType()
 
-  if (effectiveType === 'slow-2g' || effectiveType === '2g') {
-    return 2 * MB
-  }
+  // On slow connections keep chunks small so a stalled part doesn't block for too long
+  if (effectiveType === 'slow-2g' || effectiveType === '2g') return 2 * MB
+  if (effectiveType === '3g') return 8 * MB
 
-  if (effectiveType === '3g') {
-    return 4 * MB
-  }
-
-  if (fileSize >= 10 * 1024 * MB) {
-    return 16 * MB
-  }
-
-  if (fileSize >= 1024 * MB) {
-    return 8 * MB
-  }
-
-  return 4 * MB
+  // Scale with file size, capped at 25 MiB to stay well under Cloudflare's 100 MiB limit
+  if (fileSize >= 100 * MB) return 25 * MB
+  return 10 * MB
 }
 
 export function parseBoundedRangeHeader(

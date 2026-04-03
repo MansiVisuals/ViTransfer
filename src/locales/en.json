@@ -26,6 +26,7 @@
     "open": "Open",
     "generate": "Generate",
     "upload": "Upload",
+    "uploading": "Uploading...",
     "download": "Download",
     "retry": "Retry",
     "confirm": "Confirm",

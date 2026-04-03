@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AccentColorProvider } from "@/components/AccentColorProvider";
 import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
+import { StorageConfigProvider, type StorageProvider } from "@/components/StorageConfigProvider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { headers } from "next/headers";
@@ -72,6 +73,7 @@ export default async function RootLayout({
   const messages = await getMessages()
   const headersList = await headers()
   const nonce = headersList.get('x-nonce') || ''
+  const storageProvider = (process.env.STORAGE_PROVIDER === 's3' ? 's3' : 'local') as StorageProvider
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -79,8 +81,7 @@ export default async function RootLayout({
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
+            __html: `window.__STORAGE_PROVIDER__=${JSON.stringify(storageProvider)};(function() {
                 try {
                   var serverDefaultTheme = '${appearance.defaultTheme}';
                   var serverAccentColor = '${appearance.accentColor}';
@@ -142,9 +143,11 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.className} flex flex-col min-h-dvh overflow-x-hidden`}>
         <NextIntlClientProvider messages={messages}>
-          <AccentColorProvider />
-          <ServiceWorkerProvider />
-          <main className="flex-1 min-h-0 flex flex-col">{children}</main>
+          <StorageConfigProvider provider={storageProvider}>
+            <AccentColorProvider />
+            <ServiceWorkerProvider />
+            <main className="flex-1 min-h-0 flex flex-col">{children}</main>
+          </StorageConfigProvider>
         </NextIntlClientProvider>
       </body>
     </html>

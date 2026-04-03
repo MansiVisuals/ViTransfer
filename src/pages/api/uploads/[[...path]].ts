@@ -10,6 +10,7 @@ import { Readable } from 'stream'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { logError, logMessage } from '@/lib/logging'
 import { parseBearerToken, verifyAdminAccessToken, verifyShareToken } from '@/lib/auth'
+import { isS3Mode } from '@/lib/storage'
 
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
@@ -186,6 +187,12 @@ const tusServer: Server = new Server({
       }
 
       if (videoId) {
+        // In S3 mode, video uploads must go through /api/uploads/s3/presign — not TUS.
+        // TUS is only used for local filesystem storage.
+        if (isS3Mode()) {
+          throw { status_code: 400, body: 'Video uploads must use the S3 multipart upload path in S3 mode' }
+        }
+
         // Only admins can upload videos
         if (!isAdmin) {
           throw {

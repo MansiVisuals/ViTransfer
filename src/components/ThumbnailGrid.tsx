@@ -105,6 +105,9 @@ export default function ThumbnailGrid({
                   <div className="absolute inset-0 animate-pulse bg-muted" />
                 ) : thumbnailUrl ? (
                   // Thumbnail image - object-contain preserves aspect ratio
+                  // unoptimized: in S3 mode /api/content/{token} returns a 302 redirect to a
+                  // presigned URL — the Next.js image optimizer cannot follow cross-origin
+                  // redirects, so we bypass it and let the browser handle the redirect natively.
                   <Image
                     src={thumbnailUrl}
                     alt={name}
@@ -112,6 +115,7 @@ export default function ThumbnailGrid({
                     sizes="(min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     className="object-contain"
                     draggable={false}
+                    unoptimized
                   />
                 ) : (
                   // Placeholder

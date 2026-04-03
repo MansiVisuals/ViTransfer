@@ -41,6 +41,7 @@ interface Settings {
   defaultApplyPreviewLut: boolean | null
   maxUploadSizeGB: number | null
   maxCommentAttachments: number | null
+  maxReverseShareFiles: number | null
   defaultTimestampDisplay: string | null
   autoApproveProject: boolean | null
   defaultUsePreviewForApprovedPlayback: boolean | null
@@ -134,6 +135,7 @@ export default function GlobalSettingsPage() {
   const [defaultApplyPreviewLut, setDefaultApplyPreviewLut] = useState(true)
   const [maxUploadSizeGB, setMaxUploadSizeGB] = useState('1')
   const [maxCommentAttachments, setMaxCommentAttachments] = useState('10')
+  const [maxReverseShareFiles, setMaxReverseShareFiles] = useState('10')
   const [defaultTimestampDisplay, setDefaultTimestampDisplay] = useState('TIMECODE')
   const [autoApproveProject, setAutoApproveProject] = useState(true)
   const [defaultUsePreviewForApprovedPlayback, setDefaultUsePreviewForApprovedPlayback] = useState(false)
@@ -212,6 +214,7 @@ export default function GlobalSettingsPage() {
     setDefaultApplyPreviewLut(data.defaultApplyPreviewLut ?? true)
     setMaxUploadSizeGB(data.maxUploadSizeGB?.toString() || '1')
     setMaxCommentAttachments(data.maxCommentAttachments?.toString() || '10')
+    setMaxReverseShareFiles(data.maxReverseShareFiles?.toString() || '10')
     setDefaultTimestampDisplay(data.defaultTimestampDisplay || 'TIMECODE')
     setAutoApproveProject(data.autoApproveProject ?? true)
     setDefaultUsePreviewForApprovedPlayback(data.defaultUsePreviewForApprovedPlayback ?? false)
@@ -524,6 +527,7 @@ export default function GlobalSettingsPage() {
         defaultApplyPreviewLut,
         maxUploadSizeGB: parseInt(maxUploadSizeGB, 10) || 1,
         maxCommentAttachments: parseInt(maxCommentAttachments, 10) || 10,
+        maxReverseShareFiles: parseInt(maxReverseShareFiles, 10) || 10,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject: autoApproveProject,
         defaultUsePreviewForApprovedPlayback: defaultUsePreviewForApprovedPlayback,
@@ -705,6 +709,7 @@ export default function GlobalSettingsPage() {
     shareTokenTtlSeconds, setShareTokenTtlSeconds,
     passwordAttempts, setPasswordAttempts,
     maxUploadSizeGB, setMaxUploadSizeGB, maxCommentAttachments, setMaxCommentAttachments,
+    maxReverseShareFiles, setMaxReverseShareFiles,
     sessionTimeoutValue, setSessionTimeoutValue, sessionTimeoutUnit, setSessionTimeoutUnit,
     adminSessionTimeoutValue, setAdminSessionTimeoutValue,
     adminSessionTimeoutUnit, setAdminSessionTimeoutUnit,

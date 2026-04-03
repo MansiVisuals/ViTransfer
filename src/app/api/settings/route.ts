@@ -143,6 +143,7 @@ export async function PATCH(request: NextRequest) {
       defaultAllowClientAssetUpload,
       emailHeaderStyle,
       maxCommentAttachments,
+      maxReverseShareFiles,
       privacyDisclosureEnabled,
       privacyDisclosureText,
     } = body
@@ -330,6 +331,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (maxReverseShareFiles !== undefined && maxReverseShareFiles !== null) {
+      const parsed = Number(maxReverseShareFiles)
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 500) {
+        return NextResponse.json(
+          { error: settingsMessages.maxReverseShareFilesMustBeIntegerBetween1And500 || 'Max reverse share files must be an integer between 1 and 500.' },
+          { status: 400 }
+        )
+      }
+    }
+
     if (smtpPort !== undefined && smtpPort !== null) {
       const port = parseInt(smtpPort, 10)
       if (isNaN(port) || port < 1 || port > 65535) {
@@ -432,6 +443,7 @@ export async function PATCH(request: NextRequest) {
       defaultApplyPreviewLut,
       maxUploadSizeGB: maxUploadSizeGB !== undefined && maxUploadSizeGB !== null ? Number(maxUploadSizeGB) : undefined,
       maxCommentAttachments: maxCommentAttachments !== undefined && maxCommentAttachments !== null ? Number(maxCommentAttachments) : undefined,
+      maxReverseShareFiles: maxReverseShareFiles !== undefined && maxReverseShareFiles !== null ? Number(maxReverseShareFiles) : undefined,
       defaultTimestampDisplay,
       autoApproveProject,
       adminNotificationSchedule,
@@ -480,6 +492,7 @@ export async function PATCH(request: NextRequest) {
         defaultWatermarkText,
         maxUploadSizeGB: maxUploadSizeGB !== undefined && maxUploadSizeGB !== null ? Number(maxUploadSizeGB) : 1,
         maxCommentAttachments: maxCommentAttachments !== undefined && maxCommentAttachments !== null ? Number(maxCommentAttachments) : 10,
+        maxReverseShareFiles: maxReverseShareFiles !== undefined && maxReverseShareFiles !== null ? Number(maxReverseShareFiles) : 10,
         defaultTimestampDisplay: defaultTimestampDisplay || 'TIMECODE',
         autoApproveProject,
         adminNotificationSchedule: adminNotificationSchedule || 'IMMEDIATE',

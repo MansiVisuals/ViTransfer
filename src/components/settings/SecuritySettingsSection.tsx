@@ -38,6 +38,8 @@ interface SecuritySettingsSectionProps {
   setMaxUploadSizeGB: (value: string) => void
   maxCommentAttachments: string
   setMaxCommentAttachments: (value: string) => void
+  maxReverseShareFiles: string
+  setMaxReverseShareFiles: (value: string) => void
   sessionTimeoutValue: string
   setSessionTimeoutValue: (value: string) => void
   sessionTimeoutUnit: string
@@ -77,6 +79,8 @@ export function SecuritySettingsSection({
   setMaxUploadSizeGB,
   maxCommentAttachments,
   setMaxCommentAttachments,
+  maxReverseShareFiles,
+  setMaxReverseShareFiles,
   sessionTimeoutValue,
   setSessionTimeoutValue,
   sessionTimeoutUnit,
@@ -257,6 +261,22 @@ export function SecuritySettingsSection({
                 />
                 <p className="text-xs text-muted-foreground">
                   {t('security.maxAttachmentsHint')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxReverseShareFiles">{t('security.maxReverseShareFiles')}</Label>
+                <Input
+                  id="maxReverseShareFiles"
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={maxReverseShareFiles}
+                  onChange={(e) => setMaxReverseShareFiles(e.target.value)}
+                  placeholder="10"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('security.maxReverseShareFilesHint')}
                 </p>
               </div>
             </div>

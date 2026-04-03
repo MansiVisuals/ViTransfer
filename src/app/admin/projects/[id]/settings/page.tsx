@@ -503,9 +503,8 @@ export default function ProjectSettingsPage() {
           </div>
         )}
 
-        {/* Section content (shared between mobile and desktop layouts) */}
+        {/* Section content blocks (shared between mobile and desktop layouts) */}
         {(() => {
-          // Project Details content
           const projectDetailsContent = (
             <>
 	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
@@ -1220,43 +1219,25 @@ export default function ProjectSettingsPage() {
             </>
           )
 
-          // Helper to wrap content in a CollapsibleSection
-          const Section = ({ id, title, description, open, onOpenChange, collapsible, contentClassName, children }: {
-            id: string; title: string; description: string; open: boolean; onOpenChange: (v: boolean) => void; collapsible?: boolean; contentClassName?: string; children: React.ReactNode
-          }) => (
-            <CollapsibleSection
-              key={id}
-              className="border-border"
-              title={title}
-              description={description}
-              open={open}
-              onOpenChange={onOpenChange}
-              contentClassName={contentClassName || "space-y-4 border-t pt-4"}
-              collapsible={collapsible}
-            >
-              {children}
-            </CollapsibleSection>
-          )
-
           return (
             <>
               {/* Mobile: stacked collapsible cards */}
               <div className="lg:hidden space-y-4 sm:space-y-6">
-                <Section id="project-details" title={t('projectDetails')} description={t('projectDetailsDescription')} open={showProjectDetails} onOpenChange={setShowProjectDetails}>
+                <CollapsibleSection className="border-border" title={t('projectDetails')} description={t('projectDetailsDescription')} open={showProjectDetails} onOpenChange={setShowProjectDetails} contentClassName="space-y-4 border-t pt-4">
                   {projectDetailsContent}
-                </Section>
-                <Section id="client-info" title={t('clientInfoNotifications')} description={t('clientInfoNotificationsDescription')} open={showClientInfo} onOpenChange={setShowClientInfo} contentClassName="space-y-6 border-t pt-4">
+                </CollapsibleSection>
+                <CollapsibleSection className="border-border" title={t('clientInfoNotifications')} description={t('clientInfoNotificationsDescription')} open={showClientInfo} onOpenChange={setShowClientInfo} contentClassName="space-y-6 border-t pt-4">
                   {clientInfoContent}
-                </Section>
-                <Section id="client-share" title={t('clientSharePage')} description={t('clientSharePageDescription')} open={showClientSharePage} onOpenChange={setShowClientSharePage} contentClassName="space-y-6 border-t pt-4">
+                </CollapsibleSection>
+                <CollapsibleSection className="border-border" title={t('clientSharePage')} description={t('clientSharePageDescription')} open={showClientSharePage} onOpenChange={setShowClientSharePage} contentClassName="space-y-6 border-t pt-4">
                   {clientShareContent}
-                </Section>
-                <Section id="video-processing" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={showVideoProcessing} onOpenChange={setShowVideoProcessing} contentClassName="space-y-6 border-t pt-4">
+                </CollapsibleSection>
+                <CollapsibleSection className="border-border" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={showVideoProcessing} onOpenChange={setShowVideoProcessing} contentClassName="space-y-6 border-t pt-4">
                   {videoProcessingContent}
-                </Section>
-                <Section id="security" title={t('security')} description={t('securityDescription')} open={showSecurity} onOpenChange={setShowSecurity}>
+                </CollapsibleSection>
+                <CollapsibleSection className="border-border" title={t('security')} description={t('securityDescription')} open={showSecurity} onOpenChange={setShowSecurity} contentClassName="space-y-4 border-t pt-4">
                   {securityContent}
-                </Section>
+                </CollapsibleSection>
               </div>
 
               {/* Desktop: sidebar nav + content panel */}
@@ -1283,29 +1264,29 @@ export default function ProjectSettingsPage() {
 
                 <div className="flex-1 min-w-0">
                   {activeSection === 'project-details' && (
-                    <Section id="project-details" title={t('projectDetails')} description={t('projectDetailsDescription')} open={true} onOpenChange={() => {}} collapsible={false}>
+                    <CollapsibleSection className="border-border" title={t('projectDetails')} description={t('projectDetailsDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-4 border-t pt-4">
                       {projectDetailsContent}
-                    </Section>
+                    </CollapsibleSection>
                   )}
                   {activeSection === 'client-info' && (
-                    <Section id="client-info" title={t('clientInfoNotifications')} description={t('clientInfoNotificationsDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
+                    <CollapsibleSection className="border-border" title={t('clientInfoNotifications')} description={t('clientInfoNotificationsDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
                       {clientInfoContent}
-                    </Section>
+                    </CollapsibleSection>
                   )}
                   {activeSection === 'client-share' && (
-                    <Section id="client-share" title={t('clientSharePage')} description={t('clientSharePageDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
+                    <CollapsibleSection className="border-border" title={t('clientSharePage')} description={t('clientSharePageDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
                       {clientShareContent}
-                    </Section>
+                    </CollapsibleSection>
                   )}
                   {activeSection === 'video-processing' && (
-                    <Section id="video-processing" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
+                    <CollapsibleSection className="border-border" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
                       {videoProcessingContent}
-                    </Section>
+                    </CollapsibleSection>
                   )}
                   {activeSection === 'security' && (
-                    <Section id="security" title={t('security')} description={t('securityDescription')} open={true} onOpenChange={() => {}} collapsible={false}>
+                    <CollapsibleSection className="border-border" title={t('security')} description={t('securityDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-4 border-t pt-4">
                       {securityContent}
-                    </Section>
+                    </CollapsibleSection>
                   )}
                 </div>
               </div>

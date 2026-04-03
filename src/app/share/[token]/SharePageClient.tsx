@@ -934,6 +934,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     <ReverseShareUploadPanel
                       shareToken={shareToken}
                       shareSlug={token}
+                      maxFiles={project.settings?.maxReverseShareFiles ?? 10}
                     />
                   )}
                 </>

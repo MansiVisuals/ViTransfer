@@ -344,8 +344,9 @@ model Settings {
   defaultWatermarkOpacity   Int     @default(30) // Opacity percentage (10-100)
   defaultWatermarkFontSize  String  @default("medium") // small, medium, large
   defaultApplyPreviewLut      Boolean @default(true) // Apply preview LUT during transcoding by default
-  maxUploadSizeGB          Int      @default(1) // Maximum upload size (GB) for TUS uploads (1-1000)
+  maxUploadSizeGB          Int      @default(1) // Maximum file size per upload in GB (1-1000)
   maxCommentAttachments    Int      @default(10) // Maximum files per comment attachment batch (1-50)
+  maxReverseShareFiles     Int      @default(10) // Maximum files per reverse share upload session (1-500)
 
   // Default Comment Timestamp Display
   // TIMECODE = HH:MM:SS:FF (or DF), AUTO = MM:SS or HH:MM:SS based on video length

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
-import { getFilePath, deleteFile, sanitizeFilenameForHeader } from '@/lib/storage'
+import { getFilePath, deleteFile, sanitizeFilenameForHeader, isS3Mode, createWebReadableStream } from '@/lib/storage'
+import { s3GetPresignedDownloadUrl, s3FileExists } from '@/lib/s3-storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { createReadStream } from 'fs'
 import fs from 'fs'
@@ -85,14 +86,33 @@ export async function GET(
       }
     }
 
-    // Get the full file path and check if exists
+    const sanitizedFilename = sanitizeFilenameForHeader(asset.fileName)
+
+    // ── S3 mode: redirect directly to presigned URL ──────────────────────────
+    if (isS3Mode()) {
+      const exists = await s3FileExists(asset.storagePath)
+      if (!exists) {
+        return NextResponse.json({ error: videoMessages.fileNotFound || 'File not found' }, { status: 404 })
+      }
+      const presignedUrl = await s3GetPresignedDownloadUrl(
+        asset.storagePath,
+        3600,
+        sanitizedFilename,
+        asset.fileType
+      )
+      return NextResponse.redirect(presignedUrl, {
+        status: 302,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
+    // ── Local mode ───────────────────────────────────────────────────────────
     const fullPath = getFilePath(asset.storagePath)
     const stat = await fs.promises.stat(fullPath)
     if (!stat.isFile()) {
   return NextResponse.json({ error: videoMessages.fileNotFound || 'File not found' }, { status: 404 })
     }
 
-    const sanitizedFilename = sanitizeFilenameForHeader(asset.fileName)
     const range = request.headers.get('range')
 
     if (range) {
@@ -107,20 +127,7 @@ export async function GET(
       const { start, end } = parsedRange
       const chunkSize = (end - start) + 1
       const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
-
-      const readableStream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', (chunk) => controller.enqueue(chunk))
-          fileStream.on('end', () => controller.close())
-          fileStream.on('error', (err) => {
-            fileStream.destroy()
-            controller.error(err)
-          })
-        },
-        cancel() {
-          fileStream.destroy()
-        },
-      })
+      const readableStream = createWebReadableStream(fileStream)
 
       return new NextResponse(readableStream, {
         status: 206,
@@ -137,21 +144,7 @@ export async function GET(
     }
 
     const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
-
-    // Convert Node.js stream to Web API ReadableStream
-    const readableStream = new ReadableStream({
-      start(controller) {
-        fileStream.on('data', (chunk) => controller.enqueue(chunk))
-        fileStream.on('end', () => controller.close())
-        fileStream.on('error', (err) => {
-          fileStream.destroy()
-          controller.error(err)
-        })
-      },
-      cancel() {
-        fileStream.destroy()
-      },
-    })
+    const readableStream = createWebReadableStream(fileStream)
 
     return new NextResponse(readableStream, {
       headers: {

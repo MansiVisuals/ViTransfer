@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getFilePath, sanitizeFilenameForHeader, getVideoContentType, isS3Mode } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader, getVideoContentType, isS3Mode, createWebReadableStream } from '@/lib/storage'
 import { s3GetPresignedDownloadUrl, s3FileExists } from '@/lib/s3-storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
@@ -124,17 +124,7 @@ export async function GET(
       const { start, end } = parsedRange
       const chunkSize = (end - start) + 1
       const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
-
-      const readableStream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', (chunk) => controller.enqueue(chunk))
-          fileStream.on('end', () => controller.close())
-          fileStream.on('error', (err) => controller.error(err))
-        },
-        cancel() {
-          fileStream.destroy()
-        },
-      })
+      const readableStream = createWebReadableStream(fileStream)
 
       return new NextResponse(readableStream, {
         status: 206,
@@ -151,20 +141,8 @@ export async function GET(
     }
 
     const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
+    const readableStream = createWebReadableStream(fileStream)
 
-    // Convert Node.js stream to Web API ReadableStream
-    const readableStream = new ReadableStream({
-      start(controller) {
-        fileStream.on('data', (chunk) => controller.enqueue(chunk))
-        fileStream.on('end', () => controller.close())
-        fileStream.on('error', (err) => controller.error(err))
-      },
-      cancel() {
-        fileStream.destroy()
-      },
-    })
-
-    // Return file with proper headers for download
     return new NextResponse(readableStream, {
       headers: {
         'Content-Type': contentType,

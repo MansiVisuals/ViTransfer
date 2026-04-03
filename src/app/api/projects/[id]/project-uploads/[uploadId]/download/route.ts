@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
-import { getFilePath, sanitizeFilenameForHeader } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader, isS3Mode, createWebReadableStream } from '@/lib/storage'
+import { s3GetPresignedDownloadUrl, s3FileExists } from '@/lib/s3-storage'
 import { createReadStream, existsSync } from 'fs'
 import { logError } from '@/lib/logging'
 
@@ -41,6 +42,26 @@ export async function GET(
       return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
     }
 
+    const safeFileName = sanitizeFilenameForHeader(upload.fileName)
+
+    // ── S3 mode: redirect directly to presigned URL ──────────────────────────
+    if (isS3Mode()) {
+      const exists = await s3FileExists(upload.storagePath)
+      if (!exists) {
+        return NextResponse.json({ error: 'File not found' }, { status: 404 })
+      }
+      const presignedUrl = await s3GetPresignedDownloadUrl(
+        upload.storagePath,
+        3600,
+        safeFileName,
+        upload.fileType || 'application/octet-stream'
+      )
+      return NextResponse.redirect(presignedUrl, {
+        status: 302,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
     const filePath = getFilePath(upload.storagePath)
 
     if (!existsSync(filePath)) {
@@ -48,18 +69,7 @@ export async function GET(
     }
 
     const fileStream = createReadStream(filePath)
-    const webStream = new ReadableStream({
-      start(controller) {
-        fileStream.on('data', (chunk) => controller.enqueue(chunk))
-        fileStream.on('end', () => controller.close())
-        fileStream.on('error', (err) => controller.error(err))
-      },
-      cancel() {
-        fileStream.destroy()
-      },
-    })
-
-    const safeFileName = sanitizeFilenameForHeader(upload.fileName)
+    const webStream = createWebReadableStream(fileStream)
 
     return new NextResponse(webStream, {
       status: 200,

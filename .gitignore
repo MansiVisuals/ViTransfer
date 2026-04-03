@@ -46,7 +46,7 @@ SECURITY_FIXES_*.md
 SECURITY_BUGS_*.md
 
 # Local storage
-uploads/
+/uploads/
 minio-data/
 postgres-data/
 redis-data/

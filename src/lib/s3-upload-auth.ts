@@ -157,9 +157,6 @@ export async function verifyS3UploadAccess(
       }
       return { isAdmin: false, s3Key: asset.storagePath }
     }
-
-    // Should not reach here (either videoId, assetId, or projectUploadId is set)
-    return { errorResponse: NextResponse.json({ error: 'Access denied' }, { status: 403 }) }
   }
 
   // ── Admin path: resolve S3 key from DB ─────────────────────────────────────

@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { Readable } from 'stream'
+import { ReadStream } from 'fs'
 import { pipeline } from 'stream/promises'
 import { mkdir } from 'fs/promises'
 import { s3UploadFile, s3DownloadFile, s3DeleteFile, s3DeleteDirectory } from './s3-storage'
@@ -127,6 +128,20 @@ export function getVideoContentType(filename: string): string {
   if (!filename) return 'video/mp4'
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
   return VIDEO_MIME_MAP[ext] || 'video/mp4'
+}
+
+/** Convert a Node.js ReadStream to a Web ReadableStream for NextResponse. */
+export function createWebReadableStream(fileStream: ReadStream): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      fileStream.on('data', (chunk) => controller.enqueue(chunk))
+      fileStream.on('end', () => controller.close())
+      fileStream.on('error', (err) => controller.error(err))
+    },
+    cancel() {
+      fileStream.destroy()
+    },
+  })
 }
 
 /** Strip characters unsafe in Content-Disposition headers (CRLF injection, non-ASCII). */

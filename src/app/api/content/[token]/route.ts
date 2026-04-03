@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyVideoAccessToken, detectHotlinking, trackVideoAccess, logSecurityEvent, getSecuritySettings } from '@/lib/video-access'
 import { getRedis } from '@/lib/redis'
 import { prisma } from '@/lib/db'
-import { createReadStream, existsSync, statSync, ReadStream } from 'fs'
-import { getFilePath, sanitizeFilenameForHeader, getVideoContentType, isS3Mode } from '@/lib/storage'
+import { createReadStream, existsSync, statSync } from 'fs'
+import { getFilePath, sanitizeFilenameForHeader, getVideoContentType, isS3Mode, createWebReadableStream } from '@/lib/storage'
 import { s3GetPresignedDownloadUrl, s3GetPresignedStreamUrl, s3FileExists } from '@/lib/s3-storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIpAddress } from '@/lib/utils'
@@ -23,22 +23,6 @@ export const dynamic = 'force-dynamic'
 
 const CONTENT_SESSION_WINDOW_SECONDS = 60
 
-
-/**
- * Convert Node.js ReadStream to Web ReadableStream
- */
-function createWebReadableStream(fileStream: ReadStream): ReadableStream {
-  return new ReadableStream({
-    start(controller) {
-      fileStream.on('data', (chunk) => controller.enqueue(chunk))
-      fileStream.on('end', () => controller.close())
-      fileStream.on('error', (err) => controller.error(err))
-    },
-    cancel() {
-      fileStream.destroy()
-    },
-  })
-}
 
 /**
  * Content delivery endpoint - streams video/thumbnail content with security checks

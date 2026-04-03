@@ -184,6 +184,10 @@ export async function POST(request: NextRequest) {
         defaultUsePreviewForApprovedPlayback: true,
         defaultAllowClientAssetUpload: true,
         defaultApplyPreviewLut: true,
+        defaultAllowReverseShare: true,
+        defaultShowClientTutorial: true,
+        defaultAllowAssetDownload: true,
+        defaultClientCanApprove: true,
       },
     })
 
@@ -220,6 +224,10 @@ export async function POST(request: NextRequest) {
           timestampDisplay: settings?.defaultTimestampDisplay || 'TIMECODE',
           usePreviewForApprovedPlayback: settings?.defaultUsePreviewForApprovedPlayback ?? false,
           allowClientAssetUpload: settings?.defaultAllowClientAssetUpload ?? false,
+          allowReverseShare: settings?.defaultAllowReverseShare ?? false,
+          showClientTutorial: settings?.defaultShowClientTutorial ?? true,
+          allowAssetDownload: settings?.defaultAllowAssetDownload ?? true,
+          clientCanApprove: settings?.defaultClientCanApprove ?? true,
           applyPreviewLut: settings?.defaultApplyPreviewLut ?? true,
           dueDate: dueDate ? new Date(dueDate) : null,
           dueReminder: dueReminder || null,

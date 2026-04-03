@@ -753,6 +753,7 @@ export default function ProjectSettingsPage() {
           // Client Share Page content
           const clientShareContent = (
             <>
+              {/* ── Approval & Workflow ─────────────────────────────────── */}
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
@@ -768,6 +769,28 @@ export default function ProjectSettingsPage() {
                   />
                 </div>
 
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="usePreviewForApprovedPlayback">{t('usePreviewForApproved')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('usePreviewForApprovedDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="usePreviewForApprovedPlayback"
+                    checked={usePreviewForApprovedPlayback}
+                    onCheckedChange={setUsePreviewForApprovedPlayback}
+                  />
+                </div>
+                {usePreviewForApprovedPlayback && watermarkEnabled && (
+                  <p className="text-xs text-muted-foreground italic">
+                    {t('cleanPreviewHint')}
+                  </p>
+                )}
+              </div>
+
+              {/* ── Client Access ────────────────────────────────────────── */}
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
                     <Label htmlFor="allowAssetDownload">{t('allowAssetDownloads')}</Label>
@@ -809,6 +832,10 @@ export default function ProjectSettingsPage() {
                     onCheckedChange={setAllowReverseShare}
                   />
                 </div>
+              </div>
+
+              {/* ── Presentation ─────────────────────────────────────────── */}
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
                     <Label htmlFor="showClientTutorial">{t('showClientTutorial')}</Label>
@@ -822,33 +849,10 @@ export default function ProjectSettingsPage() {
                     onCheckedChange={setShowClientTutorial}
                   />
                 </div>
-              </div>
 
-              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
-                    <Label htmlFor="usePreviewForApprovedPlayback">{t('usePreviewForApproved')}</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t('usePreviewForApprovedDescription')}
-                    </p>
-                  </div>
-                  <Switch
-                    id="usePreviewForApprovedPlayback"
-                    checked={usePreviewForApprovedPlayback}
-                    onCheckedChange={setUsePreviewForApprovedPlayback}
-                  />
-                </div>
-                {usePreviewForApprovedPlayback && watermarkEnabled && (
-                  <p className="text-xs text-muted-foreground italic">
-                    {t('cleanPreviewHint')}
-                  </p>
-                )}
-              </div>
-
-	              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
-	                <div className="flex items-center justify-between gap-4">
-	                  <div className="space-y-0.5 flex-1">
-	                    <Label htmlFor="hideFeedback">{t('hideFeedbackSection')}</Label>
+                    <Label htmlFor="hideFeedback">{t('hideFeedbackSection')}</Label>
                     <p className="text-xs text-muted-foreground">
                       {t('hideFeedbackSectionDescription')}
                     </p>
@@ -887,9 +891,9 @@ export default function ProjectSettingsPage() {
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     {t('commentTimestampDisplayHint')}
-	                  </p>
-	                </div>
-	              </div>
+                  </p>
+                </div>
+              </div>
             </>
           )
 

@@ -1092,7 +1092,15 @@
     },
     "projectDefaults": {
       "title": "Project Defaults",
-      "description": "Default behavior settings for new projects"
+      "description": "Default behavior settings for new projects",
+      "defaultAllowReverseShare": "Allow File Submissions",
+      "defaultAllowReverseShareHint": "Allow clients to upload files directly to a project. Can be overridden per project.",
+      "defaultShowClientTutorial": "Show Tutorial",
+      "defaultShowClientTutorialHint": "Show an interactive walkthrough for first-time visitors. Can be overridden per project.",
+      "defaultAllowAssetDownload": "Allow Asset Downloads",
+      "defaultAllowAssetDownloadHint": "Allow clients to download approved assets. Can be overridden per project.",
+      "defaultClientCanApprove": "Allow Client Approval",
+      "defaultClientCanApproveHint": "Allow clients to approve videos. When disabled, only admins can approve. Can be overridden per project."
     },
     "blocklist": {
       "title": "Blocklist",
@@ -1372,7 +1380,7 @@
 
     "videoProcessing": {
       "title": "Video Processing",
-      "description": "Transcoding, resolution, LUT, and watermark settings",
+      "description": "Default transcoding, resolution, LUT, and watermark settings for new projects",
       "skipTranscoding": "Skip Transcoding",
       "skipTranscodingHint": "Serve the original file directly without any processing. No watermark, resolution change, or codec conversion will be applied.",
       "skipTranscodingWarning": "Videos will not be transcoded. Playback may not work in all browsers if the original uses unsupported codecs (e.g., ProRes, HEVC).",

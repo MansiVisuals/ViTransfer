@@ -1092,7 +1092,15 @@
     },
     "projectDefaults": {
       "title": "Projektstandards",
-      "description": "Standardverhalten für neue Projekte"
+      "description": "Standardverhalten für neue Projekte",
+      "defaultAllowReverseShare": "Dateieinreichungen erlauben",
+      "defaultAllowReverseShareHint": "Kunden erlauben, Dateien direkt in ein Projekt hochzuladen. Kann pro Projekt überschrieben werden.",
+      "defaultShowClientTutorial": "Tutorial anzeigen",
+      "defaultShowClientTutorialHint": "Einen interaktiven Rundgang für Erstbesucher anzeigen. Kann pro Projekt überschrieben werden.",
+      "defaultAllowAssetDownload": "Asset-Downloads erlauben",
+      "defaultAllowAssetDownloadHint": "Kunden erlauben, freigegebene Assets herunterzuladen. Kann pro Projekt überschrieben werden.",
+      "defaultClientCanApprove": "Kundenfreigabe erlauben",
+      "defaultClientCanApproveHint": "Kunden erlauben, Videos freizugeben. Wenn deaktiviert, können nur Admins freigeben. Kann pro Projekt überschrieben werden."
     },
     "blocklist": {
       "title": "Sperrliste",
@@ -1372,7 +1380,7 @@
 
     "videoProcessing": {
       "title": "Videoverarbeitung",
-      "description": "Transkodierung, Auflösung, LUT und Wasserzeichen-Einstellungen",
+      "description": "Standard-Transkodierung, Auflösung, LUT und Wasserzeichen-Einstellungen für neue Projekte",
       "skipTranscoding": "Transkodierung Überspringen",
       "skipTranscodingHint": "Die Originaldatei direkt bereitstellen, ohne jegliche Verarbeitung. Kein Wasserzeichen, keine Auflösungsänderung oder Codec-Konvertierung wird angewendet.",
       "skipTranscodingWarning": "Videos werden nicht transkodiert. Die Wiedergabe funktioniert möglicherweise nicht in allen Browsern, wenn das Original nicht unterstützte Codecs verwendet (z. B. ProRes, HEVC).",

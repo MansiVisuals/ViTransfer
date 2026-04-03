@@ -1047,7 +1047,15 @@
     },
     "projectDefaults": {
       "title": "Projectstandaarden",
-      "description": "Standaard gedragsinstellingen voor nieuwe projecten"
+      "description": "Standaard gedragsinstellingen voor nieuwe projecten",
+      "defaultAllowReverseShare": "Bestandsinzendingen toestaan",
+      "defaultAllowReverseShareHint": "Klanten toestaan bestanden rechtstreeks naar een project te uploaden. Per project te overschrijven.",
+      "defaultShowClientTutorial": "Tutorial tonen",
+      "defaultShowClientTutorialHint": "Een interactieve rondleiding tonen voor eerste bezoekers. Per project te overschrijven.",
+      "defaultAllowAssetDownload": "Assetdownloads toestaan",
+      "defaultAllowAssetDownloadHint": "Klanten toestaan goedgekeurde bestanden te downloaden. Per project te overschrijven.",
+      "defaultClientCanApprove": "Klantgoedkeuring toestaan",
+      "defaultClientCanApproveHint": "Klanten toestaan video's goed te keuren. Indien uitgeschakeld kunnen alleen beheerders goedkeuren. Per project te overschrijven."
     },
     "blocklist": {
       "title": "Blokkeerlijst",
@@ -1321,7 +1329,7 @@
     },
     "videoProcessing": {
       "title": "Videoverwerking",
-      "description": "Transcodering, resolutie, LUT en watermerkinstellingen",
+      "description": "Standaard transcodering, resolutie, LUT en watermerkinstellingen voor nieuwe projecten",
       "skipTranscoding": "Transcodering Overslaan",
       "skipTranscodingHint": "Het originele bestand direct aanbieden zonder enige verwerking. Geen watermerk, resolutiewijziging of codec-conversie wordt toegepast.",
       "skipTranscodingWarning": "Video's worden niet getranscodeerd. Afspelen werkt mogelijk niet in alle browsers als het origineel niet-ondersteunde codecs gebruikt (bijv. ProRes, HEVC).",

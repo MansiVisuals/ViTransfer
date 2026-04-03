@@ -358,6 +358,12 @@ model Settings {
   // Default Client Asset Upload Setting
   defaultAllowClientAssetUpload Boolean @default(false)
 
+  // Default Client Access Defaults
+  defaultAllowReverseShare  Boolean @default(false) // Default: allow clients to submit files directly to project
+  defaultShowClientTutorial Boolean @default(true)  // Default: show interactive tutorial for first-time visitors
+  defaultAllowAssetDownload Boolean @default(true)  // Default: allow clients to download approved assets
+  defaultClientCanApprove   Boolean @default(true)  // Default: allow clients to approve videos
+
   // Project Behavior
   autoApproveProject Boolean @default(true) // Auto-approve project when all videos approved
 

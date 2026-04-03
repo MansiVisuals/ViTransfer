@@ -166,7 +166,8 @@ export function ProjectDefaultsSection({
             onCheckedChange={setDefaultShowClientTutorial}
           />
         </div>
-        <Label>{t('videoProcessing.timestampDisplay')}</Label>
+        <div className="pt-2 mt-2 border-t border-border space-y-3">
+          <Label>{t('videoProcessing.timestampDisplay')}</Label>
         <Select value={defaultTimestampDisplay} onValueChange={setDefaultTimestampDisplay}>
           <SelectTrigger>
             <SelectValue />
@@ -179,6 +180,7 @@ export function ProjectDefaultsSection({
         <p className="text-xs text-muted-foreground">
           {t('videoProcessing.timestampHint')}
         </p>
+        </div>
       </div>
     </CollapsibleSection>
   )

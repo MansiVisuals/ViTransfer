@@ -850,7 +850,7 @@ export default function ProjectSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 pt-2 mt-1 border-t border-border">
                   <div className="space-y-0.5 flex-1">
                     <Label htmlFor="hideFeedback">{t('hideFeedbackSection')}</Label>
                     <p className="text-xs text-muted-foreground">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
-import { verifyPasswordResetToken } from '@/lib/password-reset'
+import { verifyPasswordResetTokenWithReason } from '@/lib/password-reset'
 import { hashPassword, validatePassword } from '@/lib/encryption'
 import { invalidateAdminSessions } from '@/lib/session-invalidation'
 import { logSecurityEvent } from '@/lib/video-access'
@@ -82,15 +82,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify and decode token
-    const payload = verifyPasswordResetToken(token)
-    if (!payload) {
-      // Log invalid token attempt
+    const tokenResult = verifyPasswordResetTokenWithReason(token)
+    if (!tokenResult.valid) {
+      const eventType = tokenResult.reason === 'expired'
+        ? 'ADMIN_PASSWORD_RESET_TOKEN_EXPIRED'
+        : 'ADMIN_PASSWORD_RESET_TOKEN_INVALID'
       await logSecurityEvent({
-        type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
+        type: eventType,
         severity: 'WARNING',
         ipAddress: getClientIpAddress(request),
         details: {
-          reason: 'Invalid or expired token',
+          reason: tokenResult.reason === 'expired' ? 'Token expired' : 'Invalid or malformed token',
         },
       })
       return NextResponse.json(
@@ -98,6 +100,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    const payload = tokenResult.payload
 
     // Atomically mark token as used (single-use enforcement via SETNX)
     const redis = getRedis()

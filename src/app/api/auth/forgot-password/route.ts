@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
   }, 'forgot-password')
 
   if (rateLimitResult) {
+    await logSecurityEvent({
+      type: 'ADMIN_PASSWORD_RESET_RATE_LIMIT_HIT',
+      severity: 'WARNING',
+      ipAddress: getClientIpAddress(request),
+      details: {
+        reason: 'Too many password reset requests',
+      },
+    })
     return rateLimitResult
   }
 
@@ -90,6 +98,17 @@ export async function POST(request: NextRequest) {
       settings?.smtpPort &&
       settings?.smtpFromAddress
     )
+
+    // Log the reset request
+    await logSecurityEvent({
+      type: 'ADMIN_PASSWORD_RESET_REQUESTED',
+      severity: 'INFO',
+      ipAddress: getClientIpAddress(request),
+      details: {
+        userId: user.id,
+        email: user.email,
+      },
+    })
 
     // Generate secure reset token
     const token = generatePasswordResetToken({

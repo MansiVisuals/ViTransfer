@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }, 's3-abort')
     if (rateLimitResult) return rateLimitResult
 
-    if (!uploadId || typeof uploadId !== 'string' || uploadId.length > 256) {
+    if (!uploadId || typeof uploadId !== 'string' || uploadId.length > 1024) {
       return NextResponse.json({ error: 'Missing or invalid field: uploadId' }, { status: 400 })
     }
 

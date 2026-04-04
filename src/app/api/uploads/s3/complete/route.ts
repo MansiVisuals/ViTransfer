@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     if (rateLimitResult) return rateLimitResult
 
     // ── Input validation ──────────────────────────────────────────────────────
-    if (!uploadId || typeof uploadId !== 'string' || uploadId.length > 256) {
+    if (!uploadId || typeof uploadId !== 'string' || uploadId.length > 1024) {
       return NextResponse.json(
         { error: 'Missing or invalid field: uploadId' },
         { status: 400 }

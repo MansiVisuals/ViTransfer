@@ -38,6 +38,7 @@ model Project {
   description     String?
   companyName     String? // Optional company/brand name (display priority: companyName → primary recipient → 'Client')
   sharePassword   String?
+  type            String  @default("VIDEO") // Project type: VIDEO or PHOTO
   authMode        String  @default("PASSWORD") // Authentication mode: PASSWORD, OTP, BOTH, or NONE
   guestMode       Boolean @default(false) // Allow guest access with limited view (videos only, no comments/approval)
   guestLatestOnly Boolean @default(true) // Guests can only view latest version of each video
@@ -101,6 +102,7 @@ model Project {
   clientCompany   ClientCompany? @relation(fields: [clientCompanyId], references: [id], onDelete: SetNull)
 
   videos            Video[]
+  photos            Photo[]
   comments          Comment[]
   securityEvents    SecurityEvent[]
   analytics         VideoAnalytics[]
@@ -244,18 +246,56 @@ enum VideoStatus {
   ERROR
 }
 
+model Photo {
+  id           String @id @default(cuid())
+  projectId    String
+  name         String
+  version      Int    @default(1)
+  versionLabel String @default("v1")
+
+  originalFileName    String
+  originalFileSize    BigInt
+  originalStoragePath String
+  mimeType            String @default("image/jpeg")
+
+  width     Int?
+  height    Int?
+  sortOrder Int @default(0)
+
+  status String @default("UPLOADING") // UPLOADING, READY, ERROR
+
+  approved   Boolean   @default(false)
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  comments Comment[]
+  analytics VideoAnalytics[]
+
+  @@index([projectId, version])
+  @@index([projectId, name])
+  @@index([projectId, sortOrder])
+}
+
 model Comment {
   id           String   @id @default(cuid())
   projectId    String
-  videoId      String // All comments must be video-specific
+  videoId      String? // Video comment (nullable for photo comments)
   videoVersion Int? // track which version this comment was for
-  timecode     String // HH:MM:SS:FF format (e.g., "00:00:32:15" for 32 seconds 15 frames at given FPS)
+  timecode     String? // HH:MM:SS:FF format (nullable for photo comments)
   content      String
   authorName   String? // made optional to allow anonymous comments
   authorEmail  String?
   isInternal   Boolean  @default(false) // true = from studio, false = from client
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Photo comment support
+  photoId String? // Photo comment (nullable for video comments)
+  pinX    Float?  // 0.0-1.0 resolution-independent X coordinate
+  pinY    Float?  // 0.0-1.0 resolution-independent Y coordinate
 
   // Annotation support
   timecodeEnd String? // Optional end timecode for time range comments
@@ -271,11 +311,13 @@ model Comment {
   replies  Comment[] @relation("CommentReplies")
 
   project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  video   Video        @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  video   Video?       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  photo   Photo?       @relation(fields: [photoId], references: [id], onDelete: Cascade)
   assets  VideoAsset[]
 
   @@index([projectId])
   @@index([videoId])
+  @@index([photoId])
   @@index([parentId])
   @@index([userId])
 }
@@ -528,8 +570,11 @@ model BlockedDomain {
 model VideoAnalytics {
   id String @id @default(cuid())
 
-  videoId String
-  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  videoId String?
+  video   Video?  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  photoId String?
+  photo   Photo?  @relation(fields: [photoId], references: [id], onDelete: Cascade)
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -547,6 +592,7 @@ model VideoAnalytics {
 
   @@index([projectId, createdAt])
   @@index([videoId, createdAt])
+  @@index([photoId, createdAt])
   @@index([eventType])
   @@index([assetId])
 }

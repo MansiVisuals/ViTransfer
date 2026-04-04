@@ -98,7 +98,7 @@ export async function GET(
       const videoIds = versions.map(v => v.id)
 
       // Get all analytics for these video IDs
-      const videoAnalytics = project.analytics.filter(a => videoIds.includes(a.videoId))
+      const videoAnalytics = project.analytics.filter(a => a.videoId && videoIds.includes(a.videoId))
       const totalDownloads = videoAnalytics.length
 
       // Per-version breakdown
@@ -141,27 +141,29 @@ export async function GET(
       createdAt: access.createdAt,
     }))
 
-    const downloadEvents = project.analytics.map(download => {
+    const downloadEvents = project.analytics
+      .filter(download => download.video) // Only include video analytics (not photo)
+      .map(download => {
       let assetFileName: string | undefined
       let assetFileNames: string[] | undefined
 
       if (download.assetId) {
         // Single asset download
-        const asset = download.video.assets.find(a => a.id === download.assetId)
+        const asset = download.video!.assets.find(a => a.id === download.assetId)
         assetFileName = asset?.fileName
       } else if (download.assetIds) {
         // Multiple asset download (ZIP)
         const assetIdArray = JSON.parse(download.assetIds) as string[]
         assetFileNames = assetIdArray
-          .map(id => download.video.assets.find(a => a.id === id)?.fileName)
+          .map(id => download.video!.assets.find(a => a.id === id)?.fileName)
           .filter((name): name is string => !!name)
       }
 
       return {
         id: download.id,
         type: 'DOWNLOAD' as const,
-        videoName: download.video.name,
-        versionLabel: download.video.versionLabel,
+        videoName: download.video!.name,
+        versionLabel: download.video!.versionLabel,
         assetId: download.assetId,
         assetIds: download.assetIds ? JSON.parse(download.assetIds) : undefined,
         assetFileName,

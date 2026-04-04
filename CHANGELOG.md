@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
-## [1.0.0] - 2026-04-03
+## [1.0.0] - Unreleased
 
 ViTransfer is production-ready and near feature-complete.
 
@@ -22,6 +22,7 @@ A special thanks to [@thinkvp](https://github.com/thinkvp) (Simon), who has been
 - "Download All Videos" button on the share page grid view — downloads all approved videos as a single ZIP file.
 - Reverse share — projects can now accept client file uploads via the share page. Enable per-project in settings. Uploaded files appear in a dedicated "Client Uploads" block on the admin project page.
 - Bulk select on the admin project page — video assets and client uploads now support multi-select with a bulk action bar for downloading or deleting multiple files at once.
+- Client upload notifications — reverse share uploads now trigger notifications across all channels: external (Gotify/ntfy/Pushover/Telegram), web push, and admin email. Includes a customizable `ADMIN_CLIENT_UPLOAD` email template with file list. Toggleable per-channel in notification settings.
 
 ### Changed
 - Redesigned admin settings pages with sidebar navigation on desktop and collapsible cards on mobile. Global settings split from 4 into 8 focused sections (Appearance, Branding, Privacy, Notifications, Video Processing, Project Defaults, Security, Blocklist). Project settings follow the same pattern with 5 sidebar sections.
@@ -39,6 +40,7 @@ A special thanks to [@thinkvp](https://github.com/thinkvp) (Simon), who has been
 - Fixed Docker entrypoint not setting ownership of top-level app files (e.g. `package.json`) when remapping PUID/PGID, causing startup permission errors.
 - Keyboard shortcuts button in the comment panel no longer disappears after approving a video.
 - Redis lazy connect race condition causing 500 on first request.
+- Password reset security event gaps — forgot-password rate limit hits are now logged, reset tokens distinguish expired vs invalid in audit logs, and password reset requests are logged before token generation.
 
 ## [0.9.10] - 2026-03-28
 

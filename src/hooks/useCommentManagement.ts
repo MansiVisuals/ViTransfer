@@ -419,6 +419,9 @@ export function useCommentManagement({
       updatedAt: new Date(),
       parentId: replyingToCommentId,
       userId: null,
+      photoId: null,
+      pinX: null,
+      pinY: null,
       replies: [],
     }
 
@@ -550,9 +553,9 @@ export function useCommentManagement({
     }
   }
 
-  const handleReply = (commentId: string, videoId: string) => {
+  const handleReply = (commentId: string, videoId?: string) => {
     setReplyingToCommentId(commentId)
-    setSelectedVideoId(videoId)
+    if (videoId) setSelectedVideoId(videoId)
   }
 
   const handleCancelReply = () => {

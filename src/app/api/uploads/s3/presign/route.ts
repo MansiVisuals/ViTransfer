@@ -35,24 +35,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { videoId, assetId, projectUploadId, filename, contentType, fileSize } = body as {
+    const { videoId, assetId, projectUploadId, photoId, filename, contentType, fileSize } = body as {
       videoId?: string
       assetId?: string
       projectUploadId?: string
+      photoId?: string
       filename: string
       contentType: string
       fileSize: number
     }
 
-    if (!videoId && !assetId && !projectUploadId) {
+    if (!videoId && !assetId && !projectUploadId && !photoId) {
       return NextResponse.json(
-        { error: 'Missing required field: videoId, assetId, or projectUploadId' },
+        { error: 'Missing required field: videoId, assetId, projectUploadId, or photoId' },
         { status: 400 }
       )
     }
 
     // ── Authentication & ownership ──────────────────────────────────────────────
-    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId }, { requireUploadPermission: true })
+    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId }, { requireUploadPermission: true })
     if (authResult.errorResponse) return authResult.errorResponse
 
     // ── Rate limit: 30 presign requests per minute per client ─────────────────
@@ -119,6 +120,13 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+    } else if (photoId) {
+      if (!FILE_LIMITS.ALLOWED_PHOTO_EXTENSIONS.includes(ext)) {
+        return NextResponse.json(
+          { error: `Invalid photo format: ${ext}. Allowed: ${FILE_LIMITS.ALLOWED_PHOTO_EXTENSIONS.join(', ')}` },
+          { status: 400 }
+        )
+      }
     } else {
       if (!ALL_ALLOWED_EXTENSIONS.includes(ext)) {
         return NextResponse.json(
@@ -129,8 +137,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Resolve S3 key from DB ─────────────────────────────────────────────────
-    // Auth helper already resolved s3Key for non-video uploads.
-    // For videos, we need extra status check so re-fetch here.
+    // Auth helper already resolved s3Key for non-video/photo uploads.
+    // For videos/photos, we need extra status check so re-fetch here.
     let s3Key = authResult.s3Key
     if (videoId) {
       const video = await prisma.video.findUnique({ where: { id: videoId }, select: { status: true, originalStoragePath: true } })
@@ -139,6 +147,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Video is not in UPLOADING state' }, { status: 400 })
       }
       s3Key = video.originalStoragePath
+    } else if (photoId) {
+      const photo = await prisma.photo.findUnique({ where: { id: photoId }, select: { status: true, originalStoragePath: true } })
+      if (!photo) return NextResponse.json({ error: 'Photo record not found' }, { status: 404 })
+      if (photo.status !== 'UPLOADING') {
+        return NextResponse.json({ error: 'Photo is not in UPLOADING state' }, { status: 400 })
+      }
+      s3Key = photo.originalStoragePath
     }
 
     // ── Create multipart upload and presign all part URLs ─────────────────────

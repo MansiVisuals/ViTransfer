@@ -22,10 +22,11 @@ This folder (`docs/wiki`) is a mirror of those pages for easy versioning in the 
 - [License](License)
 
 ## What ViTransfer is
-ViTransfer is a self-hosted video review and approval platform for filmmakers and video teams. It lets you upload originals, generate watermarked previews, share secure client links, collect timestamped feedback, and manage approval workflows.
+ViTransfer is a self-hosted video and photo review platform for filmmakers, photographers, and creative teams. It lets you upload originals, generate watermarked previews, share secure client links, collect timestamped feedback (video) or pin-based feedback (photos), and manage approval workflows.
 
 ## Core concepts
-- Projects contain one or more videos, version history, and client recipients.
+- Projects contain videos or photos, version history, and client recipients.
+- Projects are either **Video** projects or **Photo** projects, each with a dedicated layout.
 - Clients use share links to view, comment, and approve.
 - Admins manage settings, security, analytics, and notifications.
 - The worker handles background processing (transcoding + notifications).

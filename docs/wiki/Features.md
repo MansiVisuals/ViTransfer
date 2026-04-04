@@ -1,13 +1,16 @@
 # Features
 
 ## Core functionality
+- **Video and photo project types** — create projects for video review or photo review with dedicated layouts for each.
 - Video upload with resumable TUS uploads; originals preserved at any resolution.
+- Photo upload with gallery management, drag-and-drop reordering, and support for JPEG, PNG, WebP, TIFF, AVIF, HEIF/HEIC, BMP, GIF, and RAW formats (CR2, CR3, NEF, ARW, RAF, ORF, RW2, DNG, PEF, SRW, ERF, MOS, IIQ, 3FR, FFF, GPR).
 - FFmpeg preview transcoding to 720p or 1080p. Optional skip-transcoding mode to serve originals directly.
 - Customizable watermarks (center/corners, multiple positions), configurable per project or globally. Adjustable opacity and font size.
 - Timestamped comments with threaded replies and version tracking.
+- Pin comments on photos — click anywhere on a photo to place a numbered pin and leave location-specific feedback. Pins are resolution-independent.
 - Annotation drawing on video frames (freehand, color picker, opacity control, undo/redo).
 - Comment file attachments with TUS resumable uploads (multiple files, drag-and-drop).
-- Approval workflow per video; optional auto-approve project when all videos approved.
+- Approval workflow per video or per photo; optional auto-approve project when all items approved.
 - Project archiving to hide completed work while preserving data.
 - Share links with password, email OTP, both methods, or guest access.
 - Due dates with calendar view (day/week/month/year), Gantt chart, and iCal feed.
@@ -16,6 +19,7 @@
 - Client asset uploads: allow clients to upload files to projects (configurable per project).
 - Reverse share: allow clients to upload files directly to a project without attaching them to a comment. Toggled per project. Uploaded files appear in a dedicated admin block with download and delete.
 - Bulk select on admin project page: multi-select video assets and client uploads for bulk download or bulk delete.
+- Bulk photo download: "Download All Photos" streams all approved photos as a single ZIP file.
 - Email notifications with scheduling (immediate, hourly, daily, weekly).
 - Activity summary emails: periodic digests for admins and clients.
 - Per-recipient unsubscribe for project emails.
@@ -48,6 +52,7 @@
 - Browser push notification management.
 - Version control: multiple video versions with revision tracking and optional limits.
 - Guest controls (view-only, latest-version restriction).
+- Photo gallery management: upload, reorder, approve, and delete photos with lightbox preview and pin comment overlay.
 - Asset management: images, audio, subtitles, project files, and documents with content validation.
 - Per-version thumbnails from uploaded image assets.
 - Client uploads block: view, download, and delete files submitted by clients via reverse share, with multi-select bulk actions.
@@ -61,6 +66,7 @@
 
 ## Technical features
 - Custom video player with comment markers, frame-accurate seeking, and version comparison.
+- Photo lightbox with zoom controls, keyboard navigation, and pin comment overlay.
 - Docker-first deployment with Compose, Unraid, TrueNAS, and Podman/Quadlet support.
 - Multi-architecture images (amd64 and arm64).
 - Next.js 16 + React 19 UI; worker uses CPU-aware FFmpeg presets.

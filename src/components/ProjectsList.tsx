@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, ArrowUpDown, Video, MessageSquare, ChevronRight, Calendar } from 'lucide-react'
+import { Plus, ArrowUpDown, Video, MessageSquare, ChevronRight, Calendar, ImageIcon } from 'lucide-react'
 import ViewModeToggle, { type ViewMode } from '@/components/ViewModeToggle'
 import FilterDropdown from '@/components/FilterDropdown'
 import { formatDate } from '@/lib/utils'
@@ -17,6 +17,7 @@ interface Project {
   title: string
   companyName: string | null
   status: string
+  type: 'VIDEO' | 'PHOTO'
   createdAt: Date
   updatedAt: Date
   maxRevisions: number
@@ -24,7 +25,7 @@ interface Project {
   dueDate: string | null
   videos: any[]
   recipients: any[]
-  _count: { comments: number }
+  _count: { comments: number; photos: number }
 }
 
 interface ProjectsListProps {
@@ -178,7 +179,9 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
           {sortedProjects.map((project) => {
+            const isPhoto = project.type === 'PHOTO'
             const totalVideos = project.videos.length
+            const totalPhotos = project._count?.photos ?? 0
             const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
             const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || t('client')
 
@@ -216,10 +219,10 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                     <div className="flex flex-wrap gap-3 sm:gap-6 text-muted-foreground text-xs sm:text-sm min-h-[28px] sm:min-h-[32px]">
                       <div className="inline-flex items-center gap-2">
                         <span className={metricIconWrapperClassName}>
-                          <Video className={metricIconClassName} />
+                          {isPhoto ? <ImageIcon className={metricIconClassName} /> : <Video className={metricIconClassName} />}
                         </span>
-                        <span className="font-medium">{totalVideos}</span>
-                        <span className="hidden sm:inline">{totalVideos !== 1 ? t('videosPlural') : t('video')}</span>
+                        <span className="font-medium">{isPhoto ? totalPhotos : totalVideos}</span>
+                        <span className="hidden sm:inline">{isPhoto ? (totalPhotos !== 1 ? t('photosPlural') : t('photo')) : (totalVideos !== 1 ? t('videosPlural') : t('video'))}</span>
                       </div>
                       <div className="inline-flex items-center gap-2">
                         <span className={metricIconWrapperClassName}>
@@ -255,7 +258,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
             <span className="flex-1 min-w-0">{tc('name')}</span>
             <span className="w-36 hidden md:block">{t('client')}</span>
             <span className="w-28">{tc('status')}</span>
-            <span className="w-16 text-center hidden lg:block">{t('videos')}</span>
+            <span className="w-16 text-center hidden lg:block">{t('content')}</span>
             <span className="w-20 text-center hidden lg:block">{t('comments')}</span>
             <span className="w-20 hidden lg:block">{t('dueDateLabel')}</span>
             <span className="w-24 hidden xl:block">{tc('created')}</span>
@@ -264,7 +267,9 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
           </div>
           <div className="divide-y">
             {sortedProjects.map((project) => {
+              const isPhoto = project.type === 'PHOTO'
               const totalVideos = project.videos.length
+              const totalPhotos = project._count?.photos ?? 0
               const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
               const displayName = project.companyName || primaryRecipient?.name || primaryRecipient?.email || t('client')
 
@@ -293,7 +298,7 @@ export default function ProjectsList({ projects, statusFilter: externalStatusFil
                       {{ IN_REVIEW: t('statusInReview'), APPROVED: t('statusApproved'), SHARE_ONLY: t('statusShareOnly'), ARCHIVED: t('statusArchived') }[project.status] || project.status}
                     </span>
                   </span>
-                  <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{totalVideos}</span>
+                  <span className="w-16 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{isPhoto ? totalPhotos : totalVideos}</span>
                   <span className="w-20 text-center text-xs text-muted-foreground tabular-nums hidden lg:block">{project._count.comments}</span>
                   <span className={`w-20 text-xs hidden lg:block ${project.dueDate ? getDueDateColor(project.dueDate, project.status) : 'text-muted-foreground'}`}>
                     {project.dueDate ? new Date(project.dueDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : '—'}

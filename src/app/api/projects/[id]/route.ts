@@ -49,6 +49,9 @@ export async function GET(
         videos: {
           orderBy: { version: 'desc' },
         },
+        photos: {
+          orderBy: { sortOrder: 'asc' },
+        },
         comments: {
           where: { parentId: null },
           include: {
@@ -110,6 +113,10 @@ export async function GET(
       videos: project.videos.map((video: any) => ({
         ...video,
         originalFileSize: video.originalFileSize.toString(),
+      })),
+      photos: project.photos.map((photo: any) => ({
+        ...photo,
+        originalFileSize: photo.originalFileSize.toString(),
       })),
       comments: sanitizedComments,
       sharePassword: decryptedPassword,

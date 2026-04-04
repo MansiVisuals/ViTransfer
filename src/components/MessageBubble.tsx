@@ -70,7 +70,7 @@ export default function MessageBubble({
       null)
 
   const handleTimestampClick = () => {
-    if (comment.timecode && onSeekToTimecode) {
+    if (comment.timecode && comment.videoId && onSeekToTimecode) {
       onSeekToTimecode(comment.timecode, comment.videoId, comment.videoVersion)
     }
   }
@@ -130,7 +130,7 @@ export default function MessageBubble({
             {(comment as any).assets && (comment as any).assets.length > 0 && (
               <CommentAttachments
                 assets={(comment as any).assets}
-                videoId={comment.videoId}
+                videoId={comment.videoId || ''}
                 shareToken={shareToken}
               />
             )}
@@ -200,7 +200,7 @@ export default function MessageBubble({
                   {(reply as any).assets && (reply as any).assets.length > 0 && (
                     <CommentAttachments
                       assets={(reply as any).assets}
-                      videoId={reply.videoId}
+                      videoId={reply.videoId || ''}
                       shareToken={shareToken}
                     />
                   )}

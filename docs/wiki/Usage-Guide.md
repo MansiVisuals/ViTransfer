@@ -2,18 +2,32 @@
 
 ## Creating your first project
 1. Login to the admin panel.
-2. Create a project with title, description, client name/email, and password (recommended).
-3. Upload videos.
-4. Share the client link.
-5. Collect timestamped feedback.
-6. Approve when the client accepts the final version.
+2. Click **New Project**.
+3. Choose a project type: **Video** or **Photo**.
+4. Fill in the title, description, client name/email, and password (recommended).
+5. Upload videos or photos depending on the project type.
+6. Share the client link.
+7. Collect feedback (timestamped for video, pin-based for photo).
+8. Approve when the client accepts the deliverables.
+
+## Creating a photo project
+1. Click **New Project** in the admin panel.
+2. Select **Photo** as the project type.
+3. Fill in the project details and save.
+4. Upload photos using the photo upload modal — drag and drop or click to browse.
+5. Supported formats: JPEG, PNG, WebP, TIFF, AVIF, HEIF/HEIC, BMP, GIF, and RAW (CR2, CR3, NEF, ARW, RAF, ORF, RW2, DNG, PEF, SRW, ERF, MOS, IIQ, 3FR, FFF, GPR).
+6. Reorder photos by dragging them in the gallery.
+7. Share the client link — clients see a photo-optimized grid layout.
+
+> **Note:** Photo projects hide video-specific settings (watermark, transcoding, preview LUT, resolution) since they do not apply to photos.
 
 ## Client workflow
 1. Open the share link.
 2. Enter password/OTP if required.
-3. Watch videos and leave timestamped feedback.
-4. Approve when satisfied.
-5. Download approved videos if enabled.
+3. For video projects: watch videos and leave timestamped feedback.
+4. For photo projects: browse the photo gallery, click photos to open the lightbox, and leave pin comments.
+5. Approve when satisfied.
+6. Download approved content if enabled.
 
 ## Drawing annotations on video
 1. Pause the video at the desired frame.
@@ -21,6 +35,15 @@
 3. Draw freehand on the video frame using the selected color and opacity.
 4. Use undo/redo to adjust your drawing.
 5. Submit the annotation — it is attached to the comment at the current timecode.
+
+## Pin comments on photos
+1. Open a photo in the lightbox (click any photo in the gallery).
+2. Click anywhere on the photo to place a pin at that location.
+3. A numbered marker appears on the photo and the comment input is focused.
+4. Type your feedback and click **Send**.
+5. The pin comment appears in the comment panel with a numbered badge matching the marker on the photo.
+6. Other reviewers can see all pin markers on the photo, numbered in order.
+7. Pin positions are resolution-independent — they render correctly at any display size.
 
 ## Attaching files to comments
 1. Click the attachment icon in the comment input area.
@@ -131,6 +154,8 @@ Both the **video asset list** (per video) and the **Client Uploads** block suppo
 - Enable privacy disclosure for GDPR compliance.
 - Use skip-transcoding mode for projects that don't need watermarked previews.
 - Set admin session inactivity timeout for enhanced security.
+- Use photo projects for still image review — they skip video-specific processing entirely.
+- Pin comments let clients give precise feedback on specific areas of a photo.
 
 ---
 Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Client Guide](Client-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Contributing](Contributing) | [License](License)

@@ -180,14 +180,86 @@ export async function GET(
       include: { project: true }
     })
 
-    if (!video || video.projectId !== verifiedToken.projectId) {
+    // Photo fallback: if video not found, this might be a photo content token
+    const photo = !video ? await prisma.photo.findUnique({
+      where: { id: verifiedToken.videoId },
+      include: { project: true }
+    }) : null
+
+    if (!video && !photo) {
   return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
     }
 
-    const originalPath = video.originalStoragePath
+    // Photo content delivery (simpler than video — always serve original)
+    if (photo) {
+      if (photo.projectId !== verifiedToken.projectId) {
+        return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
+      }
+
+      // Track photo download analytics
+      if (isDownload && !isAdminRequest) {
+        try {
+          await prisma.videoAnalytics.create({
+            data: {
+              photoId: photo.id,
+              projectId: verifiedToken.projectId,
+              eventType: 'DOWNLOAD_COMPLETE',
+            }
+          })
+        } catch {
+          // Analytics tracking is best-effort
+        }
+      }
+
+      const filePath = photo.originalStoragePath
+      const filename = photo.originalFileName
+      const contentType = photo.mimeType || 'application/octet-stream'
+
+      if (isS3Mode()) {
+        const fileExistsOnS3 = await s3FileExists(filePath)
+        if (!fileExistsOnS3) {
+          return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
+        }
+
+        if (isDownload) {
+          const downloadUrl = await s3GetPresignedDownloadUrl(filePath, 900, filename)
+          return NextResponse.redirect(downloadUrl, { status: 302 })
+        }
+        const streamUrl = await s3GetPresignedStreamUrl(filePath, 900, contentType)
+        return NextResponse.redirect(streamUrl, { status: 302 })
+      }
+
+      // Local storage
+      const localPath = getFilePath(filePath)
+      if (!existsSync(localPath)) {
+        return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
+      }
+
+      const stat = statSync(localPath)
+      const headers: Record<string, string> = {
+        'Content-Type': contentType,
+        'Content-Length': String(stat.size),
+        'Cache-Control': 'private, max-age=300',
+      }
+
+      if (isDownload) {
+        headers['Content-Disposition'] = `attachment; filename="${sanitizeFilenameForHeader(filename)}"`
+      }
+
+      const nodeStream = createReadStream(localPath)
+      const webStream = createWebReadableStream(nodeStream)
+      return new Response(webStream, { status: 200, headers })
+    }
+
+    // Video content delivery continues below
+    if (video!.projectId !== verifiedToken.projectId) {
+  return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
+    }
+
+    const originalPath = video!.originalStoragePath
     let filePath: string | null = null
     let filename: string | null = null
-    let contentType = getVideoContentType(video.originalFileName || '')
+    let contentType = getVideoContentType(video!.originalFileName || '')
 
     // Handle asset download
     if (assetId && isDownload) {
@@ -195,17 +267,17 @@ export async function GET(
         where: { id: assetId }
       })
 
-      if (!asset || asset.videoId !== video.id) {
+      if (!asset || asset.videoId !== video!.id) {
   return NextResponse.json({ error: shareMessages.assetNotFound || 'Asset not found' }, { status: 404 })
       }
 
       // Check permissions (skip for admins and client-uploaded comment attachments)
       if (!isAdminRequest && asset.uploadedBy !== 'client') {
-        if (!video.project.allowAssetDownload) {
+        if (!video!.project.allowAssetDownload) {
           return NextResponse.json({ error: shareMessages.assetDownloadsNotAllowed || 'Asset downloads not allowed' }, { status: 403 })
         }
 
-        if (!video.approved) {
+        if (!video!.approved) {
           return NextResponse.json({ error: shareMessages.assetsOnlyAvailableForApprovedVideos || 'Assets only available for approved videos' }, { status: 403 })
         }
       }
@@ -216,23 +288,23 @@ export async function GET(
     } else {
       // Handle video download/stream
       if (verifiedToken.quality === 'thumbnail') {
-        filePath = video.thumbnailPath
+        filePath = video!.thumbnailPath
       } else if (isDownload && isAdminRequest && originalPath) {
         // Admin downloads should always use the original file, even before approval
         filePath = originalPath
-      } else if (video.approved && originalPath) {
+      } else if (video!.approved && originalPath) {
         // Check if project prefers preview playback after approval (for streaming, not downloads)
-        if (!isDownload && video.project.usePreviewForApprovedPlayback) {
+        if (!isDownload && video!.project.usePreviewForApprovedPlayback) {
           // Prefer clean preview if available, fall back to watermarked preview, then original
-          const cleanPath = video.cleanPreview1080Path || video.cleanPreview720Path
-          const watermarkedPath = video.preview1080Path || video.preview720Path
+          const cleanPath = video!.cleanPreview1080Path || video!.cleanPreview720Path
+          const watermarkedPath = video!.preview1080Path || video!.preview720Path
           filePath = cleanPath || watermarkedPath || originalPath
         } else {
           filePath = originalPath
         }
       } else {
         // Fall back to original if no preview exists (e.g. skipTranscoding enabled)
-        filePath = video.preview1080Path || video.preview720Path || originalPath
+        filePath = video!.preview1080Path || video!.preview720Path || originalPath
       }
     }
 
@@ -263,11 +335,11 @@ export async function GET(
       }
 
       if (isDownload) {
-        const rawFilename = filename || (video.approved
-          ? video.originalFileName
-          : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}${(video.originalFileName || '.mp4').slice((video.originalFileName || '.mp4').lastIndexOf('.'))}`)
+        const rawFilename = filename || (video!.approved
+          ? video!.originalFileName
+          : `${video!.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}${(video!.originalFileName || '.mp4').slice((video!.originalFileName || '.mp4').lastIndexOf('.'))}`)
         const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
-        const ct = assetId ? contentType : getVideoContentType(video.originalFileName || '')
+        const ct = assetId ? contentType : getVideoContentType(video!.originalFileName || '')
         const presignedUrl = await s3GetPresignedDownloadUrl(filePath, 3600, sanitizedFilename, ct)
         return NextResponse.redirect(presignedUrl, {
           status: 302,
@@ -283,7 +355,7 @@ export async function GET(
         })
       } else {
         // Streaming (video player): long-lived presigned URL so range requests hit S3 directly
-        const ct = getVideoContentType(video.originalFileName || '')
+        const ct = getVideoContentType(video!.originalFileName || '')
         const presignedUrl = await s3GetPresignedStreamUrl(filePath, 14400, ct)
         return NextResponse.redirect(presignedUrl, {
           status: 302,
@@ -314,14 +386,14 @@ export async function GET(
 
     if (isDownload) {
       // Use asset filename if available, otherwise generate from video info
-      const rawFilename = filename || (video.approved
-        ? video.originalFileName
-        : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}${(video.originalFileName || '.mp4').slice((video.originalFileName || '.mp4').lastIndexOf('.'))}`)
+      const rawFilename = filename || (video!.approved
+        ? video!.originalFileName
+        : `${video!.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}${(video!.originalFileName || '.mp4').slice((video!.originalFileName || '.mp4').lastIndexOf('.'))}`)
       const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
 
       // For non-asset downloads, use original file's content type
       if (!assetId) {
-        contentType = isThumbnail ? 'image/jpeg' : getVideoContentType(video.originalFileName || '')
+        contentType = isThumbnail ? 'image/jpeg' : getVideoContentType(video!.originalFileName || '')
       }
 
       const trackDownloadOnce = async () => {
@@ -414,7 +486,7 @@ export async function GET(
         if (isThumbnail) {
           contentType = 'image/jpeg'
         } else if (filePath === originalPath) {
-          contentType = getVideoContentType(video.originalFileName || '')
+          contentType = getVideoContentType(video!.originalFileName || '')
         } else {
           contentType = 'video/mp4' // transcoded previews are always mp4
         }
@@ -444,7 +516,7 @@ export async function GET(
       if (isThumbnail) {
         contentType = 'image/jpeg'
       } else if (filePath === originalPath) {
-        contentType = getVideoContentType(video.originalFileName || '')
+        contentType = getVideoContentType(video!.originalFileName || '')
       } else {
         contentType = 'video/mp4' // transcoded previews are always mp4
       }

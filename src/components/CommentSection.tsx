@@ -477,7 +477,7 @@ export default function CommentSection({
                   comment.timecode.trim() !== ''
                 const timestampLabel = showTimestamp
                   ? formatCommentTimestamp({
-                      timecode: comment.timecode,
+                      timecode: comment.timecode!,
                       fps,
                       videoDurationSeconds: duration,
                       mode: timestampDisplayMode,
@@ -498,7 +498,7 @@ export default function CommentSection({
                     <MessageBubble
                       comment={comment}
                       isReply={false}
-                      onReply={() => handleReply(comment.id, comment.videoId)}
+                      onReply={() => handleReply(comment.id, comment.videoId ?? undefined)}
                       onSeekToTimecode={handleSeekToTimecode}
                       onDelete={isAdminView ? () => handleDeleteComment(comment.id) : undefined}
                       formatMessageTime={formatMessageTime}

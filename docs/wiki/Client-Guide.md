@@ -1,10 +1,10 @@
 # Client Guide
 
-This guide is for clients and reviewers who receive a ViTransfer share link to watch videos, leave feedback, and approve deliverables.
+This guide is for clients and reviewers who receive a ViTransfer share link to review videos or photos, leave feedback, and approve deliverables.
 
 ## Opening a share link
 
-Your video team will send you a link like `https://example.com/share/abc123`. Open it in any modern browser (Chrome, Firefox, Safari, Edge) on desktop or mobile.
+Your video or creative team will send you a link like `https://example.com/share/abc123`. Open it in any modern browser (Chrome, Firefox, Safari, Edge) on desktop or mobile.
 
 ## Logging in
 
@@ -45,6 +45,30 @@ In the top-left corner of the grid, depending on what the project admin has enab
 - **Submit Files** — opens an upload panel to send files directly to the project (see [Submitting files](#submitting-files-to-the-project) below).
 
 If this is your first visit, an interactive tutorial overlay may guide you through the main features of the review page.
+
+## Photo gallery
+
+If the project is a **photo project**, you see a photo grid instead of a video grid:
+
+- Each card shows a thumbnail of the photo with its name.
+- Approved photos show a checkmark overlay.
+- Photos needing review appear first, followed by approved photos.
+- Click any photo to open the **lightbox** for full-screen viewing.
+
+In the top-left corner, depending on settings:
+
+- **Download All Photos** — downloads all approved photos as a single ZIP file.
+- **Submit Files** — same as video projects (see [Submitting files](#submitting-files-to-the-project) below).
+
+### Lightbox
+
+The lightbox opens a full-screen view of the selected photo:
+
+- Use the **left/right arrow buttons** or **arrow keys** to navigate between photos.
+- Use the **zoom controls** to zoom in and out.
+- **Pin markers** appear on the photo showing where other reviewers have left comments (numbered dots).
+- Click anywhere on the photo to **place a new pin** and leave a comment at that exact spot.
+- Press **Escape** or the X button to close the lightbox.
 
 ## Video player
 
@@ -128,6 +152,17 @@ To mark a range (e.g. "the color is off from here to here"):
 4. Use undo/redo to adjust.
 5. Submit — the drawing is attached to your comment at the current timecode.
 
+### Pin comments (photo projects)
+
+In photo projects, comments are pinned to specific locations on a photo:
+
+1. Open a photo in the lightbox.
+2. Click on the spot in the photo you want to comment on.
+3. A numbered pin marker appears at that location.
+4. Type your comment in the input field and click **Send**.
+5. Your pin appears on the photo with a number. Other reviewers see all pins, numbered in order.
+6. Pin positions are resolution-independent — they display correctly at any screen size.
+
 ### Replying
 
 Click **Reply** on any existing comment to add a threaded response.
@@ -159,6 +194,17 @@ After approval:
 
 If the project has auto-approve enabled, the entire project is automatically marked as approved once all videos are approved.
 
+## Approving photos
+
+In photo projects, each photo can be individually approved:
+
+1. Open a photo in the lightbox.
+2. Click the **Approve** button.
+3. The photo shows a checkmark overlay in the gallery.
+4. Your team is notified of the approval.
+
+If the project has auto-approve enabled, the project is marked as approved once all photos are approved.
+
 ## Submitting files to the project
 
 If the project admin has enabled file submissions, a **Submit Files** button appears in the top-left corner of the video grid.
@@ -173,11 +219,16 @@ Files you submit are visible to the project admin but are not attached to any sp
 
 ## Downloading
 
-Download options appear after a video has been approved (not available in guest mode):
+Download options appear after a video or photo has been approved (not available in guest mode):
 
+**Video projects:**
 - Click the **Download** button to download the original file.
 - If the project has additional assets (images, audio, project files), a download dialog lets you select which files to download.
 - If the project has multiple approved videos and downloads are enabled, a **Download All Videos** button appears in the top-left corner of the grid to download everything as a single ZIP.
+
+**Photo projects:**
+- Click the **Download** button on an individual approved photo to download it.
+- A **Download All Photos** button appears at the top of the gallery to download all approved photos as a single ZIP file.
 
 Unapproved videos cannot be downloaded — only the watermarked preview is shown for review.
 
@@ -219,6 +270,9 @@ A: On mobile, comments are collapsed by default — tap the comment header to ex
 
 **Q: I approved the wrong video.**
 A: Contact your video team. Only admins can revoke an approval.
+
+**Q: I approved the wrong photo.**
+A: Contact your creative team. Only admins can revoke a photo approval.
 
 **Q: My session expired.**
 A: Refresh the page and re-enter your password or request a new email code.

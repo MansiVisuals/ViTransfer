@@ -105,6 +105,25 @@ docker compose logs -f         # Follow all logs in real-time
 - Reminders are processed daily by the worker using the `TZ` timezone.
 - Check worker logs for reminder processing.
 
+## Photos
+
+**Photo upload fails**
+- Ensure the file is a supported format: JPEG, PNG, WebP, TIFF, AVIF, HEIF/HEIC, BMP, GIF, or RAW (CR2, CR3, NEF, ARW, RAF, ORF, RW2, DNG, PEF, SRW, ERF, MOS, IIQ, 3FR, FFF, GPR).
+- Check that the file is not corrupted and is within the max upload size limit.
+- For S3 storage, the same CORS and permission requirements apply as for video uploads.
+
+**Pin comments not appearing on photo**
+- Pin comments require a photoId. If the comment was created without a photo context, it will not display a pin.
+- Ensure the photo has not been deleted since the comment was posted.
+
+**"Download All Photos" returns an empty ZIP**
+- Only approved photos are included in the bulk download. Ensure at least one photo has been approved.
+- Check that the photo files exist in storage (local or S3).
+
+**Photo gallery shows no photos**
+- Verify the project type is PHOTO. Video projects do not show the photo gallery.
+- Check that photos have been uploaded to the project.
+
 ## Share links
 
 **"Project not found" on share link**

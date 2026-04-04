@@ -149,11 +149,12 @@ const tusServer: Server = new Server({
       const videoId = upload.metadata?.videoId as string
       const assetId = upload.metadata?.assetId as string
       const projectUploadId = upload.metadata?.projectUploadId as string
+      const photoId = upload.metadata?.photoId as string
 
-      if (!videoId && !assetId && !projectUploadId) {
+      if (!videoId && !assetId && !projectUploadId && !photoId) {
         throw {
           status_code: 400,
-          body: 'Missing required metadata: videoId, assetId, or projectUploadId'
+          body: 'Missing required metadata: videoId, assetId, projectUploadId, or photoId'
         }
       }
 
@@ -250,6 +251,34 @@ const tusServer: Server = new Server({
         }
       }
 
+      if (photoId) {
+        // Only admins can upload photos
+        if (!isAdmin) {
+          throw {
+            status_code: 403,
+            body: 'Admin access required for photo uploads'
+          }
+        }
+
+        const photo = await prisma.photo.findUnique({
+          where: { id: photoId }
+        })
+
+        if (!photo) {
+          throw {
+            status_code: 404,
+            body: 'Photo record not found'
+          }
+        }
+
+        if (photo.status !== 'UPLOADING') {
+          throw {
+            status_code: 400,
+            body: 'Photo is not in UPLOADING state'
+          }
+        }
+      }
+
       return { metadata: upload.metadata }
     } catch (error) {
       logError('[UPLOAD] Error in onUploadCreate:', error)
@@ -262,16 +291,19 @@ const tusServer: Server = new Server({
     const videoId = upload.metadata?.videoId as string
     const assetId = upload.metadata?.assetId as string
     const projectUploadId = upload.metadata?.projectUploadId as string
+    const photoId = upload.metadata?.photoId as string
 
     try {
       if (videoId) {
         return await handleVideoUploadFinish(tusFilePath, upload, videoId, tusServer)
+      } else if (photoId) {
+        return await handlePhotoUploadFinish(tusFilePath, upload, photoId, tusServer)
       } else if (assetId) {
         return await handleAssetUploadFinish(tusFilePath, upload, assetId, tusServer)
       } else if (projectUploadId) {
         return await handleProjectUploadFinish(tusFilePath, upload, projectUploadId, tusServer)
       } else {
-        logMessage('[UPLOAD] No videoId, assetId, or projectUploadId in upload metadata')
+        logMessage('[UPLOAD] No videoId, assetId, photoId, or projectUploadId in upload metadata')
         return {}
       }
     } catch (error) {
@@ -280,6 +312,12 @@ const tusServer: Server = new Server({
 
       if (videoId) {
         await markVideoAsError(videoId, error)
+      }
+      if (photoId) {
+        await prisma.photo.update({
+          where: { id: photoId },
+          data: { status: 'ERROR' },
+        }).catch(() => {})
       }
 
       throw error
@@ -330,6 +368,45 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
   })
 
   logMessage(`[UPLOAD] Video ${videoId} queued for worker processing`)
+
+  await cleanupTUSFile(tusFilePath)
+
+  return {}
+}
+
+async function handlePhotoUploadFinish(tusFilePath: string, upload: any, photoId: string, tusServer: any) {
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId }
+  })
+
+  if (!photo) {
+    logMessage(`[UPLOAD] Photo not found: ${photoId}`)
+    return {}
+  }
+
+  const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
+
+  await initStorage()
+
+  const fileStream = (tusServer.datastore as any).read(upload.id)
+
+  await uploadFile(
+    photo.originalStoragePath,
+    fileStream,
+    fileSize,
+    upload.metadata?.filetype as string || 'image/jpeg'
+  )
+
+  // Photos don't need processing — mark as READY immediately
+  await prisma.photo.update({
+    where: { id: photoId },
+    data: {
+      status: 'READY',
+      originalFileSize: BigInt(fileSize),
+    },
+  })
+
+  logMessage(`[UPLOAD] Photo ${photoId} upload complete, status set to READY`)
 
   await cleanupTUSFile(tusFilePath)
 

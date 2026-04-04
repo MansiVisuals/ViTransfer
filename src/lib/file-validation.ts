@@ -15,10 +15,40 @@ export const ALLOWED_VIDEO_TYPES = [
   'video/avi'
 ]
 
+// Allowed photo MIME types
+export const ALLOWED_PHOTO_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/tiff',
+  'image/bmp',
+  // RAW formats (browser sends these as generic types)
+  'image/x-canon-cr2',
+  'image/x-canon-cr3',
+  'image/x-nikon-nef',
+  'image/x-sony-arw',
+  'image/x-fuji-raf',
+  'image/x-olympus-orf',
+  'image/x-panasonic-rw2',
+  'image/x-pentax-pef',
+  'image/x-adobe-dng',
+  'image/x-dcraw',
+  'application/octet-stream' // RAW files often arrive as generic binary
+]
+
 // File configuration
 export const FILE_LIMITS = {
-  ALLOWED_EXTENSIONS: ['.mp4', '.mov', '.avi', '.webm', '.mkv']
+  ALLOWED_EXTENSIONS: ['.mp4', '.mov', '.avi', '.webm', '.mkv'],
+  ALLOWED_PHOTO_EXTENSIONS: [
+    '.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.tif', '.bmp',
+    // RAW formats
+    '.cr2', '.cr3', '.nef', '.arw', '.raf', '.orf', '.rw2', '.dng', '.pef'
+  ]
 }
+
+/** Convenience re-export for client-side usage */
+export const ALLOWED_PHOTO_EXTENSIONS = FILE_LIMITS.ALLOWED_PHOTO_EXTENSIONS
 
 // Allowed asset types by category
 export const ALLOWED_ASSET_TYPES = {
@@ -191,6 +221,44 @@ export function validateUploadedFile(
     return {
       valid: false,
       error: `Invalid MIME type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`
+    }
+  }
+
+  return {
+    valid: true,
+    sanitizedFilename
+  }
+}
+
+/**
+ * Comprehensive photo file validation
+ */
+export function validatePhotoFile(
+  filename: string,
+  mimeType: string,
+  _size: number
+): { valid: boolean; error?: string; sanitizedFilename?: string } {
+  const sanitizedFilename = sanitizeFilename(filename)
+
+  if (isSuspiciousFilename(filename)) {
+    return {
+      valid: false,
+      error: 'Filename contains suspicious patterns'
+    }
+  }
+
+  const ext = sanitizedFilename.toLowerCase().slice(sanitizedFilename.lastIndexOf('.'))
+  if (!FILE_LIMITS.ALLOWED_PHOTO_EXTENSIONS.includes(ext)) {
+    return {
+      valid: false,
+      error: `Invalid photo type. Allowed: ${FILE_LIMITS.ALLOWED_PHOTO_EXTENSIONS.join(', ')}`
+    }
+  }
+
+  if (!ALLOWED_PHOTO_TYPES.includes(mimeType.toLowerCase())) {
+    return {
+      valid: false,
+      error: `Invalid MIME type. Allowed: ${ALLOWED_PHOTO_TYPES.join(', ')}`
     }
   }
 

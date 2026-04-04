@@ -162,7 +162,11 @@ Subscribe to project deadlines from any calendar app (Google Calendar, Apple Cal
 - Calendar name: "ViTransfer Deadlines" (`X-WR-CALNAME`).
 
 ## Per-project settings
-**Video processing**
+**Project type**
+- Type: VIDEO (default) or PHOTO. Set at project creation and cannot be changed.
+- Photo projects hide the Video Processing section (watermark, transcoding, preview LUT, resolution) since those settings do not apply to photos.
+
+**Video processing** _(video projects only)_
 - Preview resolution override.
 - Watermark text, enable/disable, opacity, and font size.
 - Watermark positions override.

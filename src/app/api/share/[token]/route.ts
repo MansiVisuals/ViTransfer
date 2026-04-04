@@ -90,6 +90,12 @@ export async function GET(
       return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
+    // Fetch photos for the project (separate query since fetchProjectWithVideos doesn't include them)
+    const photos = await prisma.photo.findMany({
+      where: { projectId: projectMeta.id, status: 'READY' },
+      orderBy: { sortOrder: 'asc' },
+    })
+
     const accessCheck = await verifyProjectAccess(request, projectMeta.id, projectMeta.sharePassword, projectMeta.authMode)
 
     if (!accessCheck.authorized) {
@@ -271,6 +277,7 @@ export async function GET(
 
       title: project.title,
       description: project.description,
+      type: project.type || 'VIDEO',
 
       ...(isGuest ? {} : { status: project.status }),
 
@@ -306,6 +313,21 @@ export async function GET(
 
       videos: sanitizedVideos,
       videosByName: sanitizedVideosByName,
+
+      // Photos — sanitized for share context (no storage paths)
+      photos: photos.map(p => ({
+        id: p.id,
+        name: p.name,
+        originalFileName: p.originalFileName,
+        originalFileSize: p.originalFileSize.toString(),
+        mimeType: p.mimeType,
+        width: p.width,
+        height: p.height,
+        sortOrder: p.sortOrder,
+        status: p.status,
+        approved: p.approved,
+        approvedAt: p.approvedAt,
+      })),
 
       ...(isGuest ? {} : { smtpConfigured }),
 

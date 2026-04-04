@@ -14,6 +14,7 @@ interface S3UploadTarget {
   videoId?: string
   assetId?: string
   projectUploadId?: string
+  photoId?: string
 }
 
 interface S3AuthSuccess {
@@ -51,13 +52,13 @@ export async function verifyS3UploadAccess(
   target: S3UploadTarget,
   options: { requireUploadPermission?: boolean } = {}
 ): Promise<S3AuthResult> {
-  const { videoId, assetId, projectUploadId } = target
+  const { videoId, assetId, projectUploadId, photoId } = target
   const requireUploadPermission = options.requireUploadPermission ?? false
 
-  if (!videoId && !assetId && !projectUploadId) {
+  if (!videoId && !assetId && !projectUploadId && !photoId) {
     return {
       errorResponse: NextResponse.json(
-        { error: 'Missing required field: videoId, assetId, or projectUploadId' },
+        { error: 'Missing required field: videoId, assetId, projectUploadId, or photoId' },
         { status: 400 }
       ),
     }
@@ -78,8 +79,8 @@ export async function verifyS3UploadAccess(
       return { errorResponse: NextResponse.json({ error: 'Access denied' }, { status: 403 }) }
     }
 
-    // Share tokens cannot touch video uploads (admin-only)
-    if (videoId) {
+    // Share tokens cannot touch video or photo uploads (admin-only)
+    if (videoId || photoId) {
       return { errorResponse: NextResponse.json({ error: 'Admin access required' }, { status: 403 }) }
     }
 
@@ -167,6 +168,15 @@ export async function verifyS3UploadAccess(
     })
     if (!video) return { errorResponse: NextResponse.json({ error: 'Video record not found' }, { status: 404 }) }
     return { isAdmin: true, s3Key: video.originalStoragePath }
+  }
+
+  if (photoId) {
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId },
+      select: { originalStoragePath: true },
+    })
+    if (!photo) return { errorResponse: NextResponse.json({ error: 'Photo record not found' }, { status: 404 }) }
+    return { isAdmin: true, s3Key: photo.originalStoragePath }
   }
 
   if (assetId) {

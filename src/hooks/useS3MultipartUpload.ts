@@ -17,6 +17,7 @@ interface PresignResponse {
 
 export interface S3UploadTarget {
   videoId?: string
+  photoId?: string
   assetId?: string
   projectUploadId?: string
   /** Explicit bearer token — set for share-token-authenticated uploads */
@@ -75,6 +76,7 @@ export function useS3MultipartUpload() {
           '/api/uploads/s3/presign',
           {
             videoId: target.videoId,
+            photoId: target.photoId,
             assetId: target.assetId,
             projectUploadId: target.projectUploadId,
             filename: file.name,
@@ -160,6 +162,7 @@ export function useS3MultipartUpload() {
           {
             uploadId,
             videoId: target.videoId,
+            photoId: target.photoId,
             assetId: target.assetId,
             projectUploadId: target.projectUploadId,
             parts: completedParts,
@@ -217,6 +220,7 @@ export function useS3MultipartUpload() {
         {
           uploadId: active.uploadId,
           videoId: active.target.videoId,
+          photoId: active.target.photoId,
           assetId: active.target.assetId,
           projectUploadId: active.target.projectUploadId,
         },

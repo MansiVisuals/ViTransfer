@@ -205,6 +205,7 @@ export const loginSchema = z.object({
 
 export const createProjectSchema = z.object({
   title: safeStringSchema(1, 255),
+  type: z.enum(['VIDEO', 'PHOTO']).optional().default('VIDEO'),
   description: safeStringSchema(0, 5000).optional().nullable(),
   companyName: safeStringSchema(0, 100)
     .refine(val => !val || !/[\r\n]/.test(val), {
@@ -337,6 +338,49 @@ export const createVideoSchema = z.object({
 })
 
 // ============================================================================
+// PHOTO SCHEMAS
+// ============================================================================
+
+export const ALLOWED_PHOTO_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'image/tiff', 'image/bmp',
+  'image/x-canon-cr2', 'image/x-canon-cr3', 'image/x-nikon-nef',
+  'image/x-sony-arw', 'image/x-fuji-raf', 'image/x-olympus-orf',
+  'image/x-panasonic-rw2', 'image/x-pentax-pef', 'image/x-adobe-dng',
+  'image/x-dcraw', 'application/octet-stream'
+]
+
+export const ALLOWED_PHOTO_EXTENSIONS = [
+  '.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.tif', '.bmp',
+  '.cr2', '.cr3', '.nef', '.arw', '.raf', '.orf', '.rw2', '.dng', '.pef'
+]
+
+export const createPhotoSchema = z.object({
+  projectId: cuidSchema,
+  originalFileName: safeStringSchema(1, 255),
+  originalFileSize: z.number().int().positive(),
+  mimeType: z.string().max(255).optional(),
+  name: safeStringSchema(1, 255).optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+})
+
+export const updatePhotoSchema = z.object({
+  status: z.enum(['UPLOADING', 'READY', 'ERROR']).optional(),
+  name: safeStringSchema(1, 255).optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+})
+
+export const batchUpdatePhotoSortSchema = z.object({
+  photos: z.array(z.object({
+    id: cuidSchema,
+    sortOrder: z.number().int().min(0),
+  })).min(1).max(500),
+})
+
+// ============================================================================
 // COMMENT SCHEMAS
 // ============================================================================
 
@@ -367,14 +411,17 @@ const annotationDataSchema = z.object({
 
 export const createCommentSchema = z.object({
   projectId: cuidSchema,
-  videoId: cuidSchema, // Required - all comments must be video-specific
+  videoId: cuidSchema.optional().nullable(),
   videoVersion: z.number().int().positive().optional(),
   timecode: z.string().refine(isValidTimecode, {
     message: 'Invalid timecode format. Expected HH:MM:SS:FF'
-  }),
+  }).optional().nullable(),
   timecodeEnd: z.string().refine(isValidTimecode, {
     message: 'Invalid end timecode format. Expected HH:MM:SS:FF'
   }).optional().nullable(),
+  photoId: cuidSchema.optional().nullable(),
+  pinX: z.number().min(0).max(1).optional().nullable(),
+  pinY: z.number().min(0).max(1).optional().nullable(),
   content: contentSchema,
   authorName: safeStringSchema(1, 255).optional().nullable(),
   authorEmail: emailSchema.optional().nullable(),
@@ -383,6 +430,19 @@ export const createCommentSchema = z.object({
   isInternal: z.boolean().optional(),
   assetIds: z.array(z.string()).max(50).optional(),
   annotations: annotationDataSchema.optional().nullable(),
+}).refine(data => {
+  const hasVideo = !!data.videoId
+  const hasPhoto = !!data.photoId
+  // Must have exactly one: videoId or photoId
+  return hasVideo !== hasPhoto
+}, {
+  message: 'Provide either videoId or photoId, not both and not neither'
+}).refine(data => {
+  // Video comments must have a timecode
+  if (data.videoId && !data.timecode) return false
+  return true
+}, {
+  message: 'Video comments require a timecode'
 })
 
 export const updateCommentSchema = z.object({

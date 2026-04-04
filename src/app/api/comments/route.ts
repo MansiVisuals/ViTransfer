@@ -202,6 +202,9 @@ export async function POST(request: NextRequest) {
       isInternal,
       assetIds,
       annotations,
+      photoId,
+      pinX,
+      pinY,
     } = validation.data
 
     // Enforce configurable max comment attachments
@@ -293,29 +296,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const video = await prisma.video.findUnique({
+    const video = videoId ? await prisma.video.findUnique({
       where: { id: videoId },
       select: { id: true, projectId: true, version: true }
-    })
+    }) : null
 
-    if (!video || video.projectId !== projectId) {
+    if (videoId && (!video || video.projectId !== projectId)) {
       return NextResponse.json(
         { error: commentsMessages.videoDoesNotBelongToProject || 'Video does not belong to this project' },
         { status: 400 }
       )
     }
 
+    // Validate photo belongs to project (if photo comment)
+    if (photoId) {
+      const photo = await prisma.photo.findUnique({
+        where: { id: photoId },
+        select: { id: true, projectId: true }
+      })
+
+      if (!photo || photo.projectId !== projectId) {
+        return NextResponse.json(
+          { error: 'Photo does not belong to this project' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Keep API behavior: if version is omitted, infer from current video record.
-    const finalVideoVersion = videoVersion || video.version
+    const finalVideoVersion = videoVersion || video?.version
 
     // Create comment in database
     const comment = await prisma.comment.create({
       data: {
         projectId,
-        videoId,
+        videoId: videoId ?? undefined,
         videoVersion: finalVideoVersion || null,
-        timecode,
+        timecode: timecode ?? undefined,
         timecodeEnd: timecodeEnd || null,
+        photoId: photoId ?? undefined,
+        pinX: pinX ?? undefined,
+        pinY: pinY ?? undefined,
         content: contentValidation.sanitizedContent!,
         authorName: contentValidation.sanitizedAuthorName,
         authorEmail: finalAuthorEmail,
@@ -355,7 +376,7 @@ export async function POST(request: NextRequest) {
       const assets = await prisma.videoAsset.findMany({
         where: {
           id: { in: assetIds },
-          videoId,
+          videoId: videoId ?? undefined,
           uploadedBy: 'client',
           uploadedBySessionId: uploaderSessionId,
           commentId: null,
@@ -389,7 +410,8 @@ export async function POST(request: NextRequest) {
     await handleCommentNotifications({
       comment,
       projectId,
-      videoId,
+      videoId: videoId ?? undefined,
+      photoId: photoId ?? undefined,
       parentId,
       attachmentNames,
     })

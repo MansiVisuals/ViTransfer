@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle, Calendar } from 'lucide-react'
+import { Eye, EyeOff, RefreshCw, Copy, Check, Plus, X, Mail, AlertCircle, Calendar, Video, ImageIcon } from 'lucide-react'
 import { apiPost, apiFetch } from '@/lib/api-client'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { logError } from '@/lib/logging'
@@ -34,6 +34,9 @@ export default function NewProjectPage() {
   // Due date
   const [dueDate, setDueDate] = useState('')
   const [dueReminder, setDueReminder] = useState<'NONE' | 'DAY_BEFORE' | 'WEEK_BEFORE'>('NONE')
+
+  // Project type
+  const [projectType, setProjectType] = useState<'VIDEO' | 'PHOTO'>('VIDEO')
 
   // Client info
   const [companyName, setCompanyName] = useState('')
@@ -88,6 +91,7 @@ export default function NewProjectPage() {
     const data = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
+      type: projectType,
       companyName: companyName || null,
       clientCompanyId: clientCompanyId,
       recipientName: recipientName || null,
@@ -142,6 +146,39 @@ export default function NewProjectPage() {
                   placeholder={t('descriptionPlaceholder')}
                   rows={3}
                 />
+              </div>
+
+              {/* Project Type Selector */}
+              <div className="space-y-3">
+                <Label>{t('projectType')}</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setProjectType('VIDEO')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                      projectType === 'VIDEO'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/30'
+                    }`}
+                  >
+                    <Video className={`w-6 h-6 ${projectType === 'VIDEO' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className={`text-sm font-medium ${projectType === 'VIDEO' ? 'text-primary' : 'text-foreground'}`}>{t('videoProject')}</span>
+                    <span className="text-xs text-muted-foreground text-center">{t('videoProjectDescription')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProjectType('PHOTO')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                      projectType === 'PHOTO'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/30'
+                    }`}
+                  >
+                    <ImageIcon className={`w-6 h-6 ${projectType === 'PHOTO' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className={`text-sm font-medium ${projectType === 'PHOTO' ? 'text-primary' : 'text-foreground'}`}>{t('photoProject')}</span>
+                    <span className="text-xs text-muted-foreground text-center">{t('photoProjectDescription')}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Client Selection with Directory Search */}

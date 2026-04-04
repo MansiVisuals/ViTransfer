@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       videoId,
       assetId,
       projectUploadId,
+      photoId,
       parts,
       fileSize,
       contentType,
@@ -32,20 +33,21 @@ export async function POST(request: NextRequest) {
       videoId?: string
       assetId?: string
       projectUploadId?: string
+      photoId?: string
       parts: Array<{ partNumber: number; etag: string }>
       fileSize: number
       contentType?: string
     }
 
-    if (!videoId && !assetId && !projectUploadId) {
+    if (!videoId && !assetId && !projectUploadId && !photoId) {
       return NextResponse.json(
-        { error: 'Missing required field: videoId, assetId, or projectUploadId' },
+        { error: 'Missing required field: videoId, assetId, projectUploadId, or photoId' },
         { status: 400 }
       )
     }
 
     // ── Authentication & ownership ────────────────────────────────────────────
-    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId }, { requireUploadPermission: true })
+    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId }, { requireUploadPermission: true })
     if (authResult.errorResponse) return authResult.errorResponse
 
     // ── Rate limit: 30 complete requests per minute per client ──────────���─────
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
     let dbVideo: { id: string; originalStoragePath: string; projectId: string; status: string } | null = null
     let dbAsset: { id: string; storagePath: string; category: string | null } | null = null
     let dbProjectUpload: { id: string; storagePath: string; projectId: string; fileName: string; uploadedByName: string | null; uploadedByEmail: string | null } | null = null
+    let dbPhoto: { id: string; originalStoragePath: string; status: string } | null = null
 
     if (videoId) {
       const video = await prisma.video.findUnique({
@@ -115,6 +118,17 @@ export async function POST(request: NextRequest) {
       }
       s3Key = video.originalStoragePath
       dbVideo = video
+    } else if (photoId) {
+      const photo = await prisma.photo.findUnique({
+        where: { id: photoId },
+        select: { id: true, originalStoragePath: true, status: true },
+      })
+      if (!photo) return NextResponse.json({ error: 'Photo record not found' }, { status: 404 })
+      if (photo.status !== 'UPLOADING') {
+        return NextResponse.json({ error: 'Photo is no longer in UPLOADING state' }, { status: 409 })
+      }
+      s3Key = photo.originalStoragePath
+      dbPhoto = photo
     } else if (assetId) {
       dbAsset = await prisma.videoAsset.findUnique({
         where: { id: assetId },
@@ -197,6 +211,17 @@ export async function POST(request: NextRequest) {
         uploaderName: dbProjectUpload.uploadedByName,
         uploaderEmail: dbProjectUpload.uploadedByEmail,
       })
+    } else if (dbPhoto) {
+      // Photos don't need processing — mark as READY immediately
+      await prisma.photo.update({
+        where: { id: dbPhoto.id },
+        data: {
+          status: 'READY',
+          originalFileSize: BigInt(fileSize),
+        },
+      })
+
+      logMessage(`[S3 COMPLETE] Photo ${dbPhoto.id} complete, status set to READY`)
     }
 
     return NextResponse.json({ ok: true })

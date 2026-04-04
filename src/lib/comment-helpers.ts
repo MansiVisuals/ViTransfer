@@ -170,10 +170,11 @@ export async function handleCommentNotifications(params: {
   comment: any
   projectId: string
   videoId?: string
+  photoId?: string
   parentId?: string
   attachmentNames?: string[]
 }): Promise<void> {
-  const { comment, projectId, videoId, parentId, attachmentNames } = params
+  const { comment, projectId, videoId, photoId, parentId, attachmentNames } = params
 
   try {
     const isAdminComment = comment.isInternal
@@ -202,7 +203,22 @@ export async function handleCommentNotifications(params: {
         })
       : null
 
-    logMessage('[COMMENT-NOTIFICATION] Video:', video?.name || 'None')
+    // Get photo info (for photo comments)
+    const photo = !videoId && photoId
+      ? await prisma.photo.findUnique({
+          where: { id: photoId },
+          select: { name: true, versionLabel: true },
+        })
+      : null
+
+    // Build a unified content reference for notifications
+    const contentRef = video
+      ? { name: video.name, versionLabel: video.versionLabel, version: video.version, fps: video.fps }
+      : photo
+        ? { name: photo.name, versionLabel: photo.versionLabel, version: null, fps: null }
+        : null
+
+    logMessage('[COMMENT-NOTIFICATION] Content:', contentRef?.name || 'None')
 
     // External notifications (Apprise) - client comments only
     if (!isAdminComment) {
@@ -242,14 +258,15 @@ export async function handleCommentNotifications(params: {
       const rawContent = htmlToText(rawContentHtml, { wordwrap: false }).trim()
       const commentPreview = rawContent.length > 400 ? `${rawContent.slice(0, 400)}...` : rawContent
       const timecode = comment?.timecode ? formatTimecodeDisplay(String(comment.timecode)) : ''
-      const videoLabel = video?.versionLabel ? ` ${video.versionLabel}` : ''
+      const contentLabel = contentRef?.versionLabel ? ` ${contentRef.versionLabel}` : ''
+      const contentType = photo ? 'Photo' : 'Video'
 
       await enqueueExternalNotification({
         eventType: 'CLIENT_COMMENT',
         title: `New Comment on ${project.title}`,
         body: [
           `From: ${clientDisplay}`,
-          video?.name ? `Video: ${video.name}${videoLabel}` : null,
+          contentRef?.name ? `${contentType}: ${contentRef.name}${contentLabel}` : null,
           timecode ? `Timecode: ${timecode}` : null,
           commentPreview ? `Comment: ${commentPreview}` : null,
           attachmentNames && attachmentNames.length > 0
@@ -263,7 +280,7 @@ export async function handleCommentNotifications(params: {
         pushData: {
           projectTitle: project.title,
           projectId: project.id,
-          videoName: video?.name || undefined,
+          videoName: contentRef?.name || undefined,
           authorName,
           content: rawContent,
           email: authorEmail || undefined,
@@ -297,7 +314,7 @@ export async function handleCommentNotifications(params: {
     const context = {
       comment,
       project: { id: project.id, title: project.title, slug: project.slug },
-      video,
+      video: contentRef,
       isReply: !!parentId,
       attachmentNames,
     }

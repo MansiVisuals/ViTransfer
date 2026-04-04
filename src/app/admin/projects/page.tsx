@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
-import { FolderKanban, Plus, Video, Eye, Download, EyeOff, RefreshCw, Copy, Check, Mail, AlertCircle } from 'lucide-react'
+import { FolderKanban, Plus, Video, Eye, Download, EyeOff, RefreshCw, Copy, Check, Mail, AlertCircle, ImageIcon } from 'lucide-react'
 import ProjectsList from '@/components/ProjectsList'
 import { apiFetch, apiPost } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
@@ -65,6 +65,7 @@ export default function AdminPage() {
   const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [formError, setFormError] = useState('')
+  const [projectType, setProjectType] = useState<'VIDEO' | 'PHOTO'>('VIDEO')
 
   // Save filter to localStorage whenever it changes
   useEffect(() => {
@@ -143,6 +144,7 @@ export default function AdminPage() {
     setCopied(false)
     setAuthMode('PASSWORD')
     setFormError('')
+    setProjectType('VIDEO')
     setShowNewProjectModal(true)
   }
 
@@ -166,6 +168,7 @@ export default function AdminPage() {
     try {
       const data: Record<string, unknown> = {
         title: projectTitle,
+        type: projectType,
         authMode: passwordProtected ? authMode : 'NONE',
         isShareOnly: isShareOnly,
       }
@@ -247,6 +250,37 @@ export default function AdminPage() {
                 onChange={(e) => setProjectDescription(e.target.value)}
                 rows={2}
               />
+            </div>
+
+            {/* Project Type Selector */}
+            <div className="space-y-3">
+              <Label>{t('projectType')}</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setProjectType('VIDEO')}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors ${
+                    projectType === 'VIDEO'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/30'
+                  }`}
+                >
+                  <Video className={`w-5 h-5 ${projectType === 'VIDEO' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm font-medium ${projectType === 'VIDEO' ? 'text-primary' : 'text-foreground'}`}>{t('videoProject')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProjectType('PHOTO')}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors ${
+                    projectType === 'PHOTO'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/30'
+                  }`}
+                >
+                  <ImageIcon className={`w-5 h-5 ${projectType === 'PHOTO' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm font-medium ${projectType === 'PHOTO' ? 'text-primary' : 'text-foreground'}`}>{t('photoProject')}</span>
+                </button>
+              </div>
             </div>
 
             {/* Client Selection */}

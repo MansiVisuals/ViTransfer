@@ -8,7 +8,9 @@ import Link from 'next/link'
 import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import ProjectUploadsBlock from '@/components/ProjectUploadsBlock'
-import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp } from 'lucide-react'
+import PhotoGallery from '@/components/PhotoGallery'
+import { PhotoUploadModal } from '@/components/PhotoUploadModal'
+import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp, ImageIcon } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { useTranslations } from 'next-intl'
 import { logError } from '@/lib/logging'
@@ -28,6 +30,9 @@ export default function ProjectPage() {
   const [shareUrl, setShareUrl] = useState('')
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
   const videoManagerRef = useRef<{ triggerUpload: () => void } | null>(null)
+  const [photoUploadOpen, setPhotoUploadOpen] = useState(false)
+  const [photoContentTokens, setPhotoContentTokens] = useState<Record<string, string>>({})
+  const sessionIdRef = useRef(`admin:${Date.now()}`)
 
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = useCallback(async () => {
@@ -116,6 +121,67 @@ export default function ProjectPage() {
     fetchShareUrl()
   }, [project?.slug])
 
+  // Fetch content tokens for photos (for thumbnail display in gallery)
+  useEffect(() => {
+    if (!project?.photos?.length) return
+
+    const readyPhotos = project.photos.filter((p: any) => p.status === 'READY')
+    if (readyPhotos.length === 0) return
+
+    // Only fetch tokens for photos we don't already have
+    const missingIds = readyPhotos
+      .map((p: any) => p.id)
+      .filter((pid: string) => !photoContentTokens[pid])
+
+    if (missingIds.length === 0) return
+
+    let cancelled = false
+
+    async function fetchPhotoTokens() {
+      const newTokens: Record<string, string> = {}
+      await Promise.all(
+        missingIds.map(async (photoId: string) => {
+          try {
+            const res = await apiFetch(
+              `/api/admin/photo-token?photoId=${photoId}&projectId=${id}&sessionId=${sessionIdRef.current}`
+            )
+            if (res.ok) {
+              const data = await res.json()
+              if (data.token) {
+                newTokens[photoId] = `/api/content/${data.token}`
+              }
+            }
+          } catch {
+            // Token fetch failed for this photo
+          }
+        })
+      )
+      if (!cancelled && Object.keys(newTokens).length > 0) {
+        setPhotoContentTokens(prev => ({ ...prev, ...newTokens }))
+      }
+    }
+
+    fetchPhotoTokens()
+    return () => { cancelled = true }
+  }, [project?.photos, id, photoContentTokens])
+
+  // Auto-refresh when photos are uploading
+  useEffect(() => {
+    if (!project?.photos) return
+
+    const hasUploadingPhotos = project.photos.some(
+      (photo: any) => photo.status === 'UPLOADING'
+    )
+
+    if (hasUploadingPhotos) {
+      const interval = setInterval(() => {
+        fetchProject()
+      }, 5000)
+
+      return () => clearInterval(interval)
+    }
+  }, [project?.photos, fetchProject])
+
 
   if (loading) {
     return (
@@ -154,14 +220,26 @@ export default function ProjectPage() {
           </Link>
           <div className="flex items-center gap-2">
             {project && project.status !== 'APPROVED' && (
-              <Button
-                variant="default"
-                size="default"
-                onClick={() => videoManagerRef.current?.triggerUpload()}
-              >
-                <Upload className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t('uploadVideos')}</span>
-              </Button>
+              <>
+                {project.type !== 'PHOTO' && (
+                  <Button
+                    variant="default"
+                    size="default"
+                    onClick={() => videoManagerRef.current?.triggerUpload()}
+                  >
+                    <Upload className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t('uploadVideos')}</span>
+                  </Button>
+                )}
+                <Button
+                  variant="default"
+                  size="default"
+                  onClick={() => setPhotoUploadOpen(true)}
+                >
+                  <ImageIcon className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Upload Photos</span>
+                </Button>
+              </>
             )}
             <Link href={`/admin/projects/${id}/settings`}>
               <Button variant="outline" size="default">
@@ -186,6 +264,39 @@ export default function ProjectPage() {
 
           {/* Videos Section - Below actions on mobile, left on desktop */}
           <div className="lg:col-span-2 lg:row-start-1 space-y-6 min-w-0">
+            {/* Photos Section — shown first for PHOTO projects, or when project has photos */}
+            {project.photos && (
+              <div className="min-w-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span className={iconBadgeClassName}>
+                      <ImageIcon className={iconBadgeIconClassName} />
+                    </span>
+                    Photos
+                  </h2>
+                  {project.status !== 'APPROVED' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPhotoUploadOpen(true)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Upload className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <PhotoGallery
+                  photos={project.photos}
+                  projectId={project.id}
+                  isAdmin={true}
+                  onRefresh={fetchProject}
+                  contentTokens={photoContentTokens}
+                />
+              </div>
+            )}
+
+            {/* Videos Section — hidden for PHOTO projects */}
+            {project.type !== 'PHOTO' && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -218,6 +329,7 @@ export default function ProjectPage() {
                 enableRevisions={project.enableRevisions}
               />
             </div>
+            )}
 
             {/* Client Uploads block — only shown when reverse share is enabled */}
             {project.allowReverseShare && (
@@ -235,6 +347,19 @@ export default function ProjectPage() {
             )}
           </div>
         </div>
+
+        {/* Photo Upload Modal */}
+        {project.photos && (
+          <PhotoUploadModal
+            isOpen={photoUploadOpen}
+            onClose={() => setPhotoUploadOpen(false)}
+            projectId={project.id}
+            onUploadComplete={() => {
+              setPhotoUploadOpen(false)
+              fetchProject()
+            }}
+          />
+        )}
       </div>
     </div>
   )

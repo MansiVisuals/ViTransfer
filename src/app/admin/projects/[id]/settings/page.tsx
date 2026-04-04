@@ -28,6 +28,7 @@ interface Project {
   id: string
   title: string
   slug: string
+  type: 'VIDEO' | 'PHOTO'
   description: string | null
   companyName: string | null
   clientCompanyId: string | null
@@ -457,11 +458,13 @@ export default function ProjectSettingsPage() {
     )
   }
 
+  const isPhotoProject = project.type === 'PHOTO'
+
   const settingSections = [
     { id: 'project-details', label: t('projectDetails'), icon: FileText },
     { id: 'client-info', label: t('clientInfoNotifications'), icon: Users },
     { id: 'client-share', label: t('clientSharePage'), icon: Share2 },
-    { id: 'video-processing', label: t('videoProcessing'), icon: Video },
+    ...(!isPhotoProject ? [{ id: 'video-processing', label: t('videoProcessing'), icon: Video }] : []),
     { id: 'security', label: t('security'), icon: Shield },
   ]
 
@@ -602,6 +605,7 @@ export default function ProjectSettingsPage() {
 	                </div>
 	              </div>
 
+              {!isPhotoProject && (
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
@@ -652,6 +656,7 @@ export default function ProjectSettingsPage() {
                   </div>
                 )}
               </div>
+              )}
 
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <Label htmlFor="dueDate" className="flex items-center gap-2">
@@ -769,6 +774,7 @@ export default function ProjectSettingsPage() {
                   />
                 </div>
 
+                {!isPhotoProject && (
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
                     <Label htmlFor="usePreviewForApprovedPlayback">{t('usePreviewForApproved')}</Label>
@@ -782,7 +788,8 @@ export default function ProjectSettingsPage() {
                     onCheckedChange={setUsePreviewForApprovedPlayback}
                   />
                 </div>
-                {usePreviewForApprovedPlayback && watermarkEnabled && (
+                )}
+                {!isPhotoProject && usePreviewForApprovedPlayback && watermarkEnabled && (
                   <p className="text-xs text-muted-foreground italic">
                     {t('cleanPreviewHint')}
                   </p>
@@ -864,6 +871,8 @@ export default function ProjectSettingsPage() {
                   />
                 </div>
 
+                {!isPhotoProject && (
+                <>
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5 flex-1">
                     <Label htmlFor="restrictComments">{t('restrictCommentsLatest')}</Label>
@@ -893,6 +902,8 @@ export default function ProjectSettingsPage() {
                     {t('commentTimestampDisplayHint')}
                   </p>
                 </div>
+                </>
+                )}
               </div>
             </>
           )
@@ -1236,9 +1247,11 @@ export default function ProjectSettingsPage() {
                 <CollapsibleSection className="border-border" title={t('clientSharePage')} description={t('clientSharePageDescription')} open={showClientSharePage} onOpenChange={setShowClientSharePage} contentClassName="space-y-6 border-t pt-4">
                   {clientShareContent}
                 </CollapsibleSection>
+                {!isPhotoProject && (
                 <CollapsibleSection className="border-border" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={showVideoProcessing} onOpenChange={setShowVideoProcessing} contentClassName="space-y-6 border-t pt-4">
                   {videoProcessingContent}
                 </CollapsibleSection>
+                )}
                 <CollapsibleSection className="border-border" title={t('security')} description={t('securityDescription')} open={showSecurity} onOpenChange={setShowSecurity} contentClassName="space-y-4 border-t pt-4">
                   {securityContent}
                 </CollapsibleSection>
@@ -1282,7 +1295,7 @@ export default function ProjectSettingsPage() {
                       {clientShareContent}
                     </CollapsibleSection>
                   )}
-                  {activeSection === 'video-processing' && (
+                  {activeSection === 'video-processing' && !isPhotoProject && (
                     <CollapsibleSection className="border-border" title={t('videoProcessing')} description={t('videoProcessingDescription')} open={true} onOpenChange={() => {}} collapsible={false} contentClassName="space-y-6 border-t pt-4">
                       {videoProcessingContent}
                     </CollapsibleSection>

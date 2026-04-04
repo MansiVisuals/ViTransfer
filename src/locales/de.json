@@ -1510,6 +1510,7 @@
       "adminLogin": "Admin-Login",
       "newComments": "Neue Kommentare",
       "videoApprovals": "Video-Freigaben",
+      "clientUploads": "Client-Uploads",
       "securityAlerts": "Sicherheitswarnungen",
       "dueDateReminders": "Fälligkeitserinnerungen",
       "configureBelow": "Ein oder mehrere Ziele unten konfigurieren.",
@@ -2202,7 +2203,14 @@
       "across": "über",
       "button": "Admin-Dashboard öffnen"
     },
-    "passwordNotice": "Geschütztes Projekt: Verwenden Sie das separat gesendete Passwort, um auf dieses Projekt zuzugreifen."
+    "passwordNotice": "Geschütztes Projekt: Verwenden Sie das separat gesendete Passwort, um auf dieses Projekt zuzugreifen.",
+    "adminClientUpload": {
+      "title": "Neuer Client-Upload",
+      "subject": "Neuer Upload in {{PROJECT_TITLE}}",
+      "body": "{{UPLOADER_NAME}} hat {{FILE_COUNT}} Datei(en) in <strong>{{PROJECT_TITLE}}</strong> hochgeladen.",
+      "filesLabel": "Hochgeladene Dateien",
+      "button": "Uploads anzeigen"
+    }
   },
   "notificationsText": {
     "shareLinkOpenedTitle": "Share-Link geöffnet: {projectTitle}",
@@ -2213,7 +2221,9 @@
     "method": "Methode: {method}",
     "link": "Link: {url}",
     "securityAlertTitle": "Sicherheitswarnung",
-    "sharePasswordLockoutBody": "Share-Passwort auf {projectTitle} nach zu vielen fehlgeschlagenen Versuchen gesperrt"
+    "sharePasswordLockoutBody": "Share-Passwort auf {projectTitle} nach zu vielen fehlgeschlagenen Versuchen gesperrt",
+    "clientUploadTitle": "Neuer Upload: {projectTitle}",
+    "clientUploadBody": "{person} hat {count} Datei(en) in {projectTitle} hochgeladen"
   },
   "shareOtpEmail": {
     "subject": "Ihr Verifizierungscode für {projectTitle}",

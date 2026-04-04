@@ -35,6 +35,7 @@ function getEmailTemplateLocaleDefaults(messages: Record<string, any>) {
     otpVerification: messages.otpVerification || {},
     clientActivitySummary: messages.clientActivitySummary || {},
     adminActivitySummary: messages.adminActivitySummary || {},
+    adminClientUpload: messages.adminClientUpload || {},
   }
 }
 
@@ -52,6 +53,7 @@ export const EMAIL_TEMPLATE_TYPES = {
   OTP_VERIFICATION: 'OTP_VERIFICATION',
   CLIENT_ACTIVITY_SUMMARY: 'CLIENT_ACTIVITY_SUMMARY',
   ADMIN_ACTIVITY_SUMMARY: 'ADMIN_ACTIVITY_SUMMARY',
+  ADMIN_CLIENT_UPLOAD: 'ADMIN_CLIENT_UPLOAD',
 } as const
 
 export type EmailTemplateType = keyof typeof EMAIL_TEMPLATE_TYPES
@@ -173,6 +175,14 @@ export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinit
     { key: '{{SUMMARY_PROJECTS}}', description: 'Rendered project summary HTML', example: '' },
     { key: '{{ADMIN_URL}}', description: 'Link to admin dashboard', example: 'https://review.acme.com/admin/projects' },
   ],
+  ADMIN_CLIENT_UPLOAD: [
+    ...COMMON_PLACEHOLDERS,
+    { key: '{{UPLOADER_NAME}}', description: 'Name of the person who uploaded', example: 'John Doe' },
+    { key: '{{UPLOADER_EMAIL}}', description: 'Email of the uploader', example: 'john@acme.com' },
+    { key: '{{FILE_COUNT}}', description: 'Number of files uploaded', example: '3' },
+    { key: '{{FILE_LIST}}', description: 'Rendered list of uploaded files', example: '' },
+    { key: '{{ADMIN_URL}}', description: 'Link to project uploads page', example: 'https://review.acme.com/admin/projects/xxx' },
+  ],
 }
 
 // Template metadata for UI display
@@ -254,6 +264,12 @@ export const TEMPLATE_METADATA: TemplateMetadata[] = [
     type: 'ADMIN_ACTIVITY_SUMMARY',
     name: 'Admin Activity Summary',
     description: 'Scheduled summary sent to admins',
+    category: 'admin',
+  },
+  {
+    type: 'ADMIN_CLIENT_UPLOAD',
+    name: 'Client Upload Notification (to Admin)',
+    description: 'Sent to admins when a client uploads files via reverse share',
     category: 'admin',
   },
 ]
@@ -716,6 +732,28 @@ export function buildLocalizedDefaultTemplate(
 
 <div style="margin: 28px 0; text-align: center;">
   {{BUTTON:${t.button || 'Open Admin Dashboard'}:{{ADMIN_URL}}}}
+</div>`,
+      }
+    }
+    case 'ADMIN_CLIENT_UPLOAD': {
+      const t = defaults.adminClientUpload
+      return {
+        type: 'ADMIN_CLIENT_UPLOAD',
+        name: meta.name,
+        description: meta.description,
+        subject: t.subject || 'New upload on {{PROJECT_TITLE}}',
+        bodyContent: `<p style="margin:0 0 20px; font-size:16px; line-height:1.5;">
+  ${greeting}
+</p>
+
+<p style="margin:0 0 20px; font-size:15px; line-height:1.6;">
+  ${t.body || '{{UPLOADER_NAME}} uploaded {{FILE_COUNT}} file(s) to <strong>{{PROJECT_TITLE}}</strong>.'}
+</p>
+
+{{FILE_LIST}}
+
+<div style="margin: 28px 0; text-align: center;">
+  {{BUTTON:${t.button || 'View Uploads'}:{{ADMIN_URL}}}}
 </div>`,
       }
     }

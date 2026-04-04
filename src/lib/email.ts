@@ -269,6 +269,7 @@ const HTML_ALLOWED_PLACEHOLDERS = new Set([
   '{{APPROVAL_MESSAGE}}',
   '{{SUMMARY_ITEMS}}',
   '{{SUMMARY_PROJECTS}}',
+  '{{FILE_LIST}}',
   '{{UNSUBSCRIBE_SECTION}}',
   '{{LOGO}}',
 ])
@@ -1660,5 +1661,91 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
   } catch (error) {
     logError('Email test failed:', error)
     throw error
+  }
+}
+
+/**
+ * Email: Notify admins when a client uploads files via reverse share
+ */
+export async function sendAdminClientUploadEmail({
+  adminEmails,
+  uploaderName,
+  uploaderEmail,
+  projectTitle,
+  projectId,
+  fileNames,
+}: {
+  adminEmails: string[]
+  uploaderName: string
+  uploaderEmail?: string | null
+  projectTitle: string
+  projectId: string
+  fileNames: string[]
+}) {
+  const settings = await getEmailSettings()
+  const companyName = settings.companyName || 'ViTransfer'
+  const appDomain = settings.appDomain
+  const brand = getEmailBrand(settings.accentColor)
+  const brandingLogoUrl = buildBrandingLogoUrl(settings)
+
+  if (!appDomain) {
+    throw new Error('App domain not configured.')
+  }
+
+  const locale = settings.language || 'en'
+  const emailMessages = await loadEmailMessages(locale)
+  const uploadMsg = emailMessages.adminClientUpload || {}
+
+  const template = await getEmailTemplate('ADMIN_CLIENT_UPLOAD', locale)
+
+  const fileListHtml = fileNames.length > 0 ? `
+    <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:16px; margin-bottom:24px;">
+      <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">${uploadMsg.filesLabel || 'Uploaded Files'}</div>
+      ${fileNames.map(name => `
+        <div style="font-size:15px; color:${brand.textSubtle}; padding:4px 0;">
+          • ${escapeHtml(name)}
+        </div>
+      `).join('')}
+    </div>
+  ` : ''
+
+  const adminUrl = `${appDomain}/login?returnUrl=${encodeURIComponent(`/admin/projects/${projectId}`)}`
+
+  const placeholderValues: Record<string, string> = {
+    '{{RECIPIENT_NAME}}': 'Admin',
+    '{{UPLOADER_NAME}}': uploaderName,
+    '{{UPLOADER_EMAIL}}': uploaderEmail || '',
+    '{{PROJECT_TITLE}}': projectTitle,
+    '{{FILE_COUNT}}': String(fileNames.length),
+    '{{FILE_LIST}}': fileListHtml,
+    '{{ADMIN_URL}}': adminUrl,
+    '{{COMPANY_NAME}}': companyName,
+  }
+  const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
+
+  const subject = replacePlaceholders(template.subject, safePlaceholderValues)
+  const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
+
+  const html = renderEmailShell({
+    companyName,
+    title: uploadMsg.title || 'New Client Upload',
+    subtitle: `${uploaderName} — ${projectTitle}`,
+    preheader: `${uploaderName} uploaded ${fileNames.length} file(s) to ${projectTitle}`,
+    brand,
+    brandingLogoUrl,
+    emailHeaderStyle: settings.emailHeaderStyle as EmailHeaderStyle,
+    bodyContent,
+  })
+
+  const promises = adminEmails.map(email =>
+    sendEmail({ to: email, subject, html })
+  )
+
+  const results = await Promise.allSettled(promises)
+  const successCount = results.filter(r => r.status === 'fulfilled').length
+
+  return {
+    success: successCount > 0,
+    message: `Sent to ${successCount}/${adminEmails.length} admins`,
   }
 }

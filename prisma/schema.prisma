@@ -619,7 +619,7 @@ model PushSubscription {
   deviceName String?
 
   // Event subscriptions (default: all events)
-  subscribedEvents String[] @default(["SHARE_ACCESS", "ADMIN_ACCESS", "CLIENT_COMMENT", "VIDEO_APPROVAL", "SECURITY_ALERT"])
+  subscribedEvents String[] @default(["SHARE_ACCESS", "ADMIN_ACCESS", "CLIENT_COMMENT", "VIDEO_APPROVAL", "CLIENT_UPLOAD", "SECURITY_ALERT"])
 
   createdAt  DateTime @default(now())
   lastUsedAt DateTime @default(now())

@@ -62,6 +62,7 @@ self.addEventListener('notificationclick', (event) => {
     switch (data.type) {
       case 'CLIENT_COMMENT':
       case 'VIDEO_APPROVAL':
+      case 'CLIENT_UPLOAD':
       case 'SHARE_ACCESS':
         if (data.projectId) {
           url = `/admin/projects/${data.projectId}`

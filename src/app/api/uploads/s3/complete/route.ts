@@ -7,6 +7,7 @@ import { verifyS3UploadAccess } from '@/lib/s3-upload-auth'
 import { videoQueue, getAssetQueue } from '@/lib/queue'
 import { logError, logMessage } from '@/lib/logging'
 import { rateLimit } from '@/lib/rate-limit'
+import { handleReverseShareUploadNotification } from '@/lib/upload-notifications'
 import type { CompletedPart } from '@aws-sdk/client-s3'
 
 export const runtime = 'nodejs'
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     let s3Key = authResult.s3Key
     let dbVideo: { id: string; originalStoragePath: string; projectId: string; status: string } | null = null
     let dbAsset: { id: string; storagePath: string; category: string | null } | null = null
-    let dbProjectUpload: { id: string; storagePath: string } | null = null
+    let dbProjectUpload: { id: string; storagePath: string; projectId: string; fileName: string; uploadedByName: string | null; uploadedByEmail: string | null } | null = null
 
     if (videoId) {
       const video = await prisma.video.findUnique({
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
     } else {
       const pu = await prisma.projectUpload.findUnique({
         where: { id: projectUploadId! },
-        select: { id: true, storagePath: true },
+        select: { id: true, storagePath: true, projectId: true, fileName: true, uploadedByName: true, uploadedByEmail: true },
       })
       if (!pu) return NextResponse.json({ error: 'Upload record not found' }, { status: 404 })
       dbProjectUpload = pu
@@ -188,6 +189,14 @@ export async function POST(request: NextRequest) {
       })
 
       logMessage(`[S3 COMPLETE] ProjectUpload ${dbProjectUpload.id} complete`)
+
+      // Fire-and-forget notification to admins
+      void handleReverseShareUploadNotification({
+        projectId: dbProjectUpload.projectId,
+        fileName: dbProjectUpload.fileName,
+        uploaderName: dbProjectUpload.uploadedByName,
+        uploaderEmail: dbProjectUpload.uploadedByEmail,
+      })
     }
 
     return NextResponse.json({ ok: true })

@@ -1510,6 +1510,7 @@
       "adminLogin": "Admin Login",
       "newComments": "New Comments",
       "videoApprovals": "Video Approvals",
+      "clientUploads": "Client Uploads",
       "securityAlerts": "Security Alerts",
       "dueDateReminders": "Due Date Reminders",
       "configureBelow": "Configure one or more destinations below.",
@@ -2202,7 +2203,14 @@
       "across": "across",
       "button": "Open Admin Dashboard"
     },
-    "passwordNotice": "Protected project: Use the password sent separately to access this project."
+    "passwordNotice": "Protected project: Use the password sent separately to access this project.",
+    "adminClientUpload": {
+      "title": "New Client Upload",
+      "subject": "New upload on {{PROJECT_TITLE}}",
+      "body": "{{UPLOADER_NAME}} uploaded {{FILE_COUNT}} file(s) to <strong>{{PROJECT_TITLE}}</strong>.",
+      "filesLabel": "Uploaded Files",
+      "button": "View Uploads"
+    }
   }
   ,
   "notificationsText": {
@@ -2214,7 +2222,9 @@
     "method": "Method: {method}",
     "link": "Link: {url}",
     "securityAlertTitle": "Security Alert",
-    "sharePasswordLockoutBody": "Share password locked out on {projectTitle} after too many failed attempts"
+    "sharePasswordLockoutBody": "Share password locked out on {projectTitle} after too many failed attempts",
+    "clientUploadTitle": "New Upload: {projectTitle}",
+    "clientUploadBody": "{person} uploaded {count} file(s) to {projectTitle}"
   },
   "shareOtpEmail": {
     "subject": "Your verification code for {projectTitle}",

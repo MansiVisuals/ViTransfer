@@ -368,6 +368,13 @@ export async function createNotificationPayload(
         body: data.body || webPush.securityEventOccurred || 'A security event occurred',
       }
 
+    case 'CLIENT_UPLOAD':
+      return {
+        ...basePayload,
+        title: webPush.clientUploadTitle || 'New Upload',
+        body: `${data.authorName || notificationsText.someone || auth.someoneLabel || 'Someone'} ${webPush.uploadedFilesTo || 'uploaded files to'} ${data.projectTitle || webPush.aProject || 'a project'}`,
+      }
+
     case 'DUE_DATE_REMINDER':
       return {
         ...basePayload,

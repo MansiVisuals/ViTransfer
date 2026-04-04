@@ -11,6 +11,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { logError, logMessage } from '@/lib/logging'
 import { parseBearerToken, verifyAdminAccessToken, verifyShareToken } from '@/lib/auth'
 import { isS3Mode } from '@/lib/storage'
+import { handleReverseShareUploadNotification } from '@/lib/upload-notifications'
 
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
@@ -417,6 +418,14 @@ async function handleProjectUploadFinish(tusFilePath: string, upload: any, proje
   })
 
   logMessage(`[UPLOAD] ProjectUpload complete: ${projectUploadId}`)
+
+  // Fire-and-forget notification to admins
+  void handleReverseShareUploadNotification({
+    projectId: projectUpload.projectId,
+    fileName: projectUpload.fileName,
+    uploaderName: projectUpload.uploadedByName,
+    uploaderEmail: projectUpload.uploadedByEmail,
+  })
 
   await cleanupTUSFile(tusFilePath)
 

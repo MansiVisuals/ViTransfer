@@ -1457,6 +1457,7 @@
       "adminLogin": "Admin-login",
       "newComments": "Nieuwe Opmerkingen",
       "videoApprovals": "Videogoedkeuringen",
+      "clientUploads": "Client-uploads",
       "securityAlerts": "Beveiligingswaarschuwingen",
       "dueDateReminders": "Deadlineherinneringen",
       "configureBelow": "Configureer hieronder een of meer bestemmingen.",
@@ -2128,7 +2129,14 @@
       "across": "over",
       "button": "Beheerdersdashboard Openen"
     },
-    "passwordNotice": "Beveiligd project: Gebruik het apart verstuurde wachtwoord om toegang te krijgen tot dit project."
+    "passwordNotice": "Beveiligd project: Gebruik het apart verstuurde wachtwoord om toegang te krijgen tot dit project.",
+    "adminClientUpload": {
+      "title": "Nieuwe client-upload",
+      "subject": "Nieuwe upload in {{PROJECT_TITLE}}",
+      "body": "{{UPLOADER_NAME}} heeft {{FILE_COUNT}} bestand(en) geüpload naar <strong>{{PROJECT_TITLE}}</strong>.",
+      "filesLabel": "Geüploade bestanden",
+      "button": "Uploads bekijken"
+    }
   },
   "notificationsText": {
     "shareLinkOpenedTitle": "Deellink Geopend: {projectTitle}",
@@ -2139,7 +2147,9 @@
     "method": "Methode: {method}",
     "link": "Link: {url}",
     "securityAlertTitle": "Beveiligingswaarschuwing",
-    "sharePasswordLockoutBody": "Het deelwachtwoord voor {projectTitle} is vergrendeld na te veel mislukte pogingen"
+    "sharePasswordLockoutBody": "Het deelwachtwoord voor {projectTitle} is vergrendeld na te veel mislukte pogingen",
+    "clientUploadTitle": "Nieuwe upload: {projectTitle}",
+    "clientUploadBody": "{person} heeft {count} bestand(en) geüpload naar {projectTitle}"
   },
   "shareOtpEmail": {
     "subject": "Uw verificatiecode voor {projectTitle}",

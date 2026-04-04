@@ -301,6 +301,15 @@ function generateSampleValues(
       SUMMARY_PROJECTS: '<div class="secondary-box"><div style="font-size:14px;">Summer Campaign 2026 — 5 comments</div></div>',
       ADMIN_URL: `${appDomain}/admin/projects`,
     },
+    ADMIN_CLIENT_UPLOAD: {
+      ...base,
+      PROJECT_TITLE: projectTitle,
+      UPLOADER_NAME: clientName,
+      UPLOADER_EMAIL: ex.CLIENT_EMAIL || 'jane@example.com',
+      FILE_COUNT: '2',
+      FILE_LIST: `<div class="secondary-box"><div style="font-size:14px;">• Storyboard-v2.pdf</div><div style="font-size:14px;">• VO-notes.txt</div></div>`,
+      ADMIN_URL: `${appDomain}/admin/projects/sample-id`,
+    },
   }
 
   return typeValues[type] || base
@@ -325,6 +334,7 @@ function getEmailTitle(type: EmailTemplateType, messages?: Record<string, any>):
     OTP_VERIFICATION: 'Verification Code',
     CLIENT_ACTIVITY_SUMMARY: 'Project Update',
     ADMIN_ACTIVITY_SUMMARY: 'Client Activity Summary',
+    ADMIN_CLIENT_UPLOAD: 'New Client Upload',
   }
   return localizedTitles[type] || defaultTitles[type] || 'Notification'
 }
@@ -351,6 +361,7 @@ function getEmailSubtitle(type: EmailTemplateType, values: Record<string, string
     OTP_VERIFICATION: `${projectTitle}`,
     CLIENT_ACTIVITY_SUMMARY: `${projectTitle}`,
     ADMIN_ACTIVITY_SUMMARY: localizedSubtitles.ADMIN_ACTIVITY_SUMMARY || 'Latest updates',
+    ADMIN_CLIENT_UPLOAD: `${clientName} — ${projectTitle}`,
   }
   return subtitles[type] || ''
 }

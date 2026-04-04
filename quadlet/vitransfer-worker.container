@@ -4,7 +4,7 @@ After=vitransfer-app.service
 Requires=vitransfer-postgres.service vitransfer-redis.service vitransfer-app.service
 
 [Container]
-Image=docker.io/crypt010/vitransfer:dev-0.9.11
+Image=docker.io/mansivisuals/vitransfer:latest
 ContainerName=vitransfer-worker
 AutoUpdate=registry
 

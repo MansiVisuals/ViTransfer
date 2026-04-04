@@ -475,7 +475,7 @@ jobs:
           # Production Clean Install Test Results
           
           ## Test Configuration
-          - **Docker Image**: `crypt010/vitransfer:latest`
+          - **Docker Image**: `mansivisuals/vitransfer:latest`
           - **PostgreSQL**: `${{ steps.versions.outputs.postgres_version }}`
           - **Redis**: `${{ steps.versions.outputs.redis_version }}`
           - **Branch**: `${{ github.ref_name }}`

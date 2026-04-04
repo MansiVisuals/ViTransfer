@@ -110,12 +110,12 @@ $SYSTEMCTL daemon-reload
 
 echo ""
 echo "🐳 Pulling Docker image..."
-if podman pull docker.io/crypt010/vitransfer:latest; then
+if podman pull docker.io/mansivisuals/vitransfer:latest; then
     echo "✅ Image pulled successfully"
 else
     echo "⚠️  Failed to pull image. You may need to login first:"
     echo "   podman login docker.io"
-    echo "   (username: crypt010)"
+    echo "   (username: mansivisuals)"
 fi
 
 echo ""

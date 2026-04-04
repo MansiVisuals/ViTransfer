@@ -95,7 +95,7 @@ chmod 600 ~/.config/containers/systemd/*.container
 systemctl --user daemon-reload
 
 # 6. Pull image
-podman pull docker.io/crypt010/vitransfer:latest
+podman pull docker.io/mansivisuals/vitransfer:latest
 
 # 7. Enable lingering
 sudo loginctl enable-linger $USER
@@ -196,7 +196,7 @@ tar xzf ~/uploads-backup-20250127.tar.gz -C /podman/vitransfer/uploads/
 
 ```bash
 # Pull latest image
-podman pull docker.io/crypt010/vitransfer:latest
+podman pull docker.io/mansivisuals/vitransfer:latest
 
 # Restart services
 systemctl --user restart vitransfer-app.service

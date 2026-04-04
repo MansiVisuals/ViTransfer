@@ -202,7 +202,7 @@ jobs:
           mv docker-compose.yml.new docker-compose.yml
 
           # Update compose to use locally built image
-          sed -i "s|image: crypt010/vitransfer:latest|image: vitransfer:ci-upgrade-target|g" docker-compose.yml
+          sed -i "s|image: mansivisuals/vitransfer:latest|image: vitransfer:ci-upgrade-target|g" docker-compose.yml
 
           echo "Using locally built image: vitransfer:ci-upgrade-target"
 

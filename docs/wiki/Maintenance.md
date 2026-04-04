@@ -18,7 +18,7 @@ docker-compose up -d
 
 For a specific tag:
 ```bash
-docker pull crypt010/vitransfer:latest
+docker pull mansivisuals/vitransfer:latest
 docker-compose up -d
 ```
 

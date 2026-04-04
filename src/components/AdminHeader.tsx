@@ -149,7 +149,7 @@ export default function AdminHeader() {
                       </a>
                     </Button>
                     <Button asChild variant="outline" className="w-full justify-start">
-                      <a href="https://hub.docker.com/r/crypt010/vitransfer" target="_blank" rel="noopener noreferrer">
+                      <a href="https://hub.docker.com/r/mansivisuals/vitransfer" target="_blank" rel="noopener noreferrer">
                         <Container className="w-4 h-4 mr-2" />
                         {t('dockerHub')}
                       </a>

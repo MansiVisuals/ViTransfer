@@ -4,7 +4,7 @@
 
 ViTransfer is a self-hosted web app for video teams to share work with clients, collect feedback, and manage approvals.
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/crypt010/vitransfer)](https://hub.docker.com/r/crypt010/vitransfer)
+[![Docker Pulls](https://img.shields.io/docker/pulls/mansivisuals/vitransfer)](https://hub.docker.com/r/mansivisuals/vitransfer)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 [![GitHub](https://img.shields.io/badge/github-MansiVisuals%2FViTransfer-blue)](https://github.com/MansiVisuals/ViTransfer)
 [![Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/E1E215DBM4)
@@ -13,6 +13,8 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 [![Upgrade Test](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-upgrade.yml/badge.svg)](https://github.com/MansiVisuals/ViTransfer/actions/workflows/test-upgrade.yml)
 
 **v1.0:** ViTransfer is production-ready and used in production by many users. Development continues with occasional improvements and fixes as the platform is near feature-complete. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
+
+> From v1.0.0 onward, the Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing setup, update your Docker Compose, Quadlet, or manual pull commands to use the new repository.
 
 💖 **Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
 
@@ -63,6 +65,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and https://github.com/MansiVisuals/ViTra
 ## Support
 - Issues: https://github.com/MansiVisuals/ViTransfer/issues
 - Discussions: https://github.com/MansiVisuals/ViTransfer/discussions
-- Docker Hub: https://hub.docker.com/r/crypt010/vitransfer
+- Docker Hub: https://hub.docker.com/r/mansivisuals/vitransfer
 
 Made for filmmakers and video professionals.

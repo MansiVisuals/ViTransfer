@@ -362,7 +362,7 @@ You can run the same tests locally using the scripts from the workflows:
 
 ### Upgrade test can't find old version
 - Ensure the Docker image tag exists on Docker Hub
-- Check available tags: https://hub.docker.com/r/crypt010/vitransfer/tags
+- Check available tags: https://hub.docker.com/r/mansivisuals/vitransfer/tags
 
 ### Health checks timeout
 - Increase wait time in workflow

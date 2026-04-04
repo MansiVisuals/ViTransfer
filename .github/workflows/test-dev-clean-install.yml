@@ -44,7 +44,7 @@ jobs:
 
       - name: Configure docker-compose for local image
         run: |
-          sed -i "s|image: crypt010/vitransfer:latest|image: vitransfer:ci-test|g" docker-compose.yml
+          sed -i "s|image: mansivisuals/vitransfer:latest|image: vitransfer:ci-test|g" docker-compose.yml
           echo "Configured to use locally built image"
 
       - name: Create test .env file

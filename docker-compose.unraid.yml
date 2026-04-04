@@ -41,7 +41,7 @@ services:
       - no-new-privileges:true
 
   app:
-    image: crypt010/vitransfer:latest
+    image: mansivisuals/vitransfer:latest
     container_name: vitransfer-app
     restart: unless-stopped
     depends_on:
@@ -90,7 +90,7 @@ services:
       start_period: 5m
 
   worker:
-    image: crypt010/vitransfer:latest
+    image: mansivisuals/vitransfer:latest
     container_name: vitransfer-worker
     restart: unless-stopped
     command: npm run worker

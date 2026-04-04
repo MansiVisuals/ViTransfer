@@ -110,7 +110,7 @@ systemctl --user daemon-reload
 
 ```bash
 # Pull the image
-podman pull docker.io/crypt010/vitransfer:latest
+podman pull docker.io/mansivisuals/vitransfer:latest
 ```
 
 ### 5. Start Services
@@ -235,7 +235,7 @@ sudo podman auto-update
 
 ```bash
 # Pull latest image
-podman pull docker.io/crypt010/vitransfer:latest
+podman pull docker.io/mansivisuals/vitransfer:latest
 
 # Restart services
 sudo systemctl restart vitransfer-app.service
@@ -374,7 +374,7 @@ After installation, these systemd services are created:
 
 - [Podman Quadlet Documentation](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html)
 - [systemd Unit Files](https://www.freedesktop.org/software/systemd/man/systemd.unit.html)
-- [ViTransfer Docker Hub](https://hub.docker.com/r/crypt010/vitransfer)
+- [ViTransfer Docker Hub](https://hub.docker.com/r/mansivisuals/vitransfer)
 
 ## Support
 

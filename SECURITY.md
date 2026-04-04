@@ -85,13 +85,13 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 
 **1. Keep images updated:**
 ```bash
-docker pull crypt010/vitransfer:latest
+docker pull mansivisuals/vitransfer:latest
 docker-compose up -d
 ```
 
 **2. Run security scans:**
 ```bash
-docker scout cves crypt010/vitransfer:latest
+docker scout cves mansivisuals/vitransfer:latest
 ```
 
 **3. Enable HTTPS:**

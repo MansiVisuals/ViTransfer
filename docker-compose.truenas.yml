@@ -45,7 +45,7 @@ services:
       - no-new-privileges:true
 
   app:
-    image: crypt010/vitransfer:latest
+    image: mansivisuals/vitransfer:latest
     container_name: vitransfer-app
     restart: unless-stopped
     user: "568:568"
@@ -93,7 +93,7 @@ services:
       start_period: 5m
 
   worker:
-    image: crypt010/vitransfer:latest
+    image: mansivisuals/vitransfer:latest
     container_name: vitransfer-worker
     restart: unless-stopped
     user: "568:568"

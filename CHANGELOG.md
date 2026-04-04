@@ -5,13 +5,15 @@ All notable changes to ViTransfer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
+
 ## [1.0.0] - 2026-04-03
 
 ViTransfer is production-ready and near feature-complete.
 
 **Thank you** to everyone who has contributed to getting ViTransfer to v1.0 — whether you contributed code, joined a discussion, helped debug an issue, opened a bug report, or submitted a feature request. Every bit of involvement has helped shape this project.
 
-A special thanks to [@thinkvp](https://github.com/thinkvp) (Simon), who has been part of the journey since the very first 0.1.0 release. The countless conversations and feedback in those early months helped shape ViTransfer massively. Simon has since created his own hard fork in which he has built a full CRM package around ViTransfer's core — it is absolutely amazing to see a project like ViTransfer inspire people to experiment and make something completely their own.
+A special thanks to [@thinkvp](https://github.com/thinkvp) (Simon), who has been part of the journey since the very first 0.1.0 release. The countless conversations and feedback in those early months helped shape ViTransfer massively. Simon has since created his own hard fork in which he has built a full CRM package around ViTransfer's core.
 
 ### Added
 - S3-compatible object storage. Set `STORAGE_PROVIDER=s3` to use any S3-compatible store. Uploads use browser-direct multipart presigned URLs; individual downloads redirect via presigned GET URLs; ZIP downloads stream through the server. Tested with MinIO AIStor (self-hosted Docker). Other providers (AWS S3, Cloudflare R2, Backblaze B2, etc.) should work but are untested — [open an issue](https://github.com/MansiVisuals/ViTransfer/issues) if you run into problems. Local storage remains the default. Local and S3 cannot be mixed; switching backends does not migrate files.
@@ -1350,6 +1352,10 @@ Future v0.2.x releases will include notification system changes (configurable em
 ## Release Notes
 
 ### Version Tagging
-Starting with v0.1.0, Docker images are tagged with both version numbers and "latest":
+Starting with v0.1.0, Docker images were tagged with both version numbers and `latest` in the original Docker Hub repository:
 - `crypt010/vitransfer:0.1.0` - Specific version
-- `crypt010/vitransfer:latest` - Always points to the latest stable release
+- `crypt010/vitransfer:latest` - Latest stable release for the pre-v1.0 repository
+
+Starting with v1.0.0, Docker images moved to the new Docker Hub repository:
+- `mansivisuals/vitransfer:1.0.0` - Specific version
+- `mansivisuals/vitransfer:latest` - Latest stable release for v1.0.0 and newer

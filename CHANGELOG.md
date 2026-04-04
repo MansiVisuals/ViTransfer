@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.0.1] - 2026-04-04
+
+### Fixed
+- Multipart upload fails on Cloudflare R2 with "Missing or invalid field: uploadId" due to R2's upload IDs exceeding the 256-character validation limit. Raised to 1024 characters to support R2 and other S3-compatible providers ([#59](https://github.com/MansiVisuals/ViTransfer/issues/59)).
+
 ## [1.0.0] - 2026-04-03
 
 ViTransfer is production-ready and near feature-complete.

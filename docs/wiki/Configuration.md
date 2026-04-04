@@ -53,9 +53,11 @@ Set `STORAGE_PROVIDER=s3` to have uploads and downloads bypass Node.js and go di
 
 **Important:** Local and S3 storage cannot be mixed. Switching from one to the other does not move or delete any files — they remain where they are — but ViTransfer will only read from the active backend. Projects stored in the previous backend will not work until their files are manually migrated to the new storage. There is no built-in migration tool. This is by design.
 
+**Important:** The S3 variables are set in your `.env` file and are automatically passed to both the app and worker services via `docker-compose.yml`. Do not add them to individual services manually — both containers need the same S3 configuration.
+
 **Requirements:**
 1. Create the bucket before starting ViTransfer.
-2. Configure CORS on the bucket to allow `PUT` requests from your app origin (required for presigned multipart uploads from the browser).
+2. Configure CORS on the bucket to allow `GET` and `PUT` requests from your app origin (required for presigned uploads and downloads from the browser).
 3. Set `STORAGE_PROVIDER=s3` and the `S3_*` variables in your `.env`.
 
 **Example `.env`:**
@@ -80,7 +82,13 @@ S3_SECRET_ACCESS_KEY=your-secret-key
 
 ### CORS configuration
 
-The browser must be allowed to `PUT` parts directly to your store **and** read the `ETag` response header (required for multipart upload completion).
+The browser needs direct access to your object store for two operations:
+- **`PUT`** — uploading file parts via presigned URLs
+- **`GET`** — video playback and file downloads via presigned URLs
+
+The `ETag` response header must also be exposed (browsers block it by default), or uploads will fail with "Part returned no ETag".
+
+All other S3 operations (multipart initiation, completion, abort) happen server-side and do not require CORS.
 
 **MinIO AIStor** — CORS is typically permissive by default, but if you've locked it down:
 ```bash
@@ -89,24 +97,20 @@ mc admin config set myminio/ api cors_allow_origin=https://vitransfer.example.co
 mc admin service restart myminio/
 ```
 
-**AWS S3 / R2 / B2** — configure the bucket CORS policy via the provider's console or CLI. The policy must:
-- Allow `PUT` from your app origin
-- Expose the `ETag` header (browsers block it otherwise)
+**AWS S3 / R2 / B2** — configure the bucket CORS policy via the provider's console or CLI.
 
-Example JSON CORS policy for AWS S3 / R2:
+Example JSON CORS policy:
 ```json
 [
   {
     "AllowedOrigins": ["https://vitransfer.example.com"],
-    "AllowedMethods": ["PUT"],
+    "AllowedMethods": ["GET", "PUT"],
     "AllowedHeaders": ["*"],
     "ExposeHeaders": ["ETag"],
     "MaxAgeSeconds": 3600
   }
 ]
 ```
-
-If `ETag` is not exposed, uploads will fail with "Part returned no ETag".
 
 ---
 

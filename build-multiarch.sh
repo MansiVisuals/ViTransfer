@@ -9,7 +9,7 @@
 
 set -e
 
-DOCKER_USER="crypt010"
+DOCKER_USER="mansivisuals"
 IMAGE="vitransfer"
 VERSION="${1:-latest}"
 NO_CACHE=""

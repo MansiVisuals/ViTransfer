@@ -86,21 +86,30 @@ jobs:
         run: |
           FROM_VERSION="${{ steps.versions.outputs.from_version }}"
           echo "[DEPLOY] Deploying production version: $FROM_VERSION"
-          
+
           # Backup original compose file
           cp docker-compose.yml docker-compose.yml.new
-          
-          # Modify compose to use production version (likely already :latest)
+
+          # Determine Docker repo based on version (pre-1.0.0 = crypt010, 1.0.0+ = mansivisuals)
           if [[ "$FROM_VERSION" != "latest" ]]; then
-            sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$FROM_VERSION/g" docker-compose.yml
+            FROM_MAJOR=$(echo "$FROM_VERSION" | cut -d'.' -f1)
+            if [[ "$FROM_MAJOR" -lt 1 ]]; then
+              FROM_REPO="crypt010/vitransfer"
+            else
+              FROM_REPO="mansivisuals/vitransfer"
+            fi
+            sed -i "s|image: mansivisuals/vitransfer:latest|image: $FROM_REPO:$FROM_VERSION|g" docker-compose.yml
+            echo "Using repo: $FROM_REPO:$FROM_VERSION"
+          else
+            echo "Using repo: mansivisuals/vitransfer:latest"
           fi
-          
+
           # Start production version
           docker compose up -d
-          
+
           echo "[WAIT] Waiting for production version to be ready..."
           sleep 40
-          
+
           # Verify production version is running
           docker compose ps
 

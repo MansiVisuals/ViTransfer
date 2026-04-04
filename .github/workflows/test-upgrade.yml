@@ -111,19 +111,28 @@ jobs:
         run: |
           FROM_VERSION="${{ steps.versions.outputs.from_version }}"
           echo "[DEPLOY] Deploying version $FROM_VERSION..."
-          
+
           # Backup original compose file
           cp docker-compose.yml docker-compose.yml.new
-          
+
+          # Determine Docker repo based on version (pre-1.0.0 = crypt010, 1.0.0+ = mansivisuals)
+          FROM_MAJOR=$(echo "$FROM_VERSION" | cut -d'.' -f1)
+          if [[ "$FROM_MAJOR" -lt 1 ]]; then
+            FROM_REPO="crypt010/vitransfer"
+          else
+            FROM_REPO="mansivisuals/vitransfer"
+          fi
+          echo "Using repo: $FROM_REPO:$FROM_VERSION"
+
           # Modify compose to use old version
-          sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$FROM_VERSION/g" docker-compose.yml
-          
+          sed -i "s|image: mansivisuals/vitransfer:latest|image: $FROM_REPO:$FROM_VERSION|g" docker-compose.yml
+
           # Start old version
           docker compose up -d
-          
+
           echo "[WAIT] Waiting for old version to be ready..."
           sleep 40
-          
+
           # Verify old version is running
           docker compose ps
 
@@ -227,7 +236,14 @@ jobs:
           
           # If specific version requested, update compose
           if [[ "$TO_VERSION" != "latest" ]]; then
-            sed -i "s/image: crypt010\/vitransfer:latest/image: crypt010\/vitransfer:$TO_VERSION/g" docker-compose.yml
+            # Determine Docker repo based on version (pre-1.0.0 = crypt010, 1.0.0+ = mansivisuals)
+            TO_MAJOR=$(echo "$TO_VERSION" | cut -d'.' -f1)
+            if [[ "$TO_MAJOR" -lt 1 ]]; then
+              TO_REPO="crypt010/vitransfer"
+            else
+              TO_REPO="mansivisuals/vitransfer"
+            fi
+            sed -i "s|image: mansivisuals/vitransfer:latest|image: $TO_REPO:$TO_VERSION|g" docker-compose.yml
           fi
           
           # Pull new version

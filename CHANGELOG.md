@@ -19,8 +19,8 @@ A special thanks to [@thinkvp](https://github.com/thinkvp) (Simon), who has been
 - S3-compatible object storage. Set `STORAGE_PROVIDER=s3` to use any S3-compatible store. Uploads use browser-direct multipart presigned URLs; individual downloads redirect via presigned GET URLs; ZIP downloads stream through the server. Tested with MinIO AIStor (self-hosted Docker). Other providers (AWS S3, Cloudflare R2, Backblaze B2, etc.) should work but are untested — [open an issue](https://github.com/MansiVisuals/ViTransfer/issues) if you run into problems. Local storage remains the default. Local and S3 cannot be mixed; switching backends does not migrate files.
 - Preview LUT support — a 3D LUT (`previewlut.cube`) is applied during transcoding for color-calibrated previews. Toggleable per-project and as a global default in settings. LUT crafted and provided for ViTransfer by colorist Fred ([@fredflx](https://github.com/fredflx) — [yechandocolor.com](https://yechandocolor.com)).
 - "Download All" button in the download modal — downloads the video and all assets together as a single ZIP file.
-- "Download All Videos" button on the share page grid view — downloads all approved videos as a single ZIP file.
-- Reverse share — projects can now accept client file uploads via the share page. Enable per-project in settings. Uploaded files appear in a dedicated "Client Uploads" block on the admin project page.
+- "Download All Videos" button on the share page grid view — downloads all approved videos as a single ZIP file ([#56](https://github.com/MansiVisuals/ViTransfer/issues/56)).
+- Reverse share — projects can now accept client file uploads via the share page. Enable per-project in settings. Uploaded files appear in a dedicated "Client Uploads" block on the admin project page ([#55](https://github.com/MansiVisuals/ViTransfer/issues/55)).
 - Bulk select on the admin project page — video assets and client uploads now support multi-select with a bulk action bar for downloading or deleting multiple files at once.
 
 ### Changed

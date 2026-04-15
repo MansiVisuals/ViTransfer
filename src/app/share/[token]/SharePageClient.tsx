@@ -324,7 +324,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
             if (projectData.settings) {
               setCompanyName(projectData.settings.companyName || 'Studio')
-              setDefaultQuality(projectData.settings.defaultPreviewResolution || '720p')
+              // Prefer per-project resolution, fall back to global default
+              setDefaultQuality(projectData.previewResolution || projectData.settings.defaultPreviewResolution || '720p')
             }
 
             if (!projectData.hideFeedback) {

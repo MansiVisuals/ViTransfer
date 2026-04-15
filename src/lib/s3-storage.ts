@@ -76,6 +76,7 @@ function formatS3Error(operation: string, key: string, err: unknown): Error {
 
 /** Upload a buffer or stream — used by the worker for processed outputs.
  * For files >= 100MB, uses multipart upload to avoid request size limits.
+ * Aligns with presign endpoint which uses 25MB default chunks.
  */
 export async function s3UploadFile(
   key: string,
@@ -85,11 +86,11 @@ export async function s3UploadFile(
 ): Promise<void> {
   // Use multipart upload for files >= 100MB
   const MULTIPART_THRESHOLD = 100 * 1024 * 1024 // 100MB
-  const PART_SIZE = 5 * 1024 * 1024 // 5MB per part
+  const PART_SIZE = 25 * 1024 * 1024 // 25MB per part (matches presign endpoint)
 
   // If size is provided and exceeds threshold, use multipart
   if (size !== undefined && size >= MULTIPART_THRESHOLD) {
-    return s3UploadFileMultipart(key, body, contentType, size)
+    return s3UploadFileMultipart(key, body, contentType, size, PART_SIZE)
   }
 
   // For unknown size streams, detect by reading first chunk
@@ -98,6 +99,7 @@ export async function s3UploadFile(
     const chunks: Buffer[] = []
     let totalSize = 0
     let readable = body
+    const PART_SIZE = 25 * 1024 * 1024 // 25MB per part (matches presign endpoint)
 
     // Try to determine size from stream before committing to single PUT
     return new Promise((resolve, reject) => {
@@ -115,7 +117,7 @@ export async function s3UploadFile(
           try {
             const bufferBody = Buffer.concat(chunks)
             const uploadStream = Readable.from([bufferBody, readable])
-            await s3UploadFileMultipart(key, uploadStream, contentType, totalSize)
+            await s3UploadFileMultipart(key, uploadStream, contentType, totalSize, PART_SIZE)
             resolve()
           } catch (err) {
             reject(formatS3Error('PUT', key, err))
@@ -158,10 +160,9 @@ async function s3UploadFileMultipart(
   key: string,
   body: Readable | Buffer,
   contentType: string,
-  totalSize: number
+  totalSize: number,
+  partSize: number = 25 * 1024 * 1024 // 25MB default (matches presign endpoint)
 ): Promise<void> {
-  const PART_SIZE = 5 * 1024 * 1024 // 5MB per part
-
   let uploadId: string | undefined
 
   try {
@@ -175,7 +176,7 @@ async function s3UploadFileMultipart(
     let offset = 0
     let partNumber = 1
     while (offset < bodyBuffer.length) {
-      const end = Math.min(offset + PART_SIZE, bodyBuffer.length)
+      const end = Math.min(offset + partSize, bodyBuffer.length)
       const chunk = bodyBuffer.subarray(offset, end)
 
       const uploadRes = await getS3Client().send(

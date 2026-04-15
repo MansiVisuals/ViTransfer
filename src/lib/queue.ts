@@ -4,6 +4,7 @@ import { getRedisForQueue } from './redis'
 // Lazy initialization to prevent connections during build time
 let videoQueueInstance: Queue<VideoProcessingJob> | null = null
 let assetQueueInstance: Queue<AssetProcessingJob> | null = null
+let projectUploadQueueInstance: Queue<ProjectUploadProcessingJob> | null = null
 let externalNotificationQueueInstance: Queue<ExternalNotificationJob> | null = null
 let cleanPreviewQueueInstance: Queue<CleanPreviewJob> | null = null
 
@@ -17,6 +18,12 @@ export interface AssetProcessingJob {
   assetId: string
   storagePath: string
   expectedCategory?: string
+}
+
+export interface ProjectUploadProcessingJob {
+  uploadId: string
+  storagePath: string
+  projectId: string
 }
 
 export interface ExternalNotificationJob {
@@ -90,6 +97,33 @@ export function getAssetQueue(): Queue<AssetProcessingJob> {
     })
   }
   return assetQueueInstance
+}
+
+export function getProjectUploadQueue(): Queue<ProjectUploadProcessingJob> {
+  // Don't create queue during build phase
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    throw new Error('Queue not available during build phase')
+  }
+
+  if (!projectUploadQueueInstance) {
+    projectUploadQueueInstance = new Queue<ProjectUploadProcessingJob>('project-upload-processing', {
+      connection: getRedisForQueue(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+        removeOnComplete: {
+          age: 3600, // keep completed jobs for 1 hour
+        },
+        removeOnFail: {
+          age: 86400, // keep failed jobs for 24 hours
+        },
+      },
+    })
+  }
+  return projectUploadQueueInstance
 }
 
 export function getExternalNotificationQueue(): Queue<ExternalNotificationJob> {

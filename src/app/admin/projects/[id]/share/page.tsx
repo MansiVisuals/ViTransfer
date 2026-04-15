@@ -199,13 +199,15 @@ export default function AdminSharePage() {
         }
 
         try {
-          const [token720, token1080] = await Promise.all([
+          const [token720, token1080, token2160] = await Promise.all([
             fetchAdminVideoTokenWithRetry(video.id, '720p', sessionId),
             fetchAdminVideoTokenWithRetry(video.id, '1080p', sessionId),
+            fetchAdminVideoTokenWithRetry(video.id, '2160p', sessionId),
           ])
 
           let streamToken720p = token720
           let streamToken1080p = token1080
+          let streamToken2160p = token2160
           let downloadToken = null
 
           if (video.approved) {
@@ -214,6 +216,7 @@ export default function AdminSharePage() {
               downloadToken = originalToken
               streamToken720p = streamToken720p || originalToken
               streamToken1080p = streamToken1080p || originalToken
+              streamToken2160p = streamToken2160p || originalToken
             }
           }
 
@@ -229,11 +232,12 @@ export default function AdminSharePage() {
             ...video,
             streamUrl720p: streamToken720p ? `/api/content/${streamToken720p}` : '',
             streamUrl1080p: streamToken1080p ? `/api/content/${streamToken1080p}` : '',
+            streamUrl2160p: streamToken2160p ? `/api/content/${streamToken2160p}` : '',
             downloadUrl: downloadToken ? `/api/content/${downloadToken}?download=true` : null,
             thumbnailUrl,
           }
 
-          if (tokenized.streamUrl720p || tokenized.streamUrl1080p || tokenized.downloadUrl || tokenized.thumbnailUrl) {
+          if (tokenized.streamUrl720p || tokenized.streamUrl1080p || tokenized.streamUrl2160p || tokenized.downloadUrl || tokenized.thumbnailUrl) {
             tokenCacheRef.current.set(cacheKey, tokenized)
           }
           return tokenized

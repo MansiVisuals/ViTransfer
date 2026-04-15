@@ -467,34 +467,40 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         try {
           let streamToken720p = ''
           let streamToken1080p = ''
+          let streamToken2160p = ''
           let downloadToken = null
 
           if (video.approved) {
             // Check if project uses preview for approved playback
             if (project?.usePreviewForApprovedPlayback) {
               // Use preview tokens for streaming, original for download
-              const [token720, token1080, originalToken] = await Promise.all([
+              const [token720, token1080, token2160, originalToken] = await Promise.all([
                 fetchVideoTokenWithRetry(video.id, '720p'),
                 fetchVideoTokenWithRetry(video.id, '1080p'),
+                fetchVideoTokenWithRetry(video.id, '2160p'),
                 fetchVideoTokenWithRetry(video.id, 'original'),
               ])
               streamToken720p = token720
               streamToken1080p = token1080
+              streamToken2160p = token2160
               downloadToken = originalToken
             } else {
               // Default: original for everything
               const originalToken = await fetchVideoTokenWithRetry(video.id, 'original')
               streamToken720p = originalToken
               streamToken1080p = originalToken
+              streamToken2160p = originalToken
               downloadToken = originalToken
             }
           } else {
-            const [token720, token1080] = await Promise.all([
+            const [token720, token1080, token2160] = await Promise.all([
               fetchVideoTokenWithRetry(video.id, '720p'),
               fetchVideoTokenWithRetry(video.id, '1080p'),
+              fetchVideoTokenWithRetry(video.id, '2160p'),
             ])
             streamToken720p = token720
             streamToken1080p = token1080
+            streamToken2160p = token2160
           }
 
           let thumbnailUrl = null
@@ -509,13 +515,14 @@ export default function SharePageClient({ token }: SharePageClientProps) {
             ...video,
             streamUrl720p: streamToken720p ? `/api/content/${streamToken720p}` : '',
             streamUrl1080p: streamToken1080p ? `/api/content/${streamToken1080p}` : '',
+            streamUrl2160p: streamToken2160p ? `/api/content/${streamToken2160p}` : '',
             downloadUrl: downloadToken ? `/api/content/${downloadToken}?download=true` : null,
             thumbnailUrl,
           }
 
           // Only cache successful tokenization results.
           // Avoid caching empty URLs from transient failures on first load.
-          if (tokenized.streamUrl720p || tokenized.streamUrl1080p || tokenized.downloadUrl || tokenized.thumbnailUrl) {
+          if (tokenized.streamUrl720p || tokenized.streamUrl1080p || tokenized.streamUrl2160p || tokenized.downloadUrl || tokenized.thumbnailUrl) {
             tokenCacheRef.current.set(cacheKey, tokenized)
           }
           return tokenized

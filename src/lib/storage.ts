@@ -55,7 +55,7 @@ export async function uploadFile(
   contentType: string = 'application/octet-stream'
 ): Promise<void> {
   if (isS3Mode()) {
-    await s3UploadFile(filePath, stream, contentType)
+    await s3UploadFile(filePath, stream, contentType, size)
     return
   }
 

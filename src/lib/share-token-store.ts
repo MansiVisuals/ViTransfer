@@ -18,15 +18,16 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-function validateShareToken(token: string): { valid: boolean; expired: boolean } {
+function preCheckShareToken(token: string): { valid: boolean; expired: boolean } {
   const payload = decodeJwtPayload(token)
-  if (!payload) return { valid: false, expired: false }
+  if (!payload) return { valid: false, expired: true }
 
+  // Client-side precheck only; JWT signature is validated on the server.
   // Share tokens in this codebase are JWTs with type='share'.
-  if (payload.type !== 'share') return { valid: false, expired: false }
+  if (payload.type !== 'share') return { valid: false, expired: true }
 
-  const exp = payload?.exp
-  if (typeof exp !== 'number') return { valid: false, expired: false }
+  const exp = payload.exp
+  if (typeof exp !== 'number') return { valid: false, expired: true }
 
   const nowSeconds = Math.floor(Date.now() / 1000)
   return {
@@ -44,7 +45,7 @@ export function loadShareToken(slug: string): string | null {
 
     // Drop malformed/expired share token before first network request.
     // This prevents avoidable 401 + manual refresh scenarios on first load.
-    const validation = validateShareToken(token)
+    const validation = preCheckShareToken(token)
     if (!validation.valid || validation.expired) {
       sessionStorage.removeItem(key)
       return null

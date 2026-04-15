@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.0.2] - 2026-04-15
+
+### Fixed
+- Docker entrypoint permissions: `COPY --chmod=0755` ensures deterministic executable mode regardless of buildx behavior.
+- Docker app file permissions: `chmod -R a+rX /app` covers all files (fixes `EACCES` on `next.config.js` when running as non-root UID, e.g. TrueNAS UID 568).
+- Updated preview LUT file.
+
+### Security
+- next 16.2.2 → 16.2.3 (fixes DoS with Server Components — GHSA-q4gf-8mx6-v5v3).
+- next-intl 4.9.0 → 4.9.1 (fixes open redirect — GHSA-8f24-v5vv-gm5j).
+- nodemailer 8.0.4 → 8.0.5 (fixes SMTP command injection — GHSA-vvjj-xcjg-gr5g).
+
+### Updated
+- react/react-dom 19.2.4 → 19.2.5, bullmq 5.73.0 → 5.74.1, @aws-sdk 3.1024.0 → 3.1030.0, and other minor/patch dependency updates.
+
 ## [1.0.1] - 2026-04-04
 
 ### Fixed

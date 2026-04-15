@@ -1,7 +1,7 @@
 import { Server } from '@tus/server'
 import { FileStore } from '@tus/file-store'
 import { prisma } from '@/lib/db'
-import { videoQueue, getAssetQueue } from '@/lib/queue'
+import { videoQueue, getAssetQueue, getProjectUploadQueue } from '@/lib/queue'
 import { ALL_ALLOWED_EXTENSIONS } from '@/lib/asset-validation'
 import { uploadFile, initStorage } from '@/lib/storage'
 import path from 'path'
@@ -415,6 +415,14 @@ async function handleProjectUploadFinish(tusFilePath: string, upload: any, proje
       fileType: actualFileType,
       fileSize: BigInt(fileSize),
     },
+  })
+
+  // Queue project upload for magic byte MIME detection in worker
+  const projectUploadQueue = getProjectUploadQueue()
+  await projectUploadQueue.add('process-upload', {
+    uploadId: projectUpload.id,
+    storagePath: projectUpload.storagePath,
+    projectId: projectUpload.projectId,
   })
 
   logMessage(`[UPLOAD] ProjectUpload complete: ${projectUploadId}`)

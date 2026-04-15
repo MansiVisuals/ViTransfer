@@ -5,9 +5,8 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { getShareContext } from '@/lib/auth'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
 import { deleteFile } from '@/lib/storage'
-import { getProjectUploadQueue } from '@/lib/queue'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
-import { logError, logMessage } from '@/lib/logging'
+import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 
@@ -140,21 +139,6 @@ export async function POST(
         uploadedByEmail: resolvedEmail,
       },
     })
-
-    // Queue project upload for MIME type detection in worker
-    try {
-      const projectUploadQueue = getProjectUploadQueue()
-      await projectUploadQueue.add('process-upload', {
-        uploadId: upload.id,
-        storagePath,
-        projectId: project.id,
-      })
-      logMessage(`[PROJECT-UPLOAD] Upload ${upload.id} queued for MIME type detection`)
-    } catch (queueError) {
-      logError('Failed to queue project upload for processing:', queueError)
-      // Don't fail the request - the upload was created successfully, just the async processing failed
-      // File type will remain as 'application/octet-stream'
-    }
 
     return NextResponse.json({
       uploadId: upload.id,

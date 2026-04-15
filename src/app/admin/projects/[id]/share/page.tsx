@@ -56,7 +56,7 @@ export default function AdminSharePage() {
 
     setCommentsLoading(true)
     try {
-      const response = await apiFetch(`/api/comments?projectId=${id}`)
+      const response = await apiFetch(`/api/comments?projectId=${id}`, { cache: 'no-store' })
       if (response.ok) {
         const commentsData = await response.json()
       setComments(commentsData)
@@ -101,8 +101,8 @@ export default function AdminSharePage() {
 
         try {
           const [response720p, response1080p] = await Promise.all([
-            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=720p&sessionId=${sessionId}`),
-            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=1080p&sessionId=${sessionId}`)
+            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=720p&sessionId=${sessionId}`, { cache: 'no-store' }),
+            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=1080p&sessionId=${sessionId}`, { cache: 'no-store' })
           ])
 
           let streamToken720p = ''
@@ -120,7 +120,7 @@ export default function AdminSharePage() {
           }
 
           if (video.approved) {
-            const responseOriginal = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=original&sessionId=${sessionId}`)
+            const responseOriginal = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=original&sessionId=${sessionId}`, { cache: 'no-store' })
             if (responseOriginal.ok) {
               const dataOriginal = await responseOriginal.json()
               downloadToken = dataOriginal.token
@@ -131,7 +131,7 @@ export default function AdminSharePage() {
 
           let thumbnailUrl = null
           if (video.thumbnailPath) {
-            const responseThumbnail = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`)
+            const responseThumbnail = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`, { cache: 'no-store' })
             if (responseThumbnail.ok) {
               const dataThumbnail = await responseThumbnail.json()
               thumbnailUrl = `/api/content/${dataThumbnail.token}`
@@ -167,9 +167,9 @@ export default function AdminSharePage() {
       try {
         // Fetch project, settings, and current user in parallel
         const [projectResponse, userResponse, settingsResponse] = await Promise.all([
-          apiFetch(`/api/projects/${id}`),
-          apiFetch('/api/auth/session'),
-          apiFetch('/api/settings'),
+          apiFetch(`/api/projects/${id}`, { cache: 'no-store' }),
+          apiFetch('/api/auth/session', { cache: 'no-store' }),
+          apiFetch('/api/settings', { cache: 'no-store' }),
         ])
 
         if (!isMounted) return
@@ -341,7 +341,8 @@ export default function AdminSharePage() {
             const videoWithThumb = videos.find((v: any) => v.thumbnailPath)
             if (videoWithThumb) {
               const responseThumbnail = await apiFetch(
-                `/api/admin/video-token?videoId=${videoWithThumb.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`
+                `/api/admin/video-token?videoId=${videoWithThumb.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`,
+                { cache: 'no-store' }
               )
               if (responseThumbnail.ok && isMounted) {
                 const dataThumbnail = await responseThumbnail.json()

@@ -120,6 +120,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     setCommentsLoading(true)
     try {
       const response = await fetch(`/api/share/${token}/comments`, {
+        cache: 'no-store',
         headers: {
           Authorization: `Bearer ${shareToken}`
         }
@@ -164,8 +165,17 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     try {
       const authToken = tokenOverride || shareToken
       const projectResponse = await fetch(`/api/share/${token}`, {
+        cache: 'no-store',
         headers: { ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}), ...getConsentHeader() }
       })
+
+      // Recover automatically from stale/expired stored share token.
+      if (projectResponse.status === 401 && authToken) {
+        saveShareToken(storageKey, null)
+        setShareToken(null)
+        return
+      }
+
       if (projectResponse.ok) {
         const projectData = await projectResponse.json()
 
@@ -201,6 +211,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     async function loadProject() {
       try {
         const response = await fetch(`/api/share/${token}`, {
+          cache: 'no-store',
           headers: { ...(shareToken ? { Authorization: `Bearer ${shareToken}` } : {}), ...getConsentHeader() }
         })
 
@@ -208,11 +219,20 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         if (response.status === 401) {
           saveShareToken(storageKey, null)
+
+          // If a stale share token was sent, clear in-memory state and retry once.
+          // This removes the need for a manual F5 when a cached token expires.
+          if (shareToken) {
+            setShareToken(null)
+            return
+          }
+
           const data = await response.json()
           if (data.authMode === 'NONE' && data.guestMode) {
             try {
               const guestResponse = await fetch(`/api/share/${token}/guest`, {
                 method: 'POST',
+                cache: 'no-store',
                 headers: { 'Content-Type': 'application/json', ...getConsentHeader() },
               })
               if (guestResponse.ok) {
@@ -338,6 +358,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const fetchVideoToken = useCallback(async (videoId: string, quality: string) => {
     if (!shareToken) return ''
     const response = await fetch(`/api/share/${token}/video-token?videoId=${videoId}&quality=${quality}`, {
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${shareToken}`,
       }

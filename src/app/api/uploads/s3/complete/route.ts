@@ -4,7 +4,7 @@ import { isS3Mode } from '@/lib/storage'
 import { s3CompleteMultipartUpload } from '@/lib/s3-storage'
 import { sanitizeContentType } from '@/lib/file-validation'
 import { verifyS3UploadAccess } from '@/lib/s3-upload-auth'
-import { videoQueue, getAssetQueue } from '@/lib/queue'
+import { videoQueue, getAssetQueue, getProjectUploadQueue } from '@/lib/queue'
 import { logError, logMessage } from '@/lib/logging'
 import { rateLimit } from '@/lib/rate-limit'
 import { handleReverseShareUploadNotification } from '@/lib/upload-notifications'
@@ -186,6 +186,13 @@ export async function POST(request: NextRequest) {
           fileType: actualFileType,
           fileSize: BigInt(fileSize),
         },
+      })
+
+      const projectUploadQueue = getProjectUploadQueue()
+      await projectUploadQueue.add('process-upload', {
+        uploadId: dbProjectUpload.id,
+        storagePath: dbProjectUpload.storagePath,
+        projectId: dbProjectUpload.projectId,
       })
 
       logMessage(`[S3 COMPLETE] ProjectUpload ${dbProjectUpload.id} complete`)

@@ -66,27 +66,48 @@ export function getS3Bucket(): string {
   return bucket
 }
 
+function formatS3Error(operation: string, key: string, err: unknown): Error {
+  const e = err as { $metadata?: { httpStatusCode?: number }; message?: string; name?: string }
+  const status = e?.$metadata?.httpStatusCode
+  const msg = e?.message ?? String(err)
+  const name = e?.name ? `${e.name}: ` : ''
+  return new Error(`[S3 ${operation}] key="${key}"${status ? ` HTTP ${status}` : ''} ${name}${msg}`)
+}
+
 /** Upload a buffer or stream — used by the worker for processed outputs. */
 export async function s3UploadFile(
   key: string,
   body: Readable | Buffer,
   contentType: string = 'application/octet-stream'
 ): Promise<void> {
-  await getS3Client().send(
-    new PutObjectCommand({ Bucket: getS3Bucket(), Key: key, Body: body, ContentType: contentType })
-  )
+  try {
+    await getS3Client().send(
+      new PutObjectCommand({ Bucket: getS3Bucket(), Key: key, Body: body, ContentType: contentType })
+    )
+  } catch (err) {
+    throw formatS3Error('PUT', key, err)
+  }
 }
 
 /** Download an object as a readable stream — used by the worker. */
 export async function s3DownloadFile(key: string): Promise<Readable> {
-  const res = await getS3Client().send(new GetObjectCommand({ Bucket: getS3Bucket(), Key: key }))
+  let res
+  try {
+    res = await getS3Client().send(new GetObjectCommand({ Bucket: getS3Bucket(), Key: key }))
+  } catch (err) {
+    throw formatS3Error('GET', key, err)
+  }
   if (!res.Body) throw new Error(`S3 object body missing for key: ${key}`)
   return res.Body as Readable
 }
 
 /** Delete a single object. */
 export async function s3DeleteFile(key: string): Promise<void> {
-  await getS3Client().send(new DeleteObjectCommand({ Bucket: getS3Bucket(), Key: key }))
+  try {
+    await getS3Client().send(new DeleteObjectCommand({ Bucket: getS3Bucket(), Key: key }))
+  } catch (err) {
+    throw formatS3Error('DELETE', key, err)
+  }
 }
 
 /** Delete all objects under a key prefix (paginated). */

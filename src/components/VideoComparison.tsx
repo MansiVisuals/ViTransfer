@@ -10,18 +10,21 @@ import VideoComparisonSlider from './VideoComparisonSlider'
 
 interface VideoComparisonProps {
   videoVersions: Video[]
-  defaultQuality?: '720p' | '1080p'
+  defaultQuality?: '720p' | '1080p' | '2160p'
   defaultVersionA?: number
   defaultVersionB?: number
   timestampDisplayMode?: 'TIMECODE' | 'AUTO'
   onClose: () => void
 }
 
-function getVideoUrl(video: Video, quality: '720p' | '1080p'): string {
-  if (quality === '1080p') {
-    return (video as any).streamUrl1080p || (video as any).streamUrl720p || ''
+function getVideoUrl(video: Video, quality: '720p' | '1080p' | '2160p'): string {
+  if (quality === '2160p') {
+    return (video as any).streamUrl2160p || (video as any).streamUrl1080p || (video as any).streamUrl720p || ''
   }
-  return (video as any).streamUrl720p || (video as any).streamUrl1080p || ''
+  if (quality === '1080p') {
+    return (video as any).streamUrl1080p || (video as any).streamUrl720p || (video as any).streamUrl2160p || ''
+  }
+  return (video as any).streamUrl720p || (video as any).streamUrl1080p || (video as any).streamUrl2160p || ''
 }
 
 export default function VideoComparison({

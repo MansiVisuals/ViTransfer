@@ -42,7 +42,7 @@ export interface CleanPreviewJob {
   videoId: string
   projectId: string
   originalStoragePath: string
-  resolution: string // "720p" or "1080p"
+  resolution: string // "720p", "1080p", or "2160p"
 }
 
 export function getVideoQueue(): Queue<VideoProcessingJob> {

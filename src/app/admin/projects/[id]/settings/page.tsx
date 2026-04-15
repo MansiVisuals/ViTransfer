@@ -930,6 +930,7 @@ export default function ProjectSettingsPage() {
                     <SelectContent>
                       <SelectItem value="720p">{t('resolution720p')}</SelectItem>
                       <SelectItem value="1080p">{t('resolution1080p')}</SelectItem>
+                      <SelectItem value="2160p">{t('resolution2160p')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">

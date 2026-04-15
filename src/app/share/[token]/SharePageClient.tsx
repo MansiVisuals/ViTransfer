@@ -63,7 +63,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [comments, setComments] = useState<any[]>([])
   const [_commentsLoading, setCommentsLoading] = useState(false)
   const [_companyName, setCompanyName] = useState('Studio')
-  const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
+  const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p' | '2160p'>('720p')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [activeVideosRaw, setActiveVideosRaw] = useState<any[]>([])

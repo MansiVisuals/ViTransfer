@@ -41,7 +41,7 @@ export default function AdminSharePage() {
   const [_commentsLoading, setCommentsLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [_companyName, setCompanyName] = useState('Studio')
-  const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
+  const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p' | '2160p'>('720p')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [activeVideosRaw, setActiveVideosRaw] = useState<any[]>([])

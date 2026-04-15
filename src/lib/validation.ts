@@ -231,7 +231,7 @@ export const createProjectSchema = z.object({
   dueDate: z.string().datetime().nullable().optional(),
   dueReminder: z.enum(['NONE', 'DAY_BEFORE', 'WEEK_BEFORE']).nullable().optional(),
   isShareOnly: z.boolean().optional(),
-  previewResolution: z.enum(['720p', '1080p']).optional(),
+  previewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
   watermarkText: safeStringSchema(0, 100).optional()
 })
 
@@ -261,7 +261,7 @@ export const updateProjectSchema = z.object({
   // Display settings
   hideFeedback: z.boolean().optional(),
   timestampDisplay: z.enum(['AUTO', 'TIMECODE']).optional(),
-  previewResolution: z.enum(['720p', '1080p']).optional(),
+  previewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
 
   // Transcoding settings
   skipTranscoding: z.boolean().optional(),
@@ -407,7 +407,7 @@ export const updateSettingsSchema = z.object({
   smtpFromAddress: emailSchema.optional(),
   smtpSecure: z.enum(['STARTTLS', 'TLS', 'NONE']).optional(),
   appDomain: urlSchema.optional(),
-  defaultPreviewResolution: z.enum(['720p', '1080p']).optional(),
+  defaultPreviewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
   defaultSkipTranscoding: z.boolean().optional(),
   defaultWatermarkText: safeStringSchema(0, 100).optional(),
   defaultWatermarkPositions: z.string().refine(val => {

@@ -296,10 +296,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (defaultPreviewResolution !== undefined) {
-      const validResolutions = ['720p', '1080p']
+      const validResolutions = ['720p', '1080p', '2160p']
       if (!validResolutions.includes(defaultPreviewResolution)) {
         return NextResponse.json(
-          { error: settingsMessages.invalidPreviewResolution || 'Invalid preview resolution. Must be 720p or 1080p.' },
+          { error: settingsMessages.invalidPreviewResolution || 'Invalid preview resolution. Must be 720p, 1080p, or 2160p.' },
           { status: 400 }
         )
       }

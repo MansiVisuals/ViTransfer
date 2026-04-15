@@ -224,15 +224,15 @@ export async function GET(
         // Check if project prefers preview playback after approval (for streaming, not downloads)
         if (!isDownload && video.project.usePreviewForApprovedPlayback) {
           // Prefer clean preview if available, fall back to watermarked preview, then original
-          const cleanPath = video.cleanPreview1080Path || video.cleanPreview720Path
-          const watermarkedPath = video.preview1080Path || video.preview720Path
+          const cleanPath = (video as any).cleanPreview2160Path || video.cleanPreview1080Path || video.cleanPreview720Path
+          const watermarkedPath = (video as any).preview2160Path || video.preview1080Path || video.preview720Path
           filePath = cleanPath || watermarkedPath || originalPath
         } else {
           filePath = originalPath
         }
       } else {
         // Fall back to original if no preview exists (e.g. skipTranscoding enabled)
-        filePath = video.preview1080Path || video.preview720Path || originalPath
+        filePath = (video as any).preview2160Path || video.preview1080Path || video.preview720Path || originalPath
       }
     }
 

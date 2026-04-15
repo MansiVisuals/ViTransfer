@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
  * This is used by public share pages to determine initial video quality
  * 
  * SECURITY NOTE: This is intentionally public as it only exposes
- * a non-sensitive preference setting (720p or 1080p default).
+ * a non-sensitive preference setting (720p, 1080p, or 2160p default).
  * No private data is exposed.
  */
 export async function GET() {

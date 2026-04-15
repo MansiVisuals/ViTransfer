@@ -19,7 +19,7 @@ import { getAccessToken } from '@/lib/token-store'
 import { cn } from '@/lib/utils'
 
 interface ProjectInfoProps {
-  selectedVideo: Video & { name?: string; approved?: boolean; downloadUrl?: string; cleanPreview720Path?: string | null; cleanPreview1080Path?: string | null }
+  selectedVideo: Video & { name?: string; approved?: boolean; downloadUrl?: string; cleanPreview720Path?: string | null; cleanPreview1080Path?: string | null; cleanPreview2160Path?: string | null }
   displayLabel: string
   isVideoApproved: boolean
   projectId: string
@@ -28,7 +28,7 @@ interface ProjectInfoProps {
   clientName?: string
   isPasswordProtected?: boolean
   watermarkEnabled?: boolean
-  defaultQuality: '720p' | '1080p'
+  defaultQuality: '720p' | '1080p' | '2160p'
   onApprove?: () => Promise<void>
   isAdmin?: boolean
   clientCanApprove?: boolean
@@ -340,7 +340,7 @@ export default function ProjectInfo({
                       <span className="text-muted-foreground">{t('playbackStatus')}</span>
                       <span className="font-medium break-words">
                         {(() => {
-                          const hasPreview = !!(selectedVideo.preview720Path || selectedVideo.preview1080Path)
+                          const hasPreview = !!(selectedVideo.preview720Path || selectedVideo.preview1080Path || selectedVideo.preview2160Path)
                           if (isVideoApproved) {
                             return usePreviewForApprovedPlayback
                               ? t('approvedPreview', { quality: defaultQuality })

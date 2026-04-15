@@ -24,7 +24,7 @@ interface VideoPlayerProps {
   videos: Video[]
   projectId: string
   projectStatus: ProjectStatus
-  defaultQuality?: '720p' | '1080p' // Default quality from settings
+  defaultQuality?: '720p' | '1080p' | '2160p' // Default quality from settings
   onApprove?: () => void // Optional approval callback
   authenticatedEmail?: string | null // Email of OTP-authenticated user
   authenticatedName?: string | null // Name of OTP-authenticated user
@@ -241,12 +241,15 @@ export default function VideoPlayer({
         // Respect the default quality setting from admin
         let url: string | undefined
 
-        if (defaultQuality === '1080p') {
+        if (defaultQuality === '2160p') {
+          // Prefer 2160p, fallback to 1080p then 720p
+          url = (selectedVideo as any).streamUrl2160p || (selectedVideo as any).streamUrl1080p || (selectedVideo as any).streamUrl720p
+        } else if (defaultQuality === '1080p') {
           // Prefer 1080p, fallback to 720p
           url = (selectedVideo as any).streamUrl1080p || (selectedVideo as any).streamUrl720p
         } else {
-          // Prefer 720p, fallback to 1080p
-          url = (selectedVideo as any).streamUrl720p || (selectedVideo as any).streamUrl1080p
+          // Prefer 720p, fallback to 1080p then 2160p
+          url = (selectedVideo as any).streamUrl720p || (selectedVideo as any).streamUrl1080p || (selectedVideo as any).streamUrl2160p
         }
 
         if (url) {

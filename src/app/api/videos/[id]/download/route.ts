@@ -69,7 +69,7 @@ export async function GET(
     // Choose safest available file based on role/approval
     let filePath: string | null = null
     if (accessCheck.isAdmin) {
-      filePath = video.originalStoragePath || video.preview1080Path || video.preview720Path || null
+      filePath = video.originalStoragePath || (video as any).preview2160Path || video.preview1080Path || video.preview720Path || null
     } else {
       filePath = video.originalStoragePath || null
     }

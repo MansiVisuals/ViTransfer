@@ -106,7 +106,11 @@ export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<vo
     )
 
     // Update database with clean preview path
-    const updateField = resolution === '1080p' ? 'cleanPreview1080Path' : 'cleanPreview720Path'
+    const updateField = resolution === '2160p'
+      ? 'cleanPreview2160Path'
+      : resolution === '1080p'
+        ? 'cleanPreview1080Path'
+        : 'cleanPreview720Path'
     await prisma.video.update({
       where: { id: videoId },
       data: { [updateField]: storagePath }

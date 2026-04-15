@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker entrypoint permissions: `COPY --chmod=0755` ensures deterministic executable mode regardless of buildx behavior.
 - Docker app file permissions: `chmod -R a+rX /app` covers all files (fixes `EACCES` on `next.config.js` when running as non-root UID, e.g. TrueNAS UID 568).
 - Updated preview LUT file.
+- **Project upload MIME type detection**: Added server-side MIME type detection for client-uploaded files. Now displays actual MIME types (e.g. `image/png`, `audio/mp3`) instead of generic `application/octet-stream` in file metadata modal. Reuses existing worker pattern and magic-byte validation via `file-type` library (matches video asset detection).
 - **S3 share page first-load reliability**: Hardened public share page token lifecycle to reliably load content on first page visit:
   - Added client-side JWT precheck: invalid/stale share tokens are purged from session storage before first network request.
   - Added `cache: 'no-store'` on critical endpoints (project, token, comments, settings) to prevent stale browser fetch cache.

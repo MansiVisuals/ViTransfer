@@ -340,7 +340,10 @@ export default function ProjectInfo({
                       <span className="text-muted-foreground">{t('playbackStatus')}</span>
                       <span className="font-medium break-words">
                         {(() => {
-                          const hasPreview = !!(selectedVideo.preview720Path || selectedVideo.preview1080Path || selectedVideo.preview2160Path)
+                          const videoAny = selectedVideo as any
+                          const hasPreviewPaths = !!(videoAny.preview720Path || videoAny.preview1080Path || videoAny.preview2160Path)
+                          const hasPreviewStreams = !!(videoAny.streamUrl720p || videoAny.streamUrl1080p || videoAny.streamUrl2160p)
+                          const hasPreview = hasPreviewPaths || hasPreviewStreams
                           if (isVideoApproved) {
                             return usePreviewForApprovedPlayback
                               ? t('approvedPreview', { quality: defaultQuality })

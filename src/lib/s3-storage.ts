@@ -161,18 +161,12 @@ async function s3UploadFileMultipart(
   totalSize: number
 ): Promise<void> {
   const PART_SIZE = 5 * 1024 * 1024 // 5MB per part
-  const client = getS3Client()
-  const bucket = getS3Bucket()
 
   let uploadId: string | undefined
 
   try {
-    // Initiate multipart upload
-    const initRes = await client.send(
-      new CreateMultipartUploadCommand({ Bucket: bucket, Key: key, ContentType: contentType })
-    )
-    uploadId = initRes.UploadId
-    if (!uploadId) throw new Error('Failed to initiate multipart upload')
+    // Initiate multipart upload - reuse existing exported function
+    uploadId = await s3InitiateMultipartUpload(key, contentType)
 
     const parts: CompletedPart[] = []
     const bodyBuffer = Buffer.isBuffer(body) ? body : await streamToBuffer(body)
@@ -184,9 +178,9 @@ async function s3UploadFileMultipart(
       const end = Math.min(offset + PART_SIZE, bodyBuffer.length)
       const chunk = bodyBuffer.subarray(offset, end)
 
-      const uploadRes = await client.send(
+      const uploadRes = await getS3Client().send(
         new UploadPartCommand({
-          Bucket: bucket,
+          Bucket: getS3Bucket(),
           Key: key,
           UploadId: uploadId,
           PartNumber: partNumber,
@@ -201,20 +195,13 @@ async function s3UploadFileMultipart(
       partNumber++
     }
 
-    // Complete multipart upload
-    await client.send(
-      new CompleteMultipartUploadCommand({
-        Bucket: bucket,
-        Key: key,
-        UploadId: uploadId,
-        MultipartUpload: { Parts: parts },
-      })
-    )
+    // Complete multipart upload - reuse existing exported function
+    await s3CompleteMultipartUpload(key, uploadId, parts)
   } catch (err) {
-    // Abort multipart upload on error to free storage
+    // Abort multipart upload on error to free storage - reuse existing exported function
     if (uploadId) {
       try {
-        await client.send(new AbortMultipartUploadCommand({ Bucket: bucket, Key: key, UploadId: uploadId }))
+        await s3AbortMultipartUpload(key, uploadId)
       } catch {
         // Ignore abort errors
       }

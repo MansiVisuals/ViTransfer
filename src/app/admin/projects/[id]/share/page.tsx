@@ -14,6 +14,12 @@ import { apiFetch } from '@/lib/api-client'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useTranslations } from 'next-intl'
 
+const MAX_TOKEN_FETCH_ATTEMPTS = 2
+const TOKEN_FETCH_RETRY_BASE_MS = 120
+const TOKEN_FETCH_RETRY_MAX_MS = 400
+
+type TokenFetchTelemetryEvent = 'first-attempt-failure' | 'retry-success' | 'retry-failure'
+
 export default function AdminSharePage() {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
@@ -49,6 +55,98 @@ export default function AdminSharePage() {
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
   const sessionIdRef = useRef<string>(`admin:${Date.now()}`)
+  const inFlightTokenRequestsRef = useRef<Map<string, Promise<string>>>(new Map())
+  const tokenFetchTelemetryRef = useRef({
+    firstAttemptFailures: 0,
+    retrySuccesses: 0,
+    retryFailures: 0,
+  })
+
+  const emitTokenFetchTelemetry = useCallback((
+    event: TokenFetchTelemetryEvent,
+    meta: { videoId: string; quality: string; attempts: number }
+  ) => {
+    const counters = tokenFetchTelemetryRef.current
+    if (event === 'first-attempt-failure') counters.firstAttemptFailures += 1
+    if (event === 'retry-success') counters.retrySuccesses += 1
+    if (event === 'retry-failure') counters.retryFailures += 1
+
+    const detail = {
+      event,
+      ...meta,
+      counters: { ...counters },
+      timestamp: Date.now(),
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('adminShareTokenFetchTelemetry', { detail }))
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('admin-share-token-fetch', detail)
+    }
+  }, [])
+
+  const waitForTokenRetry = useCallback(async (attempt: number) => {
+    const exponentialDelay = Math.min(
+      TOKEN_FETCH_RETRY_MAX_MS,
+      TOKEN_FETCH_RETRY_BASE_MS * Math.pow(2, Math.max(0, attempt - 1))
+    )
+    const jitterMs = Math.floor(Math.random() * 40)
+    await new Promise((resolve) => setTimeout(resolve, exponentialDelay + jitterMs))
+  }, [])
+
+  const fetchAdminVideoToken = useCallback(async (videoId: string, quality: string, sessionId: string) => {
+    const response = await apiFetch(
+      `/api/admin/video-token?videoId=${videoId}&projectId=${id}&quality=${quality}&sessionId=${sessionId}`,
+      { cache: 'no-store' }
+    )
+
+    if (!response.ok) return ''
+    const data = await response.json()
+    return data.token || ''
+  }, [id])
+
+  const fetchAdminVideoTokenWithRetry = useCallback(async (videoId: string, quality: string, sessionId: string) => {
+    const requestKey = `${sessionId}:${videoId}:${quality}`
+    const inFlight = inFlightTokenRequestsRef.current.get(requestKey)
+    if (inFlight) {
+      return inFlight
+    }
+
+    const requestPromise = (async () => {
+      for (let attempt = 1; attempt <= MAX_TOKEN_FETCH_ATTEMPTS; attempt += 1) {
+        const tokenValue = await fetchAdminVideoToken(videoId, quality, sessionId)
+        if (tokenValue) {
+          if (attempt > 1) {
+            emitTokenFetchTelemetry('retry-success', { videoId, quality, attempts: attempt })
+          }
+          return tokenValue
+        }
+
+        if (attempt === 1) {
+          emitTokenFetchTelemetry('first-attempt-failure', { videoId, quality, attempts: attempt })
+          await waitForTokenRetry(attempt)
+        }
+      }
+
+      emitTokenFetchTelemetry('retry-failure', {
+        videoId,
+        quality,
+        attempts: MAX_TOKEN_FETCH_ATTEMPTS,
+      })
+      return ''
+    })().finally(() => {
+      inFlightTokenRequestsRef.current.delete(requestKey)
+    })
+
+    inFlightTokenRequestsRef.current.set(requestKey, requestPromise)
+    return requestPromise
+  }, [
+    emitTokenFetchTelemetry,
+    fetchAdminVideoToken,
+    waitForTokenRetry,
+  ])
 
   // Fetch comments separately for security (same pattern as public share)
   const fetchComments = useCallback(async () => {
@@ -94,47 +192,36 @@ export default function AdminSharePage() {
 
     return Promise.all(
       videos.map(async (video: any) => {
-        const cached = tokenCacheRef.current.get(video.id)
+        const cacheKey = `${sessionId}:${video.id}`
+        const cached = tokenCacheRef.current.get(cacheKey)
         if (cached) {
           return cached
         }
 
         try {
-          const [response720p, response1080p] = await Promise.all([
-            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=720p&sessionId=${sessionId}`, { cache: 'no-store' }),
-            apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=1080p&sessionId=${sessionId}`, { cache: 'no-store' })
+          const [token720, token1080] = await Promise.all([
+            fetchAdminVideoTokenWithRetry(video.id, '720p', sessionId),
+            fetchAdminVideoTokenWithRetry(video.id, '1080p', sessionId),
           ])
 
-          let streamToken720p = ''
-          let streamToken1080p = ''
+          let streamToken720p = token720
+          let streamToken1080p = token1080
           let downloadToken = null
 
-          if (response720p.ok) {
-            const data720p = await response720p.json()
-            streamToken720p = data720p.token
-          }
-
-          if (response1080p.ok) {
-            const data1080p = await response1080p.json()
-            streamToken1080p = data1080p.token
-          }
-
           if (video.approved) {
-            const responseOriginal = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=original&sessionId=${sessionId}`, { cache: 'no-store' })
-            if (responseOriginal.ok) {
-              const dataOriginal = await responseOriginal.json()
-              downloadToken = dataOriginal.token
-              streamToken720p = streamToken720p || dataOriginal.token
-              streamToken1080p = streamToken1080p || dataOriginal.token
+            const originalToken = await fetchAdminVideoTokenWithRetry(video.id, 'original', sessionId)
+            if (originalToken) {
+              downloadToken = originalToken
+              streamToken720p = streamToken720p || originalToken
+              streamToken1080p = streamToken1080p || originalToken
             }
           }
 
           let thumbnailUrl = null
           if (video.thumbnailPath) {
-            const responseThumbnail = await apiFetch(`/api/admin/video-token?videoId=${video.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`, { cache: 'no-store' })
-            if (responseThumbnail.ok) {
-              const dataThumbnail = await responseThumbnail.json()
-              thumbnailUrl = `/api/content/${dataThumbnail.token}`
+            const thumbToken = await fetchAdminVideoTokenWithRetry(video.id, 'thumbnail', sessionId)
+            if (thumbToken) {
+              thumbnailUrl = `/api/content/${thumbToken}`
             }
           }
 
@@ -146,14 +233,16 @@ export default function AdminSharePage() {
             thumbnailUrl,
           }
 
-          tokenCacheRef.current.set(video.id, tokenized)
+          if (tokenized.streamUrl720p || tokenized.streamUrl1080p || tokenized.downloadUrl || tokenized.thumbnailUrl) {
+            tokenCacheRef.current.set(cacheKey, tokenized)
+          }
           return tokenized
         } catch (error) {
           return video
         }
       })
     )
-  }, [id])
+  }, [fetchAdminVideoTokenWithRetry])
 
   // Load project data, settings, and admin user
   useEffect(() => {
@@ -340,13 +429,9 @@ export default function AdminSharePage() {
           Object.entries(project.videosByName as Record<string, any[]>).map(async ([name, videos]) => {
             const videoWithThumb = videos.find((v: any) => v.thumbnailPath)
             if (videoWithThumb) {
-              const responseThumbnail = await apiFetch(
-                `/api/admin/video-token?videoId=${videoWithThumb.id}&projectId=${id}&quality=thumbnail&sessionId=${sessionId}`,
-                { cache: 'no-store' }
-              )
-              if (responseThumbnail.ok && isMounted) {
-                const dataThumbnail = await responseThumbnail.json()
-                newThumbnails.set(name, `/api/content/${dataThumbnail.token}`)
+              const thumbToken = await fetchAdminVideoTokenWithRetry(videoWithThumb.id, 'thumbnail', sessionId)
+              if (thumbToken && isMounted) {
+                newThumbnails.set(name, `/api/content/${thumbToken}`)
               }
             }
           })
@@ -369,7 +454,7 @@ export default function AdminSharePage() {
     return () => {
       isMounted = false
     }
-  }, [project?.videosByName, id])
+  }, [project?.videosByName, id, fetchAdminVideoTokenWithRetry])
 
   // Determine initial view state based on URL params (same behavior as public share)
   useEffect(() => {

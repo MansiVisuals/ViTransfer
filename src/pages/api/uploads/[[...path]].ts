@@ -294,6 +294,7 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
 
   if (!video) {
     logMessage(`[UPLOAD] Video not found: ${videoId}`)
+    await cleanupTUSFile(tusFilePath)
     return {}
   }
 

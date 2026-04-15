@@ -62,13 +62,12 @@ LABEL org.opencontainers.image.licenses="MIT"
 ENV NODE_ENV=production
 
 
-# Python for Apprise notifications (with security updates)
-RUN apk add --no-cache python3 py3-pip py3-virtualenv \
+# Python for Apprise notifications
+RUN apk add --no-cache python3 py3-pip \
     && python3 -m venv /opt/apprise-venv \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip==26.0.1 wheel==0.46.3 \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 "filelock>=3.25.2" "virtualenv>=21.2.0" \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip \
     && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.9.9 \
-    && apk del --no-cache py3-pip py3-virtualenv
+    && apk del --no-cache py3-pip
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3
 

@@ -13,6 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker entrypoint permissions: `COPY --chmod=0755` ensures deterministic executable mode regardless of buildx behavior.
 - Docker app file permissions: `chmod -R a+rX /app` covers all files (fixes `EACCES` on `next.config.js` when running as non-root UID, e.g. TrueNAS UID 568).
 - Updated preview LUT file.
+- **S3 share page first-load reliability**: Hardened public share page token lifecycle to reliably load content on first page visit:
+  - Added client-side JWT precheck: invalid/stale share tokens are purged from session storage before first network request.
+  - Added `cache: 'no-store'` on critical endpoints (project, token, comments, settings) to prevent stale browser fetch cache.
+  - Added automatic stale-token recovery on 401 responses (retries cleanly without requiring manual refresh).
+  - Implemented session-aware token cache keys (`shareToken:videoId` instead of `videoId` only) to prevent cross-session stale cache hits.
+  - Skip caching incomplete tokenized results with empty stream/thumbnail URLs (prevents first-load race condition cache poisoning).
+  - Implemented in-flight token request deduplication so concurrent identical requests share one Promise per session/video/quality.
+  - Added bounded retry with exponential backoff and jitter (base 120ms, max 400ms) for transient token fetch failures.
+  - Added lightweight client telemetry hooks (first-attempt failure, retry-success, retry-failure) for production diagnostics.
+- **Admin share page first-load reliability**: Applied same token reliability hardening to admin project share page, including dedupe, retry backoff/jitter, session-aware caching, and incomplete result filtering.
+- **Client uploads UI redesign**: Simplified uploads list to show filename only; moved file metadata (size, category, uploader, upload date) behind an info button for cleaner UI while keeping details accessible.
+- **Dialog and uploads modal i18n completeness**: Localized all remaining modal labels:
+  - Added i18n keys: `uploadedBy`, `uploadedAt`, `otherCategory` (projects), `select` (common).
+  - Localized dialog close button screen-reader text from hardcoded `Close` to `tc('close')`.
+  - Updated en, de, nl locales with full key parity.
 
 ### Security
 - next 16.2.2 → 16.2.3 (fixes DoS with Server Components — GHSA-q4gf-8mx6-v5v3).

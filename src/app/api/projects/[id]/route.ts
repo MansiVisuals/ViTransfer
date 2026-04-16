@@ -551,6 +551,9 @@ export async function DELETE(
         }
 
         // Delete preview files (watermarked)
+        if ((video as any).preview2160Path) {
+          await deleteFile((video as any).preview2160Path)
+        }
         if (video.preview1080Path) {
           await deleteFile(video.preview1080Path)
         }
@@ -559,6 +562,9 @@ export async function DELETE(
         }
 
         // Delete clean preview files (non-watermarked, created after approval)
+        if ((video as any).cleanPreview2160Path) {
+          await deleteFile((video as any).cleanPreview2160Path)
+        }
         if (video.cleanPreview1080Path) {
           await deleteFile(video.cleanPreview1080Path)
         }

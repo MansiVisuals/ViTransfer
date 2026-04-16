@@ -185,6 +185,37 @@ export async function GET(
     }
 
     const originalPath = video.originalStoragePath
+    const requestedQuality = verifiedToken.quality
+
+    const getPreferredPreviewPath = (preferClean: boolean): string | null => {
+      const clean2160 = (video as any).cleanPreview2160Path as string | null | undefined
+      const clean1080 = video.cleanPreview1080Path
+      const clean720 = video.cleanPreview720Path
+      const wm2160 = (video as any).preview2160Path as string | null | undefined
+      const wm1080 = video.preview1080Path
+      const wm720 = video.preview720Path
+
+      const pick = (...paths: Array<string | null | undefined>): string | null => {
+        return paths.find((p): p is string => Boolean(p)) || null
+      }
+
+      if (requestedQuality === '2160p') {
+        return preferClean
+          ? pick(clean2160, wm2160, clean1080, wm1080, clean720, wm720)
+          : pick(wm2160, wm1080, wm720)
+      }
+
+      if (requestedQuality === '1080p') {
+        return preferClean
+          ? pick(clean1080, wm1080, clean720, wm720, clean2160, wm2160)
+          : pick(wm1080, wm720, wm2160)
+      }
+
+      return preferClean
+        ? pick(clean720, wm720, clean1080, wm1080, clean2160, wm2160)
+        : pick(wm720, wm1080, wm2160)
+    }
+
     let filePath: string | null = null
     let filename: string | null = null
     let contentType = getVideoContentType(video.originalFileName || '')
@@ -223,16 +254,14 @@ export async function GET(
       } else if (video.approved && originalPath) {
         // Check if project prefers preview playback after approval (for streaming, not downloads)
         if (!isDownload && video.project.usePreviewForApprovedPlayback) {
-          // Prefer clean preview if available, fall back to watermarked preview, then original
-          const cleanPath = video.cleanPreview1080Path || video.cleanPreview720Path
-          const watermarkedPath = video.preview1080Path || video.preview720Path
-          filePath = cleanPath || watermarkedPath || originalPath
+          // Prefer requested clean preview quality, then requested watermarked preview quality, then original
+          filePath = getPreferredPreviewPath(true) || originalPath
         } else {
           filePath = originalPath
         }
       } else {
         // Fall back to original if no preview exists (e.g. skipTranscoding enabled)
-        filePath = video.preview1080Path || video.preview720Path || originalPath
+        filePath = getPreferredPreviewPath(false) || originalPath
       }
     }
 

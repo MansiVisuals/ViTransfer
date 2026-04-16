@@ -93,8 +93,12 @@ export async function POST(
 
       // Delete old preview files (keep original safe)
       const filesToDelete = [
+        (video as any).preview2160Path,
         video.preview720Path,
         video.preview1080Path,
+        (video as any).cleanPreview2160Path,
+        video.cleanPreview720Path,
+        video.cleanPreview1080Path,
         // Only delete system-generated thumbnails; keep custom assets intact
         hasCustomThumbnail ? null : video.thumbnailPath,
       ].filter(Boolean) as string[]
@@ -108,8 +112,12 @@ export async function POST(
         where: { id: video.id },
         data: {
           status: 'PROCESSING',
+          preview2160Path: null,
           preview720Path: null,
           preview1080Path: null,
+          cleanPreview2160Path: null,
+          cleanPreview720Path: null,
+          cleanPreview1080Path: null,
           // Keep custom thumbnails; regenerate only system thumbnails
           thumbnailPath: hasCustomThumbnail ? video.thumbnailPath : null,
         },

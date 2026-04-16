@@ -1,11 +1,12 @@
 import { Worker, Queue } from 'bullmq'
-import { VideoProcessingJob, AssetProcessingJob, ExternalNotificationJob } from '../lib/queue'
+import { VideoProcessingJob, AssetProcessingJob, ProjectUploadProcessingJob, ExternalNotificationJob } from '../lib/queue'
 import { initStorage } from '../lib/storage'
 import { runCleanup } from '../lib/upload-cleanup'
 import { getRedisForQueue, closeRedisConnection } from '../lib/redis'
 import { getCpuAllocation, logCpuAllocation } from '../lib/cpu-config'
 import { processVideo } from './video-processor'
 import { processAsset } from './asset-processor'
+import { processProjectUpload } from './project-upload-processor'
 import { processAdminNotifications } from './admin-notifications'
 import { processClientNotifications } from './client-notifications'
 import { processExternalNotificationJob } from './external-notifications/processExternalNotificationJob'
@@ -113,6 +114,29 @@ async function main() {
   })
 
   logMessage('[WORKER] Asset processing worker started')
+
+  // Create project upload processing worker
+  const projectUploadWorker = new Worker<ProjectUploadProcessingJob>('project-upload-processing', processProjectUpload, {
+    connection: getRedisForQueue(),
+    concurrency: concurrency * 2, // Project uploads are lighter than videos
+  })
+
+  projectUploadWorker.on('completed', (job) => {
+    logMessage(`[WORKER] Project upload job ${job.id} completed successfully`)
+  })
+
+  projectUploadWorker.on('failed', (job, err) => {
+    logError(`[WORKER ERROR] Project upload job ${job?.id} failed`, err)
+    if (DEBUG) {
+      logMessage(`[WORKER DEBUG] Project upload job failure details: ${JSON.stringify({
+        jobId: job?.id,
+        jobData: job?.data,
+        error: err instanceof Error ? err.stack : err
+      })}`)
+    }
+  })
+
+  logMessage('[WORKER] Project upload processing worker started')
 
   // Create notification processing queue with repeatable job
   logMessage('Setting up notification processing...')

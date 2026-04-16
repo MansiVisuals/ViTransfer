@@ -61,7 +61,7 @@ model Project {
   timestampDisplay String @default("TIMECODE")
 
   // Video processing settings
-  previewResolution String  @default("720p") // "720p" or "1080p" (originals can be any resolution including 2160p)
+  previewResolution String  @default("720p") // "720p", "1080p", or "2160p" (originals can be any resolution including 2160p)
   skipTranscoding   Boolean @default(false) // Skip transcoding entirely — serve original file directly
   watermarkEnabled  Boolean @default(true) // Enable/disable watermarks for this project
   watermarkText     String? // Custom watermark text (null = use default format)
@@ -159,11 +159,13 @@ model Video {
   processingError    String?
 
   // Preview versions (watermarked)
+  preview2160Path String?
   preview1080Path String?
   preview720Path  String?
   thumbnailPath   String?
 
   // Clean (non-watermarked) previews for approved playback
+  cleanPreview2160Path String?
   cleanPreview1080Path String?
   cleanPreview720Path  String?
 
@@ -200,6 +202,8 @@ model VideoAsset {
   uploadedByName String? // Display name of uploader
   uploadedBySessionId String? // Stable share/admin session identifier for pending asset ownership
 
+  uploadCompletedAt DateTime? // null until file transfer finishes; orphaned records stay null
+
   // Comment attachment (optional link to comment)
   commentId String?
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
@@ -209,6 +213,7 @@ model VideoAsset {
 
   @@index([videoId])
   @@index([videoId, category])
+  @@index([videoId, uploadCompletedAt])
   @@index([videoId, uploadedBySessionId])
   @@index([commentId])
 }
@@ -229,11 +234,14 @@ model ProjectUpload {
   uploadedByName      String?
   uploadedByEmail     String?
 
+  uploadCompletedAt DateTime? // null until file transfer finishes; orphaned records stay null
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([projectId, createdAt])
+  @@index([projectId, uploadCompletedAt])
   @@index([uploadedBySessionId])
 }
 

@@ -105,6 +105,7 @@ export function VideoProcessingSettingsSection({
           <SelectContent>
             <SelectItem value="720p">{t('videoProcessing.resolution720')}</SelectItem>
             <SelectItem value="1080p">{t('videoProcessing.resolution1080')}</SelectItem>
+            <SelectItem value="2160p">{t('videoProcessing.resolution2160')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">

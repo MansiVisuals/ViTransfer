@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { FolderUp, Download, Trash2, Loader2, FileIcon, FileImage, FileVideo, FileMusic, FileArchive, FileText, FilePlay, Square, CheckSquare } from 'lucide-react'
+import { Download, Trash2, Loader2, FileIcon, FileImage, FileVideo, FileMusic, FileArchive, FileText, FilePlay, Square, CheckSquare, Info } from 'lucide-react'
 import { formatFileSize } from '@/lib/utils'
 import { Button } from './ui/button'
 import { apiFetch } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 
 interface ProjectUpload {
   id: string
@@ -33,8 +34,8 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function getCategoryLabel(category: string | null): string {
-  if (!category) return 'Other'
+function getCategoryLabel(category: string | null, otherLabel: string): string {
+  if (!category) return otherLabel
   return category.charAt(0).toUpperCase() + category.slice(1)
 }
 
@@ -62,6 +63,10 @@ function getUploadIcon(fileType: string, fileName: string, category: string | nu
     return <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
   }
   return <FileIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+}
+
+function getUploaderDisplay(upload: ProjectUpload, unknownLabel: string): string {
+  return upload.uploadedByName || upload.uploadedByEmail || unknownLabel
 }
 
 export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockProps) {
@@ -227,7 +232,7 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {uploads.map((upload) => {
-            const uploader = upload.uploadedByName || upload.uploadedByEmail || t('unknownUploader')
+            const uploader = getUploaderDisplay(upload, t('unknownUploader'))
             const isSelected = selectedIds.has(upload.id)
             return (
               <div
@@ -238,7 +243,7 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
                   type="button"
                   onClick={() => toggleSelect(upload.id)}
                   className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
-                  aria-label="Select"
+                  aria-label={tc('select')}
                 >
                   {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
                 </button>
@@ -247,18 +252,54 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{upload.fileName}</p>
-                  <div className="flex gap-2 text-xs text-muted-foreground items-center flex-wrap">
-                    <span>{formatFileSize(Number(upload.fileSize))}</span>
-                    <span>•</span>
-                    <span>{getCategoryLabel(upload.category)}</span>
-                    <span>•</span>
-                    <span className="truncate">{uploader}</span>
-                    <span>•</span>
-                    <span className="truncate">{formatDate(upload.createdAt)}</span>
-                  </div>
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        title={tc('details')}
+                        aria-label={tc('details')}
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>{tc('details')}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{tc('name')}</p>
+                          <p className="break-all">{upload.fileName}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">{tc('type')}</p>
+                          <p>{upload.fileType || getCategoryLabel(upload.category, t('otherCategory'))}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">{tc('details')}</p>
+                          <p>{formatFileSize(Number(upload.fileSize))} • {getCategoryLabel(upload.category, t('otherCategory'))}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t('uploadedBy')}</p>
+                          <p className="break-all">{uploader}</p>
+                          {upload.uploadedByEmail && upload.uploadedByName && (
+                            <>
+                              <p className="text-xs text-muted-foreground mt-2">{tc('email')}</p>
+                              <p className="text-xs text-muted-foreground break-all">{upload.uploadedByEmail}</p>
+                            </>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">{t('uploadedAt')}</p>
+                          <p>{formatDate(upload.createdAt)}</p>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <button
                     type="button"
                     onClick={() => handleDownload(upload)}

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.0.2] - 2026-04-16
+
+### Fixed
+- **Reverse share and comment attachment uploads failing** — uploads via the share page (reverse share file submissions and comment file attachments) returned 403 "Upload does not belong to your session". Root cause: `authMode: NONE` projects were generating a new random session ID on every request, so the ID stored at upload record creation never matched the ID presented at upload time. Fixed with a deterministic IP-based session ID.
+- **File picker silently doing nothing on plain HTTP installs** (e.g. `http://192.168.x.x`) — selecting a file in the reverse share or comment attachment modal had no effect and nothing appeared in the list. Root cause: `crypto.randomUUID()` is only available in secure contexts (HTTPS or `localhost`); the call threw silently on plain HTTP, crashing the file list update. Added a fallback that works in all contexts.
+- **Phantom upload entries in admin UI** — `ProjectUpload` and `VideoAsset` records are created before the file transfer begins; if a transfer was cancelled or failed, the record was left behind and appeared as a file with no content. Added `uploadCompletedAt` to both models, set only on successful transfer completion. Admin listings and downloads now filter to completed records only. Incomplete records older than 24 hours are deleted by the background cleanup job. In S3 mode, stale incomplete multipart uploads are also aborted.
+- **Existing files hidden after upgrade** — the `uploadCompletedAt` filter would have hidden all files uploaded before this version. A one-time migration (`20260416133000`) backfills the field for all existing records so no previously uploaded content disappears on upgrade.
+- **S3 large file uploads failing with HTTP 413** — worker-side S3 operations for files larger than the presign chunk limit were sent as a single PUT request, exceeding body size limits. The worker now uses S3 multipart upload for large files, matching the browser upload path.
+- **Project upload MIME type showing `application/octet-stream`** — client-submitted files were stored with a generic MIME type. The worker now runs magic-byte detection (via `file-type`) on completion and updates the stored MIME type, matching the existing behaviour for video assets.
+- **Share page and admin share page content not loading on first visit** — required a manual refresh in certain S3 configurations. Fixed token lifecycle, stale-cache prevention, in-flight deduplication, and bounded retry with backoff across both the public share page and the admin share page.
+- **Per-project preview resolution ignored** — the share page always used the global default resolution instead of the per-project override.
+- **File permission error (`EACCES` on `next.config.js`)** when running as a non-root UID (e.g. TrueNAS UID 568). Docker image now applies `chmod -R a+rX /app` to cover all files.
+
+### Added
+- **Optional 2160p (4K) preview support** — `2160p` is now available as a transcoding and preview resolution option in global defaults and per-project settings. `720p` remains the default.
+- **Client uploads UI** — the admin project page client uploads list now shows the filename inline with file details (size, type, uploader, date) accessible behind an info button, reducing visual clutter.
+
+### Security
+- next 16.2.2 → 16.2.3 (fixes DoS via Server Components — GHSA-q4gf-8mx6-v5v3).
+- next-intl 4.9.0 → 4.9.1 (fixes open redirect — GHSA-8f24-v5vv-gm5j).
+- nodemailer 8.0.4 → 8.0.5 (fixes SMTP command injection — GHSA-vvjj-xcjg-gr5g).
+
+### Updated
+- react/react-dom 19.2.4 → 19.2.5, bullmq 5.73.0 → 5.74.1, @aws-sdk 3.1024.0 → 3.1030.0, and other minor/patch dependency updates.
+
 ## [1.0.1] - 2026-04-04
 
 ### Fixed

@@ -62,13 +62,12 @@ LABEL org.opencontainers.image.licenses="MIT"
 ENV NODE_ENV=production
 
 
-# Python for Apprise notifications (with security updates)
-RUN apk add --no-cache python3 py3-pip py3-virtualenv \
+# Python for Apprise notifications
+RUN apk add --no-cache python3 py3-pip \
     && python3 -m venv /opt/apprise-venv \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip==26.0.1 wheel==0.46.3 \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 "filelock>=3.25.2" "virtualenv>=21.2.0" \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip \
     && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.9.9 \
-    && apk del --no-cache py3-pip py3-virtualenv
+    && apk del --no-cache py3-pip
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3
 
@@ -91,13 +90,12 @@ COPY --from=builder --link /app/package.json ./package.json
 COPY --from=builder --link /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --link /app/next.config.js ./next.config.js
 COPY --from=builder --link /app/worker.mjs ./worker.mjs
-COPY --link docker-entrypoint.sh /usr/local/bin/
+COPY --link --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY --link previewlut.cube /usr/share/ffmpeg/previewlut.cube
 
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
-    chmod a+r /usr/share/ffmpeg/previewlut.cube && \
+RUN chmod a+r /usr/share/ffmpeg/previewlut.cube && \
     chown -R app:app /app && \
-    chmod -R a+rX /app/src /app/.next /app/node_modules /app/public /app/prisma
+    chmod -R a+rX /app
 
 ENV PUID=1000 PGID=1000
 

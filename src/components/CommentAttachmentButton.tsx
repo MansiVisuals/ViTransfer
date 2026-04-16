@@ -7,12 +7,13 @@ import { Button } from './ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from './ui/dialog'
 import * as tus from 'tus-js-client'
-import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { createTusAfterResponseHandler, createTusShouldRetryHandler, getTusUploadErrorMessage, resetTusAuthRetry } from '@/lib/tus-error'
 import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
@@ -108,7 +109,7 @@ export default function CommentAttachmentButton({
       const newItems: FileUploadItem[] = newFiles.map((file) => {
         const error = validateFile(file)
         return {
-          id: crypto.randomUUID(),
+          id: crypto.randomUUID?.() ?? `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           file,
           status: error ? 'error' as const : 'pending' as const,
           progress: 0,
@@ -135,7 +136,7 @@ export default function CommentAttachmentButton({
       }
     }
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [abortS3Upload])
+  }, [abortS3Upload, storageProvider])
 
   const uploadFile = async (item: FileUploadItem): Promise<boolean> => {
     // Step 1: Create asset record via JSON POST
@@ -217,6 +218,8 @@ export default function CommentAttachmentButton({
         // Ensure fresh upload context
         ensureFreshUploadOnContextChange(item.file, `client:${videoId}:${assetId}`)
 
+      const uploadRef = { current: null as tus.Upload | null }
+
       const tusUpload = new tus.Upload(item.file, {
         endpoint: `${window.location.origin}/api/uploads`,
         retryDelays: TUS_RETRY_DELAYS_MS,
@@ -228,6 +231,8 @@ export default function CommentAttachmentButton({
         chunkSize: getTusChunkSizeBytes(item.file.size),
         storeFingerprintForResuming: true,
         removeFingerprintOnSuccess: true,
+        onAfterResponse: createTusAfterResponseHandler(uploadRef),
+        onShouldRetry: createTusShouldRetryHandler(uploadRef),
 
         onProgress: (bytesUploaded, bytesTotal) => {
           const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
@@ -242,6 +247,7 @@ export default function CommentAttachmentButton({
           )
 
           tusUploadsRef.current.delete(item.id)
+          resetTusAuthRetry(uploadRef.current)
           clearFileContext(item.file)
           clearUploadMetadata(item.file)
           clearTUSFingerprint(item.file)
@@ -266,6 +272,7 @@ export default function CommentAttachmentButton({
           )
 
           tusUploadsRef.current.delete(item.id)
+          resetTusAuthRetry(uploadRef.current)
           clearUploadMetadata(item.file)
           clearTUSFingerprint(item.file)
 
@@ -293,6 +300,7 @@ export default function CommentAttachmentButton({
         },
       })
 
+      uploadRef.current = tusUpload
       tusUploadsRef.current.set(item.id, tusUpload)
 
       // Check for previous uploads to resume
@@ -410,6 +418,7 @@ export default function CommentAttachmentButton({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('attachFilesTitle')}</DialogTitle>
+            <DialogDescription className="sr-only">{t('attachFilesDesc')}</DialogDescription>
           </DialogHeader>
 
           {/* Drop zone */}

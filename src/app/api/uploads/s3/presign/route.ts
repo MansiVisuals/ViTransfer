@@ -4,6 +4,7 @@ import { isS3Mode } from '@/lib/storage'
 import {
   s3InitiateMultipartUpload,
   s3GetPresignedPartUrl,
+  s3AbortMultipartUpload,
 } from '@/lib/s3-storage'
 import { ALL_ALLOWED_EXTENSIONS } from '@/lib/asset-validation'
 import { FILE_LIMITS, sanitizeContentType } from '@/lib/file-validation'
@@ -32,6 +33,8 @@ export async function POST(request: NextRequest) {
   if (!isS3Mode()) {
     return NextResponse.json({ error: 'S3 storage is not enabled' }, { status: 400 })
   }
+
+  let initiatedMultipart: { key: string; uploadId: string } | null = null
 
   try {
     const body = await request.json()
@@ -146,6 +149,7 @@ export async function POST(request: NextRequest) {
     const partCount = Math.ceil(fileSize / partSize)
 
     const uploadId = await s3InitiateMultipartUpload(s3Key, sanitizedContentType)
+    initiatedMultipart = { key: s3Key, uploadId }
 
     const parts = await Promise.all(
       Array.from({ length: partCount }, (_, i) => i + 1).map(async (partNumber) => ({
@@ -154,8 +158,17 @@ export async function POST(request: NextRequest) {
       }))
     )
 
+    initiatedMultipart = null
+
     return NextResponse.json({ uploadId, partSize, parts })
   } catch (error) {
+    if (initiatedMultipart) {
+      try {
+        await s3AbortMultipartUpload(initiatedMultipart.key, initiatedMultipart.uploadId)
+      } catch (abortError) {
+        logError('[S3 PRESIGN] Failed to abort initiated multipart upload after error:', abortError)
+      }
+    }
     logError('[S3 PRESIGN] Error:', error)
     return NextResponse.json({ error: 'Failed to initiate upload' }, { status: 500 })
   }

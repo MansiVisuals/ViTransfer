@@ -8,12 +8,13 @@ import { Button } from './ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from './ui/dialog'
 import * as tus from 'tus-js-client'
-import { getTusUploadErrorMessage } from '@/lib/tus-error'
+import { createTusAfterResponseHandler, createTusShouldRetryHandler, getTusUploadErrorMessage, resetTusAuthRetry } from '@/lib/tus-error'
 import { getTusChunkSizeBytes, TUS_RETRY_DELAYS_MS } from '@/lib/transfer-tuning'
 import {
   ensureFreshUploadOnContextChange,
@@ -84,7 +85,7 @@ export default function ReverseShareUploadPanel({
           const ext = getFileExtension(file.name)
           const error = !ext || !ALLOWED_EXTENSIONS.has(ext) ? `Unsupported file type (${ext || 'no extension'})` : null
           return {
-            id: crypto.randomUUID(),
+            id: crypto.randomUUID?.() ?? `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             file,
             status: error ? 'error' as const : 'pending' as const,
             progress: 0,
@@ -110,7 +111,7 @@ export default function ReverseShareUploadPanel({
       }
     }
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [abortS3Upload])
+  }, [abortS3Upload, storageProvider])
 
   const retryFile = useCallback((id: string) => {
     setAllDone(false)
@@ -182,6 +183,8 @@ export default function ReverseShareUploadPanel({
         // ── TUS resumable upload ─────────────────────────────────────────────
         ensureFreshUploadOnContextChange(item.file, `reverse-share:${shareSlug}:${uploadId}`)
 
+      const uploadRef = { current: null as tus.Upload | null }
+
       const tusUpload = new tus.Upload(item.file, {
         endpoint: `${window.location.origin}/api/uploads`,
         retryDelays: TUS_RETRY_DELAYS_MS,
@@ -193,6 +196,8 @@ export default function ReverseShareUploadPanel({
         chunkSize: getTusChunkSizeBytes(item.file.size),
         storeFingerprintForResuming: true,
         removeFingerprintOnSuccess: true,
+        onAfterResponse: createTusAfterResponseHandler(uploadRef),
+        onShouldRetry: createTusShouldRetryHandler(uploadRef),
 
         onProgress: (bytesUploaded, bytesTotal) => {
           const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
@@ -202,6 +207,7 @@ export default function ReverseShareUploadPanel({
         onSuccess: () => {
           setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: 'completed', progress: 100, uploadId } : i)))
           tusUploadsRef.current.delete(item.id)
+          resetTusAuthRetry(uploadRef.current)
           clearFileContext(item.file)
           clearUploadMetadata(item.file)
           clearTUSFingerprint(item.file)
@@ -212,6 +218,7 @@ export default function ReverseShareUploadPanel({
           const errorMessage = getTusUploadErrorMessage(error)
           setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: 'error', error: errorMessage, uploadId } : i)))
           tusUploadsRef.current.delete(item.id)
+          resetTusAuthRetry(uploadRef.current)
           clearUploadMetadata(item.file)
           clearTUSFingerprint(item.file)
           fetch(`/api/share/${shareSlug}/project-uploads?uploadId=${uploadId}`, {
@@ -228,6 +235,7 @@ export default function ReverseShareUploadPanel({
         },
       })
 
+      uploadRef.current = tusUpload
       tusUploadsRef.current.set(item.id, tusUpload)
       tusUpload.findPreviousUploads().then((previousUploads) => {
         if (previousUploads.length > 0) tusUpload.resumeFromPreviousUpload(previousUploads[0])
@@ -315,6 +323,7 @@ export default function ReverseShareUploadPanel({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('submitFilesTitle')}</DialogTitle>
+            <DialogDescription className="sr-only">{t('submitFilesDesc')}</DialogDescription>
           </DialogHeader>
 
           {/* Drop zone */}

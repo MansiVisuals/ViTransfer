@@ -25,6 +25,12 @@ interface SharePageClientProps {
   token: string
 }
 
+const MAX_TOKEN_FETCH_ATTEMPTS = 2
+const TOKEN_FETCH_RETRY_BASE_MS = 120
+const TOKEN_FETCH_RETRY_MAX_MS = 400
+
+type TokenFetchTelemetryEvent = 'first-attempt-failure' | 'retry-success' | 'retry-failure'
+
 export default function SharePageClient({ token }: SharePageClientProps) {
   const t = useTranslations('share')
   const tc = useTranslations('common')
@@ -57,7 +63,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [comments, setComments] = useState<any[]>([])
   const [_commentsLoading, setCommentsLoading] = useState(false)
   const [_companyName, setCompanyName] = useState('Studio')
-  const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p'>('720p')
+  const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p' | '2160p'>('720p')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
   const [activeVideosRaw, setActiveVideosRaw] = useState<any[]>([])
@@ -72,6 +78,46 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [downloadingAll, setDownloadingAll] = useState(false)
   const storageKey = token || ''
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
+  const inFlightTokenRequestsRef = useRef<Map<string, Promise<string>>>(new Map())
+  const tokenFetchTelemetryRef = useRef({
+    firstAttemptFailures: 0,
+    retrySuccesses: 0,
+    retryFailures: 0,
+  })
+
+  const emitTokenFetchTelemetry = useCallback((
+    event: TokenFetchTelemetryEvent,
+    meta: { videoId: string; quality: string; attempts: number }
+  ) => {
+    const counters = tokenFetchTelemetryRef.current
+    if (event === 'first-attempt-failure') counters.firstAttemptFailures += 1
+    if (event === 'retry-success') counters.retrySuccesses += 1
+    if (event === 'retry-failure') counters.retryFailures += 1
+
+    const detail = {
+      event,
+      ...meta,
+      counters: { ...counters },
+      timestamp: Date.now(),
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('shareTokenFetchTelemetry', { detail }))
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('share-token-fetch', detail)
+    }
+  }, [])
+
+  const waitForTokenRetry = useCallback(async (attempt: number) => {
+    const exponentialDelay = Math.min(
+      TOKEN_FETCH_RETRY_MAX_MS,
+      TOKEN_FETCH_RETRY_BASE_MS * Math.pow(2, Math.max(0, attempt - 1))
+    )
+    const jitterMs = Math.floor(Math.random() * 40)
+    await new Promise((resolve) => setTimeout(resolve, exponentialDelay + jitterMs))
+  }, [])
 
   /** Read GDPR analytics consent from localStorage for inclusion in auth request headers */
   const getConsentHeader = (): Record<string, string> => {
@@ -120,6 +166,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     setCommentsLoading(true)
     try {
       const response = await fetch(`/api/share/${token}/comments`, {
+        cache: 'no-store',
         headers: {
           Authorization: `Bearer ${shareToken}`
         }
@@ -164,8 +211,17 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     try {
       const authToken = tokenOverride || shareToken
       const projectResponse = await fetch(`/api/share/${token}`, {
+        cache: 'no-store',
         headers: { ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}), ...getConsentHeader() }
       })
+
+      // Recover automatically from stale/expired stored share token.
+      if (projectResponse.status === 401 && authToken) {
+        saveShareToken(storageKey, null)
+        setShareToken(null)
+        return
+      }
+
       if (projectResponse.ok) {
         const projectData = await projectResponse.json()
 
@@ -201,6 +257,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     async function loadProject() {
       try {
         const response = await fetch(`/api/share/${token}`, {
+          cache: 'no-store',
           headers: { ...(shareToken ? { Authorization: `Bearer ${shareToken}` } : {}), ...getConsentHeader() }
         })
 
@@ -208,11 +265,20 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         if (response.status === 401) {
           saveShareToken(storageKey, null)
+
+          // If a stale share token was sent, clear in-memory state and retry once.
+          // This removes the need for a manual F5 when a cached token expires.
+          if (shareToken) {
+            setShareToken(null)
+            return
+          }
+
           const data = await response.json()
           if (data.authMode === 'NONE' && data.guestMode) {
             try {
               const guestResponse = await fetch(`/api/share/${token}/guest`, {
                 method: 'POST',
+                cache: 'no-store',
                 headers: { 'Content-Type': 'application/json', ...getConsentHeader() },
               })
               if (guestResponse.ok) {
@@ -258,7 +324,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
             if (projectData.settings) {
               setCompanyName(projectData.settings.companyName || 'Studio')
-              setDefaultQuality(projectData.settings.defaultPreviewResolution || '720p')
+              // Prefer per-project resolution, fall back to global default
+              setDefaultQuality(projectData.previewResolution || projectData.settings.defaultPreviewResolution || '720p')
             }
 
             if (!projectData.hideFeedback) {
@@ -338,6 +405,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const fetchVideoToken = useCallback(async (videoId: string, quality: string) => {
     if (!shareToken) return ''
     const response = await fetch(`/api/share/${token}/video-token?videoId=${videoId}&quality=${quality}`, {
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${shareToken}`,
       }
@@ -347,12 +415,52 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return data.token || ''
   }, [shareToken, token])
 
+  const fetchVideoTokenWithRetry = useCallback(async (videoId: string, quality: string) => {
+    if (!shareToken) return ''
+
+    const requestKey = `${shareToken}:${videoId}:${quality}`
+    const inFlight = inFlightTokenRequestsRef.current.get(requestKey)
+    if (inFlight) {
+      return inFlight
+    }
+
+    const requestPromise = (async () => {
+      for (let attempt = 1; attempt <= MAX_TOKEN_FETCH_ATTEMPTS; attempt += 1) {
+        const tokenValue = await fetchVideoToken(videoId, quality)
+        if (tokenValue) {
+          if (attempt > 1) {
+            emitTokenFetchTelemetry('retry-success', { videoId, quality, attempts: attempt })
+          }
+          return tokenValue
+        }
+
+        if (attempt === 1) {
+          emitTokenFetchTelemetry('first-attempt-failure', { videoId, quality, attempts: attempt })
+          await waitForTokenRetry(attempt)
+        }
+      }
+
+      emitTokenFetchTelemetry('retry-failure', {
+        videoId,
+        quality,
+        attempts: MAX_TOKEN_FETCH_ATTEMPTS,
+      })
+      return ''
+    })().finally(() => {
+      inFlightTokenRequestsRef.current.delete(requestKey)
+    })
+
+    inFlightTokenRequestsRef.current.set(requestKey, requestPromise)
+    return requestPromise
+  }, [shareToken, fetchVideoToken, emitTokenFetchTelemetry, waitForTokenRetry])
+
   const fetchTokensForVideos = useCallback(async (videos: any[]) => {
     if (!shareToken) return videos
 
     return Promise.all(
       videos.map(async (video: any) => {
-        const cached = tokenCacheRef.current.get(video.id)
+        const cacheKey = `${shareToken}:${video.id}`
+        const cached = tokenCacheRef.current.get(cacheKey)
         if (cached) {
           return cached
         }
@@ -360,39 +468,45 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         try {
           let streamToken720p = ''
           let streamToken1080p = ''
+          let streamToken2160p = ''
           let downloadToken = null
 
           if (video.approved) {
             // Check if project uses preview for approved playback
             if (project?.usePreviewForApprovedPlayback) {
               // Use preview tokens for streaming, original for download
-              const [token720, token1080, originalToken] = await Promise.all([
-                fetchVideoToken(video.id, '720p'),
-                fetchVideoToken(video.id, '1080p'),
-                fetchVideoToken(video.id, 'original'),
+              const [token720, token1080, token2160, originalToken] = await Promise.all([
+                fetchVideoTokenWithRetry(video.id, '720p'),
+                fetchVideoTokenWithRetry(video.id, '1080p'),
+                fetchVideoTokenWithRetry(video.id, '2160p'),
+                fetchVideoTokenWithRetry(video.id, 'original'),
               ])
               streamToken720p = token720
               streamToken1080p = token1080
+              streamToken2160p = token2160
               downloadToken = originalToken
             } else {
               // Default: original for everything
-              const originalToken = await fetchVideoToken(video.id, 'original')
+              const originalToken = await fetchVideoTokenWithRetry(video.id, 'original')
               streamToken720p = originalToken
               streamToken1080p = originalToken
+              streamToken2160p = originalToken
               downloadToken = originalToken
             }
           } else {
-            const [token720, token1080] = await Promise.all([
-              fetchVideoToken(video.id, '720p'),
-              fetchVideoToken(video.id, '1080p'),
+            const [token720, token1080, token2160] = await Promise.all([
+              fetchVideoTokenWithRetry(video.id, '720p'),
+              fetchVideoTokenWithRetry(video.id, '1080p'),
+              fetchVideoTokenWithRetry(video.id, '2160p'),
             ])
             streamToken720p = token720
             streamToken1080p = token1080
+            streamToken2160p = token2160
           }
 
           let thumbnailUrl = null
           if (video.thumbnailPath) {
-            const thumbToken = await fetchVideoToken(video.id, 'thumbnail')
+            const thumbToken = await fetchVideoTokenWithRetry(video.id, 'thumbnail')
             if (thumbToken) {
               thumbnailUrl = `/api/content/${thumbToken}`
             }
@@ -402,18 +516,23 @@ export default function SharePageClient({ token }: SharePageClientProps) {
             ...video,
             streamUrl720p: streamToken720p ? `/api/content/${streamToken720p}` : '',
             streamUrl1080p: streamToken1080p ? `/api/content/${streamToken1080p}` : '',
+            streamUrl2160p: streamToken2160p ? `/api/content/${streamToken2160p}` : '',
             downloadUrl: downloadToken ? `/api/content/${downloadToken}?download=true` : null,
             thumbnailUrl,
           }
 
-          tokenCacheRef.current.set(video.id, tokenized)
+          // Only cache successful tokenization results.
+          // Avoid caching empty URLs from transient failures on first load.
+          if (tokenized.streamUrl720p || tokenized.streamUrl1080p || tokenized.streamUrl2160p || tokenized.downloadUrl || tokenized.thumbnailUrl) {
+            tokenCacheRef.current.set(cacheKey, tokenized)
+          }
           return tokenized
         } catch (error) {
           return video
         }
       })
     )
-  }, [shareToken, fetchVideoToken, project?.usePreviewForApprovedPlayback])
+  }, [shareToken, fetchVideoTokenWithRetry, project?.usePreviewForApprovedPlayback])
 
   useEffect(() => {
     let isMounted = true
@@ -460,7 +579,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
             // Find a video with a thumbnail
             const videoWithThumb = videos.find((v: any) => v.thumbnailPath)
             if (videoWithThumb) {
-              const thumbToken = await fetchVideoToken(videoWithThumb.id, 'thumbnail')
+              const thumbToken = await fetchVideoTokenWithRetry(videoWithThumb.id, 'thumbnail')
               if (thumbToken && isMounted) {
                 newThumbnails.set(name, `/api/content/${thumbToken}`)
               }
@@ -485,7 +604,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return () => {
       isMounted = false
     }
-  }, [project?.videosByName, shareToken, fetchVideoToken])
+  }, [project?.videosByName, shareToken, fetchVideoTokenWithRetry])
 
   // Determine initial view state based on URL params
   useEffect(() => {

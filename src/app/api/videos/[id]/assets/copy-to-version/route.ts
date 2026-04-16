@@ -107,6 +107,7 @@ export async function POST(
             category: asset.category,
             uploadedBy: asset.uploadedBy,
             uploadedByName: asset.uploadedByName,
+            uploadCompletedAt: new Date(), // File already exists — mark complete immediately
           },
         })
       )

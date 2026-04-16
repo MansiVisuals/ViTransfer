@@ -344,7 +344,7 @@ export function useAssetUploadQueue({
           : u
       ))
     }
-  }, [videoId, onUploadComplete])
+  }, [videoId, onUploadComplete, storageProvider, startS3Upload])
 
   // Auto-start queued uploads when slots are available
   useEffect(() => {
@@ -441,7 +441,7 @@ export function useAssetUploadQueue({
     }
 
     // useEffect will auto-start next queued upload
-  }, [videoId, abortS3Upload])
+  }, [videoId, abortS3Upload, storageProvider])
 
   // Remove completed upload from queue
   const removeCompleted = useCallback((uploadId: string) => {

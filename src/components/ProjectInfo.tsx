@@ -19,7 +19,7 @@ import { getAccessToken } from '@/lib/token-store'
 import { cn } from '@/lib/utils'
 
 interface ProjectInfoProps {
-  selectedVideo: Video & { name?: string; approved?: boolean; downloadUrl?: string; cleanPreview720Path?: string | null; cleanPreview1080Path?: string | null }
+  selectedVideo: Video & { name?: string; approved?: boolean; downloadUrl?: string; cleanPreview720Path?: string | null; cleanPreview1080Path?: string | null; cleanPreview2160Path?: string | null }
   displayLabel: string
   isVideoApproved: boolean
   projectId: string
@@ -28,7 +28,7 @@ interface ProjectInfoProps {
   clientName?: string
   isPasswordProtected?: boolean
   watermarkEnabled?: boolean
-  defaultQuality: '720p' | '1080p'
+  defaultQuality: '720p' | '1080p' | '2160p'
   onApprove?: () => Promise<void>
   isAdmin?: boolean
   clientCanApprove?: boolean
@@ -42,6 +42,7 @@ interface ProjectInfoProps {
   authenticatedName?: string | null
   className?: string
   usePreviewForApprovedPlayback?: boolean
+  playbackQuality?: '720p' | '1080p' | '2160p'
 }
 
 export default function ProjectInfo({
@@ -67,6 +68,7 @@ export default function ProjectInfo({
   authenticatedName = null,
   className,
   usePreviewForApprovedPlayback = false,
+  playbackQuality,
 }: ProjectInfoProps) {
   const [showInfoDialog, setShowInfoDialog] = useState(false)
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false)
@@ -340,16 +342,20 @@ export default function ProjectInfo({
                       <span className="text-muted-foreground">{t('playbackStatus')}</span>
                       <span className="font-medium break-words">
                         {(() => {
-                          const hasPreview = !!(selectedVideo.preview720Path || selectedVideo.preview1080Path)
+                          const videoAny = selectedVideo as any
+                          const hasPreviewPaths = !!(videoAny.preview720Path || videoAny.preview1080Path || videoAny.preview2160Path)
+                          const hasPreviewStreams = !!(videoAny.streamUrl720p || videoAny.streamUrl1080p || videoAny.streamUrl2160p)
+                          const hasPreview = hasPreviewPaths || hasPreviewStreams
+                          const qualityLabel = playbackQuality || defaultQuality
                           if (isVideoApproved) {
                             return usePreviewForApprovedPlayback
-                              ? t('approvedPreview', { quality: defaultQuality })
+                              ? t('approvedPreview', { quality: qualityLabel })
                               : t('approvedOriginal')
                           }
                           if (!hasPreview) {
                             return t('originalQuality')
                           }
-                          return t('downscaledPreview', { quality: defaultQuality, watermark: watermarkEnabled ? t('withWatermark') : '' })
+                          return t('downscaledPreview', { quality: qualityLabel, watermark: watermarkEnabled ? t('withWatermark') : '' })
                         })()}
                       </span>
                     </div>

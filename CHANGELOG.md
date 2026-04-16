@@ -7,42 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
-## [1.0.2] - 2026-04-15
+## [1.0.2] - 2026-04-16
 
 ### Fixed
-- Docker entrypoint permissions: `COPY --chmod=0755` ensures deterministic executable mode regardless of buildx behavior.
-- Docker app file permissions: `chmod -R a+rX /app` covers all files (fixes `EACCES` on `next.config.js` when running as non-root UID, e.g. TrueNAS UID 568).
-- Updated preview LUT file.
-- **Project upload MIME type detection**: Added server-side MIME type detection for client-uploaded files. Now displays actual MIME types (e.g. `image/png`, `audio/mp3`) instead of generic `application/octet-stream` in file metadata modal. Reuses existing worker pattern and magic-byte validation via `file-type` library (matches video asset detection).
-- **Optional 2160p preview support**: Added `2160p` as an additional transcoding/preview resolution option (global defaults and per-project settings), while keeping `720p` as the default. Extended worker presets, preview/clean-preview storage paths, content fallback order, and project cleanup to include 2160 variants.
-- **S3 share page first-load reliability**: Hardened public share page token lifecycle to reliably load content on first page visit:
-  - Added client-side JWT precheck: invalid/stale share tokens are purged from session storage before first network request.
-  - Added `cache: 'no-store'` on critical endpoints (project, token, comments, settings) to prevent stale browser fetch cache.
-  - Added automatic stale-token recovery on 401 responses (retries cleanly without requiring manual refresh).
-  - Implemented session-aware token cache keys (`shareToken:videoId` instead of `videoId` only) to prevent cross-session stale cache hits.
-  - Skip caching incomplete tokenized results with empty stream/thumbnail URLs (prevents first-load race condition cache poisoning).
-  - Implemented in-flight token request deduplication so concurrent identical requests share one Promise per session/video/quality.
-  - Added bounded retry with exponential backoff and jitter (base 120ms, max 400ms) for transient token fetch failures.
-  - Added lightweight client telemetry hooks (first-attempt failure, retry-success, retry-failure) for production diagnostics.
-- **Admin share page first-load reliability**: Applied same token reliability hardening to admin project share page, including dedupe, retry backoff/jitter, session-aware caching, and incomplete result filtering.
-- **Client uploads UI redesign**: Simplified uploads list to show filename only; moved file metadata (size, category, uploader, upload date) behind an info button for cleaner UI while keeping details accessible.
-- **Dialog and uploads modal i18n completeness**: Localized all remaining modal labels:
-  - Added i18n keys: `uploadedBy`, `uploadedAt`, `otherCategory` (projects), `select` (common).
-  - Localized dialog close button screen-reader text from hardcoded `Close` to `tc('close')`.
-  - Updated en, de, nl locales with full key parity.
+- **Reverse share and comment attachment uploads failing** — uploads via the share page (reverse share file submissions and comment file attachments) returned 403 "Upload does not belong to your session". Root cause: `authMode: NONE` projects were generating a new random session ID on every request, so the ID stored at upload record creation never matched the ID presented at upload time. Fixed with a deterministic IP-based session ID.
+- **File picker silently doing nothing on plain HTTP installs** (e.g. `http://192.168.x.x`) — selecting a file in the reverse share or comment attachment modal had no effect and nothing appeared in the list. Root cause: `crypto.randomUUID()` is only available in secure contexts (HTTPS or `localhost`); the call threw silently on plain HTTP, crashing the file list update. Added a fallback that works in all contexts.
+- **Phantom upload entries in admin UI** — `ProjectUpload` and `VideoAsset` records are created before the file transfer begins; if a transfer was cancelled or failed, the record was left behind and appeared as a file with no content. Added `uploadCompletedAt` to both models, set only on successful transfer completion. Admin listings and downloads now filter to completed records only. Incomplete records older than 24 hours are deleted by the background cleanup job. In S3 mode, stale incomplete multipart uploads are also aborted.
+- **Existing files hidden after upgrade** — the `uploadCompletedAt` filter would have hidden all files uploaded before this version. A one-time migration (`20260416133000`) backfills the field for all existing records so no previously uploaded content disappears on upgrade.
+- **S3 large file uploads failing with HTTP 413** — worker-side S3 operations for files larger than the presign chunk limit were sent as a single PUT request, exceeding body size limits. The worker now uses S3 multipart upload for large files, matching the browser upload path.
+- **Project upload MIME type showing `application/octet-stream`** — client-submitted files were stored with a generic MIME type. The worker now runs magic-byte detection (via `file-type`) on completion and updates the stored MIME type, matching the existing behaviour for video assets.
+- **Share page and admin share page content not loading on first visit** — required a manual refresh in certain S3 configurations. Fixed token lifecycle, stale-cache prevention, in-flight deduplication, and bounded retry with backoff across both the public share page and the admin share page.
+- **Per-project preview resolution ignored** — the share page always used the global default resolution instead of the per-project override.
+- **File permission error (`EACCES` on `next.config.js`)** when running as a non-root UID (e.g. TrueNAS UID 568). Docker image now applies `chmod -R a+rX /app` to cover all files.
+
+### Added
+- **Optional 2160p (4K) preview support** — `2160p` is now available as a transcoding and preview resolution option in global defaults and per-project settings. `720p` remains the default.
+- **Client uploads UI** — the admin project page client uploads list now shows the filename inline with file details (size, type, uploader, date) accessible behind an info button, reducing visual clutter.
 
 ### Security
-- next 16.2.2 → 16.2.3 (fixes DoS with Server Components — GHSA-q4gf-8mx6-v5v3).
+- next 16.2.2 → 16.2.3 (fixes DoS via Server Components — GHSA-q4gf-8mx6-v5v3).
 - next-intl 4.9.0 → 4.9.1 (fixes open redirect — GHSA-8f24-v5vv-gm5j).
 - nodemailer 8.0.4 → 8.0.5 (fixes SMTP command injection — GHSA-vvjj-xcjg-gr5g).
 
 ### Updated
 - react/react-dom 19.2.4 → 19.2.5, bullmq 5.73.0 → 5.74.1, @aws-sdk 3.1024.0 → 3.1030.0, and other minor/patch dependency updates.
-- **Reverse share upload session mismatch**: Uploads via the reverse share panel incorrectly returned 403 "Upload does not belong to your session" followed by a 404 on cleanup. Root cause: `verifyProjectAccess` was generating a new random session ID on every request for projects with `authMode: NONE`, causing the session stored in the upload record at creation to never match the session presented at upload time. Fixed by only applying the NONE-mode shortcut when no share token is present, and making the fallback session ID deterministic (IP-based, consistent with the rest of the codebase).
-- **Orphaned upload records and stale multipart cleanup**: `ProjectUpload` and `VideoAsset` records are created before file transfer begins. If a transfer failed, records could remain incomplete and appear as phantom entries. Added `uploadCompletedAt` timestamp to both models; set only when transfer completes (TUS and S3). Admin list/download queries now filter to completed records only. Background cleanup now deletes incomplete DB records older than 24 hours and, in S3 mode, aborts stale incomplete multipart uploads older than 24 hours. Migrations: `20260416120000` (ProjectUpload), `20260416120001` (VideoAsset).
-- **Legacy visibility backfill for existing installs**: Added a one-time migration to mark pre-rollout `ProjectUpload` and `VideoAsset` rows as completed so already-uploaded files remain visible after upgrading to the `uploadCompletedAt` filter. Migration: `20260416133000`.
-- **React hook missing dependencies**: Resolved `react-hooks/exhaustive-deps` and `react-hooks/preserve-manual-memoization` lint warnings in `useAssetUploadQueue`, `useS3MultipartUpload`, `CommentAttachmentButton`, and `ReverseShareUploadPanel`.
-- **Unused eslint-disable directive**: Removed stale `eslint-disable-next-line` comment in `encryption.ts`.
 
 ## [1.0.1] - 2026-04-04
 

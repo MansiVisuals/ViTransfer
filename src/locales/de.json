@@ -866,6 +866,7 @@
 
     "attachFiles": "Dateien anhängen",
     "attachFilesTitle": "Dateien anhängen",
+    "attachFilesDesc": "Dateien auswählen, um sie an deinen Kommentar anzuhängen.",
     "maxFilesReached": "Maximale Dateianzahl erreicht",
     "dragDropFiles": "Dateien hierher ziehen & ablegen oder klicken zum Durchsuchen",
     "supportedFileTypes": "Bilder, Audio, Video, Dokumente, Untertitel, Projektdateien und Archive",
@@ -1026,6 +1027,7 @@
     "noApprovedVideos": "Keine freigegebenen Videos zum Herunterladen verfügbar",
     "submitFiles": "Dateien einreichen",
     "submitFilesTitle": "Dateien an Projekt einreichen",
+    "submitFilesDesc": "Dateien auswählen, um sie an dieses Projekt einzureichen.",
     "unsupportedFileType": "Nicht unterstützter Dateityp",
     "maxFilesReached": "Maximale Dateianzahl erreicht",
     "dragDropFiles": "Dateien hierher ziehen oder klicken zum Durchsuchen",
@@ -1055,6 +1057,7 @@
     "watermarkTextTooLong": "Wasserzeichentext zu lang",
     "watermarkTextTooLongDetails": "Wasserzeichentext darf maximal 100 Zeichen lang sein",
     "invalidTimestampDisplay": "Ungültige Zeitstempelanzeige. Muss TIMECODE oder AUTO sein.",
+    "invalidPreviewResolution": "Ungültige Vorschauauflösung. Muss 720p, 1080p oder 2160p sein.",
     "maxUploadSizeMustBeIntegerBetween1And1000Gb": "Maximale Upload-Größe muss eine ganze Zahl zwischen 1 und 1000 GB sein.",
     "maxCommentAttachmentsMustBeIntegerBetween1And50": "Maximale Kommentaranhänge müssen eine ganze Zahl zwischen 1 und 50 sein.",
     "maxReverseShareFilesMustBeIntegerBetween1And500": "Maximale Datei-Einreichungen müssen eine ganze Zahl zwischen 1 und 500 sein.",

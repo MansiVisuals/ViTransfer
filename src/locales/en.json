@@ -866,6 +866,7 @@
 
     "attachFiles": "Attach Files",
     "attachFilesTitle": "Attach Files",
+    "attachFilesDesc": "Select files to attach to your comment.",
     "maxFilesReached": "Maximum files reached",
     "dragDropFiles": "Drag & drop files here or click to browse",
     "supportedFileTypes": "Images, audio, video, documents, subtitles, project files, and archives",
@@ -1026,6 +1027,7 @@
     "noApprovedVideos": "No approved videos available for download",
     "submitFiles": "Submit Files",
     "submitFilesTitle": "Submit Files to Project",
+    "submitFilesDesc": "Select files to submit to this project.",
     "unsupportedFileType": "Unsupported file type",
     "maxFilesReached": "Maximum files reached",
     "dragDropFiles": "Drop files here or click to browse",
@@ -1055,6 +1057,7 @@
   "watermarkTextTooLong": "Watermark text too long",
   "watermarkTextTooLongDetails": "Watermark text must be 100 characters or less",
   "invalidTimestampDisplay": "Invalid timestamp display. Must be TIMECODE or AUTO.",
+  "invalidPreviewResolution": "Invalid preview resolution. Must be 720p, 1080p, or 2160p.",
   "maxUploadSizeMustBeIntegerBetween1And1000Gb": "Max upload size must be an integer between 1 and 1000 GB.",
   "maxCommentAttachmentsMustBeIntegerBetween1And50": "Max comment attachments must be an integer between 1 and 50.",
   "maxReverseShareFilesMustBeIntegerBetween1And500": "Max file submission files must be an integer between 1 and 500.",

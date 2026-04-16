@@ -166,6 +166,7 @@ export async function POST(request: NextRequest) {
         data: {
           fileType: actualFileType,
           fileSize: BigInt(fileSize),
+          uploadCompletedAt: new Date(),
         },
       })
 
@@ -185,6 +186,7 @@ export async function POST(request: NextRequest) {
         data: {
           fileType: actualFileType,
           fileSize: BigInt(fileSize),
+          uploadCompletedAt: new Date(),
         },
       })
 

@@ -110,7 +110,7 @@ export default function ReverseShareUploadPanel({
       }
     }
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [abortS3Upload])
+  }, [abortS3Upload, storageProvider])
 
   const retryFile = useCallback((id: string) => {
     setAllDone(false)

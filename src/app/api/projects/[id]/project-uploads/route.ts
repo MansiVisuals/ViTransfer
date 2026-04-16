@@ -35,7 +35,7 @@ export async function GET(
     }
 
     const uploads = await prisma.projectUpload.findMany({
-      where: { projectId },
+      where: { projectId, uploadCompletedAt: { not: null } },
       orderBy: { createdAt: 'desc' },
     })
 

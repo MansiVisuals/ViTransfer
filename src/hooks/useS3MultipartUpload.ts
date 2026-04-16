@@ -188,7 +188,7 @@ export function useS3MultipartUpload() {
         onError?.(err instanceof Error ? err : new Error(String(err)))
       }
     },
-    []
+    [abortUpload]
   )
 
   const abortUpload = useCallback(async (uploadKey: string): Promise<void> => {

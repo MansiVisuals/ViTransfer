@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest, getShareContext } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getClientIpAddress } from '@/lib/utils'
-import crypto from 'crypto'
 
 /**
  * Verify project access using dual authentication pattern
@@ -57,8 +56,8 @@ export async function verifyProjectAccess(
   }
 
   const isUnauthenticated = authMode === 'NONE'
-  if (isUnauthenticated) {
-    const sessionId = `none:${projectId}:${crypto.randomBytes(16).toString('base64url')}`
+  if (isUnauthenticated && !shareContext) {
+    const sessionId = `none:${projectId}:${getClientIpAddress(request)}`
     return {
       authorized: true,
       isAdmin: false,

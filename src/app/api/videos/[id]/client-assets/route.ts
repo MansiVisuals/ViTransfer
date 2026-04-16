@@ -213,6 +213,7 @@ export async function GET(
     const assets = await prisma.videoAsset.findMany({
       where: {
         videoId,
+        uploadCompletedAt: { not: null },
         uploadedBy: 'client',
         ...(accessCheck.isAdmin ? {} : { uploadedBySessionId: uploaderSessionId }),
       },

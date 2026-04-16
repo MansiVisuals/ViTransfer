@@ -369,6 +369,7 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
     data: {
       fileType: actualFileType,
       fileSize: BigInt(fileSize),
+      uploadCompletedAt: new Date(),
     },
   })
 
@@ -415,6 +416,7 @@ async function handleProjectUploadFinish(tusFilePath: string, upload: any, proje
     data: {
       fileType: actualFileType,
       fileSize: BigInt(fileSize),
+      uploadCompletedAt: new Date(),
     },
   })
 

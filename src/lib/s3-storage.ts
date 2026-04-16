@@ -5,6 +5,7 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
+  ListMultipartUploadsCommand,
   HeadObjectCommand,
   CreateMultipartUploadCommand,
   UploadPartCommand,
@@ -340,6 +341,51 @@ export async function s3AbortMultipartUpload(key: string, uploadId: string): Pro
   await getS3Client().send(
     new AbortMultipartUploadCommand({ Bucket: getS3Bucket(), Key: key, UploadId: uploadId })
   )
+}
+
+/** Abort all multipart uploads in the bucket that were initiated before cutoffDate. */
+export async function s3AbortIncompleteMultipartUploadsOlderThan(cutoffDate: Date): Promise<number> {
+  const client = getS3Client()
+  const bucket = getS3Bucket()
+
+  let abortedCount = 0
+  let keyMarker: string | undefined
+  let uploadIdMarker: string | undefined
+
+  do {
+    const listRes = await client.send(
+      new ListMultipartUploadsCommand({
+        Bucket: bucket,
+        KeyMarker: keyMarker,
+        UploadIdMarker: uploadIdMarker,
+      })
+    )
+
+    const uploads = listRes.Uploads ?? []
+    for (const upload of uploads) {
+      if (!upload.Key || !upload.UploadId || !upload.Initiated) {
+        continue
+      }
+
+      if (upload.Initiated.getTime() >= cutoffDate.getTime()) {
+        continue
+      }
+
+      await client.send(
+        new AbortMultipartUploadCommand({
+          Bucket: bucket,
+          Key: upload.Key,
+          UploadId: upload.UploadId,
+        })
+      )
+      abortedCount++
+    }
+
+    keyMarker = listRes.IsTruncated ? listRes.NextKeyMarker : undefined
+    uploadIdMarker = listRes.IsTruncated ? listRes.NextUploadIdMarker : undefined
+  } while (keyMarker)
+
+  return abortedCount
 }
 
 // ─── Presigned GET URLs ───────────────────────────────────────────────────────

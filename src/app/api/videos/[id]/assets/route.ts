@@ -89,7 +89,7 @@ export async function GET(
 
     // Get all assets for this video
     const assets = await prisma.videoAsset.findMany({
-      where: { videoId },
+      where: { videoId, uploadCompletedAt: { not: null } },
       orderBy: { createdAt: 'desc' },
     })
 

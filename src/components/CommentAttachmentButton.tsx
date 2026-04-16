@@ -135,7 +135,7 @@ export default function CommentAttachmentButton({
       }
     }
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }, [abortS3Upload])
+  }, [abortS3Upload, storageProvider])
 
   const uploadFile = async (item: FileUploadItem): Promise<boolean> => {
     // Step 1: Create asset record via JSON POST

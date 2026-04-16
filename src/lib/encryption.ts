@@ -19,7 +19,6 @@ function getCrypto(): typeof import('crypto') {
 }
 
 // Lazy-load bcryptjs (ESM in v3) so it isn't pulled into Edge bundles.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let bcryptModule: any = null
 
 async function getBcrypt() {

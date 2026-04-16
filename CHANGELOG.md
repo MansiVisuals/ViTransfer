@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Updated
 - react/react-dom 19.2.4 → 19.2.5, bullmq 5.73.0 → 5.74.1, @aws-sdk 3.1024.0 → 3.1030.0, and other minor/patch dependency updates.
+- **Reverse share upload session mismatch**: Uploads via the reverse share panel incorrectly returned 403 "Upload does not belong to your session" followed by a 404 on cleanup. Root cause: `verifyProjectAccess` was generating a new random session ID on every request for projects with `authMode: NONE`, causing the session stored in the upload record at creation to never match the session presented at upload time. Fixed by only applying the NONE-mode shortcut when no share token is present, and making the fallback session ID deterministic (IP-based, consistent with the rest of the codebase).
+- **Orphaned upload records and stale multipart cleanup**: `ProjectUpload` and `VideoAsset` records are created before file transfer begins. If a transfer failed, records could remain incomplete and appear as phantom entries. Added `uploadCompletedAt` timestamp to both models; set only when transfer completes (TUS and S3). Admin list/download queries now filter to completed records only. Background cleanup now deletes incomplete DB records older than 24 hours and, in S3 mode, aborts stale incomplete multipart uploads older than 24 hours. Migrations: `20260416120000` (ProjectUpload), `20260416120001` (VideoAsset).
+- **React hook missing dependencies**: Resolved `react-hooks/exhaustive-deps` and `react-hooks/preserve-manual-memoization` lint warnings in `useAssetUploadQueue`, `useS3MultipartUpload`, `CommentAttachmentButton`, and `ReverseShareUploadPanel`.
+- **Unused eslint-disable directive**: Removed stale `eslint-disable-next-line` comment in `encryption.ts`.
 
 ## [1.0.1] - 2026-04-04
 

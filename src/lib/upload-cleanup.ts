@@ -1,10 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import { prisma } from './db'
-import { logError } from './logging'
+import { logError, logMessage } from './logging'
+import { isS3Mode } from './storage'
+import { s3AbortIncompleteMultipartUploadsOlderThan } from './s3-storage'
 
 const TUS_UPLOAD_DIR = '/tmp/vitransfer-tus-uploads'
 const MAX_AGE_HOURS = 24 // Remove files older than 24 hours
+const INCOMPLETE_S3_MULTIPART_MAX_AGE_HOURS = 24
 
 /**
  * Clean up orphaned upload files
@@ -97,4 +100,64 @@ export async function cleanupStuckUploads() {
 export async function runCleanup() {
   await cleanupOrphanedUploads()
   await cleanupStuckUploads()
+  await cleanupIncompleteUploadRecords()
+  await cleanupIncompleteS3MultipartUploads()
+}
+
+/**
+ * Delete ProjectUpload and VideoAsset records that were never completed.
+ * These are created when an upload is initiated but the transfer never finished
+ * (e.g. client disconnect, session error). Records older than 24 hours are removed.
+ */
+export async function cleanupIncompleteUploadRecords() {
+  const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  try {
+    const deletedUploads = await prisma.projectUpload.deleteMany({
+      where: {
+        uploadCompletedAt: null,
+        createdAt: { lt: cutoffDate },
+      },
+    })
+    if (deletedUploads.count > 0) {
+      console.log(`[Upload Cleanup] Deleted ${deletedUploads.count} incomplete ProjectUpload record(s)`)
+    }
+  } catch (error) {
+    logError('[Upload Cleanup] Error cleaning up incomplete ProjectUpload records:', error)
+  }
+
+  try {
+    const deletedAssets = await prisma.videoAsset.deleteMany({
+      where: {
+        uploadCompletedAt: null,
+        createdAt: { lt: cutoffDate },
+      },
+    })
+    if (deletedAssets.count > 0) {
+      console.log(`[Upload Cleanup] Deleted ${deletedAssets.count} incomplete VideoAsset record(s)`)
+    }
+  } catch (error) {
+    logError('[Upload Cleanup] Error cleaning up incomplete VideoAsset records:', error)
+  }
+}
+
+/**
+ * In S3 mode, abort stale multipart uploads so orphaned parts do not accumulate.
+ * This complements explicit abort calls and bucket lifecycle rules.
+ */
+export async function cleanupIncompleteS3MultipartUploads() {
+  if (!isS3Mode()) {
+    return
+  }
+
+  const cutoffDate = new Date(Date.now() - INCOMPLETE_S3_MULTIPART_MAX_AGE_HOURS * 60 * 60 * 1000)
+
+  try {
+    const abortedCount = await s3AbortIncompleteMultipartUploadsOlderThan(cutoffDate)
+    if (abortedCount > 0) {
+      logMessage(`[Upload Cleanup] Aborted ${abortedCount} stale S3 multipart upload(s)`)
+    }
+  } catch (error) {
+    logError('[Upload Cleanup] Error cleaning up stale S3 multipart uploads:', error)
+  }
 }

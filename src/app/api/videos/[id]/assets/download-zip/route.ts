@@ -93,6 +93,7 @@ export async function POST(
       where: {
         id: { in: assetIds },
         videoId,
+        uploadCompletedAt: { not: null },
       },
     })
 

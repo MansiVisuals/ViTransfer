@@ -202,6 +202,8 @@ model VideoAsset {
   uploadedByName String? // Display name of uploader
   uploadedBySessionId String? // Stable share/admin session identifier for pending asset ownership
 
+  uploadCompletedAt DateTime? // null until file transfer finishes; orphaned records stay null
+
   // Comment attachment (optional link to comment)
   commentId String?
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
@@ -211,6 +213,7 @@ model VideoAsset {
 
   @@index([videoId])
   @@index([videoId, category])
+  @@index([videoId, uploadCompletedAt])
   @@index([videoId, uploadedBySessionId])
   @@index([commentId])
 }
@@ -231,11 +234,14 @@ model ProjectUpload {
   uploadedByName      String?
   uploadedByEmail     String?
 
+  uploadCompletedAt DateTime? // null until file transfer finishes; orphaned records stay null
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([projectId, createdAt])
+  @@index([projectId, uploadCompletedAt])
   @@index([uploadedBySessionId])
 }
 

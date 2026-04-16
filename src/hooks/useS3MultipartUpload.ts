@@ -52,6 +52,42 @@ export function useS3MultipartUpload() {
   const activeUploadsRef = useRef<Map<string, ActiveUpload>>(new Map())
   const pauseGatesRef = useRef<Map<string, PauseGate>>(new Map())
 
+  const abortUpload = useCallback(async (uploadKey: string): Promise<void> => {
+    const active = activeUploadsRef.current.get(uploadKey)
+    if (!active) return
+
+    active.abortController.abort()
+    activeUploadsRef.current.delete(uploadKey)
+
+    // If paused, resolve the gate so the loop can exit
+    const gate = pauseGatesRef.current.get(uploadKey)
+    if (gate) {
+      gate.resolve()
+      pauseGatesRef.current.delete(uploadKey)
+    }
+
+    // Best-effort abort on S3 to free incomplete multipart storage
+    try {
+      const authHeader = active.bearerToken
+        ? { headers: { Authorization: `Bearer ${active.bearerToken}` } }
+        : getAccessToken()
+        ? { headers: { Authorization: `Bearer ${getAccessToken()}` } }
+        : {}
+      await apiPost(
+        '/api/uploads/s3/abort',
+        {
+          uploadId: active.uploadId,
+          videoId: active.target.videoId,
+          assetId: active.target.assetId,
+          projectUploadId: active.target.projectUploadId,
+        },
+        authHeader
+      )
+    } catch (err) {
+      console.warn('[S3 MULTIPART] Failed to abort multipart upload:', err)
+    }
+  }, [])
+
   const startUpload = useCallback(
     async (
       file: File,
@@ -190,42 +226,6 @@ export function useS3MultipartUpload() {
     },
     [abortUpload]
   )
-
-  const abortUpload = useCallback(async (uploadKey: string): Promise<void> => {
-    const active = activeUploadsRef.current.get(uploadKey)
-    if (!active) return
-
-    active.abortController.abort()
-    activeUploadsRef.current.delete(uploadKey)
-
-    // If paused, resolve the gate so the loop can exit
-    const gate = pauseGatesRef.current.get(uploadKey)
-    if (gate) {
-      gate.resolve()
-      pauseGatesRef.current.delete(uploadKey)
-    }
-
-    // Best-effort abort on S3 to free incomplete multipart storage
-    try {
-      const authHeader = active.bearerToken
-        ? { headers: { Authorization: `Bearer ${active.bearerToken}` } }
-        : getAccessToken()
-        ? { headers: { Authorization: `Bearer ${getAccessToken()}` } }
-        : {}
-      await apiPost(
-        '/api/uploads/s3/abort',
-        {
-          uploadId: active.uploadId,
-          videoId: active.target.videoId,
-          assetId: active.target.assetId,
-          projectUploadId: active.target.projectUploadId,
-        },
-        authHeader
-      )
-    } catch (err) {
-      console.warn('[S3 MULTIPART] Failed to abort multipart upload:', err)
-    }
-  }, [])
 
   /** Pause an in-progress upload. Takes effect between part batches. */
   const pauseUpload = useCallback((uploadKey: string): void => {

@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
-import { getRedis } from '@/lib/redis'
-import { getClientIpAddress } from '@/lib/utils'
-import crypto from 'crypto'
+import { generateVideoAccessToken } from '@/lib/video-access'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 
 /**
- * Generate a temporary download token for downloading all approved videos as ZIP.
- * Used by share page "Download All" button.
+ * Generate per-video download URLs for all approved videos.
+ * Used by share page "Download All" button (batch individual downloads, no ZIP).
  */
 export async function POST(
   request: NextRequest,
@@ -97,36 +95,23 @@ export async function POST(
       )
     }
 
-    // Generate secure token
-    const downloadToken = crypto.randomBytes(32).toString('base64url')
-
-    const redis = getRedis()
     const sessionId = accessCheck.shareTokenSessionId || (accessCheck.isAdmin ? `admin:${Date.now()}` : `guest:${Date.now()}`)
-    const ipAddress = getClientIpAddress(request)
-    const userAgentHash = crypto
-      .createHash('sha256')
-      .update(request.headers.get('user-agent') || 'unknown')
-      .digest('hex')
 
-    const tokenData = {
-      projectId: project.id,
-      projectTitle: project.title,
-      videoIds: approvedVideos.map((v) => v.id),
-      sessionId,
-      ipAddress,
-      userAgentHash,
-      createdAt: Date.now(),
-      isAdmin: accessCheck.isAdmin || false,
-    }
-
-    await redis.setex(
-      `bulk_download:${downloadToken}`,
-      15 * 60, // 15 minutes
-      JSON.stringify(tokenData)
+    const urls = await Promise.all(
+      approvedVideos.map(async (video) => {
+        const accessToken = await generateVideoAccessToken(
+          video.id,
+          project.id,
+          'original',
+          request,
+          sessionId
+        )
+        return `/api/content/${accessToken}?download=true`
+      })
     )
 
     return NextResponse.json({
-      url: `/api/content/bulk-zip/${downloadToken}`,
+      urls,
       videoCount: approvedVideos.length,
     })
   } catch (error) {

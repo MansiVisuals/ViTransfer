@@ -661,16 +661,28 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         throw new Error(data.error || 'Download failed')
       }
 
-      const { url } = await response.json()
+      const { urls } = await response.json()
 
-      const link = document.createElement('a')
-      link.href = url
-      link.download = ''
-      link.rel = 'noopener'
-      link.style.display = 'none'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      if (!Array.isArray(urls) || urls.length === 0) {
+        throw new Error('No download links available')
+      }
+
+      // Trigger each approved video as its own download to avoid server-side ZIP creation.
+      for (let i = 0; i < urls.length; i += 1) {
+        const link = document.createElement('a')
+        link.href = urls[i]
+        link.download = ''
+        link.rel = 'noopener'
+        link.style.display = 'none'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        // Stagger starts slightly so browsers process each save request reliably.
+        if (i < urls.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 150))
+        }
+      }
     } catch {
       // Silently fail - user can retry
     } finally {

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.0.3] - Unreleased
+
+### Fixed
+- **"Video record not found" when retrying a failed upload** — if a previous upload attempt failed and left a stale video record reference in local storage, retrying the same file would immediately error with "Video record not found" (or "Video is not in UPLOADING state"). Both the S3 multipart and TUS upload paths now automatically detect stale resume metadata on these specific backend errors, clear the stale state, and silently self-heal with one fresh retry — creating a new video record and restarting the upload without any user action required.
+
+### Changed
+- **"Download All Videos" on the share page now triggers individual per-file downloads instead of a server-generated ZIP** — previously clicking "Download All" on the share page grid view streamed all approved videos into a single ZIP archive on the server before delivering it to the browser, which was slow and resource-intensive for large files. The share page now requests a secure per-video download token for each approved video and triggers individual downloads sequentially with a short stagger, bypassing all server-side compression. The bulk ZIP endpoint has been removed. The `archiver` dependency remains for per-video asset ZIP downloads, which are unaffected.
+
 ## [1.0.2] - 2026-04-16
 
 ### Fixed

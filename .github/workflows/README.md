@@ -334,22 +334,6 @@ echo "Testing feature X..."
 
 ---
 
-## Local Testing
-
-You can run the same tests locally using the scripts from the workflows:
-
-```bash
-# Clean install test
-./scripts/test-clean-install.sh
-
-# Upgrade test
-./scripts/test-upgrade.sh 0.8.3 latest
-```
-
-(Note: Scripts need to be created based on workflow steps)
-
----
-
 ## Troubleshooting
 
 ### Tests fail on PostgreSQL version check

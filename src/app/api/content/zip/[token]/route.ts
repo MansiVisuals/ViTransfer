@@ -110,9 +110,10 @@ export async function GET(
       return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
 
-    // Track download analytics (skip for admin sessions)
+    // Track download analytics fire-and-forget — must not block the zip stream
+    // from starting, otherwise the browser save dialog is delayed.
     if (sessionId) {
-      await trackVideoAccess({
+      void trackVideoAccess({
         videoId,
         projectId,
         sessionId,
@@ -124,9 +125,12 @@ export async function GET(
       }).catch(() => {})
     }
 
-    // Create ZIP archive with streaming (no memory buffer)
+    // Create ZIP archive with streaming (no memory buffer).
+    // store: true (no compression) — videos and most asset files are already
+    // compressed, so deflate would burn CPU for no size win and would actually
+    // bottleneck the stream. Store mode is just header + raw bytes, much faster.
     const archive = archiver('zip', {
-      zlib: { level: 6 }, // Compression level (0-9)
+      store: true,
     })
 
     archive.on('error', (err) => {

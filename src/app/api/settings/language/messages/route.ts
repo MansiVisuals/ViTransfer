@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const locale = searchParams.get('locale') || 'en'
 
   // Validate locale is supported
-  if (!SUPPORTED_LOCALES.includes(locale as any)) {
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale)) {
     return NextResponse.json({ error: configuredMessages?.settings?.language?.unsupportedLocale || 'Unsupported locale' }, { status: 400 })
   }
 

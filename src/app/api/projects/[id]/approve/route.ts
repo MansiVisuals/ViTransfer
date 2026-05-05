@@ -7,6 +7,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { z } from 'zod'
 import { logError, logMessage } from '@/lib/logging'
+import { getCleanPreviewQueue } from '@/lib/queue'
 
 export const runtime = 'nodejs'
 
@@ -93,33 +94,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: projectMessages.selectedVideoNotFound || 'Selected video not found' }, { status: 404 })
     }
 
-    // IMPORTANT: When approving a video, unapprove all other versions of the SAME video
-    // This ensures only ONE version per video name can be approved at a time
-    await prisma.video.updateMany({
-      where: {
-        projectId,
-        name: selectedVideo.name, // Same video name
-        id: { not: selectedVideoId }, // But different version
-      },
-      data: {
-        approved: false,
-        approvedAt: null,
-      },
-    })
-
-    // Now approve the selected video
-    await prisma.video.update({
-      where: { id: selectedVideoId },
-      data: {
-        approved: true,
-        approvedAt: new Date(),
-      },
-    })
+    // Atomic swap: unapprove other versions of the same video, approve the selected one.
+    // Without a transaction, two concurrent approvals of different versions could both win.
+    await prisma.$transaction([
+      prisma.video.updateMany({
+        where: {
+          projectId,
+          name: selectedVideo.name,
+          id: { not: selectedVideoId },
+        },
+        data: {
+          approved: false,
+          approvedAt: null,
+        },
+      }),
+      prisma.video.update({
+        where: { id: selectedVideoId },
+        data: {
+          approved: true,
+          approvedAt: new Date(),
+        },
+      }),
+    ])
 
     // Queue clean preview generation if project uses preview for approved playback AND watermarks enabled
     if (project.usePreviewForApprovedPlayback && project.watermarkEnabled) {
       try {
-        const { getCleanPreviewQueue } = await import('@/lib/queue')
         const cleanPreviewQueue = getCleanPreviewQueue()
         await cleanPreviewQueue.add('generate-clean-preview', {
           videoId: selectedVideoId,

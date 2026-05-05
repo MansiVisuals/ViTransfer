@@ -140,6 +140,13 @@ export async function DELETE(request: NextRequest) {
     return authResult
   }
 
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 10,
+    message: securityMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
+  }, 'security-events-delete', authResult.id)
+  if (rateLimitResult) return rateLimitResult
+
   try {
     const body = await request.json()
     const { olderThan } = body // Days (0 = delete all)

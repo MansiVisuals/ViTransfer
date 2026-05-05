@@ -8,7 +8,7 @@ import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import fs from 'fs'
 import { createReadStream } from 'fs'
 import { logError } from '@/lib/logging'
-import { STREAM_HIGH_WATER_MARK_BYTES, parseBoundedRangeHeader } from '@/lib/transfer-tuning'
+import { STREAM_HIGH_WATER_MARK_BYTES, parseDownloadRangeHeader } from '@/lib/transfer-tuning'
 
 export const runtime = 'nodejs'
 
@@ -113,7 +113,9 @@ export async function GET(
     const range = request.headers.get('range')
 
     if (range) {
-      const parsedRange = parseBoundedRangeHeader(range, stat.size, 16 * 1024 * 1024)
+      // Honor the requested range as-is. Open-ended (bytes=0-) → full file —
+      // capping it forced download managers into many round-trips.
+      const parsedRange = parseDownloadRangeHeader(range, stat.size)
       if (!parsedRange) {
         return new NextResponse(null, {
           status: 416,

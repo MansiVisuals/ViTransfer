@@ -23,6 +23,7 @@ interface Settings {
   accentColor: string | null
   companyName: string | null
   brandingLogoPath: string | null
+  brandingFaviconPath: string | null
   emailHeaderStyle: string | null
   smtpServer: string | null
   smtpPort: number | null
@@ -120,6 +121,14 @@ export default function GlobalSettingsPage() {
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
   const [pendingLogoRemoval, setPendingLogoRemoval] = useState(false)
 
+  // Favicon mirrors the logo flow: upload/remove are staged and applied on save.
+  const [brandingFaviconPath, setBrandingFaviconPath] = useState<string | null>(null)
+  const [brandingFaviconPreview, setBrandingFaviconPreview] = useState<string | null>(null)
+  const [faviconUploading, setFaviconUploading] = useState(false)
+  const [faviconError, setFaviconError] = useState('')
+  const [pendingFaviconFile, setPendingFaviconFile] = useState<File | null>(null)
+  const [pendingFaviconRemoval, setPendingFaviconRemoval] = useState(false)
+
   // Form state for global settings
   const [companyName, setCompanyName] = useState('')
   const [smtpServer, setSmtpServer] = useState('')
@@ -204,6 +213,10 @@ export default function GlobalSettingsPage() {
     setBrandingLogoPreview(data.brandingLogoPath ? `/api/branding/logo?ts=${Date.now()}` : null)
     setPendingLogoFile(null)
     setPendingLogoRemoval(false)
+    setBrandingFaviconPath(data.brandingFaviconPath || null)
+    setBrandingFaviconPreview(data.brandingFaviconPath ? `/api/branding/favicon?ts=${Date.now()}` : null)
+    setPendingFaviconFile(null)
+    setPendingFaviconRemoval(false)
     setEmailHeaderStyle(data.emailHeaderStyle || 'LOGO_AND_NAME')
     setSmtpServer(data.smtpServer || '')
     setSmtpPort(data.smtpPort?.toString() || '587')
@@ -321,6 +334,59 @@ export default function GlobalSettingsPage() {
     setPendingLogoFile(null)
     setPendingLogoRemoval(true)
     setBrandingLogoPreview(null)
+  }, [])
+
+  // Favicon: stage upload (svg/png/ico, max 100 KB).
+  const handleFaviconUpload = useCallback(async (file: File) => {
+    setFaviconError('')
+    setFaviconUploading(true)
+
+    try {
+      const lowerName = file.name.toLowerCase()
+      const lowerType = (file.type || '').toLowerCase()
+      const isSvg = lowerType.includes('svg') || lowerName.endsWith('.svg')
+      const isPng = lowerType.includes('png') || lowerName.endsWith('.png')
+      const isIco = lowerType.includes('icon') || lowerName.endsWith('.ico')
+
+      if (!isSvg && !isPng && !isIco) {
+        setFaviconError(t('faviconInvalidFormat'))
+        return
+      }
+      if (file.size > 100 * 1024) {
+        setFaviconError(t('faviconTooLarge'))
+        return
+      }
+
+      // For SVG, run the same client-side safety checks as the logo flow.
+      // PNG/ICO are binary formats with no script-execution risk.
+      if (isSvg) {
+        const text = await file.text()
+        const leading = text.trimStart().slice(0, 256).toLowerCase()
+        if (!leading.startsWith('<svg') && !leading.startsWith('<?xml')) {
+          setFaviconError(t('faviconUnsafeSvg'))
+          return
+        }
+        if (/<script[\s>]/i.test(text) || /on[a-zA-Z]+\s*=/.test(text) || /javascript:/i.test(text)) {
+          setFaviconError(t('faviconUnsafeSvg'))
+          return
+        }
+      }
+
+      setPendingFaviconFile(file)
+      setPendingFaviconRemoval(false)
+      setBrandingFaviconPreview(URL.createObjectURL(file))
+    } catch {
+      setFaviconError(t('faviconInvalidFormat'))
+    } finally {
+      setFaviconUploading(false)
+    }
+  }, [t])
+
+  const handleFaviconRemove = useCallback(async () => {
+    setFaviconError('')
+    setPendingFaviconFile(null)
+    setPendingFaviconRemoval(true)
+    setBrandingFaviconPreview(null)
   }, [])
 
   useEffect(() => {
@@ -515,12 +581,63 @@ export default function GlobalSettingsPage() {
         }
       }
 
+      // Handle pending favicon upload / removal — same shape as logo.
+      let newFaviconPath = brandingFaviconPath
+      if (pendingFaviconFile) {
+        setFaviconUploading(true)
+        try {
+          const buffer = await pendingFaviconFile.arrayBuffer()
+          const lowerName = pendingFaviconFile.name.toLowerCase()
+          const inferredType =
+            pendingFaviconFile.type ||
+            (lowerName.endsWith('.svg') ? 'image/svg+xml'
+              : lowerName.endsWith('.png') ? 'image/png'
+              : lowerName.endsWith('.ico') ? 'image/x-icon'
+              : 'application/octet-stream')
+          const res = await apiFetch('/api/settings/favicon', {
+            method: 'POST',
+            headers: { 'Content-Type': inferredType },
+            body: buffer,
+          })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            throw new Error(data?.error || t('faviconUploadFailed'))
+          }
+          newFaviconPath = data.path || '/api/branding/favicon'
+          setPendingFaviconFile(null)
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : t('faviconUploadFailed')
+          setFaviconError(message)
+          throw err
+        } finally {
+          setFaviconUploading(false)
+        }
+      } else if (pendingFaviconRemoval && brandingFaviconPath) {
+        setFaviconUploading(true)
+        try {
+          const res = await apiFetch('/api/settings/favicon', { method: 'DELETE' })
+          if (!res.ok && res.status !== 404) {
+            const data = await res.json().catch(() => ({}))
+            throw new Error(data?.error || t('faviconRemoveFailed'))
+          }
+          newFaviconPath = null
+          setPendingFaviconRemoval(false)
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : t('faviconRemoveFailed')
+          setFaviconError(message)
+          throw err
+        } finally {
+          setFaviconUploading(false)
+        }
+      }
+
       const updates = {
         language: language || 'en',
         defaultTheme: defaultTheme || 'auto',
         accentColor: accentColor || 'blue',
         companyName: companyName || null,
         brandingLogoPath: newLogoPath || null,
+        brandingFaviconPath: newFaviconPath || null,
         emailHeaderStyle: emailHeaderStyle || 'LOGO_AND_NAME',
         smtpServer: smtpServer || null,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : 587,
@@ -680,6 +797,8 @@ export default function GlobalSettingsPage() {
     companyName, setCompanyName, appDomain, setAppDomain,
     brandingLogoUrl: brandingLogoPreview, onUploadLogo: handleLogoUpload,
     onRemoveLogo: handleLogoRemove, logoUploading, logoError,
+    brandingFaviconUrl: brandingFaviconPreview, onUploadFavicon: handleFaviconUpload,
+    onRemoveFavicon: handleFaviconRemove, faviconUploading, faviconError,
     emailHeaderStyle, setEmailHeaderStyle,
   }
 

@@ -87,17 +87,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let settings = await prisma.securitySettings.findUnique({
+    const settings = await prisma.securitySettings.upsert({
       where: { id: 'default' },
+      create: { id: 'default' },
+      update: {},
     })
-
-    if (!settings) {
-      settings = await prisma.securitySettings.create({
-        data: {
-          id: 'default',
-        },
-      })
-    }
 
     return NextResponse.json({
       ...settings,

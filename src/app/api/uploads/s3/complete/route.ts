@@ -133,10 +133,18 @@ export async function POST(request: NextRequest) {
     // ── Complete the multipart upload on S3 ────────────────────────────────────
     // ETags must be quoted per HTTP/S3 spec. The browser client strips quotes
     // from the ETag header value, so re-add them if missing.
-    const completedParts: CompletedPart[] = parts.map((p) => ({
-      PartNumber: p.partNumber,
-      ETag: p.etag.startsWith('"') ? p.etag : `"${p.etag}"`,
-    }))
+    //
+    // CRITICAL: S3's CompleteMultipartUpload requires Parts in ascending
+    // PartNumber order. The client uploads parts via a worker pool that
+    // finishes them in non-deterministic order, so we MUST sort here. The
+    // SDK does not sort for us — sending unsorted parts returns InvalidPartOrder
+    // and the upload appears as "Failed to complete upload" to the user.
+    const completedParts: CompletedPart[] = parts
+      .map((p) => ({
+        PartNumber: p.partNumber,
+        ETag: p.etag.startsWith('"') ? p.etag : `"${p.etag}"`,
+      }))
+      .sort((a, b) => (a.PartNumber ?? 0) - (b.PartNumber ?? 0))
 
     // CompleteMultipartUpload validates that every part is present and assembles
     // the object atomically.

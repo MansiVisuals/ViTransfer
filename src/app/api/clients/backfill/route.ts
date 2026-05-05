@@ -65,17 +65,17 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Find or create company
-      let company = await prisma.clientCompany.findUnique({
-        where: { name: companyName }
+      // Find or create company atomically (avoids race on concurrent backfill runs)
+      const before = await prisma.clientCompany.findUnique({
+        where: { name: companyName },
+        select: { id: true }
       })
-
-      if (!company) {
-        company = await prisma.clientCompany.create({
-          data: { name: companyName }
-        })
-        stats.companiesCreated++
-      }
+      const company = await prisma.clientCompany.upsert({
+        where: { name: companyName },
+        create: { name: companyName },
+        update: {}
+      })
+      if (!before) stats.companiesCreated++
 
       // Create contacts from recipients
       for (const recipient of project.recipients) {

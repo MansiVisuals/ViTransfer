@@ -38,33 +38,19 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult
 
   try {
-    // Get or create the default settings
-    let settings = await prisma.settings.findUnique({
+    // Atomic get-or-create — `id` is the primary key, upsert closes the race window
+    // where two concurrent reads both miss and both try to create.
+    const settings = await prisma.settings.upsert({
       where: { id: 'default' },
+      create: { id: 'default' },
+      update: {},
     })
 
-    if (!settings) {
-      // Create default settings if they don't exist
-      settings = await prisma.settings.create({
-        data: {
-          id: 'default',
-        },
-      })
-    }
-
-    // Get security settings
-    let securitySettings = await prisma.securitySettings.findUnique({
+    const securitySettings = await prisma.securitySettings.upsert({
       where: { id: 'default' },
+      create: { id: 'default' },
+      update: {},
     })
-
-    if (!securitySettings) {
-      // Create default security settings if they don't exist
-      securitySettings = await prisma.securitySettings.create({
-        data: {
-          id: 'default',
-        },
-      })
-    }
 
     // SECURITY: Never send SMTP password in cleartext — return masked placeholder
     const maskedSettings = {
@@ -118,6 +104,7 @@ export async function PATCH(request: NextRequest) {
       accentColor,
       companyName,
       brandingLogoPath,
+      brandingFaviconPath,
       smtpServer,
       smtpPort,
       smtpUsername,
@@ -198,6 +185,13 @@ export async function PATCH(request: NextRequest) {
     if (brandingLogoPath !== undefined && brandingLogoPath !== null && typeof brandingLogoPath !== 'string') {
       return NextResponse.json(
         { error: settingsMessages.invalidBrandingLogoPath || 'Invalid branding logo path.' },
+        { status: 400 }
+      )
+    }
+
+    if (brandingFaviconPath !== undefined && brandingFaviconPath !== null && typeof brandingFaviconPath !== 'string') {
+      return NextResponse.json(
+        { error: settingsMessages.invalidBrandingFaviconPath || 'Invalid branding favicon path.' },
         { status: 400 }
       )
     }
@@ -430,6 +424,7 @@ export async function PATCH(request: NextRequest) {
       accentColor,
       companyName,
       brandingLogoPath,
+      brandingFaviconPath,
       emailHeaderStyle,
       smtpServer,
       smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,
@@ -488,6 +483,7 @@ export async function PATCH(request: NextRequest) {
         accentColor: accentColor || 'blue',
         companyName,
         brandingLogoPath: brandingLogoPath || null,
+        brandingFaviconPath: brandingFaviconPath || null,
         emailHeaderStyle: emailHeaderStyle || 'LOGO_AND_NAME',
         smtpServer,
         smtpPort: smtpPort ? parseInt(smtpPort, 10) : null,

@@ -102,18 +102,27 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
   const handleDownload = async (upload: ProjectUpload) => {
     setDownloadingId(upload.id)
     try {
-      const res = await apiFetch(`/api/projects/${projectId}/project-uploads/${upload.id}/download`)
+      // Mint a single-use download token, then navigate the browser directly.
+      // This triggers the native save dialog instantly — the previous
+      // fetch-into-Blob approach buffered the entire file in the tab first
+      // and felt like "the browser is downloading first".
+      const res = await apiFetch(
+        `/api/projects/${projectId}/project-uploads/${upload.id}/download-token`,
+        { method: 'POST' }
+      )
       if (!res.ok) {
-        logError('Download failed', await res.json().catch(() => ({})))
+        logError('Download token request failed', await res.json().catch(() => ({})))
         return
       }
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
+      const { url } = await res.json()
       const a = document.createElement('a')
       a.href = url
-      a.download = upload.fileName
+      a.download = ''
+      a.rel = 'noopener'
+      a.style.display = 'none'
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      document.body.removeChild(a)
     } catch (error) {
       logError('Error downloading project upload:', error)
     } finally {
@@ -157,17 +166,27 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
 
   const handleBulkDownload = async () => {
     setBulkDownloading(true)
+    // Stagger native browser downloads slightly so each save dialog appears
+    // separately. Using token-based URLs means each is a single round-trip
+    // to mint the token, then the browser streams directly.
     for (const upload of uploads.filter(u => selectedIds.has(u.id))) {
       try {
-        const res = await apiFetch(`/api/projects/${projectId}/project-uploads/${upload.id}/download`)
+        const res = await apiFetch(
+          `/api/projects/${projectId}/project-uploads/${upload.id}/download-token`,
+          { method: 'POST' }
+        )
         if (!res.ok) continue
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
+        const { url } = await res.json()
         const a = document.createElement('a')
         a.href = url
-        a.download = upload.fileName
+        a.download = ''
+        a.rel = 'noopener'
+        a.style.display = 'none'
+        document.body.appendChild(a)
         a.click()
-        URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        // Browsers will batch simultaneous downloads otherwise; small gap helps.
+        await new Promise((r) => setTimeout(r, 200))
       } catch (error) {
         logError('Error downloading project upload:', error)
       }

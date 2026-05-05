@@ -16,6 +16,11 @@ interface BrandingSectionProps {
   onRemoveLogo: () => Promise<void>
   logoUploading: boolean
   logoError?: string | null
+  brandingFaviconUrl: string | null
+  onUploadFavicon: (file: File) => Promise<void>
+  onRemoveFavicon: () => Promise<void>
+  faviconUploading: boolean
+  faviconError?: string | null
   emailHeaderStyle: string
   setEmailHeaderStyle: (value: string) => void
   show: boolean
@@ -33,6 +38,11 @@ export function BrandingSection({
   onRemoveLogo,
   logoUploading,
   logoError,
+  brandingFaviconUrl,
+  onUploadFavicon,
+  onRemoveFavicon,
+  faviconUploading,
+  faviconError,
   emailHeaderStyle,
   setEmailHeaderStyle,
   show,
@@ -41,6 +51,7 @@ export function BrandingSection({
 }: BrandingSectionProps) {
   const t = useTranslations('settings')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const faviconInputRef = useRef<HTMLInputElement | null>(null)
 
   return (
     <CollapsibleSection
@@ -118,6 +129,61 @@ export function BrandingSection({
         ) : (
           <p className="text-xs text-muted-foreground">
             {t('appearance.logoHint')}
+          </p>
+        )}
+      </div>
+
+      {/* Custom Favicon Upload */}
+      <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+        <Label>{t('appearance.customFavicon')}</Label>
+        <input
+          ref={faviconInputRef}
+          type="file"
+          accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon,image/vnd.microsoft.icon"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              onUploadFavicon(file)
+              e.target.value = ''
+            }
+          }}
+        />
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-xl border border-border bg-card flex items-center justify-center overflow-hidden">
+            {brandingFaviconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brandingFaviconUrl} alt={t('appearance.faviconPreview')} className="w-full h-full object-contain" />
+            ) : (
+              <ImageIcon className="w-6 h-6 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card text-sm hover:border-primary/60 hover:text-primary transition-colors"
+              onClick={() => faviconInputRef.current?.click()}
+              disabled={faviconUploading}
+            >
+              <Upload className="w-4 h-4" />
+              {faviconUploading ? t('appearance.validating') : brandingFaviconUrl ? t('appearance.replaceFavicon') : t('appearance.uploadFavicon')}
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card text-sm text-destructive hover:border-destructive/60 hover:text-destructive transition-colors disabled:opacity-50"
+              onClick={onRemoveFavicon}
+              disabled={!brandingFaviconUrl || faviconUploading}
+            >
+              <Trash2 className="w-4 h-4" />
+              {t('appearance.removeFavicon')}
+            </button>
+          </div>
+        </div>
+        {faviconError ? (
+          <p className="text-xs text-destructive font-medium">{faviconError}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {t('appearance.faviconHint')}
           </p>
         )}
       </div>

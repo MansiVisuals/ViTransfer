@@ -284,11 +284,13 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               if (guestResponse.ok) {
                 const guestData = await guestResponse.json()
                 if (guestData.shareToken) {
+                  // Setting the token re-runs this effect (shareToken is in deps).
+                  // Don't recurse here — the closure's shareToken is stale (null)
+                  // and a recursive call would re-trigger the same 401 → guest path.
                   setShareToken(guestData.shareToken)
                   saveShareToken(storageKey, guestData.shareToken)
                   setIsGuest(true)
                   setIsAuthenticated(true)
-                  await loadProject()
                   return
                 }
               }

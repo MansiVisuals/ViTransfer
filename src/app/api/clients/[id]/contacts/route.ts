@@ -107,7 +107,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Validate language if provided
     const contactLanguage = language?.trim() || null
-    if (contactLanguage && !SUPPORTED_LOCALES.includes(contactLanguage as any)) {
+    if (contactLanguage && !(SUPPORTED_LOCALES as readonly string[]).includes(contactLanguage)) {
       return NextResponse.json({ error: clientContactMessages.unsupportedLanguage || 'Unsupported language' }, { status: 400 })
     }
 

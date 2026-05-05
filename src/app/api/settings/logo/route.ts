@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { initStorage, uploadFile, deleteFile, getFilePath } from '@/lib/storage'
+import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import fs from 'fs/promises'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -79,6 +80,13 @@ export async function POST(request: NextRequest) {
   const auth = await requireApiAdmin(request)
   if (auth instanceof Response) return auth
 
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 10,
+    message: settingsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
+  }, 'settings-logo-upload', auth.id)
+  if (rateLimitResult) return rateLimitResult
+
   const contentType = request.headers.get('content-type') || ''
   if (!contentType.includes('image/svg+xml')) {
     return NextResponse.json({ error: settingsMessages.onlySvg || 'Only SVG files are allowed' }, { status: 400 })
@@ -140,6 +148,13 @@ export async function DELETE(request: NextRequest) {
 
   const auth = await requireApiAdmin(request)
   if (auth instanceof Response) return auth
+
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 10,
+    message: settingsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
+  }, 'settings-logo-delete', auth.id)
+  if (rateLimitResult) return rateLimitResult
 
   try {
     await initStorage()

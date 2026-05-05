@@ -109,7 +109,7 @@ export default function CommentAttachmentButton({
       const newItems: FileUploadItem[] = newFiles.map((file) => {
         const error = validateFile(file)
         return {
-          id: crypto.randomUUID?.() ?? `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          id: crypto.randomUUID(),
           file,
           status: error ? 'error' as const : 'pending' as const,
           progress: 0,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAdmin } from '@/lib/auth'
 import { testEmailConnection } from '@/lib/email'
 import { emailSchema } from '@/lib/validation'
+import { rateLimit } from '@/lib/rate-limit'
 import { prisma } from '@/lib/db'
 import { decrypt } from '@/lib/encryption'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -24,6 +25,14 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof Response) {
       return authResult
     }
+
+    // Rate-limit test-email sends to prevent email-bombing a target via repeated triggers.
+    const rateLimitResult = await rateLimit(request, {
+      windowMs: 60 * 1000,
+      maxRequests: 5,
+      message: emailMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
+    }, 'settings-test-email', authResult.id)
+    if (rateLimitResult) return rateLimitResult
 
     const { testEmail, smtpConfig } = await request.json()
 

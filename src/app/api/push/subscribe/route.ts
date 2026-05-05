@@ -39,11 +39,17 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    // Mask endpoint for privacy (just show domain)
-    const maskedSubscriptions = subscriptions.map((sub) => ({
-      ...sub,
-      endpoint: new URL(sub.endpoint).origin,
-    }))
+    // Mask endpoint for privacy (just show domain). A malformed stored endpoint shouldn't
+    // poison the whole response — return an empty origin if it can't be parsed.
+    const maskedSubscriptions = subscriptions.map((sub) => {
+      let origin = ''
+      try {
+        origin = new URL(sub.endpoint).origin
+      } catch {
+        origin = ''
+      }
+      return { ...sub, endpoint: origin }
+    })
 
     return NextResponse.json({ subscriptions: maskedSubscriptions })
   } catch (error) {

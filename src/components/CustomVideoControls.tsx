@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Comment } from '@prisma/client'
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward, Repeat } from 'lucide-react'
 import { getUserColor } from '@/lib/utils'
 import { timecodeToSeconds, timecodeToSeekSeconds, secondsToTimecode, formatCommentTimestamp } from '@/lib/timecode'
 
@@ -25,6 +25,8 @@ interface CustomVideoControlsProps {
   onToggleMute: () => void
   onToggleFullscreen: () => void
   onFrameStep: (direction: 'forward' | 'backward') => void
+  isLooping: boolean
+  onToggleLoop: () => void
   comments?: CommentWithReplies[]
   videoFps?: number
   videoId?: string
@@ -314,6 +316,8 @@ export default function CustomVideoControls({
   onToggleMute,
   onToggleFullscreen,
   onFrameStep,
+  isLooping,
+  onToggleLoop,
   comments = [],
   videoFps = 24,
   videoId = '',
@@ -804,6 +808,17 @@ export default function CustomVideoControls({
               </div>
             )}
           </div>
+
+          {/* Loop */}
+          <button
+            onClick={onToggleLoop}
+            className={`p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation ${isLooping ? 'bg-white/15' : ''}`}
+            aria-label={t('loop')}
+            aria-pressed={isLooping}
+            title={t('loop')}
+          >
+            <Repeat className={`w-4 h-4 sm:w-5 sm:h-5 ${isLooping ? 'text-primary' : 'text-white'}`} />
+          </button>
 
           {/* Fullscreen */}
           <button

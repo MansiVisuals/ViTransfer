@@ -11,10 +11,10 @@ import { getAuthContext } from '@/lib/auth'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 import {
-  DOWNLOAD_CHUNK_SIZE_BYTES,
   STREAM_CHUNK_SIZE_BYTES,
   STREAM_HIGH_WATER_MARK_BYTES,
   parseBoundedRangeHeader,
+  parseDownloadRangeHeader,
 } from '@/lib/transfer-tuning'
 
 
@@ -276,9 +276,10 @@ export async function GET(
         return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
       }
 
-      // Track non-range access before redirecting
+      // Track non-range access fire-and-forget — must not delay the 302 redirect
+      // back to the browser, otherwise the native download dialog stalls.
       if (!isRangeRequest && !isAdminRequest) {
-        await trackVideoAccess({
+        void trackVideoAccess({
           videoId: verifiedToken.videoId,
           projectId: verifiedToken.projectId,
           sessionId,
@@ -353,9 +354,12 @@ export async function GET(
         contentType = isThumbnail ? 'image/jpeg' : getVideoContentType(video.originalFileName || '')
       }
 
-      const trackDownloadOnce = async () => {
+      // Fire-and-forget — must NOT block the first response byte. The browser's
+      // download dialog only appears after Content-Disposition headers are sent,
+      // so any await here would visibly delay the "save as" prompt.
+      const trackDownloadOnce = () => {
         if (!isAdminRequest) {
-          await trackVideoAccess({
+          void trackVideoAccess({
             videoId: verifiedToken.videoId,
             projectId: verifiedToken.projectId,
             sessionId,
@@ -371,7 +375,7 @@ export async function GET(
 
       // If no Range header, stream entire file with 200 so downloads aren't truncated
       if (!range) {
-        await trackDownloadOnce()
+        trackDownloadOnce()
 
         const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
         const readableStream = createWebReadableStream(fileStream)
@@ -390,8 +394,11 @@ export async function GET(
         })
       }
 
-      // If client requested range, serve in 16MB chunks to keep UI responsive
-      const parsedRange = parseBoundedRangeHeader(range || 'bytes=0-', stat.size, DOWNLOAD_CHUNK_SIZE_BYTES)
+      // For downloads, honor the client's range as given. Open-ended
+      // (bytes=0-) means "stream the rest" — capping it forced download
+      // managers into many sequential round-trips through Prisma and
+      // crippled throughput.
+      const parsedRange = parseDownloadRangeHeader(range || 'bytes=0-', stat.size)
       if (!parsedRange) {
         return new NextResponse(null, {
           status: 416,
@@ -402,7 +409,7 @@ export async function GET(
       const chunksize = (end - start) + 1
 
       if (start === 0) {
-        await trackDownloadOnce()
+        trackDownloadOnce()
       }
 
       const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })

@@ -18,7 +18,7 @@
 | `ADMIN_EMAIL` | Yes | Initial admin email | - | `admin@example.com` |
 | `ADMIN_PASSWORD` | Yes | Initial admin password | - | `Admin1234` |
 | `ADMIN_NAME` | No | Initial admin display name | `Admin` | `Jane Doe` |
-| `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens | _none_ | |
+| `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens **and recipient-portal session tokens** (both JWTs are HS256-signed; the `type` claim discriminates between them). | _none_ | |
 | `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
 | `CPU_THREADS` | No | Override CPU thread count used by the worker/FFmpeg | auto-detect | `8` |
 | `DEBUG_WORKER` | No | Enable verbose worker logging | `false` | `true` |

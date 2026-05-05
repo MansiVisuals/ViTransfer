@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Lock, Check, Mail, KeyRound, Download, Loader2 } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
+import { loadPortalSession } from '@/app/portal/portalSession'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageToggle from '@/components/LanguageToggle'
 import { ShareTutorial } from '@/components/ShareTutorial'
@@ -274,6 +275,37 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           }
 
           const data = await response.json()
+
+          // Portal-issued session: exchange for a project-scoped share token, bypassing
+          // password/OTP. Server re-checks recipient membership; the JWT alone is not
+          // authoritative.
+          const portalToken = loadPortalSession()
+          if (portalToken) {
+            try {
+              const claimResponse = await fetch(`/api/share/${token}/portal-claim`, {
+                method: 'POST',
+                cache: 'no-store',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${portalToken}`,
+                  ...getConsentHeader(),
+                },
+              })
+              if (claimResponse.ok) {
+                const claimData = await claimResponse.json()
+                if (claimData.shareToken) {
+                  setShareToken(claimData.shareToken)
+                  saveShareToken(storageKey, claimData.shareToken)
+                  setIsAuthenticated(true)
+                  setIsGuest(false)
+                  return
+                }
+              }
+            } catch {
+              // fall through to normal auth gate
+            }
+          }
+
           if (data.authMode === 'NONE' && data.guestMode) {
             try {
               const guestResponse = await fetch(`/api/share/${token}/guest`, {

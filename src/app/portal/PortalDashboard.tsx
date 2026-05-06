@@ -105,11 +105,11 @@ export default function PortalDashboard({ token, onUnauthorized }: Props) {
                   <h2 className="text-base font-semibold text-foreground truncate">{p.title}</h2>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span
-                      className={
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap border-2 ${
                         p.status === 'IN_REVIEW'
-                          ? 'inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 font-medium'
-                          : 'inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-medium'
-                      }
+                          ? 'bg-primary-visible text-primary border-primary-visible'
+                          : 'bg-success-visible text-success border-success-visible'
+                      }`}
                     >
                       {p.status === 'IN_REVIEW' ? t('statusReview') : t('statusApproved')}
                     </span>

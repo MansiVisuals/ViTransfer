@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
+import { LogOut } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageToggle from '@/components/LanguageToggle'
@@ -25,6 +26,7 @@ export default function PortalClient() {
   const [token, setToken] = useState<string | null>(null)
   const [submittedEmail, setSubmittedEmail] = useState('')
   const [expiredNotice, setExpiredNotice] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const noticeShownRef = useRef(false)
 
   // Initial load: hydrate token from sessionStorage; honor ?expired=1
@@ -42,11 +44,32 @@ export default function PortalClient() {
     }
   }, [searchParams])
 
-  const handleLogout = useCallback(() => {
+  const handleUnauthorized = useCallback(() => {
     savePortalSession(null)
     setToken(null)
     setView('login')
   }, [])
+
+  const handleLogout = useCallback(async () => {
+    if (loggingOut) return
+    setLoggingOut(true)
+    const current = token
+    try {
+      if (current) {
+        await fetch('/api/portal/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${current}` },
+        })
+      }
+    } catch {
+      // ignore — local cleanup happens regardless
+    } finally {
+      savePortalSession(null)
+      setToken(null)
+      setView('login')
+      setLoggingOut(false)
+    }
+  }, [token, loggingOut])
 
   const handleSessionTimeout = useCallback(() => {
     savePortalSession(null)
@@ -74,6 +97,18 @@ export default function PortalClient() {
       <div className="fixed top-3 right-3 z-20 flex items-center gap-2">
         <LanguageToggle />
         <ThemeToggle />
+        {view === 'dashboard' && token && (
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+            aria-label={t('logout')}
+            title={t('logout')}
+          >
+            <LogOut className="h-5 w-5 text-foreground" />
+            <span className="text-xs font-medium text-foreground">{t('logout')}</span>
+          </button>
+        )}
       </div>
 
       <div className="min-h-dvh flex flex-col items-center justify-center p-4 gap-6">
@@ -105,7 +140,7 @@ export default function PortalClient() {
         )}
 
         {view === 'dashboard' && token && (
-          <PortalDashboard token={token} onLogout={handleLogout} />
+          <PortalDashboard token={token} onUnauthorized={handleUnauthorized} />
         )}
       </div>
 

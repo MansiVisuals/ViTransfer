@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, LogOut, Loader2, FolderOpen } from 'lucide-react'
+import { ExternalLink, Loader2, FolderOpen } from 'lucide-react'
 
 interface PortalProject {
   id: string
@@ -17,7 +17,7 @@ interface PortalProject {
 
 interface Props {
   token: string
-  onLogout: () => void
+  onUnauthorized: () => void
 }
 
 function formatDate(value: string | null, locale: string): string {
@@ -33,12 +33,11 @@ function formatDate(value: string | null, locale: string): string {
   }
 }
 
-export default function PortalDashboard({ token, onLogout }: Props) {
+export default function PortalDashboard({ token, onUnauthorized }: Props) {
   const t = useTranslations('portal')
   const tc = useTranslations('common')
   const [projects, setProjects] = useState<PortalProject[] | null>(null)
   const [error, setError] = useState('')
-  const [loggingOut, setLoggingOut] = useState(false)
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en'
 
   const fetchProjects = useCallback(async () => {
@@ -49,7 +48,7 @@ export default function PortalDashboard({ token, onLogout }: Props) {
         cache: 'no-store',
       })
       if (res.status === 401) {
-        onLogout()
+        onUnauthorized()
         return
       }
       if (!res.ok) {
@@ -61,36 +60,15 @@ export default function PortalDashboard({ token, onLogout }: Props) {
     } catch {
       setError(t('failedToLoad'))
     }
-  }, [token, onLogout, t])
+  }, [token, onUnauthorized, t])
 
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
 
-  async function handleLogout() {
-    if (loggingOut) return
-    setLoggingOut(true)
-    try {
-      await fetch('/api/portal/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    } catch {
-      // ignore
-    } finally {
-      onLogout()
-    }
-  }
-
   return (
     <div className="w-full max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">{t('dashboardTitle')}</h1>
-        <Button variant="outline" size="sm" onClick={handleLogout} disabled={loggingOut}>
-          <LogOut className="w-4 h-4" />
-          {t('logout')}
-        </Button>
-      </div>
+      <h1 className="text-2xl font-semibold text-foreground">{t('dashboardTitle')}</h1>
 
       {error && (
         <Card className="bg-card border-destructive/50">

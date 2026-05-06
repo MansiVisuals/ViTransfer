@@ -2276,7 +2276,7 @@
     "checkEmailBody": "We sent a sign-in link to {email}.",
     "checkEmailHint": "The link expires in 5 minutes and can only be used once.",
     "useDifferentEmail": "Use a different email",
-    "dashboardTitle": "My projects",
+    "dashboardTitle": "My Projects",
     "empty": "No projects are shared with this email yet.",
     "statusReview": "Needs your review",
     "statusApproved": "Approved",

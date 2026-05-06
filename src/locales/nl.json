@@ -2201,7 +2201,7 @@
     "checkEmailBody": "We hebben een inloglink gestuurd naar {email}.",
     "checkEmailHint": "De link verloopt over 5 minuten en kan slechts één keer worden gebruikt.",
     "useDifferentEmail": "Ander e-mailadres gebruiken",
-    "dashboardTitle": "Mijn projecten",
+    "dashboardTitle": "Mijn Projecten",
     "empty": "Er zijn nog geen projecten met dit e-mailadres gedeeld.",
     "statusReview": "Wacht op uw beoordeling",
     "statusApproved": "Goedgekeurd",

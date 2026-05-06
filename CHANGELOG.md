@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.1.1] - Unreleased
+
+### Security
+- Hardened video upload storage path generation by always using the validated sanitized filename when building `originalStoragePath`. This closes the remaining CodeQL-reported path-shaping risk in the upload route.
+
 ## [1.1.0] - 2026-05-06
 
 ### Added

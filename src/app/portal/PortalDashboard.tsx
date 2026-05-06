@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, Loader2, FolderOpen } from 'lucide-react'
@@ -36,9 +36,9 @@ function formatDate(value: string | null, locale: string): string {
 export default function PortalDashboard({ token, onUnauthorized }: Props) {
   const t = useTranslations('portal')
   const tc = useTranslations('common')
+  const locale = useLocale()
   const [projects, setProjects] = useState<PortalProject[] | null>(null)
   const [error, setError] = useState('')
-  const locale = typeof navigator !== 'undefined' ? navigator.language : 'en'
 
   const fetchProjects = useCallback(async () => {
     setError('')

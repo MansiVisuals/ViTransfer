@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
-## [1.1.0] - Unreleased
+## [1.1.0] - 2026-05-06
 
 ### Added
 - **Recipient portal at `/portal`** — recipients can sign in with a magic link and see all active projects they are assigned to in one place. From the portal they can open each share page directly. Available in English, Dutch, and German.
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed clean installs on Postgres 18 in all compose variants by setting `PGDATA=/var/lib/postgresql/data/pgdata` in `docker-compose.yml`, `docker-compose.unraid.yml`, and `docker-compose.truenas.yml`. This was needed because newer Postgres 18 images expect the database cluster inside a subfolder of the mounted volume.
 
 ### Changed
-- **"Download All Videos" now downloads each approved video directly instead of creating one server ZIP first.** This makes large downloads start faster and reduces server load.
+- **"Download All Videos" now downloads each approved video directly instead of creating one server ZIP first** ([#60](https://github.com/MansiVisuals/ViTransfer/issues/60)). This makes large downloads start faster and reduces server load.
 - **Asset ZIP downloads now use no-compression mode (`store: true`)** for faster delivery of already-compressed media files.
 - **S3 uploads (browser + worker) are now more resilient and faster** with parallel part uploads, per-part retries, and longer presigned URL validity.
 - **Worker upload memory use is now bounded** for large files instead of buffering full files in memory.

@@ -63,7 +63,7 @@ export function useAssetUploadQueue({
 
   // Add file to queue
   const addToQueue = useCallback((file: File, category: string): string => {
-    const uploadId = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const uploadId = `upload-${crypto.randomUUID()}`
 
     const newUpload: QueuedUpload = {
       id: uploadId,

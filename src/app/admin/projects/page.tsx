@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -11,12 +11,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { FolderKanban, Plus, Video, Eye, Download, EyeOff, RefreshCw, Copy, Check, Mail, AlertCircle } from 'lucide-react'
 import ProjectsList from '@/components/ProjectsList'
+import ProjectsToolbar from '@/components/projects/ProjectsToolbar'
+import ProjectsFilterChips from '@/components/projects/ProjectsFilterChips'
+import ProjectsSavedViews, { type SavedView } from '@/components/projects/ProjectsSavedViews'
 import { apiFetch, apiPost } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
 import { useTranslations } from 'next-intl'
 import { SharePasswordRequirements } from '@/components/SharePasswordRequirements'
 import { ClientSelector } from '@/components/ClientSelector'
 import { generateSecurePassword } from '@/lib/password-utils'
+import type { ViewMode } from '@/components/ViewModeToggle'
+import {
+  applyProjectsQuery,
+  clientLabelFor,
+  clientKeyFor,
+  deserializeFilterState,
+  emptyFilterState,
+  filterStateFromParams,
+  filterStateToParams,
+  getDistinctClients,
+  getDistinctYears,
+  isFilterActive,
+  serializeFilterState,
+  type ProjectListItem,
+  type ProjectsFilterState,
+  type SerializedFilterState,
+} from '@/lib/projects-filter'
 
 interface AnalyticsOverview {
   totalProjects: number
@@ -25,28 +45,49 @@ interface AnalyticsOverview {
   totalDownloads: number
 }
 
+const FILTERS_STORAGE_KEY = 'admin_projects_filters'
+const VIEW_MODE_STORAGE_KEY = 'admin_projects_view'
+
+function loadInitialFilters(searchParams: URLSearchParams): ProjectsFilterState {
+  // URL params take precedence so shareable URLs work
+  const fromUrl = filterStateFromParams(searchParams)
+  if (isFilterActive(fromUrl) || searchParams.has('sort')) return fromUrl
+
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(FILTERS_STORAGE_KEY)
+    if (stored) {
+      try {
+        return deserializeFilterState(JSON.parse(stored) as SerializedFilterState)
+      } catch {
+        // fall through
+      }
+    }
+  }
+  return emptyFilterState()
+}
+
+function loadInitialViewMode(): ViewMode {
+  if (typeof window === 'undefined') return 'grid'
+  const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+  if (stored === 'grid' || stored === 'table') return stored
+  if (stored === 'list') return 'table'
+  return 'grid'
+}
+
 export default function AdminPage() {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
   const router = useRouter()
-  const [projects, setProjects] = useState<any[] | null>(null)
+  const pathname = usePathname()
+
+  const [projects, setProjects] = useState<ProjectListItem[] | null>(null)
   const [analyticsData, setAnalyticsData] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState<Set<string>>(() => {
-    // Load filter from localStorage or use default (all except ARCHIVED)
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('admin_projects_status_filter')
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          return new Set(parsed)
-        } catch {
-          // If parsing fails, use default
-        }
-      }
-    }
-    return new Set(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY'])
-  })
+  const [filters, setFilters] = useState<ProjectsFilterState>(() =>
+    loadInitialFilters(new URLSearchParams(typeof window !== 'undefined' ? window.location.search : ''))
+  )
+  const [savedViews, setSavedViews] = useState<SavedView[]>([])
+  const [viewMode, setViewMode] = useState<ViewMode>(loadInitialViewMode)
 
   // New Project Modal state
   const [showNewProjectModal, setShowNewProjectModal] = useState(false)
@@ -66,12 +107,34 @@ export default function AdminPage() {
   const [recipientEmail, setRecipientEmail] = useState('')
   const [formError, setFormError] = useState('')
 
-  // Save filter to localStorage whenever it changes
+  // Load saved views from API
   useEffect(() => {
-    localStorage.setItem('admin_projects_status_filter', JSON.stringify(Array.from(statusFilter)))
-  }, [statusFilter])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await apiFetch('/api/admin/saved-views')
+        if (!res.ok || cancelled) return
+        const data = await res.json()
+        setSavedViews(data.views || [])
+      } catch {
+        // non-fatal: dashboard works without saved views
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
-  // Check if SMTP is configured
+  // Persist filters to localStorage and sync to URL
+  useEffect(() => {
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(serializeFilterState(filters)))
+    if (!pathname) return
+    const qs = filterStateToParams(filters).toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [filters, pathname, router])
+
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode)
+  }, [viewMode])
+
   async function checkSmtpConfiguration() {
     try {
       const res = await apiFetch('/api/settings')
@@ -86,10 +149,9 @@ export default function AdminPage() {
 
   const loadProjects = async () => {
     try {
-      // Fetch projects and analytics in parallel
       const [projectsRes, analyticsRes] = await Promise.all([
         apiFetch('/api/projects'),
-        apiFetch('/api/analytics')
+        apiFetch('/api/analytics'),
       ])
 
       if (projectsRes.ok) {
@@ -100,9 +162,8 @@ export default function AdminPage() {
       }
 
       if (analyticsRes.ok) {
-        const analyticsData = await analyticsRes.json()
-        const projectsList = analyticsData.projects || []
-        setAnalyticsData(projectsList)
+        const a = await analyticsRes.json()
+        setAnalyticsData(a.projects || [])
       }
     } catch (error) {
       setProjects([])
@@ -116,6 +177,67 @@ export default function AdminPage() {
     checkSmtpConfiguration()
   }, [])
 
+  // Derive options + filtered list
+  const { clientOptions, yearOptions, filteredProjects, clientLabels } = useMemo(() => {
+    const list = projects || []
+    const clientOpts = getDistinctClients(list)
+    const labels: Record<string, string> = {}
+    for (const p of list) {
+      const k = clientKeyFor(p)
+      const l = clientLabelFor(p)
+      if (l) labels[k] = l
+    }
+    return {
+      clientOptions: clientOpts,
+      yearOptions: getDistinctYears(list),
+      filteredProjects: applyProjectsQuery(list, filters),
+      clientLabels: labels,
+    }
+  }, [projects, filters])
+
+  // Saved view handlers — persist to DB
+  const handleSaveView = async (name: string) => {
+    try {
+      const view = await apiPost('/api/admin/saved-views', {
+        name,
+        state: serializeFilterState(filters),
+      })
+      setSavedViews(prev => [...prev, view.view])
+    } catch (err) {
+      logError('Failed to save view:', err)
+    }
+  }
+
+  const handleSelectView = (view: SavedView | null) => {
+    if (!view) {
+      setFilters(emptyFilterState())
+      return
+    }
+    setFilters(deserializeFilterState(view.state))
+  }
+
+  const handleDeleteView = async (id: string) => {
+    // Optimistic remove; on failure, refetch to restore truth
+    setSavedViews(prev => prev.filter(v => v.id !== id))
+    try {
+      const res = await apiFetch(`/api/admin/saved-views/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('delete failed')
+    } catch (err) {
+      logError('Failed to delete view:', err)
+      try {
+        const res = await apiFetch('/api/admin/saved-views')
+        if (res.ok) {
+          const data = await res.json()
+          setSavedViews(data.views || [])
+        }
+      } catch {
+        // give up; user can refresh
+      }
+    }
+  }
+
+  const handleClearAll = () => setFilters(emptyFilterState())
+
   // Password helpers
   function handleGeneratePassword() {
     setSharePassword(generateSecurePassword())
@@ -128,7 +250,6 @@ export default function AdminPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Open new project modal
   function openNewProjectModal() {
     setProjectTitle('')
     setProjectDescription('')
@@ -146,14 +267,12 @@ export default function AdminPage() {
     setShowNewProjectModal(true)
   }
 
-  // Create project
   async function handleCreateProject() {
     if (!projectTitle.trim()) {
       setFormError(t('titleRequired2'))
       return
     }
 
-    // Client-side validation for password modes
     const needsPasswordForMode = passwordProtected && (authMode === 'PASSWORD' || authMode === 'BOTH')
     if (needsPasswordForMode && !sharePassword.trim()) {
       setFormError(t('passwordRequired'))
@@ -169,15 +288,13 @@ export default function AdminPage() {
         authMode: passwordProtected ? authMode : 'NONE',
         isShareOnly: isShareOnly,
       }
-      
-      // Only include optional fields if they have values
+
       if (projectDescription) data.description = projectDescription
       if (companyName) data.companyName = companyName
       if (clientCompanyId) data.clientCompanyId = clientCompanyId
       if (recipientName) data.recipientName = recipientName
       if (recipientEmail) data.recipientEmail = recipientEmail
-      
-      // Only include password for password-based auth modes
+
       if ((authMode === 'PASSWORD' || authMode === 'BOTH') && passwordProtected && sharePassword) {
         data.sharePassword = sharePassword
       }
@@ -200,7 +317,6 @@ export default function AdminPage() {
   const showOTPRecommendation = recipientEmail && smtpConfigured && authMode === 'PASSWORD'
   const needsPassword = authMode === 'PASSWORD' || authMode === 'BOTH'
 
-  // Render new project modal
   function renderNewProjectModal() {
     return (
       <Dialog open={showNewProjectModal} onOpenChange={setShowNewProjectModal}>
@@ -222,7 +338,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Project Title */}
             <div className="space-y-2">
               <Label htmlFor="projectTitle">{t('titleRequired')}</Label>
               <Input
@@ -237,7 +352,6 @@ export default function AdminPage() {
               />
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="projectDescription">{t('descriptionOptional')}</Label>
               <Textarea
@@ -249,7 +363,6 @@ export default function AdminPage() {
               />
             </div>
 
-            {/* Client Selection */}
             <ClientSelector
               companyName={companyName}
               onCompanyChange={(name, id) => {
@@ -263,7 +376,6 @@ export default function AdminPage() {
               disabled={creating}
             />
 
-            {/* Authentication Section */}
             <div className="space-y-4 border rounded-lg p-4 bg-primary-visible border-2 border-primary-visible">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -285,7 +397,6 @@ export default function AdminPage() {
 
               {passwordProtected && (
                 <div className="space-y-3 pt-2 border-t">
-                  {/* Authentication Method */}
                   <div className="space-y-2">
                     <Label>{t('authMethod')}</Label>
                     <Select value={authMode} onValueChange={(v) => setAuthMode(v as 'PASSWORD' | 'OTP' | 'BOTH')}>
@@ -308,7 +419,6 @@ export default function AdminPage() {
                       {authMode === 'BOTH' && t('bothDescription')}
                     </p>
 
-                    {/* Smart Recommendation */}
                     {showOTPRecommendation && (
                       <div className="flex items-start gap-2 p-2 bg-muted border border-border rounded-md">
                         <Mail className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
@@ -351,7 +461,6 @@ export default function AdminPage() {
                     )}
                   </div>
 
-                  {/* Password Field */}
                   {needsPassword && (
                     <div className="space-y-2">
                       <Label htmlFor="sharePassword">{t('sharePassword')}</Label>
@@ -414,7 +523,6 @@ export default function AdminPage() {
               )}
             </div>
 
-            {/* Share Only */}
             <div className="space-y-2 border-t pt-4">
               <div className="flex items-center space-x-2">
                 <input
@@ -451,18 +559,18 @@ export default function AdminPage() {
     )
   }
 
-  // Calculate analytics based on current filter
-  const analytics: AnalyticsOverview | null = analyticsData
-    ? (() => {
-        const filteredAnalytics = analyticsData.filter((p: any) => statusFilter.has(p.status))
-        return {
-          totalProjects: filteredAnalytics.length,
-          totalVideos: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.videoCount || 0), 0),
-          totalVisits: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalVisits || 0), 0),
-          totalDownloads: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalDownloads || 0), 0),
-        }
-      })()
-    : null
+  // Analytics: scope to currently filtered projects
+  const analytics: AnalyticsOverview | null = useMemo(() => {
+    if (!analyticsData) return null
+    const filteredIds = new Set(filteredProjects.map(p => p.id))
+    const filteredAnalytics = analyticsData.filter((p: any) => filteredIds.has(p.id))
+    return {
+      totalProjects: filteredAnalytics.length,
+      totalVideos: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.videoCount || 0), 0),
+      totalVisits: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalVisits || 0), 0),
+      totalDownloads: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalDownloads || 0), 0),
+    }
+  }, [analyticsData, filteredProjects])
 
   const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const metricIconClassName = 'w-4 h-4 text-primary'
@@ -475,7 +583,9 @@ export default function AdminPage() {
     )
   }
 
-  if (!projects || projects.length === 0) {
+  const totalProjects = projects?.length ?? 0
+
+  if (totalProjects === 0) {
     return (
       <div className="flex-1 min-h-0 bg-background">
         <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-6">
@@ -492,7 +602,15 @@ export default function AdminPage() {
               <span className="hidden sm:inline">{t('newProject')}</span>
             </Button>
           </div>
-          <div className="text-muted-foreground">{t('noProjects')}</div>
+          <Card>
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground mb-4">{t('noProjectsYet')}</p>
+              <Button variant="default" size="default" onClick={openNewProjectModal}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('createFirst')}
+              </Button>
+            </div>
+          </Card>
         </div>
         {renderNewProjectModal()}
       </div>
@@ -516,7 +634,6 @@ export default function AdminPage() {
           </Button>
         </div>
 
-        {/* Analytics Overview */}
         {analytics && (
           <Card className="p-3 mb-4">
             <div className="flex flex-wrap items-center gap-6">
@@ -560,10 +677,33 @@ export default function AdminPage() {
           </Card>
         )}
 
-        <ProjectsList 
-          projects={projects} 
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
+        <ProjectsSavedViews
+          views={savedViews}
+          filters={filters}
+          onSelect={handleSelectView}
+          onSave={handleSaveView}
+          onDelete={handleDeleteView}
+        />
+
+        <ProjectsToolbar
+          filters={filters}
+          onChange={setFilters}
+          clientOptions={clientOptions}
+          yearOptions={yearOptions}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+
+        <ProjectsFilterChips
+          filters={filters}
+          onChange={setFilters}
+          clientLabels={clientLabels}
+          onClearAll={handleClearAll}
+        />
+
+        <ProjectsList
+          projects={filteredProjects}
+          viewMode={viewMode}
         />
       </div>
       {renderNewProjectModal()}

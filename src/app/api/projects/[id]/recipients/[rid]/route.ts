@@ -54,7 +54,7 @@ export async function PATCH(
   }
 
   try {
-    const { rid: recipientId } = await params
+    const { id: projectId, rid: recipientId } = await params
     const body = await request.json()
 
     // Validate input
@@ -71,11 +71,18 @@ export async function PATCH(
       )
     }
 
-    // Get current recipient to check if email is changing
-    const currentRecipient = await prisma.projectRecipient.findUnique({
-      where: { id: recipientId },
+    // Verify the recipient belongs to the project in the URL (prevents cross-project IDOR)
+    const currentRecipient = await prisma.projectRecipient.findFirst({
+      where: { id: recipientId, projectId },
       select: { email: true }
     })
+
+    if (!currentRecipient) {
+      return NextResponse.json(
+        { error: recipientMessages.recipientNotFound || 'Recipient not found' },
+        { status: 404 }
+      )
+    }
 
     const recipient = await updateRecipient(recipientId, validation.data)
 
@@ -131,13 +138,20 @@ export async function DELETE(
   }
 
   try {
-    const { rid: recipientId } = await params
+    const { id: projectId, rid: recipientId } = await params
 
-    // Get recipient email BEFORE deletion for session invalidation
-    const recipientToDelete = await prisma.projectRecipient.findUnique({
-      where: { id: recipientId },
+    // Verify the recipient belongs to the project in the URL (prevents cross-project IDOR)
+    const recipientToDelete = await prisma.projectRecipient.findFirst({
+      where: { id: recipientId, projectId },
       select: { email: true }
     })
+
+    if (!recipientToDelete) {
+      return NextResponse.json(
+        { error: recipientMessages.recipientNotFound || 'Recipient not found' },
+        { status: 404 }
+      )
+    }
 
     await deleteRecipient(recipientId)
 

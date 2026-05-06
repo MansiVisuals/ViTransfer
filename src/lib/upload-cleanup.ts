@@ -120,7 +120,7 @@ export async function cleanupIncompleteUploadRecords() {
       },
     })
     if (deletedUploads.count > 0) {
-      console.log(`[Upload Cleanup] Deleted ${deletedUploads.count} incomplete ProjectUpload record(s)`)
+      logMessage(`[Upload Cleanup] Deleted ${deletedUploads.count} incomplete ProjectUpload record(s)`)
     }
   } catch (error) {
     logError('[Upload Cleanup] Error cleaning up incomplete ProjectUpload records:', error)
@@ -134,7 +134,7 @@ export async function cleanupIncompleteUploadRecords() {
       },
     })
     if (deletedAssets.count > 0) {
-      console.log(`[Upload Cleanup] Deleted ${deletedAssets.count} incomplete VideoAsset record(s)`)
+      logMessage(`[Upload Cleanup] Deleted ${deletedAssets.count} incomplete VideoAsset record(s)`)
     }
   } catch (error) {
     logError('[Upload Cleanup] Error cleaning up incomplete VideoAsset records:', error)

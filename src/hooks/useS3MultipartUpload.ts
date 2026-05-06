@@ -4,10 +4,15 @@ import { useRef, useCallback } from 'react'
 import { apiPost } from '@/lib/api-client'
 import { getAccessToken } from '@/lib/token-store'
 
-// Upload 4 parts in parallel for throughput without exhausting connections
+// Upload N parts in parallel via a shared worker pool. Each finished part
+// frees its slot for the next queued part — no straggler-blocks-batch waste.
 const PARALLEL_PARTS = 4
 // Minimum part size required by S3 spec (5 MiB), except for the last part
 const MIN_PART_SIZE = 5 * 1024 * 1024
+// Per-part retry: handles transient 5xx from MinIO/R2/etc. without aborting
+// the whole upload. Backoff: 0.5s → 1.5s → 4.5s.
+const PART_MAX_ATTEMPTS = 3
+const PART_RETRY_BASE_MS = 500
 
 interface PresignResponse {
   uploadId: string
@@ -129,64 +134,131 @@ export function useS3MultipartUpload() {
           bearerToken: bearerToken ?? null,
         })
 
-        // ── 2. Upload parts directly to MinIO ─────────────────────────────────
+        // ── 2. Upload parts directly to S3 ────────────────────────────────────
         const { uploadId, partSize: serverPartSize, parts } = presignRes
         if (!serverPartSize || serverPartSize < MIN_PART_SIZE) {
           throw new Error(`Server returned invalid partSize: ${serverPartSize}`)
         }
         const partSize = serverPartSize
-        const totalParts = parts.length
         const completedParts: Array<{ partNumber: number; etag: string }> = []
-        let bytesUploaded = 0
 
-        // Process parts in batches of PARALLEL_PARTS
-        for (let i = 0; i < totalParts; i += PARALLEL_PARTS) {
-          if (signal.aborted) {
-            await abortUpload(uploadKey)
-            throw new Error('Upload cancelled')
-          }
+        // Per-part progress tracking. `partProgress[partNumber-1]` holds bytes
+        // sent for that part. Sum + clamp gives smooth byte-level progress
+        // even though parts upload in parallel.
+        const partProgress = new Array<number>(parts.length).fill(0)
+        const reportProgress = () => {
+          let sum = 0
+          for (const v of partProgress) sum += v
+          onProgress?.(Math.min(sum, file.size), file.size)
+        }
 
-          // ── Pause gate: block here while paused ───────────────────────────
+        async function waitIfPaused(): Promise<void> {
           const gate = pauseGatesRef.current.get(uploadKey)
-          if (gate) {
-            await gate.promise
-            // Re-check abort after resume
-            if (signal.aborted) {
-              await abortUpload(uploadKey)
-              throw new Error('Upload cancelled')
+          if (gate) await gate.promise
+        }
+
+        function uploadPartWithProgress(
+          url: string,
+          chunk: Blob,
+          partIndex: number
+        ): Promise<string> {
+          return new Promise<string>((resolve, reject) => {
+            const xhr = new XMLHttpRequest()
+            // Tear down on external abort
+            const onAbort = () => xhr.abort()
+            signal.addEventListener('abort', onAbort, { once: true })
+
+            xhr.open('PUT', url, true)
+            xhr.upload.onprogress = (ev) => {
+              if (ev.lengthComputable) {
+                partProgress[partIndex] = ev.loaded
+                reportProgress()
+              }
+            }
+            xhr.onload = () => {
+              signal.removeEventListener('abort', onAbort)
+              if (xhr.status >= 200 && xhr.status < 300) {
+                const etag =
+                  xhr.getResponseHeader('ETag') ?? xhr.getResponseHeader('etag')
+                if (!etag) {
+                  reject(new Error(`Part ${partIndex + 1} returned no ETag`))
+                  return
+                }
+                // On success, lock the part's progress at its full size so
+                // partial-byte XHR reporting can't drift the total.
+                partProgress[partIndex] = chunk.size
+                reportProgress()
+                resolve(etag.replace(/"/g, ''))
+              } else {
+                reject(new Error(`Part ${partIndex + 1} HTTP ${xhr.status}`))
+              }
+            }
+            xhr.onerror = () => {
+              signal.removeEventListener('abort', onAbort)
+              reject(new Error(`Part ${partIndex + 1} network error`))
+            }
+            xhr.onabort = () => {
+              signal.removeEventListener('abort', onAbort)
+              reject(new Error('Upload cancelled'))
+            }
+            xhr.ontimeout = () => {
+              signal.removeEventListener('abort', onAbort)
+              reject(new Error(`Part ${partIndex + 1} timeout`))
+            }
+            xhr.send(chunk)
+          })
+        }
+
+        async function uploadOnePart(partNumber: number, url: string): Promise<void> {
+          const partIndex = partNumber - 1
+          const start = partIndex * partSize
+          const end = Math.min(start + partSize, file.size)
+          const chunk = file.slice(start, end)
+
+          let lastErr: unknown = null
+          for (let attempt = 1; attempt <= PART_MAX_ATTEMPTS; attempt++) {
+            if (signal.aborted) throw new Error('Upload cancelled')
+            await waitIfPaused()
+            if (signal.aborted) throw new Error('Upload cancelled')
+
+            try {
+              // Reset progress at start of each attempt so the bar doesn't
+              // double-count bytes from a failed attempt.
+              partProgress[partIndex] = 0
+              reportProgress()
+
+              const etag = await uploadPartWithProgress(url, chunk, partIndex)
+              completedParts.push({ partNumber, etag })
+              return
+            } catch (err: any) {
+              lastErr = err
+              if (signal.aborted) throw err
+              if (err?.message === 'Upload cancelled') throw err
+              if (attempt < PART_MAX_ATTEMPTS) {
+                const backoff = PART_RETRY_BASE_MS * Math.pow(3, attempt - 1)
+                await new Promise((r) => setTimeout(r, backoff))
+              }
             }
           }
-
-          const batch = parts.slice(i, i + PARALLEL_PARTS)
-
-          const batchResults = await Promise.all(
-            batch.map(async ({ partNumber, url }) => {
-              const start = (partNumber - 1) * partSize
-              const end = Math.min(start + partSize, file.size)
-              const chunk = file.slice(start, end)
-
-              const response = await fetch(url, {
-                method: 'PUT',
-                body: chunk,
-                signal,
-              })
-
-              if (!response.ok) {
-                throw new Error(`Part ${partNumber} upload failed: HTTP ${response.status}`)
-              }
-
-              const etag = response.headers.get('ETag') || response.headers.get('etag')
-              if (!etag) throw new Error(`Part ${partNumber} returned no ETag`)
-
-              bytesUploaded += chunk.size
-              onProgress?.(Math.min(bytesUploaded, file.size), file.size)
-
-              return { partNumber, etag: etag.replace(/"/g, '') }
-            })
-          )
-
-          completedParts.push(...batchResults)
+          throw lastErr instanceof Error ? lastErr : new Error(`Part ${partNumber} failed`)
         }
+
+        // Worker pool: N concurrent workers pull from a shared FIFO queue.
+        // A slow part no longer idles the other workers — they keep dequeuing.
+        const queue = [...parts]
+        async function workerLoop(): Promise<void> {
+          while (queue.length > 0) {
+            const part = queue.shift()
+            if (!part) return
+            await uploadOnePart(part.partNumber, part.url)
+          }
+        }
+
+        const workers = Array.from(
+          { length: Math.min(PARALLEL_PARTS, parts.length) },
+          () => workerLoop()
+        )
+        await Promise.all(workers)
 
         if (signal.aborted) return
 

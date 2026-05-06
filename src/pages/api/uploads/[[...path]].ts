@@ -3,7 +3,7 @@ import { FileStore } from '@tus/file-store'
 import { prisma } from '@/lib/db'
 import { videoQueue, getAssetQueue, getProjectUploadQueue } from '@/lib/queue'
 import { ALL_ALLOWED_EXTENSIONS } from '@/lib/asset-validation'
-import { uploadFile, initStorage } from '@/lib/storage'
+import { initStorage, moveFile } from '@/lib/storage'
 import path from 'path'
 import fs from 'fs'
 import { Readable } from 'stream'
@@ -304,11 +304,12 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
 
   await initStorage()
 
-  const fileStream = (tusServer.datastore as any).read(upload.id)
-
-  await uploadFile(
+  // Move the completed TUS temp file into final storage. In FS mode this is
+  // an O(1) fs.rename when /tmp and STORAGE_ROOT share a filesystem (typical
+  // Docker setup) — much faster than the previous re-streaming copy.
+  await moveFile(
+    tusFilePath,
     video.originalStoragePath,
-    fileStream,
     fileSize,
     upload.metadata?.filetype as string || 'video/mp4'
   )
@@ -332,7 +333,8 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
 
   logMessage(`[UPLOAD] Video ${videoId} queued for worker processing`)
 
-  await cleanupTUSFile(tusFilePath)
+  // moveFile already removed the temp data file; clean the .json sidecar
+  await cleanupTUSMetadata(tusFilePath)
 
   return {}
 }
@@ -354,15 +356,8 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
 
   await initStorage()
 
-  const fileStream = (tusServer.datastore as any).read(upload.id)
-
   const actualFileType = upload.metadata?.filetype as string || 'application/octet-stream'
-  await uploadFile(
-    asset.storagePath,
-    fileStream,
-    fileSize,
-    actualFileType
-  )
+  await moveFile(tusFilePath, asset.storagePath, fileSize, actualFileType)
 
   await prisma.videoAsset.update({
     where: { id: assetId },
@@ -384,7 +379,7 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
 
   logMessage(`[UPLOAD] Asset uploaded and queued for processing: ${assetId}`)
 
-  await cleanupTUSFile(tusFilePath)
+  await cleanupTUSMetadata(tusFilePath)
 
   return {}
 }
@@ -406,10 +401,8 @@ async function handleProjectUploadFinish(tusFilePath: string, upload: any, proje
 
   await initStorage()
 
-  const fileStream = (tusServer.datastore as any).read(upload.id)
   const actualFileType = upload.metadata?.filetype as string || 'application/octet-stream'
-
-  await uploadFile(projectUpload.storagePath, fileStream, fileSize, actualFileType)
+  await moveFile(tusFilePath, projectUpload.storagePath, fileSize, actualFileType)
 
   await prisma.projectUpload.update({
     where: { id: projectUploadId },
@@ -438,7 +431,7 @@ async function handleProjectUploadFinish(tusFilePath: string, upload: any, proje
     uploaderEmail: projectUpload.uploadedByEmail,
   })
 
-  await cleanupTUSFile(tusFilePath)
+  await cleanupTUSMetadata(tusFilePath)
 
   return {}
 }
@@ -501,6 +494,7 @@ async function validateUploadedAssetFile(tusFilePath: string, filename?: string)
 }
 
 async function cleanupTUSFile(tusFilePath: string) {
+  // Used on error paths where the temp file may still exist.
   try {
     if (fs.existsSync(tusFilePath)) {
       fs.unlinkSync(tusFilePath)
@@ -511,6 +505,19 @@ async function cleanupTUSFile(tusFilePath: string) {
     }
   } catch (cleanupErr) {
     logError('[UPLOAD] Failed to cleanup TUS files:', cleanupErr)
+  }
+}
+
+async function cleanupTUSMetadata(tusFilePath: string) {
+  // Used on success paths after moveFile() has already moved/uploaded the
+  // data file. Only the .json sidecar (TUS bookkeeping) remains.
+  try {
+    const metadataPath = `${tusFilePath}.json`
+    if (fs.existsSync(metadataPath)) {
+      fs.unlinkSync(metadataPath)
+    }
+  } catch (cleanupErr) {
+    logError('[UPLOAD] Failed to cleanup TUS metadata:', cleanupErr)
   }
 }
 

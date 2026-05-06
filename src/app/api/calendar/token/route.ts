@@ -24,18 +24,16 @@ export async function GET(request: NextRequest) {
   try {
     const userId = authResult.id
 
-    let calendarToken = await prisma.calendarToken.findUnique({
+    // userId is unique on CalendarToken — upsert closes the race window where two
+    // concurrent requests both pass findUnique and both try to create.
+    const calendarToken = await prisma.calendarToken.upsert({
       where: { userId },
+      create: {
+        userId,
+        token: crypto.randomBytes(32).toString('hex'),
+      },
+      update: {},
     })
-
-    if (!calendarToken) {
-      calendarToken = await prisma.calendarToken.create({
-        data: {
-          userId,
-          token: crypto.randomBytes(32).toString('hex'),
-        },
-      })
-    }
 
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },

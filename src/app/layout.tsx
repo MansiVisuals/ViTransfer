@@ -17,26 +17,50 @@ export const runtime = 'nodejs';
 // Prevent caching to ensure fresh appearance settings on every request
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: "ViTransfer",
-  description: "Professional video review and approval platform",
-  manifest: '/manifest.json',
-  icons: {
-    icon: [
-      { url: '/brand/icon.svg', type: 'image/svg+xml' },
-      { url: '/brand/icon-192.svg', type: 'image/svg+xml', sizes: '192x192' },
-      { url: '/brand/icon-512.svg', type: 'image/svg+xml', sizes: '512x512' },
-    ],
-    apple: [
-      { url: '/brand/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
-    ],
-    shortcut: '/brand/icon.svg',
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'ViTransfer',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  // Resolve the admin's custom favicon (if any). When set, it overrides all
+  // built-in icon entries so the browser uses the operator's branding.
+  // When not set, fall back to the built-in /brand/icon.svg endpoints.
+  let customFavicon: string | null = null
+  try {
+    const row = await prisma.settings.findUnique({
+      where: { id: 'default' },
+      select: { brandingFaviconPath: true },
+    })
+    customFavicon = row?.brandingFaviconPath || null
+  } catch {
+    customFavicon = null
+  }
+
+  const icons: Metadata['icons'] = customFavicon
+    ? {
+        icon: [{ url: customFavicon }],
+        apple: [{ url: customFavicon }],
+        shortcut: customFavicon,
+      }
+    : {
+        icon: [
+          { url: '/brand/icon.svg', type: 'image/svg+xml' },
+          { url: '/brand/icon-192.svg', type: 'image/svg+xml', sizes: '192x192' },
+          { url: '/brand/icon-512.svg', type: 'image/svg+xml', sizes: '512x512' },
+        ],
+        apple: [
+          { url: '/brand/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+        ],
+        shortcut: '/brand/icon.svg',
+      }
+
+  return {
+    title: "ViTransfer",
+    description: "Professional video review and approval platform",
+    manifest: '/manifest.json',
+    icons,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'black-translucent',
+      title: 'ViTransfer',
+    },
+  }
 }
 
 export const viewport = {

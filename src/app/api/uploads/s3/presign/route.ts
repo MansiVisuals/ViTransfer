@@ -18,8 +18,12 @@ export const runtime = 'nodejs'
 const MIN_PART_SIZE = 5 * 1024 * 1024
 // Default part size: 25 MiB
 const DEFAULT_PART_SIZE = 25 * 1024 * 1024
-// Presigned URL expiry: 1 hour per part
-const PART_URL_EXPIRY_SECONDS = 3600
+// Presigned URL expiry per part. 1 h was too short for slow-link uploads of
+// large files (a 50 GB file at 50 Mbps takes ~2 h, so the last parts' URLs
+// would expire mid-upload). 6 h covers the realistic worst case without
+// materially extending the replay window — the upload itself still aborts
+// the moment the server-side upload-id is invalidated.
+const PART_URL_EXPIRY_SECONDS = 6 * 60 * 60
 // Hard limit on upload size (1000 GB)
 const ABSOLUTE_MAX_UPLOAD_SIZE = 1000 * 1024 * 1024 * 1024
 

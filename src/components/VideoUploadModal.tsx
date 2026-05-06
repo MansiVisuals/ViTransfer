@@ -54,6 +54,8 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
   const uploadRefs = useRef<Map<string, tus.Upload>>(new Map())
   // Tracks the S3 upload key per item ID so we can abort them on remove
   const s3UploadKeys = useRef<Map<string, string>>(new Map())
+  // Prevent infinite loops: auto-recover stale resume metadata at most once per item
+  const autoRecoveryAttempted = useRef<Set<string>>(new Set())
 
   // Maximum length for video names (fits comfortably in modal)
   const MAX_VIDEO_NAME_LENGTH = 50
@@ -288,6 +290,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
             onSuccess: () => {
               clearFileContext(file)
               clearUploadMetadata(file)
+              autoRecoveryAttempted.current.delete(id)
               s3UploadKeys.current.delete(id)
               setPendingUploads(prev => prev.map(u =>
                 u.id === id ? { ...u, status: 'completed', progress: 100 } : u
@@ -295,13 +298,53 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
               onUploadComplete(trimmedVideoName, videoId)
             },
             onError: async (err) => {
+              const hasAutoRecoveryAttempted = autoRecoveryAttempted.current.has(id)
+              const staleResumeError =
+                canResumeExisting &&
+                (err.message.includes('Video record not found') ||
+                  err.message.includes('Video is not in UPLOADING state') ||
+                  err.message.includes('Video is no longer in UPLOADING state'))
+
+              if (staleResumeError) {
+                clearUploadMetadata(file)
+                clearTUSFingerprint(file)
+
+                if (!hasAutoRecoveryAttempted) {
+                  autoRecoveryAttempted.current.add(id)
+                  s3UploadKeys.current.delete(id)
+                  setPendingUploads(prev => prev.map(u =>
+                    u.id === id
+                      ? {
+                        ...u,
+                        status: 'uploading',
+                        progress: 0,
+                        speed: 0,
+                        error: undefined,
+                        videoId: undefined,
+                        paused: false,
+                      }
+                      : u
+                  ))
+                  // Retry immediately with fresh metadata so a new video record is created.
+                  void startUpload(uploadItem)
+                  return
+                }
+              }
+
               if (createdVideoRecord) {
                 try { await apiDelete(`/api/videos/${videoId}`) } catch {}
                 clearUploadMetadata(file)
+                clearTUSFingerprint(file)
               }
               s3UploadKeys.current.delete(id)
               setPendingUploads(prev => prev.map(u =>
-                u.id === id ? { ...u, status: 'error', error: err.message } : u
+                u.id === id
+                  ? {
+                    ...u,
+                    status: 'error',
+                    error: staleResumeError ? t('uploadExpired') : err.message,
+                  }
+                  : u
               ))
             },
           },
@@ -365,6 +408,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
           clearFileContext(file)
           clearUploadMetadata(file)
           clearTUSFingerprint(file)
+          autoRecoveryAttempted.current.delete(id)
           resetTusAuthRetry(tusRef.current)
           uploadRefs.current.delete(id)
 
@@ -378,12 +422,37 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
 
         onError: async (error) => {
           let errorMessage = getTusUploadErrorMessage(error)
+          const hasAutoRecoveryAttempted = autoRecoveryAttempted.current.has(id)
 
           const statusCode = (error as any)?.originalResponse?.getStatus?.()
+          const staleResumeError = canResumeExisting && (statusCode === 404 || statusCode === 410)
 
-          if (canResumeExisting && (statusCode === 404 || statusCode === 410)) {
+          if (staleResumeError) {
             clearUploadMetadata(file)
             clearTUSFingerprint(file)
+
+            if (!hasAutoRecoveryAttempted) {
+              autoRecoveryAttempted.current.add(id)
+              resetTusAuthRetry(tusRef.current)
+              uploadRefs.current.delete(id)
+              setPendingUploads(prev => prev.map(u =>
+                u.id === id
+                  ? {
+                    ...u,
+                    status: 'uploading',
+                    progress: 0,
+                    speed: 0,
+                    error: undefined,
+                    videoId: undefined,
+                    paused: false,
+                  }
+                  : u
+              ))
+              // Retry immediately with fresh metadata so a new video record is created.
+              void startUpload(uploadItem)
+              return
+            }
+
             errorMessage = t('uploadExpired')
           } else if (createdVideoRecord && videoId) {
             try {
@@ -461,6 +530,7 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
   const handleRetry = (id: string) => {
     const item = pendingUploads.find(u => u.id === id)
     if (item) {
+      autoRecoveryAttempted.current.delete(id)
       startUpload(item)
     }
   }

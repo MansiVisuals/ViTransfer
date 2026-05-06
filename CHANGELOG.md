@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.1.0] - 2026-05-06
+
+### Added
+- **Recipient portal at `/portal`** — recipients can sign in with a magic link and see all active projects they are assigned to in one place. From the portal they can open each share page directly. Available in English, Dutch, and German.
+- **Custom favicon upload** ([#66](https://github.com/MansiVisuals/ViTransfer/issues/66)) — admins can upload a favicon (SVG/PNG/ICO, up to 100 KB) from Settings → Branding so browser tabs use their own icon across login, admin, and share pages.
+- **Loop playback toggle in the video player** ([#68](https://github.com/MansiVisuals/ViTransfer/issues/68)) — clients can now loop preview playback with a dedicated control in the player.
+- **New Projects Dashboard filters + saved views** ([#70](https://github.com/MansiVisuals/ViTransfer/issues/70)) — added search, multi-select filters (status, client, year, due date), clearer sort options, removable filter chips, and saved views per user. Filter state is also reflected in the URL, so filtered dashboard links can be shared.
+
+### Fixed
+- Fixed failed upload retries that could get stuck with "Video record not found" by automatically resetting stale local upload state and retrying once.
+- Fixed a recipient-edit/delete access-control bug where records could be edited across projects using a mismatched URL.
+- Fixed race conditions in several admin endpoints that could create duplicate default rows under concurrent requests.
+- Fixed a video approval race that could temporarily leave more than one version approved.
+- Fixed a guest-auth loop edge case that could repeatedly re-trigger project loading.
+- Fixed an OTP timing difference that could be used to guess whether an email is registered.
+- Fixed push subscription listing so one malformed endpoint no longer crashes the full response.
+- Fixed delayed download starts by sending file responses immediately instead of waiting on analytics work first.
+- Fixed admin downloads of client-uploaded files so large files stream directly to the browser save dialog (instead of buffering first).
+- Fixed download speed problems for range-based download clients (`curl`, `wget`, download managers) in filesystem mode.
+- Fixed clean installs on Postgres 18 in all compose variants by setting `PGDATA=/var/lib/postgresql/data/pgdata` in `docker-compose.yml`, `docker-compose.unraid.yml`, and `docker-compose.truenas.yml`. This was needed because newer Postgres 18 images expect the database cluster inside a subfolder of the mounted volume.
+
+### Changed
+- **"Download All Videos" now downloads each approved video directly instead of creating one server ZIP first** ([#60](https://github.com/MansiVisuals/ViTransfer/issues/60)). This makes large downloads start faster and reduces server load.
+- **Asset ZIP downloads now use no-compression mode (`store: true`)** for faster delivery of already-compressed media files.
+- **S3 uploads (browser + worker) are now more resilient and faster** with parallel part uploads, per-part retries, and longer presigned URL validity.
+- **Worker upload memory use is now bounded** for large files instead of buffering full files in memory.
+- **Finalizing TUS uploads in local-storage mode is faster** by moving files directly when possible.
+- **Filesystem download streaming was tuned** to improve throughput while keeping memory usage stable under load.
+
+### Security
+- Added metadata-service SSRF protection for outbound notification URLs.
+- Added missing rate limits to several admin routes and to OTP send requests, reducing abuse risk.
+- Replaced weak random upload ID fallbacks with cryptographically secure IDs in the browser.
+
+### Updated
+- npm dependencies bumped within their semver ranges (this also satisfies Dependabot PR [#69](https://github.com/MansiVisuals/ViTransfer/pull/69) by transitively pulling in `fast-xml-parser` 5.7.2 and dropping the orphaned `uuid` dep):
+  - `@aws-sdk/client-s3` 3.1030.0 → 3.1041.0, `@aws-sdk/s3-request-presigner` 3.1030.0 → 3.1041.0
+  - `@tus/file-store` 2.0.0 → 2.1.0 (note: `@tus/server` remains pinned to `2.0.0` — newer versions transitively depend on a vulnerable `srvx < 0.11.13` per advisory [GHSA-p36q-q72m-gchr](https://github.com/advisories/GHSA-p36q-q72m-gchr); the pin remains load-bearing until upstream updates its `srvx` range)
+  - `bullmq` 5.74.1 → 5.76.5
+  - `isomorphic-dompurify` 3.9.0 → 3.12.0
+  - `next-intl` 4.9.1 → 4.11.0
+  - `nodemailer` 8.0.5 → 8.0.7
+  - `postcss` 8.5.10 → 8.5.13
+
 ## [1.0.2] - 2026-04-16
 
 ### Fixed

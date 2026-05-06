@@ -96,6 +96,7 @@ export default function VideoPlayer({
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isLooping, setIsLooping] = useState(false)
   const [showControls, setShowControls] = useState(true)
 
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -568,6 +569,10 @@ export default function VideoPlayer({
     }
   }
 
+  const handleToggleLoop = () => {
+    setIsLooping(prev => !prev)
+  }
+
   const handleToggleFullscreen = () => {
     if (!containerRef.current || !videoRef.current) return
 
@@ -878,6 +883,7 @@ export default function VideoPlayer({
                 onClick={isDrawingMode ? undefined : handlePlayPause}
                 crossOrigin="anonymous"
                 playsInline
+                loop={isLooping}
                 preload="metadata"
                 // @ts-ignore - webkit attributes for iOS
                 webkit-playsinline="true"
@@ -943,6 +949,8 @@ export default function VideoPlayer({
                     onToggleMute={handleToggleMute}
                     onToggleFullscreen={handleToggleFullscreen}
                     onFrameStep={handleFrameStep}
+                    isLooping={isLooping}
+                    onToggleLoop={handleToggleLoop}
                     comments={comments}
                     videoFps={selectedVideo?.fps || 24}
                     videoId={selectedVideo?.id}

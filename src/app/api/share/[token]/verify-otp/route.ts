@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { verifyOTP, verifyRecipientEmail } from '@/lib/otp'
+import { verifyOTP } from '@/lib/otp'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
 import { getMaxAuthAttempts } from '@/lib/settings'
 import { getRedis } from '@/lib/redis'
-import { signShareToken } from '@/lib/auth'
+import { signShareToken, verifyShareToken } from '@/lib/auth'
 import { getShareTokenTtlSeconds } from '@/lib/settings'
 import { trackSharePageAccess, readAnalyticsConsent } from '@/lib/share-access-tracking'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { safeParseBody } from '@/lib/validation'
 import crypto from 'crypto'
-import jwt from 'jsonwebtoken'
 import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
@@ -151,18 +150,11 @@ export async function POST(
       )
     }
 
-    // Verify email is a project recipient
-    const isRecipient = await verifyRecipientEmail(email, project.id)
-    if (!isRecipient) {
-      // SECURITY: Don't reveal if email is valid - return generic error
-      // This prevents email enumeration attacks
-      return NextResponse.json(
-        { error: shareMessages.invalidCode || 'Invalid or expired code' },
-        { status: 403 }
-      )
-    }
-
-    // Verify OTP
+    // Verify OTP directly — no recipient pre-check.
+    // verifyOTP looks up (projectId, emailHash) in Redis; if the email isn't a recipient,
+    // no OTP entry exists and verifyOTP returns the same generic 'Invalid or expired code'
+    // with no side effects. Skipping the pre-check eliminates the timing oracle that
+    // distinguished "non-recipient" (instant) from "recipient" (Redis round-trip).
     const result = await verifyOTP(email, project.id, code)
 
     if (!result.success) {
@@ -282,7 +274,7 @@ export async function POST(
     })
 
     // Track share page access for analytics (GDPR: respect consent header)
-    const shareTokenPayload = jwt.decode(shareToken) as any
+    const shareTokenPayload = await verifyShareToken(shareToken)
     if (shareTokenPayload?.sessionId) {
       await trackSharePageAccess({
         projectId: project.id,

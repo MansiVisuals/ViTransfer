@@ -18,7 +18,7 @@
 | `ADMIN_EMAIL` | Yes | Initial admin email | - | `admin@example.com` |
 | `ADMIN_PASSWORD` | Yes | Initial admin password | - | `Admin1234` |
 | `ADMIN_NAME` | No | Initial admin display name | `Admin` | `Jane Doe` |
-| `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens | _none_ | |
+| `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens **and recipient-portal session tokens** (both JWTs are HS256-signed; the `type` claim discriminates between them). | _none_ | |
 | `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
 | `CPU_THREADS` | No | Override CPU thread count used by the worker/FFmpeg | auto-detect | `8` |
 | `DEBUG_WORKER` | No | Enable verbose worker logging | `false` | `true` |
@@ -29,6 +29,9 @@
 | `S3_REGION` | When `STORAGE_PROVIDER=s3` | AWS region or any value for region-agnostic stores | `us-east-1` | `us-east-1` |
 | `S3_ACCESS_KEY_ID` | When `STORAGE_PROVIDER=s3` | Access key ID | — | |
 | `S3_SECRET_ACCESS_KEY` | When `STORAGE_PROVIDER=s3` | Secret access key | — | |
+| `S3_SERVER_MULTIPART_CONCURRENCY` | No | Concurrent multipart parts when the worker uploads transcoded outputs to S3. Range 1–16. | `4` | `8` |
+| `TRANSFER_STREAM_HWM_MB` | No | Per-transfer Node read buffer for FS streaming (downloads + video player). Memory per active transfer is roughly this value. Range 1–64 MiB. | `16` | `32` |
+| `TRANSFER_STREAM_CHUNK_MB` | No | Cap on a single video-player Range request. Smaller = snappier seeks, larger = fewer round-trips. Does not apply to direct downloads. Range 1–64 MiB. | `4` | `8` |
 
 ### Notes
 - Use `openssl rand -hex 32` for database passwords (URL-safe).
@@ -166,6 +169,47 @@ Detected threads: 8
  → Max 4/8 threads in use (~50%)
  → Remaining threads available for the web app, database, and uploads
 ```
+
+---
+
+## Transfer tuning
+
+Three optional environment variables control upload/download throughput and memory use. The defaults are tuned for a modern dedicated server and don't need adjustment in most setups. Tweak only if you're chasing throughput on a fast LAN, or trimming memory on a small VPS.
+
+### `TRANSFER_STREAM_HWM_MB` (default `16`)
+
+Per-transfer read buffer used when streaming files from local storage (downloads and the video player). Memory consumed per active transfer is roughly this value × the number of concurrent transfers.
+
+- **Default `16`** is fine for any server with ≥ 4 GB RAM.
+- **Raise to `32` or `64`** on a beefy server (e.g. ≥ 16 GB RAM, fast disk) for slightly higher per-transfer throughput.
+- **Lower to `4` or `8`** if you're memory-constrained and/or expect many concurrent downloads.
+- Range: 1–64 MiB.
+
+### `TRANSFER_STREAM_CHUNK_MB` (default `4`)
+
+Cap on a single video-player Range request. The HTML5 player issues many small Range requests as the user seeks; this cap keeps the UI responsive on seek and prevents a single tab from hogging server I/O. Does **not** apply to direct downloads — those serve the full file.
+
+- **Default `4`** matches typical browser HTML5-video range behavior.
+- **Raise to `8` or `16`** if your players are doing long sequential reads (e.g. preview-only streaming with no seeking).
+- Range: 1–64 MiB.
+
+### `S3_SERVER_MULTIPART_CONCURRENCY` (default `4`)
+
+Number of concurrent multipart parts the worker uploads in parallel when shipping transcoded outputs back to your S3 store. Only relevant in S3 mode.
+
+- **Default `4`** is conservative and works well on most networks.
+- **Raise to `8` or `12`** on a fast LAN to MinIO/Ceph for noticeably faster post-transcode uploads.
+- **Lower to `2`** if your S3 endpoint is rate-limited or shared with many tenants.
+- Range: 1–16.
+
+### Recommended profiles
+
+| Server profile | `TRANSFER_STREAM_HWM_MB` | `S3_SERVER_MULTIPART_CONCURRENCY` |
+|---|---|---|
+| Small VPS (2 GB RAM) | `4` | `2` |
+| Default (4–16 GB RAM) | `16` (default) | `4` (default) |
+| Dedicated server (≥ 32 GB RAM, fast LAN) | `32` | `8`–`12` |
+| Cloud (S3 over the public internet) | `16` (default) | `4`–`8` |
 
 ---
 Navigation: [Home](Home) | [Features](Features) | [Installation](Installation) | [Platform Guides](Platform-Guides) | [Configuration](Configuration) | [Admin Settings](Admin-Settings) | [Usage Guide](Usage-Guide) | [Client Guide](Client-Guide) | [Security](Security) | [Maintenance](Maintenance) | [Troubleshooting](Troubleshooting) | [Screenshots](Screenshots) | [Contributing](Contributing) | [License](License)

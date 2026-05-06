@@ -78,6 +78,41 @@ export const urlSchema = z
   .url('Invalid URL format')
   .max(2048, 'URL too long')
 
+// Cloud-metadata / link-local hosts that are NEVER a legitimate notification target.
+// Self-hosted private-network destinations (10.x, 192.168.x, etc.) remain allowed by design —
+// users routinely run Gotify/NTFY on the same LAN as the app. This list only blocks endpoints
+// where the only realistic intent is SSRF against cloud instance-metadata services.
+const SSRF_DENY_HOSTS = new Set([
+  '169.254.169.254',
+  '[fd00:ec2::254]',
+  'fd00:ec2::254',
+  'metadata.google.internal',
+  'metadata.goog',
+  'metadata',
+])
+
+function isMetadataServiceHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  return SSRF_DENY_HOSTS.has(h)
+}
+
+// URL schema for outbound notification destinations: format-validated AND blocks
+// cloud-metadata hosts that have no legitimate notification use case.
+export const notificationUrlSchema = urlSchema
+  .refine(
+    (val) => {
+      try {
+        const u = new URL(val)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+        if (isMetadataServiceHost(u.hostname)) return false
+        return true
+      } catch {
+        return false
+      }
+    },
+    { message: 'URL must be http(s) and not point to a cloud metadata service' }
+  )
+
 // ============================================================================
 // NOTIFICATION SCHEMAS (External providers via worker)
 // ============================================================================
@@ -100,7 +135,7 @@ const gotifyDestinationSchema = z.object({
   name: safeStringSchema(1, 100),
   enabled: z.boolean().optional(),
   config: z.object({
-    baseUrl: urlSchema,
+    baseUrl: notificationUrlSchema,
   }),
   secrets: z.object({
     appToken: notificationSecretSchema,
@@ -113,7 +148,7 @@ const ntfyDestinationSchema = z.object({
   name: safeStringSchema(1, 100),
   enabled: z.boolean().optional(),
   config: z.object({
-    serverUrl: urlSchema.optional().or(z.literal('')),
+    serverUrl: notificationUrlSchema.optional().or(z.literal('')),
     topic: z.string().min(1).max(128).trim(),
   }),
   secrets: z.object({
@@ -444,6 +479,30 @@ export async function safeParseBody(
     }
   }
 }
+
+// Saved-view state for the admin Projects Dashboard.
+// Mirrors SerializedFilterState from src/lib/projects-filter.ts; kept in lockstep.
+export const savedViewStateSchema = z.object({
+  q: z.string().max(200),
+  statuses: z.array(z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED'])).max(8),
+  clientKeys: z.array(z.string().max(200)).max(500),
+  years: z.array(z.string().regex(/^\d{4}$/)).max(50),
+  dueBuckets: z.array(z.enum(['overdue', 'thisWeek', 'thisMonth', 'later', 'none'])).max(8),
+  sort: z.enum([
+    'updatedDesc',
+    'createdDesc',
+    'createdAsc',
+    'dueAsc',
+    'titleAsc',
+    'titleDesc',
+    'statusPriority',
+  ]),
+})
+
+export const createSavedViewSchema = z.object({
+  name: safeStringSchema(1, 100),
+  state: savedViewStateSchema,
+})
 
 /**
  * Validate request data against a schema

@@ -13,6 +13,7 @@ import {
 } from '@/lib/otp'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
+import { rateLimit } from '@/lib/rate-limit'
 import { enqueueExternalNotification } from '@/lib/external-notifications/enqueueExternalNotification'
 import { isSmtpConfigured } from '@/lib/settings'
 import { getAppUrl } from '@/lib/url'
@@ -35,6 +36,18 @@ export async function POST(
   const notificationsText = messages?.notificationsText || {}
 
     const { token } = await params
+
+    // Network-layer rate limit by IP. The per-(email, project) limit in checkOTPRateLimit
+    // only counts requests that pass recipient verification, so it does NOT throttle
+    // attackers spamming non-recipient emails — which still triggers admin
+    // "unauthorized OTP request" notifications. This catches that.
+    const ipRateLimitResult = await rateLimit(request, {
+      windowMs: 15 * 60 * 1000,
+      maxRequests: 10,
+      message: shareMessages.tooManyRequests || 'Too many requests. Please try again later.'
+    }, 'share-send-otp-ip')
+    if (ipRateLimitResult) return ipRateLimitResult
+
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
     const { email } = parsed.data

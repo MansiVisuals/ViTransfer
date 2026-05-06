@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { invalidateBlocklistCache } from '@/lib/video-access'
+import { rateLimit } from '@/lib/rate-limit'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
@@ -24,6 +25,13 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
+
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    message: settingsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
+  }, 'blocklist-ips-read', authResult.id)
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const blockedIPs = await prisma.blockedIP.findMany({
@@ -58,6 +66,13 @@ export async function POST(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
+
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: settingsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
+  }, 'blocklist-ips-create', authResult.id)
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const body = await request.json()
@@ -130,6 +145,13 @@ export async function DELETE(request: NextRequest) {
   if (authResult instanceof Response) {
     return authResult
   }
+
+  const rateLimitResult = await rateLimit(request, {
+    windowMs: 60 * 1000,
+    maxRequests: 20,
+    message: settingsMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
+  }, 'blocklist-ips-delete', authResult.id)
+  if (rateLimitResult) return rateLimitResult
 
   try {
     const body = await request.json()

@@ -76,8 +76,13 @@ function formatS3Error(operation: string, key: string, err: unknown): Error {
 }
 
 /** Upload a buffer or stream — used by the worker for processed outputs.
- * For files >= 100MB, uses multipart upload to avoid request size limits.
- * Aligns with presign endpoint which uses 25MB default chunks.
+ * For files >= 100MB (or unknown-size streams), uses parallel multipart
+ * upload. Smaller buffers go via a single PUT. Streams of unknown size are
+ * always multipart so we never have to buffer the whole file in RAM.
+ *
+ * The previous implementation peeked at the stream and concat'd every chunk
+ * into a Buffer before deciding — that's a memory bomb on multi-GB transcoded
+ * outputs and a hard cap on what the worker can ship.
  */
 export async function s3UploadFile(
   key: string,
@@ -85,78 +90,63 @@ export async function s3UploadFile(
   contentType: string = 'application/octet-stream',
   size?: number
 ): Promise<void> {
-  // Use multipart upload for files >= 100MB
-  const MULTIPART_THRESHOLD = 100 * 1024 * 1024 // 100MB
-  const PART_SIZE = 25 * 1024 * 1024 // 25MB per part (matches presign endpoint)
+  const MULTIPART_THRESHOLD = 100 * 1024 * 1024
+  const PART_SIZE = 25 * 1024 * 1024
 
-  // If size is provided and exceeds threshold, use multipart
-  if (size !== undefined && size >= MULTIPART_THRESHOLD) {
-    return s3UploadFileMultipart(key, body, contentType, size, PART_SIZE)
+  // Buffer input
+  if (Buffer.isBuffer(body)) {
+    if (body.length >= MULTIPART_THRESHOLD) {
+      return s3UploadFileMultipart(key, body, contentType, body.length, PART_SIZE)
+    }
+    try {
+      await getS3Client().send(
+        new PutObjectCommand({ Bucket: getS3Bucket(), Key: key, Body: body, ContentType: contentType })
+      )
+    } catch (err) {
+      throw formatS3Error('PUT', key, err)
+    }
+    return
   }
 
-  // For unknown size streams, detect by reading first chunk
-  if (size === undefined && body instanceof Readable) {
-    // Peek at stream to detect if it's large enough for multipart
-    const chunks: Buffer[] = []
-    let totalSize = 0
-    let readable = body
-    const PART_SIZE = 25 * 1024 * 1024 // 25MB per part (matches presign endpoint)
-
-    // Try to determine size from stream before committing to single PUT
-    return new Promise((resolve, reject) => {
-      let uploadedUsingMultipart = false
-
-      readable.on('data', async (chunk: Buffer) => {
-        chunks.push(chunk)
-        totalSize += chunk.length
-
-        // Switch to multipart mid-stream if size exceeds threshold
-        if (!uploadedUsingMultipart && totalSize >= MULTIPART_THRESHOLD) {
-          uploadedUsingMultipart = true
-          readable.pause()
-
-          try {
-            const bufferBody = Buffer.concat(chunks)
-            const uploadStream = Readable.from([bufferBody, readable])
-            await s3UploadFileMultipart(key, uploadStream, contentType, totalSize, PART_SIZE)
-            resolve()
-          } catch (err) {
-            reject(formatS3Error('PUT', key, err))
-          }
-        }
-      })
-
-      readable.on('end', async () => {
-        if (!uploadedUsingMultipart) {
-          try {
-            const bufferBody = Buffer.concat(chunks)
-            await getS3Client().send(
-              new PutObjectCommand({ Bucket: getS3Bucket(), Key: key, Body: bufferBody, ContentType: contentType })
-            )
-            resolve()
-          } catch (err) {
-            reject(formatS3Error('PUT', key, err))
-          }
-        }
-      })
-
-      readable.on('error', (err) => {
-        reject(formatS3Error('PUT', key, err))
-      })
-    })
+  // Stream input
+  // Known size and below threshold → single PUT (SDK handles streaming the body)
+  if (size !== undefined && size < MULTIPART_THRESHOLD) {
+    try {
+      await getS3Client().send(
+        new PutObjectCommand({
+          Bucket: getS3Bucket(),
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+          ContentLength: size,
+        })
+      )
+    } catch (err) {
+      throw formatS3Error('PUT', key, err)
+    }
+    return
   }
 
-  // Buffer or sized stream under threshold: use single PUT
-  try {
-    await getS3Client().send(
-      new PutObjectCommand({ Bucket: getS3Bucket(), Key: key, Body: body, ContentType: contentType })
-    )
-  } catch (err) {
-    throw formatS3Error('PUT', key, err)
-  }
+  // Known-large or unknown-size stream → multipart, streaming chunk-by-chunk.
+  // No upfront buffering; memory use stays bounded to ~PART_SIZE × concurrency.
+  return s3UploadFileMultipart(key, body, contentType, size ?? 0, PART_SIZE)
 }
 
-/** Upload a file using multipart upload. Internal helper for large files. */
+const SERVER_MULTIPART_CONCURRENCY = (() => {
+  const v = Number(process.env.S3_SERVER_MULTIPART_CONCURRENCY)
+  return Number.isFinite(v) && v >= 1 && v <= 16 ? Math.floor(v) : 4
+})()
+
+/** Upload a file using multipart upload. Internal helper for large files.
+ *
+ * For Buffer input: slices into part-sized chunks and uploads them in
+ * parallel via a worker pool (was sequential — could be 4× slower on fast
+ * links to MinIO).
+ *
+ * For Readable input: reads chunks of partSize off the stream and queues
+ * them for parallel upload. We can't slice the stream up-front so we read
+ * sequentially but upload concurrently — `inFlight` slots gate memory use.
+ */
 async function s3UploadFileMultipart(
   key: string,
   body: Readable | Buffer,
@@ -165,61 +155,89 @@ async function s3UploadFileMultipart(
   partSize: number = 25 * 1024 * 1024 // 25MB default (matches presign endpoint)
 ): Promise<void> {
   let uploadId: string | undefined
+  const completedParts: CompletedPart[] = []
+
+  async function uploadPart(partNumber: number, chunk: Buffer): Promise<void> {
+    const res = await getS3Client().send(
+      new UploadPartCommand({
+        Bucket: getS3Bucket(),
+        Key: key,
+        UploadId: uploadId!,
+        PartNumber: partNumber,
+        Body: chunk,
+      })
+    )
+    if (!res.ETag) throw new Error(`Missing ETag for part ${partNumber}`)
+    completedParts.push({ ETag: res.ETag, PartNumber: partNumber })
+  }
 
   try {
-    // Initiate multipart upload - reuse existing exported function
     uploadId = await s3InitiateMultipartUpload(key, contentType)
 
-    const parts: CompletedPart[] = []
-    const bodyBuffer = Buffer.isBuffer(body) ? body : await streamToBuffer(body)
+    if (Buffer.isBuffer(body)) {
+      // Pre-known size — slice into part chunks and parallelise.
+      const partCount = Math.ceil(body.length / partSize)
+      let nextPart = 1
+      const queue = Array.from({ length: partCount }, (_, i) => i + 1)
 
-    // Upload parts
-    let offset = 0
-    let partNumber = 1
-    while (offset < bodyBuffer.length) {
-      const end = Math.min(offset + partSize, bodyBuffer.length)
-      const chunk = bodyBuffer.subarray(offset, end)
-
-      const uploadRes = await getS3Client().send(
-        new UploadPartCommand({
-          Bucket: getS3Bucket(),
-          Key: key,
-          UploadId: uploadId,
-          PartNumber: partNumber,
-          Body: chunk,
-        })
+      const workers = Array.from(
+        { length: Math.min(SERVER_MULTIPART_CONCURRENCY, partCount) },
+        async () => {
+          while (queue.length > 0) {
+            const partNumber = queue.shift()!
+            const offset = (partNumber - 1) * partSize
+            const end = Math.min(offset + partSize, body.length)
+            await uploadPart(partNumber, body.subarray(offset, end))
+          }
+        }
       )
+      void nextPart
+      await Promise.all(workers)
+    } else {
+      // Stream input — read part-sized chunks sequentially, then dispatch
+      // each to one of N concurrent upload slots so we don't hold more than
+      // SERVER_MULTIPART_CONCURRENCY parts in RAM at a time.
+      let partNumber = 1
+      const inFlight = new Set<Promise<void>>()
+      let pending: Buffer[] = []
+      let pendingSize = 0
 
-      if (!uploadRes.ETag) throw new Error(`Missing ETag for part ${partNumber}`)
-      parts.push({ ETag: uploadRes.ETag, PartNumber: partNumber })
+      const flushPart = async () => {
+        const partBody = pending.length === 1 ? pending[0] : Buffer.concat(pending, pendingSize)
+        pending = []
+        pendingSize = 0
+        const myPart = partNumber++
+        // Throttle: if we already have N parts in flight, wait for one.
+        while (inFlight.size >= SERVER_MULTIPART_CONCURRENCY) {
+          await Promise.race(inFlight)
+        }
+        const promise = uploadPart(myPart, partBody).finally(() => inFlight.delete(promise))
+        inFlight.add(promise)
+      }
 
-      offset = end
-      partNumber++
+      for await (const chunk of body) {
+        const buf: Buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+        pending.push(buf)
+        pendingSize += buf.length
+        if (pendingSize >= partSize) {
+          await flushPart()
+        }
+      }
+      if (pendingSize > 0) {
+        await flushPart()
+      }
+      await Promise.all(inFlight)
     }
 
-    // Complete multipart upload - reuse existing exported function
-    await s3CompleteMultipartUpload(key, uploadId, parts)
+    // CompleteMultipartUpload requires PartNumber-ordered parts.
+    completedParts.sort((a, b) => (a.PartNumber ?? 0) - (b.PartNumber ?? 0))
+    await s3CompleteMultipartUpload(key, uploadId, completedParts)
   } catch (err) {
-    // Abort multipart upload on error to free storage - reuse existing exported function
     if (uploadId) {
-      try {
-        await s3AbortMultipartUpload(key, uploadId)
-      } catch {
-        // Ignore abort errors
-      }
+      try { await s3AbortMultipartUpload(key, uploadId) } catch { /* swallow abort errors */ }
     }
     throw formatS3Error('PUT', key, err)
   }
-}
-
-/** Convert a readable stream to a buffer. */
-async function streamToBuffer(stream: Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    stream.on('data', (chunk) => chunks.push(chunk))
-    stream.on('end', () => resolve(Buffer.concat(chunks)))
-    stream.on('error', reject)
-  })
 }
 
 /** Download an object as a readable stream — used by the worker. */

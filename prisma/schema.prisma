@@ -25,6 +25,21 @@ model User {
   passkeys          PasskeyCredential[]
   pushSubscriptions PushSubscription[]
   calendarToken     CalendarToken?
+  savedViews        AdminSavedView[]
+}
+
+// Saved filter/sort presets for the admin Projects Dashboard.
+// Per-user; the `state` blob is the SerializedFilterState from src/lib/projects-filter.ts
+model AdminSavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  state     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 enum UserRole {
@@ -330,6 +345,7 @@ model Settings {
   // Company Branding
   companyName String? @default("Studio") // Displayed in feedback/comments
   brandingLogoPath String? // Path to uploaded custom SVG logo
+  brandingFaviconPath String? // Path to uploaded custom favicon (svg/png/ico)
   emailHeaderStyle String @default("LOGO_AND_NAME") // NONE, LOGO_ONLY, NAME_ONLY, LOGO_AND_NAME
 
   // SMTP Email Configuration

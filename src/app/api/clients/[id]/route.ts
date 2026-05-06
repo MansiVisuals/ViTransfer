@@ -97,28 +97,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: clientsMessages.companyNameRequired || 'Company name is required' }, { status: 400 })
     }
 
-    // Check for duplicate (excluding current company)
-    const existing = await prisma.clientCompany.findFirst({
-      where: {
-        name: trimmedName,
-        NOT: { id }
+    // The unique index on `name` is the source of truth — let Prisma race-detect duplicates
+    // via P2002 instead of a separate findFirst (which would have a TOCTOU window).
+    try {
+      const company = await prisma.clientCompany.update({
+        where: { id },
+        data: { name: trimmedName },
+        include: {
+          contacts: true,
+          _count: { select: { projects: true } }
+        }
+      })
+      return NextResponse.json({ company })
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        return NextResponse.json({ error: clientsMessages.companyNameAlreadyExists || 'A company with this name already exists' }, { status: 409 })
       }
-    })
-
-    if (existing) {
-      return NextResponse.json({ error: clientsMessages.companyNameAlreadyExists || 'A company with this name already exists' }, { status: 409 })
+      throw e
     }
-
-    const company = await prisma.clientCompany.update({
-      where: { id },
-      data: { name: trimmedName },
-      include: {
-        contacts: true,
-        _count: { select: { projects: true } }
-      }
-    })
-
-    return NextResponse.json({ company })
   } catch (error) {
     logError('Failed to update client company:', error)
     return NextResponse.json({ error: clientsMessages.failedToUpdateClientCompany || 'Failed to update client company' }, { status: 500 })

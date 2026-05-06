@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Funnel } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
+import { useViewportClamp } from '@/hooks/useViewportClamp'
 
 interface FilterOption {
   value: string
@@ -17,16 +19,24 @@ interface FilterGroup {
   options: FilterOption[]
   selected: Set<string>
   onChange: (selected: Set<string>) => void
+  searchable?: boolean
+  searchPlaceholder?: string
 }
 
 interface FilterDropdownProps {
   groups: FilterGroup[]
+  triggerLabel?: string
+  triggerIcon?: React.ReactNode
+  width?: string
 }
 
-export default function FilterDropdown({ groups }: FilterDropdownProps) {
+export default function FilterDropdown({ groups, triggerLabel, triggerIcon, width }: FilterDropdownProps) {
   const t = useTranslations('common')
   const [isOpen, setIsOpen] = useState(false)
+  const [searchByGroup, setSearchByGroup] = useState<Record<string, string>>({})
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+  useViewportClamp(popupRef, isOpen)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -55,10 +65,10 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
         className={cn(
           isFiltering && 'text-primary border-primary'
         )}
-        title={t('filter')}
+        title={triggerLabel || t('filter')}
       >
-        <Funnel className={cn('w-4 h-4', isFiltering && 'fill-primary')} />
-        <span className="hidden sm:inline ml-2">{t('filter')}</span>
+        {triggerIcon || <Funnel className={cn('w-4 h-4', isFiltering && 'fill-primary')} />}
+        <span className="hidden sm:inline ml-2">{triggerLabel || t('filter')}</span>
         {isFiltering && (
           <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full font-medium">
             {groups.reduce((sum, g) => sum + g.selected.size, 0)}
@@ -67,9 +77,19 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-[200px] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto bg-card border border-border rounded-lg shadow-lg p-2">
+        <div
+          ref={popupRef}
+          className={cn(
+            'absolute right-0 top-full mt-1 z-50 max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-y-auto bg-card border border-border rounded-lg shadow-lg p-2',
+            width || 'w-[220px]'
+          )}
+        >
           {groups.map((group, index) => {
             const allSelected = group.options.length > 0 && group.selected.size === group.options.length
+            const search = (searchByGroup[group.key] || '').toLowerCase().trim()
+            const visibleOptions = group.searchable && search
+              ? group.options.filter(o => o.label.toLowerCase().includes(search))
+              : group.options
 
             const toggleAll = () => {
               if (allSelected) {
@@ -102,6 +122,16 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
                   </span>
                 </div>
 
+                {group.searchable && group.options.length > 5 && (
+                  <Input
+                    type="text"
+                    value={searchByGroup[group.key] || ''}
+                    onChange={(e) => setSearchByGroup(prev => ({ ...prev, [group.key]: e.target.value }))}
+                    placeholder={group.searchPlaceholder || t('search')}
+                    className="h-7 text-xs my-1"
+                  />
+                )}
+
                 <label className="flex items-center gap-2 px-2 py-1 hover:bg-muted rounded cursor-pointer">
                   <input
                     type="checkbox"
@@ -112,7 +142,7 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
                   <span className="text-xs font-medium">{t('all')}</span>
                 </label>
 
-                {group.options.map((option) => (
+                {visibleOptions.map((option) => (
                   <label
                     key={option.value}
                     className="flex items-center gap-2 px-2 py-1 hover:bg-muted rounded cursor-pointer"
@@ -123,9 +153,15 @@ export default function FilterDropdown({ groups }: FilterDropdownProps) {
                       onChange={() => toggleOption(option.value)}
                       className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
                     />
-                    <span className="text-xs">{option.label}</span>
+                    <span className="text-xs truncate">{option.label}</span>
                   </label>
                 ))}
+
+                {group.searchable && search && visibleOptions.length === 0 && (
+                  <div className="px-2 py-1 text-xs text-muted-foreground italic">
+                    {t('noResults')}
+                  </div>
+                )}
               </div>
             )
           })}

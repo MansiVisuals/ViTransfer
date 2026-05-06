@@ -25,6 +25,21 @@ model User {
   passkeys          PasskeyCredential[]
   pushSubscriptions PushSubscription[]
   calendarToken     CalendarToken?
+  savedViews        AdminSavedView[]
+}
+
+// Saved filter/sort presets for the admin Projects Dashboard.
+// Per-user; the `state` blob is the SerializedFilterState from src/lib/projects-filter.ts
+model AdminSavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  state     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 enum UserRole {

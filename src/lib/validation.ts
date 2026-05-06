@@ -480,6 +480,30 @@ export async function safeParseBody(
   }
 }
 
+// Saved-view state for the admin Projects Dashboard.
+// Mirrors SerializedFilterState from src/lib/projects-filter.ts; kept in lockstep.
+export const savedViewStateSchema = z.object({
+  q: z.string().max(200),
+  statuses: z.array(z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED'])).max(8),
+  clientKeys: z.array(z.string().max(200)).max(500),
+  years: z.array(z.string().regex(/^\d{4}$/)).max(50),
+  dueBuckets: z.array(z.enum(['overdue', 'thisWeek', 'thisMonth', 'later', 'none'])).max(8),
+  sort: z.enum([
+    'updatedDesc',
+    'createdDesc',
+    'createdAsc',
+    'dueAsc',
+    'titleAsc',
+    'titleDesc',
+    'statusPriority',
+  ]),
+})
+
+export const createSavedViewSchema = z.object({
+  name: safeStringSchema(1, 100),
+  state: savedViewStateSchema,
+})
+
 /**
  * Validate request data against a schema
  * Returns validated data or throws error with details

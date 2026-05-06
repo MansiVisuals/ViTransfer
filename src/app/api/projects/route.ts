@@ -57,6 +57,12 @@ export async function GET(request: NextRequest) {
         allowClientAssetUpload: true,
         previewResolution: true,
         companyName: true,
+        clientCompanyId: true,
+        clientCompany: {
+          select: {
+            name: true,
+          },
+        },
         dueDate: true,
         maxRevisions: true,
         enableRevisions: true,
@@ -70,6 +76,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            email: true,
             isPrimary: true,
           },
         },

@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Hardened video upload storage path generation by always using the validated sanitized filename when building `originalStoragePath`. This closes the remaining CodeQL-reported path-shaping risk in the upload route.
 
+### Updated
+- Aligned dependency manifests for BullMQ (`package.json` and `package-lock.json`) so declared and resolved versions match at `5.76.5`.
+- Confirmed transitive `fast-xml-parser` resolves to `5.7.2` and removed stale `uuid` lockfile drift from the Dependabot group update path.
+
 ## [1.1.0] - 2026-05-06
 
 ### Added

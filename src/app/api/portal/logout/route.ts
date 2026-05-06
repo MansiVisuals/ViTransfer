@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/rate-limit'
 import { parseBearerToken } from '@/lib/auth'
 import {
   verifyPortalSession,
@@ -11,6 +12,14 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    // Mirrors auth/logout — caps denylist-write spam from a stolen JWT.
+    const limit = await rateLimit(request, {
+      windowMs: 60 * 1000,
+      maxRequests: 60,
+      message: 'Too many logout attempts. Please try again later.',
+    }, 'portal-logout')
+    if (limit) return limit
+
     const bearer = parseBearerToken(request)
     if (!bearer) {
       return NextResponse.json({ success: true })

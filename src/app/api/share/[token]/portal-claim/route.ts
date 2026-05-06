@@ -55,6 +55,19 @@ export async function POST(
     }
 
     if (project.status !== 'IN_REVIEW' && project.status !== 'APPROVED') {
+      await logSecurityEvent({
+        type: 'PORTAL_CLAIM_DENIED',
+        severity: 'WARNING',
+        projectId: project.id,
+        ipAddress: getClientIpAddress(request),
+        details: {
+          shareToken: token,
+          email: session.email,
+          reason: 'project_unavailable',
+          status: project.status,
+        },
+        wasBlocked: true,
+      })
       return NextResponse.json({ error: 'Project not available' }, { status: 403 })
     }
 

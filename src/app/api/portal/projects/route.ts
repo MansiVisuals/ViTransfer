@@ -9,12 +9,13 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    const limit = await rateLimit(request, {
+    // Cheap network-layer guard against unauthenticated spammers before we touch JWT verify.
+    const ipLimit = await rateLimit(request, {
       windowMs: 60 * 1000,
-      maxRequests: 60,
+      maxRequests: 120,
       message: 'Too many requests. Please slow down.',
-    }, 'portal-projects')
-    if (limit) return limit
+    }, 'portal-projects-ip')
+    if (ipLimit) return ipLimit
 
     const bearer = parseBearerToken(request)
     if (!bearer) {
@@ -25,6 +26,14 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Per-session quota — one stolen IP with N sessions can't pool quotas.
+    const sessionLimit = await rateLimit(request, {
+      windowMs: 60 * 1000,
+      maxRequests: 60,
+      message: 'Too many requests. Please slow down.',
+    }, 'portal-projects-session', session.sessionId)
+    if (sessionLimit) return sessionLimit
 
     const projects = await prisma.project.findMany({
       where: {

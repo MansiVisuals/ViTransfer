@@ -4,6 +4,7 @@ import { getClientIpAddress } from '@/lib/utils'
 import { consumePortalLinkToken, hashIpUa } from '@/lib/portal-link'
 import { signPortalSession } from '@/lib/portal-token'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
+import { logSecurityEvent } from '@/lib/video-access'
 import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
@@ -63,12 +64,21 @@ export async function GET(request: NextRequest) {
     const messages = await loadLocaleMessages(locale)
     const portalMessages = messages?.portal || {}
 
+    const ipAddress = getClientIpAddress(request)
+
     const limit = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
       maxRequests: 20,
       message: portalMessages.tooManyRequests || 'Too many requests. Please try again later.',
     }, 'portal-verify-ip')
     if (limit) {
+      await logSecurityEvent({
+        type: 'PORTAL_LINK_RATE_LIMIT_HIT',
+        severity: 'WARNING',
+        ipAddress,
+        details: { scope: 'verify-ip' },
+        wasBlocked: true,
+      })
       return new NextResponse(
         renderErrorPage(
           portalMessages.tooManyRequestsTitle || 'Too many attempts',
@@ -97,19 +107,46 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const ip = getClientIpAddress(request)
     const ua = request.headers.get('user-agent') || ''
-    const { ipHash, uaHash } = hashIpUa(ip, ua)
+    const { ipHash, uaHash } = hashIpUa(ipAddress, ua)
 
-    const record = await consumePortalLinkToken({ token, ipHash, uaHash })
-    if (!record) {
+    const result = await consumePortalLinkToken({ token, ipHash, uaHash })
+
+    if (result.status === 'mismatch') {
+      // Token is real but bound to a different IP/UA. Strong signal of token theft
+      // or an unusual roaming pattern — log even though we return the same generic page.
+      await logSecurityEvent({
+        type: 'PORTAL_LINK_DEVICE_MISMATCH',
+        severity: 'WARNING',
+        ipAddress,
+        details: { email: result.email },
+        wasBlocked: true,
+      })
       return new NextResponse(linkExpiredHtml, {
         status: 400,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       })
     }
 
-    const session = await signPortalSession(record.email)
+    if (result.status === 'invalid') {
+      // Expired / never-existed / lost-the-race. Don't log — would flood the audit
+      // log on every benign expired-link click.
+      return new NextResponse(linkExpiredHtml, {
+        status: 400,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      })
+    }
+
+    const session = await signPortalSession(result.record.email)
+
+    await logSecurityEvent({
+      type: 'PORTAL_LINK_VERIFIED',
+      severity: 'INFO',
+      ipAddress,
+      sessionId: session.sessionId,
+      details: { email: result.record.email },
+      wasBlocked: false,
+    })
 
     return new NextResponse(renderSuccessPage(session.token), {
       status: 200,

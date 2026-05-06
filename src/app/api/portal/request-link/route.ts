@@ -12,6 +12,7 @@ import {
   hashIpUa,
   sendPortalMagicLinkEmail,
 } from '@/lib/portal-link'
+import { logSecurityEvent } from '@/lib/video-access'
 import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
@@ -23,13 +24,23 @@ export async function POST(request: NextRequest) {
     const locale = await getConfiguredLocale()
     const messages = await loadLocaleMessages(locale)
     const portalMessages = messages?.portal || {}
+    const ipAddress = getClientIpAddress(request)
 
     const ipLimit = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
       maxRequests: 5,
       message: portalMessages.tooManyRequests || 'Too many requests. Please try again later.',
     }, 'portal-request-link-ip')
-    if (ipLimit) return ipLimit
+    if (ipLimit) {
+      await logSecurityEvent({
+        type: 'PORTAL_LINK_RATE_LIMIT_HIT',
+        severity: 'WARNING',
+        ipAddress,
+        details: { scope: 'ip' },
+        wasBlocked: true,
+      })
+      return ipLimit
+    }
 
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
@@ -48,7 +59,16 @@ export async function POST(request: NextRequest) {
       maxRequests: 3,
       message: portalMessages.tooManyRequests || 'Too many requests. Please try again later.',
     }, 'portal-request-link-email', normalizedEmail)
-    if (emailLimit) return emailLimit
+    if (emailLimit) {
+      await logSecurityEvent({
+        type: 'PORTAL_LINK_RATE_LIMIT_HIT',
+        severity: 'WARNING',
+        ipAddress,
+        details: { scope: 'email', email: normalizedEmail },
+        wasBlocked: true,
+      })
+      return emailLimit
+    }
 
     const successResponse = NextResponse.json({
       success: true,
@@ -56,8 +76,8 @@ export async function POST(request: NextRequest) {
     })
 
     if (!(await isSmtpConfigured())) {
-      // Return 503 only for the operator's own visibility — users still see generic copy
-      // when SMTP is fine. The 503 prevents silent black-holing of magic links.
+      // 503 mirrors share/[token]/send-otp behavior — operator-visible signal that
+      // the email pipeline is down. Same response for matched and unmatched users.
       return NextResponse.json(
         { error: portalMessages.emailServiceUnavailable || 'Email service not configured.' },
         { status: 503 }
@@ -68,6 +88,16 @@ export async function POST(request: NextRequest) {
 
     const isRecipient = await emailHasAnyRecipient(normalizedEmail)
     if (!isRecipient) {
+      // Log BEFORE the constant-time wait so the DB I/O is absorbed by the jitter window
+      // (matches send-otp/route.ts's ordering — keeps timing oracles closed).
+      await logSecurityEvent({
+        type: 'UNAUTHORIZED_PORTAL_REQUEST',
+        severity: 'WARNING',
+        ipAddress,
+        details: { attemptedEmail: normalizedEmail },
+        wasBlocked: false,
+      })
+
       const minDelay = 800
       const maxDelay = 2000
       const target = crypto.randomInt(minDelay, maxDelay + 1)
@@ -78,9 +108,8 @@ export async function POST(request: NextRequest) {
       return successResponse
     }
 
-    const ip = getClientIpAddress(request)
     const ua = request.headers.get('user-agent') || ''
-    const { ipHash, uaHash } = hashIpUa(ip, ua)
+    const { ipHash, uaHash } = hashIpUa(ipAddress, ua)
 
     const linkToken = await createPortalLinkToken({
       email: normalizedEmail,
@@ -103,6 +132,14 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    await logSecurityEvent({
+      type: 'PORTAL_LINK_SENT',
+      severity: 'INFO',
+      ipAddress,
+      details: { email: normalizedEmail },
+      wasBlocked: false,
+    })
 
     return successResponse
   } catch (error) {

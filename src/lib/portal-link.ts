@@ -36,33 +36,38 @@ export async function createPortalLinkToken(params: {
   return token
 }
 
+export type ConsumePortalLinkResult =
+  | { status: 'ok'; record: PortalLinkRecord }
+  | { status: 'invalid' }            // token not found, malformed, or already consumed
+  | { status: 'mismatch'; email: string } // token exists but IP/UA bindings don't match
+
 export async function consumePortalLinkToken(params: {
   token: string
   ipHash: string
   uaHash: string
-}): Promise<PortalLinkRecord | null> {
+}): Promise<ConsumePortalLinkResult> {
   const redis = getRedis()
   const key = `${TOKEN_PREFIX}${params.token}`
   const raw = await redis.get(key)
-  if (!raw) return null
+  if (!raw) return { status: 'invalid' }
 
   let record: PortalLinkRecord
   try {
     record = JSON.parse(raw)
   } catch {
     await redis.del(key)
-    return null
+    return { status: 'invalid' }
   }
 
   if (record.ipHash !== params.ipHash || record.uaHash !== params.uaHash) {
-    return null
+    return { status: 'mismatch', email: record.email }
   }
 
   // Atomic single-use consumption — prevents race between two near-simultaneous clicks.
   const consumed = await consumeTokenAtomically(redis, key, raw)
-  if (!consumed) return null
+  if (!consumed) return { status: 'invalid' }
 
-  return record
+  return { status: 'ok', record }
 }
 
 export async function emailHasAnyRecipient(email: string): Promise<boolean> {

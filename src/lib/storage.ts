@@ -64,12 +64,9 @@ export async function uploadFile(
 
   await mkdir(dir, { recursive: true })
 
-  if (Buffer.isBuffer(stream)) {
-    await fs.promises.writeFile(fullPath, stream)
-  } else {
-    const writeStream = fs.createWriteStream(fullPath)
-    await pipeline(stream, writeStream)
-  }
+  const inputStream = Buffer.isBuffer(stream) ? Readable.from(stream) : stream
+  const writeStream = fs.createWriteStream(fullPath)
+  await pipeline(inputStream, writeStream)
 
   // Verify file was written with correct size
   const stats = await fs.promises.stat(fullPath)

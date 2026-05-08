@@ -10,11 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - Unreleased
 
 ### Security
-- Hardened video upload storage path generation by always using the validated sanitized filename when building `originalStoragePath`. This closes the remaining CodeQL-reported path-shaping risk in the upload route.
+- Hardened video upload storage path generation to use the validated sanitized filename for `originalStoragePath`.
+- Forced Next's bundled `postcss` to `8.5.14` via `overrides.next.postcss` ([GHSA-qx2v-qp2m-jg93](https://github.com/advisories/GHSA-qx2v-qp2m-jg93)).
 
 ### Updated
-- Aligned dependency manifests for BullMQ (`package.json` and `package-lock.json`) so declared and resolved versions match at `5.76.5`.
-- Confirmed transitive `fast-xml-parser` resolves to `5.7.2` and removed stale `uuid` lockfile drift from the Dependabot group update path.
+- Version bumped to `1.1.1`.
+- `apprise` 1.9.9 → 1.10.0.
+- `next` / `eslint-config-next` / `@next/eslint-plugin-next` 16.2.4 → 16.2.6.
+- `react` / `react-dom` 19.2.5 → 19.2.6.
+- `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1041.0 → 3.1045.0.
+- `bullmq` 5.76.5 → 5.76.6.
+- `next-intl` 4.11.0 → 4.11.1.
+- `postcss` 8.5.13 → 8.5.14.
+- `@types/node` 24.12.2 → 24.12.3.
+- Promoted `@next/eslint-plugin-next` to a first-class devDependency.
+- Removed stale `tar`, `diff`, `esbuild`, `effect` overrides; kept `glob: 11.1.0` and `next.postcss`.
+- Aligned `fast-xml-parser` at `5.7.2` and removed stale `uuid` lockfile drift.
 
 ## [1.1.0] - 2026-05-06
 

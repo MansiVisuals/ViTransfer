@@ -63,6 +63,29 @@ export async function POST(request: NextRequest) {
       return successResponse
     }
 
+    // Per-email rate limit: prevents flooding one victim's inbox by rotating IPs.
+    // Mirrors the email-keyed limit on the login endpoint.
+    const emailRateLimitResult = await rateLimit(request, {
+      windowMs: 15 * 60 * 1000,
+      maxRequests: 3,
+      message: authMessages.tooManyPasswordResetRequests || 'Too many password reset requests. Please try again later.',
+    }, 'forgot-password-email', email.toLowerCase())
+
+    if (emailRateLimitResult) {
+      await logSecurityEvent({
+        type: 'ADMIN_PASSWORD_RESET_RATE_LIMIT_HIT',
+        severity: 'WARNING',
+        ipAddress: getClientIpAddress(request),
+        details: {
+          reason: 'Too many password reset requests for this email',
+          email,
+        },
+      })
+      // Return generic success even on rate-limit so attackers can't tell which
+      // emails are being targeted. The IP-based limit above already returns 429.
+      return successResponse
+    }
+
     // Find user by email or username
     const user = await prisma.user.findFirst({
       where: {

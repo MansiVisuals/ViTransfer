@@ -13,8 +13,12 @@ export default function SessionMonitor() {
   const t = useTranslations('session')
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
-  const lastActivityRef = useRef<number>(Date.now())
+  const lastActivityRef = useRef<number>(0)
   const inactivityTimeoutRef = useRef<number>(DEFAULT_INACTIVITY_TIMEOUT_MS)
+
+  useEffect(() => {
+    lastActivityRef.current = Date.now()
+  }, [])
 
   useEffect(() => {
     let cancelled = false

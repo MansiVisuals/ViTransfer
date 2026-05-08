@@ -104,6 +104,7 @@
   "invalidOrExpiredRefreshToken": "Invalid or expired refresh token",
   "tokenRefreshFailed": "Token refresh failed",
   "tooManyLogoutAttempts": "Too many logout attempts. Please try again later.",
+  "logoutFailed": "Logout failed. Please try again.",
   "tooManyPasswordResetRequests": "Too many password reset requests. Please try again later.",
   "passwordResetEmailSentGeneric": "If an account exists with this email, you will receive password reset instructions.",
   "tooManyPasswordResetAttempts": "Too many password reset attempts. Please try again later.",

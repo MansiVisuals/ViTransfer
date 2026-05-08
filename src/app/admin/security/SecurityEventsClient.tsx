@@ -88,6 +88,15 @@ export default function SecurityEventsClient() {
   const [rateLimits, setRateLimits] = useState<RateLimitEntry[]>([])
   const [showRateLimitsModal, setShowRateLimitsModal] = useState(false)
   const [showCleanupModal, setShowCleanupModal] = useState(false)
+  // "Now" snapshot for lockout-active checks. Updated every 30s and on modal open
+  // so we don't call Date.now() during render (purity rule).
+  const [nowMs, setNowMs] = useState<number>(0)
+  useEffect(() => {
+    setNowMs(Date.now())
+    if (!showRateLimitsModal) return
+    const interval = setInterval(() => setNowMs(Date.now()), 30 * 1000)
+    return () => clearInterval(interval)
+  }, [showRateLimitsModal])
 
   const loadEvents = useCallback(async () => {
     setLoading(true)
@@ -591,7 +600,7 @@ export default function SecurityEventsClient() {
                           {t('lockedUntil', { date: new Date(entry.lockoutUntil).toLocaleString() })}
                         </div>
                       </div>
-                      {entry.lockoutUntil > Date.now() ? (
+                      {entry.lockoutUntil > nowMs ? (
                         <Button
                           onClick={() => handleUnblockRateLimit(entry.key)}
                           variant="outline"

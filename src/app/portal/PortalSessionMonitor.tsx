@@ -16,8 +16,12 @@ export default function PortalSessionMonitor({ inactivityTimeoutMs, onTimeout }:
   const t = useTranslations('session')
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
-  const lastActivityRef = useRef<number>(Date.now())
+  const lastActivityRef = useRef<number>(0)
   const onTimeoutRef = useRef(onTimeout)
+
+  useEffect(() => {
+    lastActivityRef.current = Date.now()
+  }, [])
 
   useEffect(() => {
     onTimeoutRef.current = onTimeout

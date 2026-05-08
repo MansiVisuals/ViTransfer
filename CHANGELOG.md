@@ -10,8 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - Unreleased
 
 ### Security
-- Hardened video upload storage path generation to use the validated sanitized filename for `originalStoragePath`.
-- Forced Next's bundled `postcss` to `8.5.14` via `overrides.next.postcss` ([GHSA-qx2v-qp2m-jg93](https://github.com/advisories/GHSA-qx2v-qp2m-jg93)).
+- Hardened video upload storage path to use the validated sanitized filename.
+- Forced Next's bundled `postcss` to `8.5.14` ([GHSA-qx2v-qp2m-jg93](https://github.com/advisories/GHSA-qx2v-qp2m-jg93)).
+- Passkey signature counter regression check (WebAuthn clone detection); logs `PASSKEY_COUNTER_REGRESSION`.
+- Passkey `/authenticate/options` no longer leaks whether an email is registered.
+- `revokeAllUserTokens` blacklist TTL now matches refresh token lifetime.
+- Refresh token reuse after rotation now revokes the full token family.
+- `/api/auth/logout` returns 503 on revocation failure.
+- Password length capped at 128 chars in hash/verify/validate paths.
+- `/api/auth/device/authorize` now requires admin role.
+- `/api/auth/forgot-password` now rate-limits per email.
 
 ### Updated
 - Version bumped to `1.1.1`.
@@ -26,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Promoted `@next/eslint-plugin-next` to a first-class devDependency.
 - Removed stale `tar`, `diff`, `esbuild`, `effect` overrides; kept `glob: 11.1.0` and `next.postcss`.
 - Aligned `fast-xml-parser` at `5.7.2` and removed stale `uuid` lockfile drift.
+- Moved render-time `Date.now()` calls in session monitors and security events client into `useEffect` / lazy state.
+- Disabled `react-hooks/preserve-manual-memoization` ESLint rule (joins existing RC opt-outs).
+- Added `logoutFailed` i18n key for en / nl / de.
 
 ## [1.1.0] - 2026-05-06
 

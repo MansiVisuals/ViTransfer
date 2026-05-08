@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { authorizeDeviceCode } from '@/lib/device-code'
-import { getCurrentUserFromRequest } from '@/lib/auth'
+import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { logSecurityEvent } from '@/lib/video-access'
 import { getClientIpAddress } from '@/lib/utils'
@@ -45,14 +45,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Require authenticated admin user
-    const user = await getCurrentUserFromRequest(request)
-    if (!user) {
-      return NextResponse.json(
-        { error: authMessages.authenticationRequired || 'Authentication required' },
-        { status: 401 }
-      )
-    }
+    // Require authenticated admin (role-checked, not just any authenticated user).
+    const userOrResponse = await requireApiAdmin(request)
+    if (userOrResponse instanceof Response) return userOrResponse
+    const user = userOrResponse
 
     const body = await request.json()
     const rawUserCode = body?.userCode

@@ -32,14 +32,27 @@ export async function POST(request: NextRequest) {
     if (rateLimitResult) return rateLimitResult
 
     const accessToken = parseBearerToken(request)
-    const refreshToken = await extractRefreshToken(request)
+    const refreshToken = await extractRefreshToken(request).catch(() => null)
 
-    await revokePresentedTokens({ accessToken, refreshToken })
+    // Revocation is the actual logout primitive — if it fails (e.g. Redis down),
+    // tokens remain valid until natural expiry. Surface that to the client so it can retry.
+    try {
+      await revokePresentedTokens({ accessToken, refreshToken })
+    } catch (revokeError) {
+      logError('Logout token revocation failed:', revokeError)
+      return NextResponse.json(
+        { error: authMessages.logoutFailed || 'Logout failed. Please try again.' },
+        { status: 503 }
+      )
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     logError('Logout error:', error)
-    return NextResponse.json({ success: true })
+    return NextResponse.json(
+      { error: authMessages.logoutFailed || 'Logout failed. Please try again.' },
+      { status: 503 }
+    )
   }
 }
 

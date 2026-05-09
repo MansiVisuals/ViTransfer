@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateUploadedFile } from '@/lib/file-validation'
+import { sanitizeFilename, validateUploadedFile } from '@/lib/file-validation'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const sanitizedOriginalFileName = fileValidation.sanitizedFilename || sanitizeFilename(originalFileName || 'upload.mp4')
+
     // Get the project and existing videos with the same name
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
         versionLabel: versionLabel || `v${nextVersion}`,
         originalFileName,
         originalFileSize: BigInt(originalFileSize),
-        originalStoragePath: `projects/${projectId}/videos/original-${Date.now()}-${originalFileName}`,
+        originalStoragePath: `projects/${projectId}/videos/original-${Date.now()}-${sanitizedOriginalFileName}`,
         status: 'UPLOADING',
         duration: 0,
         width: 0,

@@ -103,6 +103,7 @@
     "invalidOrExpiredRefreshToken": "Ongeldig of verlopen refresh-token",
     "tokenRefreshFailed": "Token verversen mislukt",
     "tooManyLogoutAttempts": "Te veel uitlogpogingen. Probeer het later opnieuw.",
+    "logoutFailed": "Uitloggen mislukt. Probeer het opnieuw.",
     "tooManyPasswordResetRequests": "Te veel verzoeken om het wachtwoord te herstellen. Probeer het later opnieuw.",
     "passwordResetEmailSentGeneric": "Als er een account bestaat met dit e-mailadres, ontvang je instructies om je wachtwoord te herstellen.",
     "tooManyPasswordResetAttempts": "Te veel pogingen om het wachtwoord te herstellen. Probeer het later opnieuw.",

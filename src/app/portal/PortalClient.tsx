@@ -84,13 +84,15 @@ export default function PortalClient() {
   }, [])
 
   // Inactivity TTL: derive from JWT exp (= server-side client session TTL).
-  const inactivityMs = (() => {
-    if (!token) return undefined
+  // Recomputed via effect when token changes so Date.now() doesn't run during render.
+  const [inactivityMs, setInactivityMs] = useState<number | undefined>(undefined)
+  useEffect(() => {
+    if (!token) { setInactivityMs(undefined); return }
     const exp = getPortalSessionExpSeconds(token)
-    if (!exp) return undefined
+    if (!exp) { setInactivityMs(undefined); return }
     const remainingMs = exp * 1000 - Date.now()
-    return remainingMs > 0 ? remainingMs : undefined
-  })()
+    setInactivityMs(remainingMs > 0 ? remainingMs : undefined)
+  }, [token])
 
   return (
     <div className="flex-1 min-h-0 bg-background">

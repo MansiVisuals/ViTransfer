@@ -311,12 +311,17 @@ export async function generatePasskeyAuthenticationOptions(
       },
     })
 
-    if (!user || user.passkeys.length === 0) {
-      // SECURITY: Generic error prevents user/email enumeration
-      throw new Error('PassKey authentication is not available')
+    if (user && user.passkeys.length > 0) {
+      challengeKey = user.id
+    } else {
+      // SECURITY: Unknown user / no passkeys must be indistinguishable from a known user.
+      // Generate options against an empty allowCredentials list under a synthetic session
+      // so the response status, body shape, and (approximately) timing are uniform.
+      // The subsequent verify step will fail naturally because no credential matches.
+      user = null
+      sessionId = `usernameless:${Date.now()}:${crypto.randomUUID()}`
+      challengeKey = sessionId
     }
-
-    challengeKey = user.id
   } else {
     // Usernameless authentication (discoverable credentials)
     // Generate secure session ID for challenge storage
@@ -430,11 +435,37 @@ export async function verifyPasskeyAuthentication(
       }
     }
 
+    // WebAuthn signature counter regression check (clone detection).
+    // Per WebAuthn §6.1.1: if either stored or new counter is non-zero, the new value
+    // must strictly exceed the stored value. Both being 0 means the authenticator does
+    // not implement counters (typical for platform authenticators) — accept those.
+    const newCounter = verification.authenticationInfo.newCounter
+    const storedCounter = Number(credential.counter)
+    const counterTracked = storedCounter !== 0 || newCounter !== 0
+    if (counterTracked && newCounter <= storedCounter) {
+      await logSecurityEvent({
+        type: 'PASSKEY_COUNTER_REGRESSION',
+        severity: 'CRITICAL',
+        ipAddress,
+        details: {
+          userId: credential.user.id,
+          email: credential.user.email,
+          credentialId: credential.id,
+          storedCounter,
+          newCounter,
+        },
+      })
+      return {
+        success: false,
+        error: 'PassKey authentication failed verification.',
+      }
+    }
+
     // Update credential counter and last used timestamp
     await prisma.passkeyCredential.update({
       where: { id: credential.id },
       data: {
-        counter: BigInt(verification.authenticationInfo.newCounter),
+        counter: BigInt(newCounter),
         lastUsedAt: new Date(),
         lastUsedIP: ipAddress || null,
       },

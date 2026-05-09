@@ -29,6 +29,7 @@ export type SecurityEventType =
   | 'PASSKEY_LOGIN_FAILED'
   | 'PASSKEY_DELETE_UNAUTHORIZED'
   | 'PASSKEY_DELETED'
+  | 'PASSKEY_COUNTER_REGRESSION'
 
   // Device Code Auth Events (Workflow Integrations)
   | 'DEVICE_CODE_ISSUED'
@@ -184,6 +185,12 @@ export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMet
     description: 'Passkey credential successfully removed from user account.',
     category: 'Passkey Auth',
     severity: 'INFO',
+  },
+  PASSKEY_COUNTER_REGRESSION: {
+    label: 'Passkey Counter Regression',
+    description: 'Passkey signature counter did not increase. Possible authenticator clone or replay attack.',
+    category: 'Passkey Auth',
+    severity: 'CRITICAL',
   },
 
   // Device Code Auth Events (Workflow Integrations)

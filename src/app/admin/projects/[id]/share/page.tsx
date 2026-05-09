@@ -54,7 +54,8 @@ export default function AdminSharePage() {
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
-  const sessionIdRef = useRef<string>(`admin:${Date.now()}`)
+  const [sessionId] = useState<string>(() => `admin:${Date.now()}`)
+  const sessionIdRef = useRef<string>(sessionId)
   const inFlightTokenRequestsRef = useRef<Map<string, Promise<string>>>(new Map())
   const tokenFetchTelemetryRef = useRef({
     firstAttemptFailures: 0,

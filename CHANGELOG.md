@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.1.1] - 2026-05-09
+
+### Security
+- Hardened video upload storage path to use the validated sanitized filename.
+- Forced Next's bundled `postcss` to `8.5.14` ([GHSA-qx2v-qp2m-jg93](https://github.com/advisories/GHSA-qx2v-qp2m-jg93)).
+- Passkey signature counter regression check (WebAuthn clone detection); logs `PASSKEY_COUNTER_REGRESSION`.
+- Passkey `/authenticate/options` no longer leaks whether an email is registered.
+- `revokeAllUserTokens` blacklist TTL now matches refresh token lifetime.
+- Refresh token reuse after rotation now revokes the full token family.
+- `/api/auth/logout` returns 503 on revocation failure.
+- Password length capped at 128 chars in hash/verify/validate paths.
+- `/api/auth/device/authorize` now requires admin role.
+- `/api/auth/forgot-password` now rate-limits per email.
+
+### Updated
+- Version bumped to `1.1.1`.
+- `apprise` 1.9.9 → 1.10.0.
+- `next` / `eslint-config-next` / `@next/eslint-plugin-next` 16.2.4 → 16.2.6.
+- `react` / `react-dom` 19.2.5 → 19.2.6.
+- `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1041.0 → 3.1045.0.
+- `bullmq` 5.76.5 → 5.76.6.
+- `next-intl` 4.11.0 → 4.11.1.
+- `postcss` 8.5.13 → 8.5.14.
+- `@types/node` 24.12.2 → 24.12.3.
+- Promoted `@next/eslint-plugin-next` to a first-class devDependency.
+- Removed stale `tar`, `diff`, `esbuild`, `effect` overrides; kept `glob: 11.1.0` and `next.postcss`.
+- Aligned `fast-xml-parser` at `5.7.2` and removed stale `uuid` lockfile drift.
+- Moved render-time `Date.now()` calls in session monitors and security events client into `useEffect` / lazy state.
+- Disabled `react-hooks/preserve-manual-memoization` ESLint rule (joins existing RC opt-outs).
+- Added `logoutFailed` i18n key for en / nl / de.
+
 ## [1.1.0] - 2026-05-06
 
 ### Added

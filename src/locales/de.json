@@ -104,6 +104,7 @@
     "invalidOrExpiredRefreshToken": "Ungültiges oder abgelaufenes Refresh-Token",
     "tokenRefreshFailed": "Token-Erneuerung fehlgeschlagen",
     "tooManyLogoutAttempts": "Zu viele Abmeldeversuche. Bitte versuche es später erneut.",
+    "logoutFailed": "Abmeldung fehlgeschlagen. Bitte versuche es erneut.",
     "tooManyPasswordResetRequests": "Zu viele Passwort-Zurücksetzen-Anfragen. Bitte versuche es später erneut.",
     "passwordResetEmailSentGeneric": "Falls ein Konto mit dieser E-Mail existiert, erhältst du eine Anleitung zum Zurücksetzen des Passworts.",
     "tooManyPasswordResetAttempts": "Zu viele Versuche, das Passwort zurückzusetzen. Bitte versuche es später erneut.",

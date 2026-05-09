@@ -87,8 +87,13 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
   // Store a flag that user's session is invalidated
   // This can be checked before validating any token
   const key = `blacklist:user:${userId}`
-  // Set for 3 days (max refresh token lifetime)
-  await redis.setex(key, 3 * 24 * 60 * 60, Date.now().toString())
+  // TTL must outlive the longest-lived refresh token, otherwise pre-revocation
+  // refresh tokens can resurface after the blacklist key expires.
+  const refreshTtlSeconds = (() => {
+    const parsed = parseInt(process.env.ADMIN_REFRESH_TTL_SECONDS || '', 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 7 * 24 * 60 * 60
+  })()
+  await redis.setex(key, refreshTtlSeconds, Date.now().toString())
 }
 
 /**

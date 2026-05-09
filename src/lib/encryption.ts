@@ -156,12 +156,20 @@ export function decrypt(encryptedText: string): string {
   }
 }
 
+// Hard ceiling on accepted password length. bcrypt itself is bounded at 72 bytes,
+// but cost-14 hashing on multi-MB input is a CPU DoS vector regardless. 128 chars
+// is well above any realistic password and below any user-perceived limit.
+const MAX_PASSWORD_LENGTH = 128
+
 /**
  * Hash a password using bcrypt
  * @param password Plain text password
  * @returns Hashed password
  */
 export async function hashPassword(password: string): Promise<string> {
+  if (typeof password !== 'string' || password.length > MAX_PASSWORD_LENGTH) {
+    throw new Error('Password exceeds maximum allowed length')
+  }
   const bcrypt = await getBcrypt()
   const salt = await bcrypt.genSalt(14)
   return bcrypt.hash(password, salt)
@@ -174,6 +182,9 @@ export async function hashPassword(password: string): Promise<string> {
  * @returns True if password matches
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  if (typeof password !== 'string' || password.length > MAX_PASSWORD_LENGTH) {
+    return false
+  }
   const bcrypt = await getBcrypt()
   return bcrypt.compare(password, hash)
 }
@@ -189,7 +200,17 @@ export function validatePassword(password: string): {
   strength: 'weak' | 'medium' | 'strong'
 } {
   const errors: string[] = []
-  
+
+  // Reject oversized input up front — the regex/sequence checks below scan the full
+  // string and would otherwise burn CPU on attacker-controlled payloads.
+  if (typeof password !== 'string' || password.length > MAX_PASSWORD_LENGTH) {
+    return {
+      isValid: false,
+      errors: [`Password must not exceed ${MAX_PASSWORD_LENGTH} characters`],
+      strength: 'weak',
+    }
+  }
+
   // Length check (increased from 8 to 12)
   if (password.length < 12) {
     errors.push('Password must be at least 12 characters long')

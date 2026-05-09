@@ -203,8 +203,29 @@ export async function refreshAdminTokens(params: {
   fingerprintHash?: string
 }) {
   const { refreshToken, fingerprintHash } = params
-  const payload = await verifyAdminRefreshToken(refreshToken)
-  if (!payload) return null
+
+  // Verify signature first (without revocation check) so we can detect token reuse.
+  // Replaying a previously-rotated refresh token is the canonical signal of theft —
+  // it means an attacker captured the token before rotation and is now racing the legit user.
+  let payload: AdminRefreshPayload
+  try {
+    if (!ADMIN_REFRESH_SECRET) return null
+    const decoded = jwt.verify(refreshToken, ADMIN_REFRESH_SECRET, { algorithms: ['HS256'] }) as AdminRefreshPayload
+    if (decoded.type !== 'admin_refresh') return null
+    payload = decoded
+  } catch {
+    return null
+  }
+
+  // Signature valid. If this token is already in the revocation blacklist, it was rotated
+  // before — this is a reuse attempt. Kill the entire token family for this user.
+  if (await isTokenRevoked(refreshToken)) {
+    await revokeTokenFamily(payload.userId)
+    return null
+  }
+
+  // User-level revocation (e.g. password reset, family already killed).
+  if (await isUserTokensRevoked(payload.userId, payload.iat)) return null
 
   if (fingerprintHash) {
     const storedFingerprint = await getTokenFingerprint(payload.userId, refreshToken)

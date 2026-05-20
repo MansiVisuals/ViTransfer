@@ -49,10 +49,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
   const [isArchiving, setIsArchiving] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
 
-  // Unapprove modal state
   const [showUnapproveModal, setShowUnapproveModal] = useState(false)
 
-  // Notification modal state
   const [showNotificationModal, setShowNotificationModal] = useState(false)
   const [notificationType, setNotificationType] = useState<'entire-project' | 'specific-video'>('entire-project')
   const [selectedVideoName, setSelectedVideoName] = useState<string>('')
@@ -61,13 +59,10 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Read SMTP configuration status from project data
   const smtpConfigured = (project as any).smtpConfigured !== false
 
-  // Check if at least one recipient has an email address
   const hasRecipientWithEmail = (project as any).recipients?.some((r: any) => r.email && r.email.trim() !== '') || false
 
-  // Check if project is password protected
   const isPasswordProtected = (project as any).sharePassword !== null &&
                                (project as any).sharePassword !== undefined &&
                                (project as any).sharePassword !== ''
@@ -119,7 +114,6 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
     // Prevent rapid-fire notification sends
     if (loading) return
 
-    // Validation
     if (notificationType === 'specific-video' && !selectedVideoId) {
       setMessage({ type: 'error', text: t('selectVideoAndVersion') })
       return
@@ -128,7 +122,6 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
     setLoading(true)
     setMessage({ type: 'success', text: t('sendingNotificationProgress') })
 
-    // Send notification in background without blocking UI
     apiPost(`/api/projects/${project.id}/notify`, {
       videoId: notificationType === 'specific-video' ? selectedVideoId : null,
       notifyEntireProject: notificationType === 'entire-project',
@@ -159,21 +152,17 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
     const isCurrentlyApproved = project.status === 'APPROVED'
 
     if (isCurrentlyApproved) {
-      // Show the unapprove modal to let user choose
       setShowUnapproveModal(true)
     } else {
-      // For approval, just confirm and proceed
       if (!confirm(t('confirmApproveProject'))) {
         return
       }
 
       setIsTogglingApproval(true)
 
-      // Approve project in background without blocking UI
       apiPatch(`/api/projects/${project.id}`, { status: 'APPROVED' })
         .then(() => {
           alert(t('approvedSuccessfully'))
-          // Refresh in background
           onRefresh?.()
           router.refresh()
         })
@@ -193,7 +182,6 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
     setIsTogglingApproval(true)
     setShowUnapproveModal(false)
 
-    // Unapprove project in background without blocking UI
     apiPost(`/api/projects/${project.id}/unapprove`, { unapproveVideos })
       .then((data) => {
         // Show appropriate success message
@@ -204,7 +192,6 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
         } else {
           alert(`${t('unapprovedSuccessfully')} ${t('videosRemainApproved')}`)
         }
-        // Refresh in background
         onRefresh?.()
         router.refresh()
       })
@@ -243,10 +230,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
 
     setIsDeleting(true)
 
-    // Delete project in background without blocking UI
     apiDelete(`/api/projects/${project.id}`)
       .then(() => {
-        // Redirect to admin page after successful deletion
         router.push('/admin/projects')
         router.refresh()
       })

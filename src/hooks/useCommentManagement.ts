@@ -52,7 +52,6 @@ export function useCommentManagement({
 }: UseCommentManagementProps) {
   const router = useRouter()
 
-  // State
   const [optimisticComments, setOptimisticComments] = useState<CommentWithReplies[]>([])
   const [newComment, setNewComment] = useState('')
   const [selectedTimestamp, setSelectedTimestamp] = useState<number | null>(null) // Internal: still use seconds for video player integration
@@ -68,7 +67,6 @@ export function useCommentManagement({
   const attachmentUploadCountRef = useRef(0)
   const previousVideoIdRef = useRef<string | null>(null)
 
-  // Author name management
   const namedRecipients = recipients.filter(r => r.name && r.name.trim() !== '')
 
   // Auto-select recipient if authenticatedEmail is provided
@@ -79,12 +77,10 @@ export function useCommentManagement({
       )
       
       if (matchingRecipient && matchingRecipient.name) {
-        // Auto-select this recipient
         setNameSource('recipient')
         setSelectedRecipientId(matchingRecipient.id)
         setAuthorName(matchingRecipient.name)
         
-        // Save to localStorage 
         const storageKey = `comment-name-${projectId}`
         try {
           localStorage.setItem(storageKey, JSON.stringify({
@@ -99,7 +95,6 @@ export function useCommentManagement({
     }
   }, [authenticatedEmail, recipients, projectId])
 
-  // Load persisted name selection from localStorage (persists across sessions)
   const storageKey = `comment-name-${projectId}`
   const loadPersistedName = () => {
     if (typeof window === 'undefined') return null
@@ -116,19 +111,15 @@ export function useCommentManagement({
   const [nameSource, setNameSource] = useState<'recipient' | 'custom' | 'none'>(persistedName?.nameSource || 'none')
   const [selectedRecipientId, setSelectedRecipientId] = useState(persistedName?.selectedRecipientId || '')
 
-  // Merge real comments with optimistic comments
   // Remove optimistic comments that have been confirmed by the server
   const activeOptimisticComments = optimisticComments.filter(oc => {
-    // If this optimistic comment has a temp ID, check if a real version exists
     if (oc.id.startsWith('temp-')) {
-      // Check top-level comments for matching content and similar timestamp
       const hasRealVersionTopLevel = initialComments.some(rc =>
         rc.content === oc.content &&
         rc.videoId === oc.videoId &&
         Math.abs(new Date(rc.createdAt).getTime() - new Date(oc.createdAt).getTime()) < 10000
       )
 
-      // Check nested replies for matching content and similar timestamp
       const hasRealVersionInReplies = initialComments.some(rc =>
         rc.replies?.some((reply: any) =>
           reply.content === oc.content &&
@@ -144,9 +135,8 @@ export function useCommentManagement({
     return true
   })
 
-  // Merge optimistic comments properly (nest replies under parent comments)
+  // Merge optimistic replies under parent comments
   const mergedComments = initialComments.map(comment => {
-    // Find optimistic replies for this comment
     const optimisticReplies = activeOptimisticComments.filter(oc => oc.parentId === comment.id)
 
     if (optimisticReplies.length > 0) {
@@ -158,7 +148,6 @@ export function useCommentManagement({
     return comment
   })
 
-  // Add optimistic top-level comments (no parentId)
   const optimisticTopLevel = activeOptimisticComments.filter(oc => !oc.parentId)
   const comments = [...mergedComments, ...optimisticTopLevel]
 
@@ -228,11 +217,11 @@ export function useCommentManagement({
     }
 
     syncCurrentVideo()
-    const interval = setInterval(syncCurrentVideo, 5000) // Changed from 1000ms to 5000ms
+    const interval = setInterval(syncCurrentVideo, 5000)
     return () => clearInterval(interval)
   }, [selectedVideoId])
 
-  // Listen for immediate video changes from VideoPlayer (for responsive comment updates)
+  // Listen for immediate video changes from VideoPlayer
   useEffect(() => {
     const handleVideoChange = (e: CustomEvent) => {
       const { videoId } = e.detail
@@ -331,7 +320,6 @@ export function useCommentManagement({
     setAttachmentError(null)
 
     if (value.length > 0 && !hasAutoFilledTimestamp && selectedTimestamp === null) {
-      // Pause video and capture timestamp when user starts typing
       window.dispatchEvent(new CustomEvent('pauseVideoForComment'))
 
       window.dispatchEvent(
@@ -342,7 +330,6 @@ export function useCommentManagement({
     }
   }
 
-  // Submit comment
   const handleSubmitComment = async () => {
     const attachmentsForVideo = pendingAttachments.filter(a => a.videoId === selectedVideoId)
     const hasAttachments = attachmentsForVideo.length > 0
@@ -350,7 +337,6 @@ export function useCommentManagement({
 
     if (!newComment.trim() && !hasAttachments && !hasAnnotations) return
 
-    // Prevent rapid-fire submissions
     if (loading) return
 
     if (!selectedVideoId) {
@@ -373,7 +359,6 @@ export function useCommentManagement({
     setAttachmentError(null)
     setAttachmentNotice(null)
 
-    // Check if commenting on latest version only
     if (restrictToLatestVersion) {
       const latestVideoVersion = videos.length > 0 ? Math.max(...videos.map(v => v.version)) : null
       const selectedVideo = videos.find(v => v.id === validatedVideoId)
@@ -385,7 +370,6 @@ export function useCommentManagement({
 
     setLoading(true)
 
-    // Auto-fill comment text when empty but has attachments or annotations
     let commentContent = newComment
     if (!commentContent.trim() && hasAttachments) {
       attachmentUploadCountRef.current += 1
@@ -396,7 +380,6 @@ export function useCommentManagement({
 
     // OPTIMISTIC UPDATE
     const isInternalComment = useAdminAuth || !!adminUser
-    // Convert seconds to timecode for API and storage
     const selectedVideo = videos.find(v => v.id === validatedVideoId)
     const fps = selectedVideo?.fps || 24 // Default to 24fps if not available
     const timecode = selectedTimestamp !== null ? secondsToTimecode(selectedTimestamp, fps) : '00:00:00:00'
@@ -424,7 +407,6 @@ export function useCommentManagement({
 
     setOptimisticComments(prev => [...prev, optimisticComment])
 
-    // Clear form immediately (but keep video selected for next comment)
     const commentTimestamp = selectedTimestamp
     const commentVideoId = validatedVideoId
     const commentParentId = replyingToCommentId
@@ -445,7 +427,6 @@ export function useCommentManagement({
       const fps = commentVideo?.fps || 24
       const commentTimecode = commentTimestamp !== null ? secondsToTimecode(commentTimestamp, fps) : '00:00:00:00'
 
-      // Build request body - only include fields with values
       const requestBody: any = {
         projectId,
         videoId: commentVideoId,
@@ -454,7 +435,6 @@ export function useCommentManagement({
         isInternal: isInternalComment,
       }
 
-      // Include annotation data if present
       if (pendingAnnotation) {
         requestBody.annotations = pendingAnnotation
       }
@@ -462,7 +442,6 @@ export function useCommentManagement({
         requestBody.timecodeEnd = selectedTimecodeEnd
       }
 
-      // Add optional fields only if they have values
       if (isInternalComment) {
         requestBody.authorName = adminUser!.name || 'Admin'
       } else {
@@ -473,17 +452,14 @@ export function useCommentManagement({
         }
       }
 
-      // Only include parentId if replying (not null)
       if (commentParentId) {
         requestBody.parentId = commentParentId
       }
 
-      // Include asset IDs if any attachments were added
       if (commentAssetIds.length > 0) {
         requestBody.assetIds = commentAssetIds
       }
 
-      // Submit comment in background without blocking UI
       const submitPromise = shareToken
         ? fetch('/api/comments', {
             method: 'POST',
@@ -500,25 +476,20 @@ export function useCommentManagement({
             return response.json() // Return the updated comments list
           })
         : useAdminAuth
-        ? apiPost('/api/comments', requestBody) // apiPost already returns parsed JSON
+        ? apiPost('/api/comments', requestBody)
         : Promise.reject(new Error('Authentication required to submit comment'))
 
-      // Handle submission result in background
       submitPromise
         .then((updatedComments) => {
-          // Clear the optimistic comment immediately since we have real data
           setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
 
-          // Refresh in background (non-blocking)
           router.refresh()
 
-          // Trigger immediate update with the fresh comments data
           window.dispatchEvent(new CustomEvent('commentPosted', {
             detail: { comments: updatedComments }
           }))
         })
         .catch((error) => {
-          // Remove optimistic comment and restore form on error
           setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
           setNewComment(commentContent)
           setSelectedTimestamp(commentTimestamp)
@@ -531,9 +502,7 @@ export function useCommentManagement({
           })
         })
 
-      // UI is already unblocked - loading state cleared immediately
     } catch (error) {
-      // Handle synchronous errors only
       setOptimisticComments(prev => prev.filter(c => c.id !== optimisticComment.id))
       setNewComment(commentContent)
       setSelectedTimestamp(commentTimestamp)
@@ -545,7 +514,6 @@ export function useCommentManagement({
         return toRestore.length > 0 ? [...prev, ...toRestore] : prev
       })
     } finally {
-      // Clear loading immediately so UI is not blocked
       setLoading(false)
     }
   }
@@ -563,7 +531,7 @@ export function useCommentManagement({
     setSelectedTimestamp(null)
     setSelectedVideoId(null)
     setHasAutoFilledTimestamp(false)
-    setSelectedTimecodeEnd(null) // Clear end when clearing start
+    setSelectedTimecodeEnd(null)
   }
 
   const handleNameSourceChange = (source: 'recipient' | 'custom' | 'none', recipientId?: string) => {
@@ -585,7 +553,6 @@ export function useCommentManagement({
     setAuthorName(newAuthorName)
     setSelectedRecipientId(newRecipientId)
 
-    // Persist to localStorage (persists across sessions)
     try {
       localStorage.setItem(storageKey, JSON.stringify({
         nameSource: source,
@@ -625,7 +592,6 @@ export function useCommentManagement({
         throw new Error('Authentication required to delete comment')
       }
 
-      // Trigger immediate re-fetch via window event (CommentSection polling will pick it up)
       window.dispatchEvent(new CustomEvent('commentDeleted'))
     } catch (error) {
       alert(`Failed to delete comment: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -636,7 +602,6 @@ export function useCommentManagement({
   const handleAuthorNameChange = (name: string) => {
     setAuthorName(name)
 
-    // Persist to localStorage when custom name is being typed
     if (nameSource === 'custom') {
       try {
         localStorage.setItem(storageKey, JSON.stringify({
@@ -674,7 +639,6 @@ export function useCommentManagement({
   }
 
   const handleStartDrawing = () => {
-    // Dispatch event to VideoPlayer to enter drawing mode
     window.dispatchEvent(
       new CustomEvent('enterDrawingMode', {
         detail: { timecodeEnd: selectedTimecodeEnd },
@@ -684,7 +648,6 @@ export function useCommentManagement({
 
   const handleClearAnnotation = () => {
     setPendingAnnotation(null)
-    // Tell VideoPlayer to clear its pending annotation preview
     window.dispatchEvent(new CustomEvent('annotationCleared'))
   }
 

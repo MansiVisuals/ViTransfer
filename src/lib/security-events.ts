@@ -1,10 +1,3 @@
-/**
- * Security Event Type Definitions and Helpers
- *
- * Centralized definitions for all security event types, their descriptions,
- * and formatting helpers for the security dashboard.
- */
-
 export type SecurityEventType =
   // Admin Login Events
   | 'ADMIN_PASSWORD_LOGIN_SUCCESS'

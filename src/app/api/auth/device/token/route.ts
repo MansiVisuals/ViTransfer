@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check poll rate
     const tooFast = await checkPollRate(deviceCode)
     if (tooFast) {
       return NextResponse.json(
@@ -72,7 +71,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get device code status
     const codeData = await getDeviceCodeStatus(deviceCode)
 
     if (!codeData) {
@@ -82,7 +80,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify client ID matches
     if (codeData.clientId !== clientId) {
       return NextResponse.json(
         { error: 'invalid_client' },
@@ -125,7 +122,6 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // Look up user
         const user = await prisma.user.findUnique({
           where: { id: result.userId },
           select: { id: true, email: true, name: true, role: true },
@@ -138,10 +134,8 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // Issue tokens
         const tokenData = await issueAdminTokens(user)
 
-        // Log successful token issuance
         void logSecurityEvent({
           type: 'DEVICE_CODE_TOKEN_ISSUED',
           severity: 'INFO',

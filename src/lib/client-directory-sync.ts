@@ -18,7 +18,6 @@ export async function syncRecipientToDirectory(
   if (!recipientName) return
 
   try {
-    // Get project with company info
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: {
@@ -53,7 +52,6 @@ export async function syncRecipientToDirectory(
       })
     }
 
-    // Check if contact already exists in this company
     const existingContact = await prisma.clientContact.findFirst({
       where: {
         companyId: company.id,
@@ -64,7 +62,6 @@ export async function syncRecipientToDirectory(
       }
     })
 
-    // Create contact if it doesn't exist
     if (!existingContact) {
       await prisma.clientContact.create({
         data: {
@@ -74,14 +71,12 @@ export async function syncRecipientToDirectory(
         }
       })
     } else if (recipientEmail && !existingContact.email) {
-      // Update contact with email if we now have one
       await prisma.clientContact.update({
         where: { id: existingContact.id },
         data: { email: recipientEmail }
       })
     }
 
-    // Link project to company if not already linked
     if (!project.clientCompanyId) {
       await prisma.project.update({
         where: { id: projectId },

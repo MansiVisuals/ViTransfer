@@ -112,18 +112,6 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
     }
   }, [requireAuth, loading, user, pathname, router])
 
-  /**
-   * Secure Logout Function
-   * 
-   * Client-side logout procedure:
-   * 1. Call POST /api/auth/logout with credentials
-   * 2. Clear local application state immediately
-   * 3. Clear any localStorage/sessionStorage (if used)
-   * 4. Perform hard redirect to clear all cached state
-   * 5. Handle errors gracefully (still logout locally)
-   * 
-   * Security considerations:
-   */
   async function logout() {
     try {
       const refreshToken = getRefreshToken()
@@ -142,25 +130,18 @@ export function AuthProvider({ children, requireAuth = false }: AuthProviderProp
       // Continue with local logout even if API call fails
     }
 
-    // Step 2: Clear local application state immediately
-    // Don't wait for server response - fail secure
     setUser(null)
 
-    // Step 3: Clear any client-side storage (defense in depth)
+    // Clear client-side storage (defense in depth)
     try {
       clearTokens()
       localStorage.removeItem('vitransfer_preferences')
       sessionStorage.clear()
     } catch (storageError) {
-      // Storage might not be available in some contexts - silent fail
+      // Storage might not be available in some contexts
     }
 
-    // Step 4: Hard redirect to login page
-    // Using window.location.href instead of router.push because:
-    // - Forces full page reload (clears all React state)
-    // - Clears any cached authenticated pages
-    // - Triggers middleware check immediately
-    // - More reliable than soft navigation
+    // Hard redirect to clear all React state and cached pages
     window.location.href = '/login'
   }
 

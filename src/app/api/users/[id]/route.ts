@@ -12,7 +12,6 @@ export const runtime = 'nodejs'
 
 
 
-// Prevent static generation for this route
 export const dynamic = 'force-dynamic'
 
 // GET /api/users/[id] - Get user by ID
@@ -29,12 +28,11 @@ export async function GET(
     return authResult
   }
 
-  // Rate limiting: 60 requests per minute
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
     message: usersMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
-  }, 'user-read')
+  }, 'user-read'))
 
   if (rateLimitResult) {
     return rateLimitResult
@@ -52,7 +50,6 @@ export async function GET(
         role: true,
         createdAt: true,
         updatedAt: true,
-        // Exclude password from response
       },
     })
 
@@ -93,14 +90,11 @@ export async function PATCH(
     const body = await request.json()
     const { email, username, name, password, oldPassword, role } = body
 
-    // Build update data
     const updateData: any = {}
 
-    // Track if security-sensitive fields changed
     let roleChanged = false
     
     if (email !== undefined) {
-      // Check if email is already taken by another user
       const existingUser = await prisma.user.findFirst({
         where: {
           email,
@@ -119,7 +113,6 @@ export async function PATCH(
     }
 
     if (username !== undefined) {
-      // Check if username is already taken by another user
       const existingUsername = await prisma.user.findFirst({
         where: {
           username,
@@ -142,7 +135,6 @@ export async function PATCH(
     }
 
     if (role !== undefined) {
-      // Validate role
       if (role !== 'ADMIN' && role !== 'USER') {
         return NextResponse.json(
           { error: usersMessages.invalidRoleAdminOrUser || 'Invalid role. Must be ADMIN or USER' },
@@ -150,7 +142,6 @@ export async function PATCH(
         )
       }
 
-      // Check if role is actually changing
       const currentUserData = await prisma.user.findUnique({
         where: { id },
         select: { role: true },
@@ -162,16 +153,13 @@ export async function PATCH(
       }
     }
 
-    // Track if password is being changed (for session regeneration)
     let passwordChanged = false
 
-    // Process password change - coerce inputs to strings, let validation decide
     const newPassword = typeof password === 'string' ? password.trim() : ''
     const oldPasswordStr = typeof oldPassword === 'string' ? oldPassword : ''
     const passwordValidation = validatePassword(newPassword)
 
     if (passwordValidation.isValid) {
-      // Get user's current password hash
       const userWithPassword = await prisma.user.findUnique({
         where: { id },
         select: { password: true },
@@ -197,7 +185,6 @@ export async function PATCH(
       passwordChanged = true
     }
 
-    // Update user
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
@@ -212,16 +199,14 @@ export async function PATCH(
       },
     })
 
-    // SECURITY: Handle session security for sensitive changes
+    // SECURITY: Handle session invalidation for sensitive changes
     const currentUser = await getCurrentUserFromRequest(request)
     let securityMessage = ''
 
     if (passwordChanged) {
       if (currentUser && currentUser.id === id) {
-        // User is changing their own password - revoke all sessions to force fresh login
         await revokeAllUserTokens(user.id)
       } else {
-        // Admin is changing another user's password - revoke their sessions
         await revokeAllUserTokens(user.id)
       }
 
@@ -230,13 +215,11 @@ export async function PATCH(
 
     if (roleChanged) {
       if (currentUser && currentUser.id === id) {
-        // User's own role is changing - revoke sessions to refresh permissions on next login
         await revokeAllUserTokens(user.id)
         securityMessage = securityMessage
           ? `${securityMessage} ${usersMessages.roleUpdatedLoginAgainToRefreshPermissions || 'Role updated - please log in again to refresh permissions.'}`
           : (usersMessages.roleUpdatedLoginAgainToRefreshPermissions || 'Role updated - please log in again to refresh permissions.')
       } else {
-        // Another admin is changing this user's role - revoke all their sessions
         await revokeAllUserTokens(user.id)
         securityMessage = securityMessage
           ? `${securityMessage} ${usersMessages.roleChangedUserMustLoginAgain || 'Role changed - user will need to log in again.'}`
@@ -274,10 +257,8 @@ export async function DELETE(
 
   try {
     const { id } = await params
-    // Get current user from auth
     const currentUser = authResult
 
-    // Prevent deleting yourself
     if (currentUser.id === id) {
       return NextResponse.json(
         { error: usersMessages.cannotDeleteOwnAccount || 'Cannot delete your own account' },
@@ -285,7 +266,6 @@ export async function DELETE(
       )
     }
 
-    // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id },
     })
@@ -297,11 +277,9 @@ export async function DELETE(
       )
     }
 
-    // Invalidate all sessions for this user BEFORE deletion
-    // This ensures any active tokens are revoked immediately
+    // Invalidate all sessions before deletion so active tokens are revoked immediately
     await invalidateAdminSessions(id)
 
-    // Delete user
     await prisma.user.delete({
       where: { id },
     })

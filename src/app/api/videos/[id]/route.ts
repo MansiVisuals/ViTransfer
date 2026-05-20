@@ -21,13 +21,11 @@ export async function GET(
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const videoMessages = messages?.videos || {}
 
-  // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
   }
 
-  // Rate limit status checks (allow frequent polling)
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 120, // Allow 2 requests per second for polling
@@ -66,27 +64,23 @@ export async function GET(
   }
 }
 
-// Helper: Check if all videos have at least one approved version
 async function checkAllVideosApproved(projectId: string): Promise<boolean> {
   const allVideos = await prisma.video.findMany({
     where: { projectId },
     select: { approved: true, name: true }
   })
 
-  // Group by video name
   const videosByName = allVideos.reduce((acc: Record<string, any[]>, video) => {
     if (!acc[video.name]) acc[video.name] = []
     acc[video.name].push(video)
     return acc
   }, {})
 
-  // Check if each unique video has at least one approved version
   return Object.values(videosByName).every((versions: any[]) =>
     versions.some(v => v.approved)
   )
 }
 
-// Helper: Update project status based on approval changes
 async function updateProjectStatus(
   projectId: string,
   videoId: string,
@@ -95,11 +89,9 @@ async function updateProjectStatus(
 ): Promise<void> {
   const allApproved = await checkAllVideosApproved(projectId)
 
-  // Check if auto-approve is enabled
   const autoApprove = await getAutoApproveProject()
 
   if (allApproved && approved && autoApprove) {
-    // All videos approved AND auto-approve enabled → mark project as approved
     await prisma.project.update({
       where: { id: projectId },
       data: {
@@ -109,7 +101,6 @@ async function updateProjectStatus(
       }
     })
   } else if (!approved && currentStatus === 'APPROVED') {
-    // Unapproving when project was approved → revert to IN_REVIEW
     await prisma.project.update({
       where: { id: projectId },
       data: {
@@ -129,13 +120,11 @@ export async function PATCH(
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const videoMessages = messages?.videos || {}
 
-  // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
   }
 
-  // Rate limit admin toggles
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
@@ -148,7 +137,6 @@ export async function PATCH(
     const body = await request.json()
     const { approved, name, versionLabel } = body
 
-    // Validate inputs
     if (approved !== undefined && typeof approved !== 'boolean') {
       return NextResponse.json(
         { error: videoMessages.invalidApprovedBoolean || 'Invalid request: approved must be a boolean' },
@@ -170,7 +158,6 @@ export async function PATCH(
       )
     }
 
-    // At least one field must be provided
     if (approved === undefined && name === undefined && versionLabel === undefined) {
       return NextResponse.json(
         { error: videoMessages.invalidUpdateRequest || 'Invalid request: at least one field must be provided' },
@@ -178,7 +165,6 @@ export async function PATCH(
       )
     }
 
-    // Get video details
     const video = await prisma.video.findUnique({
       where: { id },
       include: { project: true }
@@ -188,13 +174,12 @@ export async function PATCH(
   return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
-    // If approving this video, unapprove all other versions of the SAME video
     if (approved) {
       await prisma.video.updateMany({
         where: {
           projectId: video.projectId,
-          name: video.name, // Same video name
-          id: { not: id }, // But different version
+          name: video.name,
+          id: { not: id },
         },
         data: {
           approved: false,
@@ -203,7 +188,6 @@ export async function PATCH(
       })
     }
 
-    // Build update data object
     const updateData: any = {}
 
     if (approved !== undefined) {
@@ -219,20 +203,16 @@ export async function PATCH(
       updateData.versionLabel = versionLabel.trim()
     }
 
-    // Update video
     await prisma.video.update({
       where: { id },
       data: updateData
     })
 
-    // Update project status if approval changed
     if (approved !== undefined) {
       logMessage(`[VIDEO-APPROVAL] Admin toggled approval for video ${id} to ${approved}`)
       await updateProjectStatus(video.projectId, id, approved, video.project.status)
 
-      // NOTE: Admin-toggled approvals/unapprovals do NOT send email notifications
-      // Only client-initiated approvals (via /approve route) send emails immediately
-      // This prevents spam when admins are managing multiple videos
+      // Admin-toggled approvals don't send email notifications (only client-initiated ones do)
       logMessage('[VIDEO-APPROVAL] Admin approval - emails NOT sent (by design)')
     }
 
@@ -253,7 +233,6 @@ export async function DELETE(
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const videoMessages = messages?.videos || {}
 
-  // SECURITY: Require admin authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -268,7 +247,6 @@ export async function DELETE(
 
   try {
     const { id } = await params
-    // Get video details
     const video = await prisma.video.findUnique({
       where: { id },
       include: {
@@ -280,9 +258,8 @@ export async function DELETE(
       return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
     }
 
-    // Delete all associated files from storage
     try {
-      // Delete asset files only if no other assets point to the same storage path
+      // Only delete asset files if no other assets share the same storage path
       for (const asset of video.assets) {
         const sharedCount = await prisma.videoAsset.count({
           where: {
@@ -296,12 +273,10 @@ export async function DELETE(
         }
       }
 
-      // Delete original file
       if (video.originalStoragePath) {
         await deleteFile(video.originalStoragePath)
       }
 
-      // Delete preview files
       if (video.preview1080Path) {
         await deleteFile(video.preview1080Path)
       }
@@ -309,7 +284,6 @@ export async function DELETE(
         await deleteFile(video.preview720Path)
       }
 
-      // Delete thumbnail
       if (video.thumbnailPath) {
         const thumbnailSharedAssets = await prisma.videoAsset.count({
           where: {
@@ -324,17 +298,14 @@ export async function DELETE(
           },
         })
 
-        // Only delete if no other assets or videos reference this thumbnail path
         if (thumbnailSharedAssets === 0 && thumbnailSharedVideos === 0) {
           await deleteFile(video.thumbnailPath)
         }
       }
     } catch (error) {
       logError(`Failed to delete files for video ${video.id}:`, error)
-      // Continue with database deletion even if storage deletion fails
     }
 
-    // Delete video from database (cascade will handle comments)
     await prisma.video.delete({
       where: { id: id },
     })

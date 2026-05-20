@@ -85,7 +85,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Basic domain validation
     const domainPattern = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/
     if (!domainPattern.test(domain)) {
       return NextResponse.json(
@@ -94,10 +93,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Normalize domain (lowercase)
     const normalizedDomain = domain.toLowerCase()
 
-    // Check if already blocked
     const existing = await prisma.blockedDomain.findUnique({
       where: { domain: normalizedDomain }
     })
@@ -117,7 +114,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Invalidate cache
     await invalidateBlocklistCache()
 
     return NextResponse.json({
@@ -171,7 +167,6 @@ export async function DELETE(request: NextRequest) {
       where: { id }
     })
 
-    // Invalidate cache
     await invalidateBlocklistCache()
 
     return NextResponse.json({

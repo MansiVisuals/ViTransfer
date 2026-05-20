@@ -1,17 +1,6 @@
 import os from 'os'
 import { logMessage } from './logging'
 
-/**
- * Centralized CPU allocation for video processing
- *
- * Goal: Never max out CPU, leave headroom for system/host processes
- *
- * This module coordinates between:
- * - Worker concurrency (how many jobs run at once)
- * - FFmpeg threads per job
- * - Total CPU budget
- */
-
 export interface CpuAllocation {
   totalThreads: number
   workerConcurrency: number
@@ -21,17 +10,13 @@ export interface CpuAllocation {
 }
 
 /**
- * Calculate optimal CPU allocation based on available threads
- *
- * Conservative approach:
- * - Targets ~30-50% thread utilization
- * - Leaves plenty of headroom for system/host processes
- * - Remember: on hyperthreaded CPUs, 12 threads = 6 physical cores
+ * Calculate optimal CPU allocation.
+ * Targets ~30-50% thread utilization to leave headroom for system processes.
+ * On hyperthreaded CPUs, 12 threads = 6 physical cores.
  */
 export function getCpuAllocation(): CpuAllocation {
   const totalThreads = os.cpus().length
 
-  // Allow override via environment variable (for Docker resource limits)
   const envThreads = process.env.CPU_THREADS ? parseInt(process.env.CPU_THREADS, 10) : null
   const effectiveThreads = envThreads && envThreads > 0 ? envThreads : totalThreads
 
@@ -39,29 +24,24 @@ export function getCpuAllocation(): CpuAllocation {
   let cleanPreviewConcurrency: number
   let threadsPerJob: number
 
-  // Conservative allocation - keep CPU usage low
+  // Conservative allocation
   if (effectiveThreads <= 2) {
-    // Minimal: 1 job at a time, 1 thread
     workerConcurrency = 1
     cleanPreviewConcurrency = 1
     threadsPerJob = 1
   } else if (effectiveThreads <= 4) {
-    // Small (4 threads): 1+1 jobs, 1 thread each = 2 threads (50%)
     workerConcurrency = 1
     cleanPreviewConcurrency = 1
     threadsPerJob = 1
   } else if (effectiveThreads <= 8) {
-    // Medium (6-8 threads): 1+1 jobs, 2 threads each = 4 threads (50-67%)
     workerConcurrency = 1
     cleanPreviewConcurrency = 1
     threadsPerJob = 2
   } else if (effectiveThreads <= 16) {
-    // Large (12-16 threads): 1+1 jobs, 2 threads each = 4 threads (25-33%)
     workerConcurrency = 1
     cleanPreviewConcurrency = 1
     threadsPerJob = 2
   } else {
-    // XL (24+ threads): 2+1 jobs, 2 threads each = 6 threads (~25%)
     workerConcurrency = 2
     cleanPreviewConcurrency = 1
     threadsPerJob = 2
@@ -78,9 +58,7 @@ export function getCpuAllocation(): CpuAllocation {
   }
 }
 
-/**
- * Log CPU allocation for debugging
- */
+/** Log CPU allocation for debugging */
 export function logCpuAllocation(allocation: CpuAllocation): void {
   const utilizationPercent = Math.round((allocation.maxThreadsUsed / allocation.totalThreads) * 100)
 

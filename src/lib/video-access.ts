@@ -49,13 +49,6 @@ interface VideoAccessToken {
 /**
  * Generate a time-limited video access token with session binding
  * Tokens are cached per session to prevent token proliferation
- *
- * @param videoId - ID of the video to grant access to
- * @param projectId - ID of the project containing the video
- * @param quality - Quality level (thumbnail, preview720, preview1080, original)
- * @param request - NextRequest for IP address extraction
- * @param sessionId - Session ID for binding token to specific session
- * @returns Base64url-encoded access token valid for client session timeout duration
  */
 export async function generateVideoAccessToken(
   videoId: string,
@@ -104,12 +97,6 @@ export async function generateVideoAccessToken(
 
 /**
  * Verify video access token and validate session binding
- * Checks token existence, session match, and IP address consistency
- *
- * @param token - The access token to verify
- * @param request - NextRequest for IP address validation
- * @param sessionId - Expected session ID for token binding verification
- * @returns Parsed token data if valid, null if invalid or expired
  */
 export async function verifyVideoAccessToken(
   token: string,
@@ -183,13 +170,6 @@ export async function verifyVideoAccessToken(
 
 /**
  * Detect potential hotlinking attempts using referer analysis and session validation
- * Checks for suspicious patterns: missing referer, external domains, rapid token rotation
- *
- * @param request - NextRequest containing referer and origin headers
- * @param sessionId - Session ID for tracking access patterns
- * @param videoId - Video being accessed
- * @param projectId - Project containing the video
- * @returns Object indicating if hotlinking detected, with reason and severity level
  */
 export async function detectHotlinking(
   request: NextRequest,
@@ -354,7 +334,6 @@ export async function logSecurityEvent(params: {
     })
 
     const redis = getRedis()
-    // Keep recent events in Redis for quick access (last 1000 events)
     await redis.lpush('security:events:recent', JSON.stringify({
       ...params,
       timestamp: new Date().toISOString()
@@ -368,12 +347,10 @@ export async function logSecurityEvent(params: {
 export async function getSecuritySettings() {
   const now = Date.now()
 
-  // Check in-memory cache first (fastest)
   if (securitySettingsCache.expiresAt > now) {
     return securitySettingsCache.value
   }
 
-  // Check Redis cache (shared across instances)
   const redis = getRedis()
   const REDIS_KEY = 'app:security_settings'
   const cached = await redis.get(REDIS_KEY)
@@ -385,7 +362,6 @@ export async function getSecuritySettings() {
     return parsed
   }
 
-  // Fetch from database (slowest, only when both caches miss)
   const settings = await prisma.securitySettings.findUnique({
     where: { id: 'default' },
     select: {
@@ -408,12 +384,11 @@ export async function getSecuritySettings() {
     trackAnalytics: settings?.trackAnalytics ?? true
   }
 
-  // Cache in both Redis and memory
   securitySettingsCache.value = value
   securitySettingsCache.expiresAt = now + SECURITY_SETTINGS_CACHE_TTL_MS
   securitySettingsCache.version = settings?.updatedAt?.toISOString()
 
-  await redis.setex(REDIS_KEY, 300, JSON.stringify(value)) // 5 min Redis cache
+  await redis.setex(REDIS_KEY, 300, JSON.stringify(value))
 
   return value
 }
@@ -431,12 +406,10 @@ const BLOCKLIST_CACHE_KEY_DOMAINS = 'security:blocklist:domains'
 
 /**
  * Get blocked IPs with Redis caching
- * Checks database and caches in Redis for 5 minutes
  */
 async function getBlockedIPs(): Promise<string[]> {
   const redis = getRedis()
 
-  // Check cache first
   const cached = await redis.get(BLOCKLIST_CACHE_KEY_IPS)
   if (cached) {
     try {
@@ -446,14 +419,12 @@ async function getBlockedIPs(): Promise<string[]> {
     }
   }
 
-  // Fetch from database
   const blockedIPs = await prisma.blockedIP.findMany({
     select: { ipAddress: true }
   })
 
   const ipList = blockedIPs.map(entry => entry.ipAddress)
 
-  // Cache in Redis
   await redis.setex(BLOCKLIST_CACHE_KEY_IPS, BLOCKLIST_CACHE_TTL, JSON.stringify(ipList))
 
   return ipList
@@ -461,12 +432,10 @@ async function getBlockedIPs(): Promise<string[]> {
 
 /**
  * Get blocked domains with Redis caching
- * Checks database and caches in Redis for 5 minutes
  */
 async function getBlockedDomains(): Promise<string[]> {
   const redis = getRedis()
 
-  // Check cache first
   const cached = await redis.get(BLOCKLIST_CACHE_KEY_DOMAINS)
   if (cached) {
     try {
@@ -476,14 +445,12 @@ async function getBlockedDomains(): Promise<string[]> {
     }
   }
 
-  // Fetch from database
   const blockedDomains = await prisma.blockedDomain.findMany({
     select: { domain: true }
   })
 
   const domainList = blockedDomains.map(entry => entry.domain)
 
-  // Cache in Redis
   await redis.setex(BLOCKLIST_CACHE_KEY_DOMAINS, BLOCKLIST_CACHE_TTL, JSON.stringify(domainList))
 
   return domainList

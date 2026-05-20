@@ -8,7 +8,6 @@ import { headers } from 'next/headers'
  * Automatically detects headers from Server Components when request is not provided
  */
 export async function getAppUrl(request?: NextRequest): Promise<string> {
-  // 1. Try database settings first
   try {
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
@@ -22,7 +21,6 @@ export async function getAppUrl(request?: NextRequest): Promise<string> {
     // DB not available, continue to request detection
   }
 
-  // 2. Extract from request headers if available (API routes)
   if (request) {
     const proto = request.headers.get('x-forwarded-proto') ||
                   (request.url.startsWith('https') ? 'https' : 'http')
@@ -34,7 +32,6 @@ export async function getAppUrl(request?: NextRequest): Promise<string> {
     }
   }
 
-  // 3. Try to get headers from Server Component context
   try {
     const headersList = await headers()
     const proto = headersList.get('x-forwarded-proto') || 'http'
@@ -48,7 +45,6 @@ export async function getAppUrl(request?: NextRequest): Promise<string> {
     // Not in a request context
   }
 
-  // 4. No fallback - throw error
   throw new Error('Unable to determine app URL. Please configure domain in Settings or ensure request headers are available.')
 }
 

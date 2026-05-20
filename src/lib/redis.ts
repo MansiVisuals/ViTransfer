@@ -1,17 +1,3 @@
-/**
- * Centralized Redis Connection
- *
- * Single source of truth for all Redis connections across the application.
- * Used by: video-access, rate-limit, session-invalidation, token-revocation, OTP, etc.
- *
- * Features:
- * - Singleton pattern (reuses same connection)
- * - Lazy connection (connects on first use)
- * - Automatic retry with backoff
- * - Proper error handling
- * - Production-ready configuration
- */
-
 import IORedis from 'ioredis'
 import { logError, logMessage } from './logging'
 

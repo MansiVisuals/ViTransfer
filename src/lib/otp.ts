@@ -6,7 +6,6 @@ import { loadLocaleMessages } from '@/i18n/locale'
 import { getEmailTemplate, replacePlaceholders } from './email-template-system'
 import { logError } from './logging'
 
-// OTP Configuration
 const OTP_LENGTH = 6
 const OTP_EXPIRY_MINUTES = 10
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
@@ -316,12 +315,10 @@ export async function verifyOTP(
   const isValid = constantTimeCompare(code.trim(), otpData.code)
 
   if (!isValid) {
-    // Increment attempts
     otpData.attempts += 1
     const attemptsLeft = maxAttempts - otpData.attempts
 
     if (attemptsLeft > 0) {
-      // Update stored data with incremented attempts
       const ttl = await redis.ttl(otpKey)
       await redis.setex(otpKey, ttl > 0 ? ttl : 60, JSON.stringify(otpData))
 
@@ -331,7 +328,6 @@ export async function verifyOTP(
         attemptsLeft,
       }
     } else {
-      // Max attempts reached, delete OTP
       await redis.del(otpKey)
       return {
         success: false,

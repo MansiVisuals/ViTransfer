@@ -28,7 +28,6 @@ export async function validateCommentPermissions(params: {
     }
   }
 
-  // Fetch the project to check permissions
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: {
@@ -63,10 +62,8 @@ export async function resolveCommentAuthor(params: {
 }): Promise<{ authorEmail: string | null; fallbackName: string }> {
   const { projectId, authorEmail, recipientId } = params
 
-  // Get primary recipient for author name fallback
   const primaryRecipient = await getPrimaryRecipient(projectId)
 
-  // Get project company name
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { companyName: true }
@@ -75,7 +72,6 @@ export async function resolveCommentAuthor(params: {
   // Priority: companyName → primary recipient → 'Client'
   const fallbackName = project?.companyName || primaryRecipient?.name || 'Client'
 
-  // If recipientId provided, use that recipient's email
   let finalAuthorEmail = authorEmail || null
 
   if (recipientId) {
@@ -107,7 +103,6 @@ export async function sanitizeAndValidateContent(params: {
 }> {
   const { content, authorName } = params
 
-  // Validate content length
   if (!validateCommentLength(content)) {
     return {
       valid: false,
@@ -116,7 +111,6 @@ export async function sanitizeAndValidateContent(params: {
     }
   }
 
-  // Check for suspicious patterns
   if (containsSuspiciousPatterns(content)) {
     return {
       valid: false,
@@ -125,13 +119,10 @@ export async function sanitizeAndValidateContent(params: {
     }
   }
 
-  // Sanitize HTML content
   const sanitizedContent = sanitizeCommentHtml(content)
 
-  // Sanitize authorName (same rules as watermark text)
   let sanitizedAuthorName = authorName || null
   if (sanitizedAuthorName) {
-    // Remove invalid characters
     const invalidChars = sanitizedAuthorName.match(/[^a-zA-Z0-9\s\-_.()]/g)
     if (invalidChars) {
       return {
@@ -141,7 +132,6 @@ export async function sanitizeAndValidateContent(params: {
       }
     }
 
-    // Length check
     if (sanitizedAuthorName.length > 50) {
       return {
         valid: false,
@@ -150,7 +140,6 @@ export async function sanitizeAndValidateContent(params: {
       }
     }
 
-    // Trim whitespace
     sanitizedAuthorName = sanitizedAuthorName.trim()
   }
 
@@ -310,7 +299,6 @@ export async function handleCommentNotifications(params: {
     const clientImmediate = clientSchedule === 'IMMEDIATE'
     const adminImmediate = adminSchedule === 'IMMEDIATE'
 
-    // Send immediate emails for sides that use IMMEDIATE
     if (clientImmediate) {
       logMessage('[COMMENT-NOTIFICATION] Client path: sending immediately...')
       await sendImmediateNotification(context, 'client')
@@ -353,7 +341,6 @@ export async function cancelCommentNotification(commentId: string): Promise<void
       691200 // 8 days
     )
 
-    // Delete from notification queue if it exists
     await prisma.notificationQueue.deleteMany({
       where: {
         data: {

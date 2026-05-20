@@ -37,10 +37,7 @@ export async function POST(
 
     const { token } = await params
 
-    // Network-layer rate limit by IP. The per-(email, project) limit in checkOTPRateLimit
-    // only counts requests that pass recipient verification, so it does NOT throttle
-    // attackers spamming non-recipient emails — which still triggers admin
-    // "unauthorized OTP request" notifications. This catches that.
+    // Network-layer rate limit by IP (per-email/project limit only counts verified recipients)
     const ipRateLimitResult = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
       maxRequests: 10,
@@ -67,7 +64,6 @@ export async function POST(
       )
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -76,7 +72,6 @@ export async function POST(
       )
     }
 
-    // Check if SMTP is configured
     const smtpConfigured = await isSmtpConfigured()
     if (!smtpConfigured) {
       return NextResponse.json(
@@ -85,7 +80,6 @@ export async function POST(
       )
     }
 
-    // Get project
     const project = await prisma.project.findUnique({
       where: { slug: token },
       select: {
@@ -102,7 +96,6 @@ export async function POST(
       )
     }
 
-    // Check if OTP is enabled for this project
     if (project.authMode !== 'OTP' && project.authMode !== 'BOTH') {
       return NextResponse.json(
         { error: shareMessages.otpNotEnabled || 'OTP authentication not enabled for this project' },
@@ -111,11 +104,9 @@ export async function POST(
     }
 
     // SECURITY: Check rate limit BEFORE verifying recipient to prevent enumeration
-    // This ensures attackers can't determine valid recipients via rate limit differences
     const rateLimitCheck = await checkOTPRateLimit(email, project.id)
     if (rateLimitCheck.limited) {
       // SECURITY: Return generic message to prevent enumeration via rate limit
-      // Don't reveal if this email is actually a recipient or not
       const ipAddress = getClientIpAddress(request)
       await logSecurityEvent({
         type: 'OTP_RATE_LIMIT_HIT',
@@ -144,15 +135,13 @@ export async function POST(
       )
     }
 
-    // SECURITY: Track start time to add timing randomization
-    // This prevents timing attacks that could enumerate valid recipients
+    // SECURITY: Track start time for timing randomization to prevent recipient enumeration
     const startTime = Date.now()
 
     // Verify email is a project recipient (after rate limit check)
     const isRecipient = await verifyRecipientEmail(email, project.id)
     if (!isRecipient) {
-      // SECURITY: Don't reveal if email is valid or not - return success anyway
-      // This prevents email enumeration attacks
+      // SECURITY: Don't reveal if email is valid - return success to prevent enumeration
       const ipAddress = getClientIpAddress(request)
       await logSecurityEvent({
         type: 'UNAUTHORIZED_OTP_REQUEST',
@@ -194,7 +183,6 @@ export async function POST(
       }).catch(() => {})
 
       // SECURITY: Add random delay to match timing of valid email path
-      // Valid emails take 500-2000ms for SMTP + Redis + DB, match that range here
       const minDelay = 800
       const maxDelay = 2000
       const randomDelay = crypto.randomInt(minDelay, maxDelay + 1)
@@ -203,17 +191,15 @@ export async function POST(
         await new Promise(resolve => setTimeout(resolve, randomDelay - elapsed))
       }
 
-      // Return success message without actually sending OTP
+      // Return success without actually sending OTP
       return NextResponse.json({
         success: true,
         message: shareMessages.otpRequestSubmitted || 'If your email is registered for this project, you will receive a verification code shortly',
       })
     }
 
-    // Generate OTP
     const code = generateOTP()
 
-    // Store OTP in Redis
     await storeOTP(email, project.id, code)
 
     const recipient = await prisma.projectRecipient.findFirst({
@@ -241,7 +227,6 @@ export async function POST(
       }
     }
 
-    // Send OTP email
     try {
       const recipientLocale = await getRecipientLocale(email)
       await sendOTPEmail(email, project.title, code, unsubscribeUrl, recipientLocale)
@@ -253,7 +238,6 @@ export async function POST(
       )
     }
 
-    // Log security event for OTP sent
     const ipAddress = getClientIpAddress(request)
     await logSecurityEvent({
       type: 'OTP_SENT',

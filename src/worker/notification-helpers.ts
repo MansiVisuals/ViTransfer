@@ -4,9 +4,7 @@ import { logError, logMessage } from '../lib/logging'
 
 const MAX_ATTEMPTS = 3
 
-/**
- * Get period description string for email template
- */
+/** Get period description string for email template */
 export function getPeriodString(schedule: string): string {
   switch (schedule) {
     case 'HOURLY':
@@ -21,12 +19,8 @@ export function getPeriodString(schedule: string): string {
 }
 
 /**
- * Check if notifications should be sent now (CRON-like scheduling)
- *
- * CRON Principle: Compares last sent time against the most recent target time.
- * If schedule changes (e.g., WEEKLY→DAILY), immediately re-evaluates and sends if past due.
- *
- * TZ Note: All Date operations use container's TZ (set via TZ env var in docker-compose)
+ * Check if notifications should be sent now (CRON-like scheduling).
+ * TZ Note: All Date operations use container's TZ (set via TZ env var in docker-compose).
  */
 export function shouldSendNow(
   schedule: string,
@@ -38,8 +32,6 @@ export function shouldSendNow(
   const getTargetTime = (): Date | null => {
     switch (schedule) {
       case 'HOURLY':
-        // Target = most recent top-of-hour. No minute restriction —
-        // the lastSent comparison below prevents double-sends.
         const hourTarget = new Date(now)
         hourTarget.setMinutes(0, 0, 0)
         return hourTarget
@@ -60,7 +52,7 @@ export function shouldSendNow(
         const currentDay = now.getDay()
         let daysBack = currentDay - day
         if (daysBack < 0) daysBack += 7
-        if (daysBack === 0 && now < weeklyTarget) daysBack = 7 // not yet today
+        if (daysBack === 0 && now < weeklyTarget) daysBack = 7
         weeklyTarget.setDate(weeklyTarget.getDate() - daysBack)
         return weeklyTarget
 
@@ -72,23 +64,20 @@ export function shouldSendNow(
   const target = getTargetTime()
   if (!target) return false
 
-  // Not past target time yet - wait
+  // Not past target time yet
   if (now < target) return false
 
-  // Never sent before - send now
   if (!lastSent) return true
 
-  // Already sent after this target - don't send again
+  // Already sent after this target
   if (lastSent >= target) return false
 
-  // Last sent was before this target - send now
   return true
 }
 
 /**
- * Normalize queued notification payloads to ensure they include timecode.
- * Older queue entries stored a numeric timestamp; convert those on the fly
- * so emails consistently show the new HH:MM:SS:FF format.
+ * Normalize queued notification payloads to include HH:MM:SS:FF timecode format.
+ * Older queue entries stored a numeric timestamp; convert those on the fly.
  */
 export function normalizeNotificationDataTimecode(data: any) {
   if (!data) return data
@@ -139,8 +128,8 @@ export function normalizeNotificationDataTimecode(data: any) {
 }
 
 /**
- * Handle notification send with automatic retry logic
- * DRY helper - used by both admin and client notification processing
+ * Handle notification send with automatic retry logic.
+ * DRY helper used by both admin and client notification processing.
  */
 export async function sendNotificationsWithRetry(config: {
   notificationIds: string[]
@@ -165,7 +154,6 @@ export async function sendNotificationsWithRetry(config: {
   const now = new Date()
 
   if (sendSuccess) {
-    // Mark as sent
     await prisma.notificationQueue.updateMany({
       where: { id: { in: notificationIds } },
       data: {
@@ -176,7 +164,6 @@ export async function sendNotificationsWithRetry(config: {
     })
     logMessage(`${logPrefix} Successfully sent`)
   } else if (currentAttempts >= MAX_ATTEMPTS) {
-    // Permanently failed after 3 attempts
     await prisma.notificationQueue.updateMany({
       where: { id: { in: notificationIds } },
       data: {
@@ -186,7 +173,6 @@ export async function sendNotificationsWithRetry(config: {
     })
     logError(`${logPrefix} Permanently failed after ${MAX_ATTEMPTS} attempts`)
   } else {
-    // Will retry
     await prisma.notificationQueue.updateMany({
       where: { id: { in: notificationIds } },
       data: { lastError: lastError || 'Send failed' }

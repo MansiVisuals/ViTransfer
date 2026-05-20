@@ -51,7 +51,6 @@ export async function GET() {
   const settingsMessages = messages?.settings || {}
 
   try {
-    // Check if custom logo exists
     const customLogoPath = getFilePath(STORAGE_PATH)
     let hasCustomLogo = false
     try {
@@ -62,7 +61,6 @@ export async function GET() {
     }
     
     if (hasCustomLogo) {
-      // Check for cached custom logo PNG
       const pngPath = getFilePath(CACHE_PATH)
       try {
         const cachedPng = await fs.readFile(pngPath)
@@ -74,17 +72,15 @@ export async function GET() {
           },
         })
       } catch {
-        // No cached PNG, need to generate
+        // No cached PNG
       }
 
-      // Read and convert custom SVG to PNG
       const svgData = await fs.readFile(customLogoPath)
       const pngBuffer = await sharp(svgData)
         .resize({ height: 88, withoutEnlargement: false })
         .png()
         .toBuffer()
 
-      // Cache the PNG
       try {
         await fs.writeFile(pngPath, pngBuffer)
       } catch {
@@ -100,7 +96,6 @@ export async function GET() {
       })
     }
 
-    // No custom logo - generate default logo with accent color
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
       select: { accentColor: true },
@@ -108,7 +103,6 @@ export async function GET() {
     const accentKey = settings?.accentColor || 'blue'
     const accentHex = ACCENT_COLOR_HEX[accentKey] || ACCENT_COLOR_HEX.blue
     
-    // Check for cached default logo PNG for this accent color
     const defaultCachePath = getFilePath(`${DEFAULT_CACHE_PREFIX}${accentKey}.png`)
     try {
       const cachedPng = await fs.readFile(defaultCachePath)
@@ -120,16 +114,14 @@ export async function GET() {
         },
       })
     } catch {
-      // No cached PNG, need to generate
+      // No cached PNG
     }
 
-    // Generate default logo SVG and convert to PNG
     const svgString = buildDefaultLogoSvg(accentHex, 88)
     const pngBuffer = await sharp(Buffer.from(svgString))
       .png()
       .toBuffer()
 
-    // Cache the default logo PNG
     try {
       await fs.writeFile(defaultCachePath, pngBuffer)
     } catch {

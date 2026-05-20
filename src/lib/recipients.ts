@@ -33,7 +33,6 @@ export async function getProjectRecipients(projectId: string): Promise<Recipient
 
 /**
  * Get the primary recipient for a project
- * Optimized to fetch only the primary recipient instead of all recipients
  */
 export async function getPrimaryRecipient(projectId: string): Promise<Recipient | null> {
   // Try to fetch primary recipient first (most common case)
@@ -176,7 +175,7 @@ export async function deleteRecipient(recipientId: string): Promise<void> {
     where: { id: recipientId }
   })
 
-  // If deleted recipient WAS primary, promote another recipient to primary
+  // If deleted recipient was primary, promote another to primary
   if (recipient.isPrimary) {
     const remaining = await prisma.projectRecipient.findFirst({
       where: { projectId: recipient.projectId },

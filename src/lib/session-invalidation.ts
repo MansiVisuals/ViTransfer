@@ -1,34 +1,5 @@
 import { getRedis } from './redis'
-import { prisma } from './db'
-import { revokeAllUserTokens } from './token-revocation'
-import { logError, logMessage } from '@/lib/logging'
 
-/**
- * Session Invalidation Utilities
- *
- * Security-first approach: When security settings change, immediately invalidate
- * affected sessions to enforce new security posture.
- *
- * Session Types:
- * - Admin sessions: JWT tokens (access + refresh) → blacklist:user:{userId}
- * - Client share sessions: bearer JWT sessionId revocation in Redis (revoked:share_session:{sessionId})
- *
- * Invalidation Triggers:
- * 1. Session timeout changes → Invalidate ALL share sessions globally
- * 2. Project password changes → Invalidate all share sessions for that project
- * 3. Project auth mode changes → Invalidate all share sessions for that project
- * 4. Hotlink protection changes → Invalidate ALL share sessions (more restrictive)
- * 5. Password attempt changes → Clear rate limit counters
- * 6. Admin removal → Revoke all admin tokens for deleted user
- * 7. Admin password change → Revoke all admin tokens (handled in auth.ts)
- * 8. Passkey change/deletion → Revoke all admin tokens as security measure
- * 9. Recipient removal/changes → Invalidate recipient's share sessions
- */
-
-/**
- * Scan and delete Redis keys matching a pattern
- * @private
- */
 async function scanAndDeleteKeys(
   pattern: string
 ): Promise<number> {
@@ -40,7 +11,6 @@ async function scanAndDeleteKeys(
     keysToDelete.push(...keys)
   }
 
-  // Delete all collected keys in pipeline
   if (keysToDelete.length > 0) {
     const pipeline = redis.pipeline()
     keysToDelete.forEach(key => pipeline.del(key))
@@ -200,7 +170,6 @@ export async function invalidateRecipientSessions(recipientId: string): Promise<
       return 0
     }
 
-    // Filter to only sessions that match this recipient's email
     const recipientSessions = sessions.filter(s =>
       s.email?.toLowerCase() === recipient.email?.toLowerCase()
     )

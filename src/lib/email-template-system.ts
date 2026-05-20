@@ -1,11 +1,3 @@
-/**
- * Customizable Email Template System
- *
- * Defines available email template types, their placeholders, and default content.
- * Templates support placeholders in the format {{PLACEHOLDER_NAME}} which are
- * replaced with actual values at send time.
- */
-
 import { prisma } from './db'
 import { loadLocaleMessages } from '@/i18n/locale'
 
@@ -57,13 +49,6 @@ export const EMAIL_TEMPLATE_TYPES = {
 } as const
 
 export type EmailTemplateType = keyof typeof EMAIL_TEMPLATE_TYPES
-
-// Placeholder definitions with descriptions
-export interface PlaceholderDefinition {
-  key: string
-  description: string
-  example: string
-}
 
 // Common placeholders available in all templates
 export const COMMON_PLACEHOLDERS: PlaceholderDefinition[] = [
@@ -287,16 +272,12 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = TEMPLATE_METADATA
   .map(meta => buildLocalizedDefaultTemplate(meta.type, {}))
   .filter((template): template is DefaultTemplate => Boolean(template))
 
-/**
- * Get available placeholders for a template type
- */
+/** Get available placeholders for a template type */
 export function getPlaceholdersForType(type: EmailTemplateType): PlaceholderDefinition[] {
   return TEMPLATE_PLACEHOLDERS[type] || COMMON_PLACEHOLDERS
 }
 
-/**
- * Get available placeholders with localized descriptions
- */
+/** Get available placeholders with localized descriptions */
 export async function getLocalizedPlaceholdersForType(
   type: EmailTemplateType,
   locale?: string
@@ -323,25 +304,18 @@ export async function getLocalizedPlaceholdersForType(
   }
 }
 
-/**
- * Get the default template for a type
- */
+/** Get the default template for a type */
 export function getDefaultTemplate(type: EmailTemplateType): DefaultTemplate | undefined {
   return DEFAULT_TEMPLATES.find(t => t.type === type)
 }
 
-/**
- * Load email translation messages for a given locale.
- * Thin wrapper around loadLocaleMessages that extracts the `email` section.
- */
+/** Load email translation messages for a given locale */
 export async function loadEmailMessages(locale: string = 'en'): Promise<Record<string, any>> {
   const messages = await loadLocaleMessages(locale)
   return messages.email || {}
 }
 
-/**
- * Get localized template metadata (name + description) for a template type
- */
+/** Get localized template metadata (name + description) */
 export async function getLocalizedTemplateMetadata(
   type: EmailTemplateType,
   locale?: string
@@ -364,10 +338,7 @@ export async function getLocalizedTemplateMetadata(
   }
 }
 
-/**
- * Build a localized default template from email messages
- * Uses the same HTML structure as DEFAULT_TEMPLATES but with translated text
- */
+/** Build a localized default template from email messages */
 export function buildLocalizedDefaultTemplate(
   type: EmailTemplateType,
   messages: Record<string, any>
@@ -762,9 +733,7 @@ export function buildLocalizedDefaultTemplate(
   }
 }
 
-/**
- * Get template from database or return default
- */
+/** Get template from database or return default */
 export async function getEmailTemplate(type: EmailTemplateType, locale?: string): Promise<{
   subject: string
   bodyContent: string
@@ -814,9 +783,7 @@ export async function getEmailTemplate(type: EmailTemplateType, locale?: string)
   }
 }
 
-/**
- * Replace placeholders in template content
- */
+/** Replace placeholders in template content */
 export function replacePlaceholders(
   content: string,
   values: Record<string, string>
@@ -832,16 +799,11 @@ export function replacePlaceholders(
   return result
 }
 
-/**
- * Escape special regex characters
- */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/**
- * Save or update a custom template
- */
+/** Save or update a custom template */
 export async function saveEmailTemplate(
   type: EmailTemplateType,
   subject: string,
@@ -870,19 +832,14 @@ export async function saveEmailTemplate(
   })
 }
 
-/**
- * Reset template to default
- */
+/** Reset template to default */
 export async function resetEmailTemplate(type: EmailTemplateType): Promise<void> {
   await (prisma as any).emailTemplate?.deleteMany({
     where: { type },
   })
 }
 
-/**
- * Enable or disable a template override
- * When disabled, template resolution falls back to default content
- */
+/** Enable or disable a template override */
 export async function setEmailTemplateEnabled(
   type: EmailTemplateType,
   enabled: boolean

@@ -1,25 +1,3 @@
-/**
- * WebAuthn/PassKey Authentication Library
- *
- * Implements secure PassKey authentication using SimpleWebAuthn
- * Following official patterns from https://simplewebauthn.dev/docs/
- *
- * Security Features:
- * 1. Challenge stored in Redis with 5-minute TTL
- * 2. One-time use challenges (deleted after verification)
- * 3. Signature counter prevents replay attacks
- * 4. Strict domain/origin validation from Settings
- * 5. Fail-closed on configuration errors
- * 6. Rate limiting integration (reuses existing infrastructure)
- *
- * Challenge Lifecycle (Critical for Security):
- * 1. Generate options → store challenge in Redis
- * 2. User completes WebAuthn ceremony
- * 3. Verify response → retrieve challenge from Redis
- * 4. Delete challenge IMMEDIATELY (even if verification fails)
- * 5. This prevents replay attacks
- */
-
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -42,16 +20,10 @@ import { logSecurityEvent } from './video-access'
 import { logError } from './logging'
 import type { AuthUser } from './auth'
 
-/**
- * Challenge storage constants
- */
 const CHALLENGE_TTL = 5 * 60 // 5 minutes in seconds
 const CHALLENGE_PREFIX_REGISTER = 'passkey:challenge:register:'
 const CHALLENGE_PREFIX_AUTH = 'passkey:challenge:auth:'
 
-/**
- * Generate friendly device name from user agent
- */
 function generateDeviceName(userAgent?: string): string {
   if (!userAgent) return 'Unknown Device'
 
@@ -68,13 +40,6 @@ function generateDeviceName(userAgent?: string): string {
   return 'Unknown Device'
 }
 
-/**
- * Store challenge in Redis with short TTL
- *
- * @param userId - User ID (for registration) or email (for authentication)
- * @param challenge - Base64URL encoded challenge
- * @param type - 'register' or 'auth'
- */
 async function storeChallenge(
   userId: string,
   challenge: string,
@@ -87,16 +52,7 @@ async function storeChallenge(
   await redis.setex(key, CHALLENGE_TTL, challenge)
 }
 
-/**
- * Retrieve and DELETE challenge from Redis (one-time use)
- *
- * SECURITY: Challenge is deleted regardless of whether it's valid
- * This prevents replay attacks
- *
- * @param userId - User ID or email
- * @param type - 'register' or 'auth'
- * @returns Challenge string or null if not found/expired
- */
+// SECURITY: Challenge is deleted regardless of validity to prevent replay attacks
 async function retrieveAndDeleteChallenge(
   userId: string,
   type: 'register' | 'auth'
@@ -105,30 +61,18 @@ async function retrieveAndDeleteChallenge(
   const prefix = type === 'register' ? CHALLENGE_PREFIX_REGISTER : CHALLENGE_PREFIX_AUTH
   const key = `${prefix}${userId}`
 
-  // Get challenge
   const challenge = await redis.get(key)
-
-  // Delete immediately (even if null) to prevent replay
   await redis.del(key)
 
   return challenge
 }
 
-/**
- * Generate PassKey registration options
- *
- * SECURITY: Requires authenticated user (can only register passkeys for yourself)
- *
- * @param user - Authenticated user
- * @returns Registration options to send to browser
- */
+/** SECURITY: Requires authenticated user (can only register passkeys for yourself) */
 export async function generatePasskeyRegistrationOptions(
   user: AuthUser
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
-  // Get WebAuthn configuration (throws if not configured)
   const { rpID, rpName } = await getWebAuthnConfig()
 
-  // Get user's existing passkeys to exclude them
   const existingPasskeys = await prisma.passkeyCredential.findMany({
     where: { userId: user.id },
     select: {
@@ -137,7 +81,6 @@ export async function generatePasskeyRegistrationOptions(
     },
   })
 
-  // Generate registration options
   const options = await generateRegistrationOptions({
     rpName,
     rpID,
@@ -151,32 +94,20 @@ export async function generatePasskeyRegistrationOptions(
       transports: passkey.transports as AuthenticatorTransport[],
     })),
 
-    // Security settings (following SimpleWebAuthn recommendations)
-    attestationType: 'none', // Simpler UX, no privacy concerns
+    attestationType: 'none',
     authenticatorSelection: {
-      residentKey: 'required', // Enables usernameless auth
-      userVerification: 'preferred', // Better UX than 'required'
+      residentKey: 'required',
+      userVerification: 'preferred',
     },
 
-    // Support ES256 and RS256 algorithms
-    supportedAlgorithmIDs: [-7, -257],
+    supportedAlgorithmIDs: [-7, -257], // ES256 and RS256
   })
 
-  // Store challenge for verification (5-minute TTL)
   await storeChallenge(user.id, options.challenge, 'register')
 
   return options
 }
 
-/**
- * Verify PassKey registration response
- *
- * @param user - Authenticated user
- * @param response - Registration response from browser
- * @param userAgent - User agent string for tracking
- * @param ipAddress - IP address for security tracking
- * @returns Credential ID if successful, null otherwise
- */
 export async function verifyPasskeyRegistration(
   user: AuthUser,
   response: RegistrationResponseJSON,
@@ -184,10 +115,8 @@ export async function verifyPasskeyRegistration(
   ipAddress?: string
 ): Promise<{ success: boolean; credentialId?: string; error?: string }> {
   try {
-    // Get WebAuthn configuration
     const { rpID, origins } = await getWebAuthnConfig()
 
-    // Retrieve and delete challenge (one-time use)
     const expectedChallenge = await retrieveAndDeleteChallenge(user.id, 'register')
 
     if (!expectedChallenge) {
@@ -197,13 +126,12 @@ export async function verifyPasskeyRegistration(
       }
     }
 
-    // Verify registration response
     const verification: VerifiedRegistrationResponse = await verifyRegistrationResponse({
       response,
       expectedChallenge,
       expectedOrigin: origins,
       expectedRPID: rpID,
-      requireUserVerification: false, // 'preferred' on client, not required
+      requireUserVerification: false,
     })
 
     if (!verification.verified || !verification.registrationInfo) {
@@ -221,7 +149,6 @@ export async function verifyPasskeyRegistration(
       aaguid,
     } = registrationInfo
 
-    // Store credential in database
     // credential.id is base64url string in v11+, publicKey is Uint8Array
     const passkeyCredential = await prisma.passkeyCredential.create({
       data: {
@@ -239,7 +166,6 @@ export async function verifyPasskeyRegistration(
       },
     })
 
-    // Log successful registration
     await logSecurityEvent({
       type: 'PASSKEY_REGISTERED',
       severity: 'INFO',
@@ -260,7 +186,6 @@ export async function verifyPasskeyRegistration(
   } catch (error) {
     logError('[PASSKEY] Registration verification error:', error)
 
-    // Log failed registration attempt with full details
     await logSecurityEvent({
       type: 'PASSKEY_REGISTRATION_FAILED',
       severity: 'WARNING',
@@ -272,7 +197,6 @@ export async function verifyPasskeyRegistration(
       },
     })
 
-    // Return generic error to prevent information disclosure
     return {
       success: false,
       error: 'PassKey registration failed. Please try again.',
@@ -280,16 +204,9 @@ export async function verifyPasskeyRegistration(
   }
 }
 
-/**
- * Generate PassKey authentication options
- *
- * @param email - User email (optional for usernameless auth)
- * @returns Authentication options to send to browser
- */
 export async function generatePasskeyAuthenticationOptions(
   email?: string
 ): Promise<{ options: PublicKeyCredentialRequestOptionsJSON; sessionId?: string }> {
-  // Get WebAuthn configuration
   const { rpID } = await getWebAuthnConfig()
 
   let user
@@ -297,7 +214,7 @@ export async function generatePasskeyAuthenticationOptions(
   let sessionId: string | undefined
 
   if (email) {
-    // Standard authentication (with email)
+
     user = await prisma.user.findUnique({
       where: { email },
       select: {
@@ -315,26 +232,17 @@ export async function generatePasskeyAuthenticationOptions(
       challengeKey = user.id
     } else {
       // SECURITY: Unknown user / no passkeys must be indistinguishable from a known user.
-      // Generate options against an empty allowCredentials list under a synthetic session
-      // so the response status, body shape, and (approximately) timing are uniform.
-      // The subsequent verify step will fail naturally because no credential matches.
       user = null
       sessionId = `usernameless:${Date.now()}:${crypto.randomUUID()}`
       challengeKey = sessionId
     }
   } else {
-    // Usernameless authentication (discoverable credentials)
-    // Generate secure session ID for challenge storage
     sessionId = `usernameless:${Date.now()}:${crypto.randomUUID()}`
     challengeKey = sessionId
   }
 
-  // Generate authentication options
   const options = await generateAuthenticationOptions({
     rpID,
-
-    // For usernameless auth, allow any credential
-    // For standard auth, specify user's credentials
     allowCredentials: user
       ? user.passkeys.map((passkey) => ({
           id: isoBase64URL.fromBuffer(passkey.credentialID),
@@ -346,38 +254,22 @@ export async function generatePasskeyAuthenticationOptions(
     userVerification: 'preferred',
   })
 
-  // Store challenge for verification
   await storeChallenge(challengeKey, options.challenge, 'auth')
 
   return {
     options,
-    sessionId, // Return sessionId for usernameless auth
+    sessionId,
   }
 }
 
-/**
- * Verify PassKey authentication response
- *
- * SECURITY: This is the main authentication gate
- * - Verifies signature using stored public key
- * - Checks signature counter (replay attack prevention)
- * - Updates counter and last used tracking
- *
- * @param response - Authentication response from browser
- * @param email - User email (if known)
- * @param ipAddress - IP address for security tracking
- * @returns AuthUser if successful, null otherwise
- */
 export async function verifyPasskeyAuthentication(
   response: AuthenticationResponseJSON,
   sessionId?: string,
   ipAddress?: string
 ): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
   try {
-    // Get WebAuthn configuration
     const { rpID, origins } = await getWebAuthnConfig()
 
-    // Find credential by ID
     // response.id is base64url-encoded credential ID from browser
     const credentialID = Buffer.from(response.id, 'base64url')
     const credential = await prisma.passkeyCredential.findUnique({
@@ -401,8 +293,6 @@ export async function verifyPasskeyAuthentication(
       }
     }
 
-    // Retrieve and delete challenge
-    // For usernameless: use sessionId, for standard: use user ID
     const challengeKey = sessionId || credential.user.id
     const expectedChallenge = await retrieveAndDeleteChallenge(challengeKey, 'auth')
 
@@ -413,7 +303,6 @@ export async function verifyPasskeyAuthentication(
       }
     }
 
-    // Verify authentication response
     const verification: VerifiedAuthenticationResponse = await verifyAuthenticationResponse({
       response,
       expectedChallenge,
@@ -461,7 +350,6 @@ export async function verifyPasskeyAuthentication(
       }
     }
 
-    // Update credential counter and last used timestamp
     await prisma.passkeyCredential.update({
       where: { id: credential.id },
       data: {
@@ -496,7 +384,6 @@ export async function verifyPasskeyAuthentication(
   } catch (error) {
     logError('[PASSKEY] Authentication verification error:', error)
 
-    // Log failed authentication attempt with full details
     await logSecurityEvent({
       type: 'PASSKEY_LOGIN_FAILED',
       severity: 'WARNING',
@@ -507,7 +394,6 @@ export async function verifyPasskeyAuthentication(
       },
     })
 
-    // Return generic error to prevent information disclosure
     return {
       success: false,
       error: 'PassKey authentication failed. Please try again.',
@@ -515,12 +401,7 @@ export async function verifyPasskeyAuthentication(
   }
 }
 
-/**
- * Get user's registered passkeys
- *
- * @param userId - User ID
- * @returns List of passkeys with metadata
- */
+/** Get user's registered passkeys */
 export async function getUserPasskeys(userId: string) {
   return prisma.passkeyCredential.findMany({
     where: { userId },
@@ -541,16 +422,7 @@ export async function getUserPasskeys(userId: string) {
   })
 }
 
-/**
- * Delete a passkey
- *
- * SECURITY: Users can only delete their own passkeys unless adminOverride is true
- *
- * @param userId - User ID (for ownership check or target user if adminOverride)
- * @param credentialId - Credential ID to delete
- * @param adminOverride - If true, allows deletion without ownership check (for admin support)
- * @returns Success status
- */
+/** SECURITY: Users can only delete their own passkeys unless adminOverride is true */
 export async function deletePasskey(
   userId: string,
   credentialId: string,
@@ -571,7 +443,6 @@ export async function deletePasskey(
       return { success: false, error: 'PassKey not found' }
     }
 
-    // Check ownership unless admin override is enabled
     if (!adminOverride && credential.userId !== userId) {
       // Log unauthorized deletion attempt
       await logSecurityEvent({
@@ -590,7 +461,6 @@ export async function deletePasskey(
       where: { id: credentialId },
     })
 
-    // Log successful deletion
     await logSecurityEvent({
       type: 'PASSKEY_DELETED',
       severity: 'INFO',
@@ -614,13 +484,6 @@ export async function deletePasskey(
   }
 }
 
-/**
- * Update passkey name (user-friendly label)
- *
- * @param userId - User ID
- * @param credentialId - Credential ID
- * @param name - New name
- */
 export async function updatePasskeyName(
   userId: string,
   credentialId: string,

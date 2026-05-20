@@ -9,7 +9,6 @@ import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
 
-// Constants (no more magic numbers!)
 export const RESOLUTION_PRESETS = {
   '720p': { horizontal: { width: 1280, height: 720 }, verticalWidth: 720 },
   '1080p': { horizontal: { width: 1920, height: 1080 }, verticalWidth: 1080 },
@@ -66,7 +65,6 @@ export interface OutputDimensions {
   height: number
 }
 
-// Debug logging helper
 export function debugLog(message: string, data?: any) {
   if (!DEBUG) return
 
@@ -87,7 +85,6 @@ export async function downloadAndValidateVideo(
 ): Promise<VideoInfo> {
   debugLog('Starting download and validation...')
 
-  // Download original file to temp location
   const tempInputPath = path.join(TEMP_DIR, `${videoId}-original`)
   tempFiles.input = tempInputPath
 
@@ -101,7 +98,6 @@ export async function downloadAndValidateVideo(
 
   logMessage(`[WORKER] Downloaded original file for video ${videoId} in ${(downloadTime / 1000).toFixed(2)}s`)
 
-  // Verify file exists and has content
   const stats = fs.statSync(tempInputPath)
   if (stats.size === 0) {
     throw new Error('Downloaded file is empty')
@@ -129,7 +125,6 @@ export async function downloadAndValidateVideo(
   logMessage(`[WORKER] Magic byte validation passed - detected type: ${fileType.mime}`)
   debugLog('File is a valid video format')
 
-  // Get video metadata
   debugLog('Extracting video metadata...')
 
   const metadataStart = Date.now()
@@ -181,7 +176,6 @@ export async function fetchProcessingSettings(
     watermarkEnabled: project?.watermarkEnabled
   })
 
-  // Determine watermark text (only if watermarks are enabled)
   const watermarkText = project?.watermarkEnabled
     ? (project.watermarkText || `PREVIEW-${project.title || 'PROJECT'}-${video?.versionLabel || 'v1'}`)
     : undefined
@@ -317,7 +311,6 @@ export async function processPreview(
   const transcodeStats = fs.statSync(tempPreviewPath)
   debugLog('Transcoded file size:', (transcodeStats.size / 1024 / 1024).toFixed(2) + ' MB')
 
-  // Upload preview to storage
   const previewPath = `projects/${projectId}/videos/${videoId}/preview-${settings.resolution}.mp4`
 
   debugLog('Uploading preview to:', previewPath)
@@ -365,7 +358,6 @@ export async function processThumbnail(
 
   logMessage(`[WORKER] Generated thumbnail for video ${videoId} in ${(thumbTime / 1000).toFixed(2)}s`)
 
-  // Upload thumbnail
   const thumbnailPath = `projects/${projectId}/videos/${videoId}/thumbnail.jpg`
   const statsThumbnail = fs.statSync(tempThumbnailPath)
 

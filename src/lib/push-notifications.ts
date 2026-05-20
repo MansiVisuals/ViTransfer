@@ -23,8 +23,6 @@ async function getPushLocaleText() {
 
 /**
  * Get VAPID subject from app domain or fallback
- * The VAPID subject identifies who is sending push notifications.
- * It can be a mailto: URL or the app's domain URL.
  */
 async function getVapidSubject(): Promise<string> {
   try {
@@ -33,20 +31,16 @@ async function getVapidSubject(): Promise<string> {
       select: { appDomain: true },
     })
 
-    // Use the app domain if configured (preferred for self-hosted instances)
     if (settings?.appDomain) {
-      // Ensure it's a valid URL format
       const domain = settings.appDomain.startsWith('http')
         ? settings.appDomain
         : `https://${settings.appDomain}`
       return domain
     }
   } catch {
-    // Fall back to default if database not available
   }
 
-  // Fallback: generic mailto that works for all instances
-  // This is safe because VAPID subject is just an identifier for push services
+  // VAPID subject is just an identifier for push services
   return 'mailto:push@localhost'
 }
 
@@ -71,25 +65,21 @@ function generateVapidKeys(): VapidKeys {
  * Keys are stored encrypted in the database
  */
 export async function getOrCreateVapidKeys(): Promise<VapidKeys> {
-  // Try to get existing keys from settings
   const settings = await prisma.settings.findUnique({
     where: { id: 'default' },
     select: { vapidPublicKey: true, vapidPrivateKey: true },
   })
 
   if (settings?.vapidPublicKey && settings?.vapidPrivateKey) {
-    // Decrypt the private key
     return {
       publicKey: settings.vapidPublicKey,
       privateKey: decrypt(settings.vapidPrivateKey),
     }
   }
 
-  // Generate new keys
   logMessage('[WEB-PUSH] Generating new VAPID keys...')
   const keys = generateVapidKeys()
 
-  // Store keys (encrypt the private key)
   await prisma.settings.upsert({
     where: { id: 'default' },
     create: {
@@ -158,29 +148,23 @@ async function sendToSubscription(
       },
     }
 
-    // web-push returns a response object with statusCode
-    // 201 = Created (success), 200 = OK (success)
+    // web-push statusCode: 201 = Created (success), 200 = OK (success)
     const response = await webpush.sendNotification(pushSubscription, JSON.stringify(payload))
 
-    // Check if response indicates success (2xx status codes)
     if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
       return { success: true }
     }
 
-    // If we get here without throwing, the notification was accepted
     return { success: true }
   } catch (error) {
-    // Check if this is a WebPushError with a success status code
     // Some push services return 201 which web-push might handle oddly
     if (error instanceof webpush.WebPushError) {
-      // 201 Created is actually success
       if (error.statusCode === 201 || error.statusCode === 200) {
         return { success: true }
       }
 
       // 410 Gone or 404 Not Found = subscription expired
       if (error.statusCode === 410 || error.statusCode === 404) {
-        // Remove invalid subscription
         await prisma.pushSubscription.delete({
           where: { endpoint: subscription.endpoint },
         }).catch(() => {
@@ -216,7 +200,6 @@ export async function sendPushNotifications(
       badge: payload.badge || defaultBadge,
     }
 
-    // Get all subscriptions that include this event type
     const subscriptions = await prisma.pushSubscription.findMany({
       where: {
         subscribedEvents: {
@@ -238,7 +221,6 @@ export async function sendPushNotifications(
     let sent = 0
     let failed = 0
 
-    // Send to all subscriptions in parallel
     const results = await Promise.allSettled(
       subscriptions.map(async (sub) => {
         const result = await sendToSubscription(

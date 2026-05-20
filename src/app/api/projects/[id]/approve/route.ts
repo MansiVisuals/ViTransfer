@@ -87,7 +87,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: projectMessages.projectAlreadyApproved || 'Project already approved' }, { status: 400 })
     }
 
-    // Find the selected video
     const selectedVideo = project.videos.find(v => v.id === selectedVideoId)
 
     if (!selectedVideo) {
@@ -140,7 +139,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: { id: true, approved: true, name: true },
     })
 
-    // Group videos by name to get unique videos
     const videosByName = allVideos.reduce((acc: Record<string, any[]>, video) => {
       if (!acc[video.name]) {
         acc[video.name] = []
@@ -149,15 +147,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return acc
     }, {})
 
-    // Check if each unique video has at least one approved version
     const allApproved = Object.values(videosByName).every((versions: any[]) =>
       versions.some(v => v.approved)
     )
 
-    // Check if auto-approve is enabled
     const autoApprove = await getAutoApproveProject()
 
-    // If all unique videos are approved AND auto-approve enabled, approve the project
     if (allApproved && autoApprove) {
       await prisma.project.update({
         where: { id: projectId },
@@ -196,14 +191,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             id: v.id
           }))
         } else {
-          // Only the video that was just approved
           approvedVideosList = [{
             name: selectedVideo.name,
             id: selectedVideo.id
           }]
         }
 
-        // Use new unified notification system
         const safeAuthorName = authorName || undefined
         const safeAuthorEmail = authorEmail || undefined
 
@@ -218,7 +211,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           approved: true,
           authorName: safeAuthorName,
           authorEmail: safeAuthorEmail,
-          isComplete: isCompleteProjectApproval, // Pass whether ALL videos are approved
+          isComplete: isCompleteProjectApproval,
         })
       }
     } catch (error) {

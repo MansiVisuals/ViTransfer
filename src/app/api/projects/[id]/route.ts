@@ -23,7 +23,6 @@ export async function GET(
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const projectMessages = messages?.projects || {}
 
-  // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -92,16 +91,14 @@ export async function GET(
     // Check SMTP configuration status
     const smtpConfigured = await isSmtpConfigured()
 
-    // Determine fallback name for sanitization
     const primaryRecipient = project.recipients?.find((r: any) => r.isPrimary) || project.recipients?.[0]
     const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
 
-    // Sanitize/normalize comments to ensure timecodes are consistent
     const sanitizedComments = project.comments.map((comment: any) =>
       sanitizeComment(comment, true, true, fallbackName)
     )
 
-    // Decrypt password for admin users (needed for settings form)
+    // Decrypt password for admin view
     const decryptedPassword = project.sharePassword ? decrypt(project.sharePassword) : null
 
     // Convert BigInt fields to strings for JSON serialization
@@ -133,7 +130,6 @@ export async function PATCH(
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const projectMessages = messages?.projects || {}
 
-  // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
     return authResult
@@ -156,15 +152,12 @@ export async function PATCH(
     }
     const validatedBody = parsed.data
 
-    // Build update data object
     const updateData: any = {}
 
-    // Handle basic project details
     if (validatedBody.title !== undefined) {
       updateData.title = validatedBody.title
     }
     if (validatedBody.slug !== undefined) {
-      // Check if slug is unique (excluding current project)
       const existingProject = await prisma.project.findFirst({
         where: {
           slug: validatedBody.slug,
@@ -195,17 +188,13 @@ export async function PATCH(
       updateData.companyName = validatedBody.companyName || null
     }
 
-    // Handle client directory link
     if (validatedBody.clientCompanyId !== undefined) {
       updateData.clientCompanyId = validatedBody.clientCompanyId || null
     }
 
-    // Handle status update (for approval)
     if (validatedBody.status !== undefined) {
       updateData.status = validatedBody.status
 
-      // When approving project, just set the status and timestamp
-      // Video approvals are handled separately by the admin
       if (validatedBody.status === 'APPROVED') {
         updateData.approvedAt = new Date()
       }
@@ -216,7 +205,6 @@ export async function PATCH(
       }
     }
 
-    // Handle revision settings
     if (validatedBody.enableRevisions !== undefined) {
       updateData.enableRevisions = validatedBody.enableRevisions
     }
@@ -224,7 +212,6 @@ export async function PATCH(
       updateData.maxRevisions = validatedBody.maxRevisions
     }
 
-    // Handle comment restrictions
     if (validatedBody.restrictCommentsToLatestVersion !== undefined) {
       updateData.restrictCommentsToLatestVersion = validatedBody.restrictCommentsToLatestVersion
     }
@@ -235,7 +222,6 @@ export async function PATCH(
       updateData.timestampDisplay = validatedBody.timestampDisplay
     }
 
-    // Handle video processing settings
     if (validatedBody.previewResolution !== undefined) {
       updateData.previewResolution = validatedBody.previewResolution
     }
@@ -264,7 +250,6 @@ export async function PATCH(
           )
         }
 
-        // Additional length check (prevent excessively long watermarks)
         if (validatedBody.watermarkText.length > 100) {
           return NextResponse.json(
             {
@@ -316,20 +301,16 @@ export async function PATCH(
       updateData.usePreviewForApprovedPlayback = validatedBody.usePreviewForApprovedPlayback
     }
 
-    // Handle client tutorial setting
     if (validatedBody.showClientTutorial !== undefined) {
       updateData.showClientTutorial = validatedBody.showClientTutorial
     }
 
-    // Handle password, authMode, and guest settings updates
-    // Fetch current project once if any security field is being updated
     let passwordWasChanged = false
     let authModeWasChanged = false
     let guestModeWasChanged = false
     let guestLatestOnlyWasChanged = false
 
     if (validatedBody.sharePassword !== undefined || validatedBody.authMode !== undefined || validatedBody.guestMode !== undefined || validatedBody.guestLatestOnly !== undefined) {
-      // Get current project state (single query for all security checks)
       const currentProject = await prisma.project.findUnique({
         where: { id },
         select: { authMode: true, sharePassword: true, guestMode: true, guestLatestOnly: true }
@@ -339,20 +320,15 @@ export async function PATCH(
         return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
       }
 
-      // Handle password update - only update if actually changed
       if (validatedBody.sharePassword !== undefined) {
-        // Decrypt current password for comparison
         const currentPassword = currentProject.sharePassword ? decrypt(currentProject.sharePassword) : null
 
-        // Only update if password actually changed
         if (validatedBody.sharePassword === null || validatedBody.sharePassword === '') {
-          // Clearing password
           if (currentPassword !== null) {
             updateData.sharePassword = null
             passwordWasChanged = true
           }
         } else {
-          // Setting/updating password - only if different from current
           if (validatedBody.sharePassword !== currentPassword) {
             updateData.sharePassword = encrypt(validatedBody.sharePassword)
             passwordWasChanged = true
@@ -360,18 +336,14 @@ export async function PATCH(
         }
       }
 
-      // Handle authentication mode
       if (validatedBody.authMode !== undefined) {
-        // Detect if authMode actually changed
         if (currentProject.authMode !== validatedBody.authMode) {
           authModeWasChanged = true
         }
 
-        // Validate that password modes have a password when being set
         const newAuthMode = validatedBody.authMode
         const newPassword = validatedBody.sharePassword !== undefined ? validatedBody.sharePassword : undefined
 
-        // Get current password if not being changed
         if (newPassword === undefined && (newAuthMode === 'PASSWORD' || newAuthMode === 'BOTH')) {
           const currentPassword = currentProject?.sharePassword ? decrypt(currentProject.sharePassword) : null
 
@@ -391,18 +363,14 @@ export async function PATCH(
         updateData.authMode = validatedBody.authMode
       }
 
-      // Handle guest mode
       if (validatedBody.guestMode !== undefined) {
-        // Detect if guestMode actually changed
         if (currentProject.guestMode !== validatedBody.guestMode) {
           guestModeWasChanged = true
         }
         updateData.guestMode = validatedBody.guestMode
       }
 
-      // Handle guest latest only restriction
       if (validatedBody.guestLatestOnly !== undefined) {
-        // Detect if guestLatestOnly actually changed
         if (currentProject.guestLatestOnly !== validatedBody.guestLatestOnly) {
           guestLatestOnlyWasChanged = true
         }
@@ -426,7 +394,6 @@ export async function PATCH(
       }
     }
 
-    // Handle due date
     if (validatedBody.dueDate !== undefined) {
       updateData.dueDate = validatedBody.dueDate ? new Date(validatedBody.dueDate) : null
     }
@@ -434,7 +401,6 @@ export async function PATCH(
       updateData.dueReminder = validatedBody.dueReminder
     }
 
-    // Handle client notification schedule
     let previousClientSchedule: string | null = null
     if (validatedBody.clientNotificationSchedule !== undefined) {
       const current = await prisma.project.findUnique({
@@ -473,7 +439,6 @@ export async function PATCH(
         // Invalidate JWT-based share sessions
         const shareSessionsInvalidated = await invalidateShareTokensByProject(id)
 
-        // Log the security action
         const changes: string[] = []
         if (passwordWasChanged) changes.push('password')
         if (authModeWasChanged) changes.push('auth mode')
@@ -491,7 +456,6 @@ export async function PATCH(
 
     }
 
-    // Auto-sync company name to client directory (fire and forget)
     if (validatedBody.companyName && updateData.companyName) {
       syncCompanyToDirectory(id, updateData.companyName).catch(err => {
         logError('Failed to sync company to client directory:', err)
@@ -530,7 +494,6 @@ export async function DELETE(
 
   try {
     const { id } = await params
-    // Get project with all videos
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
@@ -542,15 +505,12 @@ export async function DELETE(
       return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
-    // Delete all video files from storage
     for (const video of project.videos) {
       try {
-        // Delete original file
         if (video.originalStoragePath) {
           await deleteFile(video.originalStoragePath)
         }
 
-        // Delete preview files (watermarked)
         if ((video as any).preview2160Path) {
           await deleteFile((video as any).preview2160Path)
         }
@@ -561,7 +521,6 @@ export async function DELETE(
           await deleteFile(video.preview720Path)
         }
 
-        // Delete clean preview files (non-watermarked, created after approval)
         if ((video as any).cleanPreview2160Path) {
           await deleteFile((video as any).cleanPreview2160Path)
         }
@@ -572,7 +531,6 @@ export async function DELETE(
           await deleteFile(video.cleanPreview720Path)
         }
 
-        // Delete thumbnail
         if (video.thumbnailPath) {
           await deleteFile(video.thumbnailPath)
         }
@@ -582,7 +540,6 @@ export async function DELETE(
       }
     }
 
-    // Delete the entire project directory after all files are removed
     try {
       await deleteDirectory(`projects/${id}`)
     } catch (error) {

@@ -22,16 +22,13 @@ export interface QueuedUpload {
   assetId: string | null
   videoId: string
 
-  // Status tracking
   status: 'queued' | 'uploading' | 'paused' | 'completed' | 'error'
   progress: number
   uploadSpeed: number
   error: string | null
 
-  // TUS upload reference
   tusUpload: tus.Upload | null
 
-  // Timestamps
   createdAt: number
   startedAt: number | null
   completedAt: number | null
@@ -56,12 +53,10 @@ export function useAssetUploadQueue({
   const { startUpload: startS3Upload, abortUpload: abortS3Upload, pauseUpload: pauseS3Upload, resumeUpload: resumeS3Upload } = useS3MultipartUpload()
   const storageProvider = useStorageProvider()
 
-  // Keep queueRef in sync with queue state
   useEffect(() => {
     queueRef.current = queue
   }, [queue])
 
-  // Add file to queue
   const addToQueue = useCallback((file: File, category: string): string => {
     const uploadId = `upload-${crypto.randomUUID()}`
 
@@ -86,7 +81,6 @@ export function useAssetUploadQueue({
     return uploadId
   }, [videoId])
 
-  // Warn before leaving page if uploads are in progress
   useEffect(() => {
     const hasActiveUploads = queue.some(u =>
       u.status === 'uploading' || u.status === 'queued' || u.status === 'paused'
@@ -107,13 +101,11 @@ export function useAssetUploadQueue({
     }
   }, [queue])
 
-  // Start an upload
   const startUpload = useCallback(async (uploadId: string) => {
     const upload = queueRef.current.find(u => u.id === uploadId)
     if (!upload || upload.status === 'uploading') return
 
     try {
-      // Check if file was uploaded to different video and clear TUS fingerprint if needed
       ensureFreshUploadOnContextChange(upload.file, `${videoId}:${upload.category || 'default'}`)
 
       const existingMetadata = getUploadMetadata(upload.file)
@@ -123,14 +115,12 @@ export function useAssetUploadQueue({
         (existingMetadata.category || null) === (upload.category || null)
       let createdAssetRecord = false
 
-      // Update status to uploading
       setQueue(prev => prev.map(u =>
         u.id === uploadId
           ? { ...u, status: 'uploading' as const, startedAt: Date.now(), error: null }
           : u
       ))
 
-      // Create asset record if we don't have one stored
       let assetId: string
       if (canResumeExisting) {
         assetId = existingMetadata!.assetId!
@@ -282,7 +272,6 @@ export function useAssetUploadQueue({
 
           const statusCode = (error as any)?.originalResponse?.getStatus?.()
 
-          // Clean up asset record on error
           const currentAssetId = assetIdsMap.current.get(uploadId)
           if (currentAssetId) {
             // If resume session is gone, clear local resume data and keep the DB record (user can retry fresh)
@@ -314,7 +303,6 @@ export function useAssetUploadQueue({
           const xhr = req.getUnderlyingObject()
           xhr.withCredentials = true
 
-          // Add authorization token for admin uploads
           const token = getAccessToken()
           if (token) {
             xhr.setRequestHeader('Authorization', `Bearer ${token}`)
@@ -346,12 +334,10 @@ export function useAssetUploadQueue({
     }
   }, [videoId, onUploadComplete, storageProvider, startS3Upload])
 
-  // Auto-start queued uploads when slots are available
   useEffect(() => {
     const currentUploading = queue.filter(u => u.status === 'uploading').length
     const queuedUploads = queue.filter(u => u.status === 'queued')
 
-    // Start queued uploads if we have available slots
     if (currentUploading < maxConcurrent && queuedUploads.length > 0) {
       const slotsAvailable = maxConcurrent - currentUploading
       const uploadsToStart = queuedUploads.slice(0, slotsAvailable)
@@ -362,7 +348,6 @@ export function useAssetUploadQueue({
     }
   }, [queue, maxConcurrent, startUpload])
 
-  // Pause an upload
   const pauseUpload = useCallback((uploadId: string) => {
     if (storageProvider === 's3') {
       const s3Key = s3AbortKeysMap.current.get(uploadId)
@@ -383,7 +368,6 @@ export function useAssetUploadQueue({
     }
   }, [storageProvider, pauseS3Upload])
 
-  // Resume an upload
   const resumeUpload = useCallback((uploadId: string) => {
     if (storageProvider === 's3') {
       const s3Key = s3AbortKeysMap.current.get(uploadId)
@@ -404,7 +388,6 @@ export function useAssetUploadQueue({
     }
   }, [storageProvider, resumeS3Upload])
 
-  // Cancel an upload
   const cancelUpload = useCallback(async (uploadId: string) => {
     if (storageProvider === 's3') {
       const s3Key = s3AbortKeysMap.current.get(uploadId)
@@ -420,7 +403,6 @@ export function useAssetUploadQueue({
       uploadRefsMap.current.delete(uploadId)
     }
 
-    // Clean up asset record
     const assetId = assetIdsMap.current.get(uploadId)
     if (assetId) {
       try {
@@ -430,7 +412,6 @@ export function useAssetUploadQueue({
 
     assetIdsMap.current.delete(uploadId)
 
-    // Remove from queue
     setQueue(prev => prev.filter(u => u.id !== uploadId))
 
     const upload = queueRef.current.find(u => u.id === uploadId)
@@ -443,12 +424,10 @@ export function useAssetUploadQueue({
     // useEffect will auto-start next queued upload
   }, [videoId, abortS3Upload, storageProvider])
 
-  // Remove completed upload from queue
   const removeCompleted = useCallback((uploadId: string) => {
     setQueue(prev => prev.filter(u => u.id !== uploadId))
   }, [])
 
-  // Clear all completed uploads
   const clearCompleted = useCallback(() => {
     setQueue(prev => prev.filter(u => u.status !== 'completed'))
   }, [])
@@ -462,7 +441,6 @@ export function useAssetUploadQueue({
     ))
   }, [])
 
-  // Get queue statistics
   const stats = {
     total: queue.length,
     queued: queue.filter(u => u.status === 'queued').length,

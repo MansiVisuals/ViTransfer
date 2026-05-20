@@ -106,10 +106,8 @@ export default function GlobalSettingsPage() {
   const [testEmailResult, setTestEmailResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [testEmailAddress, setTestEmailAddress] = useState('')
 
-  // Form state for language
   const [language, setLanguage] = useState('en')
 
-  // Form state for appearance
   const [defaultTheme, setDefaultTheme] = useState('auto')
   const [accentColor, setAccentColor] = useState('blue')
   const [brandingLogoPath, setBrandingLogoPath] = useState<string | null>(null)
@@ -129,7 +127,6 @@ export default function GlobalSettingsPage() {
   const [pendingFaviconFile, setPendingFaviconFile] = useState<File | null>(null)
   const [pendingFaviconRemoval, setPendingFaviconRemoval] = useState(false)
 
-  // Form state for global settings
   const [companyName, setCompanyName] = useState('')
   const [smtpServer, setSmtpServer] = useState('')
   const [smtpPort, setSmtpPort] = useState('587')
@@ -158,16 +155,13 @@ export default function GlobalSettingsPage() {
   const [defaultAllowAssetDownload, setDefaultAllowAssetDownload] = useState(true)
   const [defaultClientCanApprove, setDefaultClientCanApprove] = useState(true)
 
-  // Form state for privacy disclosure
   const [privacyDisclosureEnabled, setPrivacyDisclosureEnabled] = useState(false)
   const [privacyDisclosureText, setPrivacyDisclosureText] = useState('')
 
-  // Form state for admin notification settings
   const [adminNotificationSchedule, setAdminNotificationSchedule] = useState('HOURLY')
   const [adminNotificationTime, setAdminNotificationTime] = useState('09:00')
   const [adminNotificationDay, setAdminNotificationDay] = useState(1)
 
-  // Form state for security settings
   const [showSecuritySettings, setShowSecuritySettings] = useState(false)
   const [httpsEnabled, setHttpsEnabled] = useState(false)
   const [httpsManagedByEnvironment, setHttpsManagedByEnvironment] = useState(false)
@@ -192,7 +186,6 @@ export default function GlobalSettingsPage() {
   const [newDomainReason, setNewDomainReason] = useState('')
   const [blocklistsLoading, setBlocklistsLoading] = useState(false)
 
-  // Collapsible section state (all collapsed by default, used on mobile)
   const [showAppearance, setShowAppearance] = useState(false)
   const [showBranding, setShowBranding] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
@@ -201,7 +194,6 @@ export default function GlobalSettingsPage() {
   const [showProjectDefaults, setShowProjectDefaults] = useState(false)
   const [showBlocklist, setShowBlocklist] = useState(false)
 
-  // Desktop sidebar navigation
   const [activeSection, setActiveSection] = useState('appearance')
 
   const applySettingsToForm = useCallback((data: Settings) => {
@@ -276,13 +268,11 @@ export default function GlobalSettingsPage() {
     setLogoUploading(true)
     
     try {
-      // File type validation
       if (!file || (!file.type.includes('svg') && !file.name.toLowerCase().endsWith('.svg'))) {
         setLogoError(t('onlySvg'))
         return
       }
       
-      // Size validation (max 300KB)
       if (file.size > 300 * 1024) {
         setLogoError(t('svgTooLarge'))
         return
@@ -317,7 +307,6 @@ export default function GlobalSettingsPage() {
         return
       }
 
-      // Stage file for upload on save
       setPendingLogoFile(file)
       setPendingLogoRemoval(false)
       setBrandingLogoPreview(URL.createObjectURL(file))
@@ -328,7 +317,6 @@ export default function GlobalSettingsPage() {
     }
   }, [t])
 
-  // Stage logo removal for save
   const handleLogoRemove = useCallback(async () => {
     setLogoError('')
     setPendingLogoFile(null)
@@ -401,7 +389,6 @@ export default function GlobalSettingsPage() {
 
         applySettingsToForm(data)
 
-        // Load security settings
         const securityResponse = await apiFetch('/api/settings/security')
         if (securityResponse.ok) {
           const securityData = await securityResponse.json()
@@ -537,7 +524,6 @@ export default function GlobalSettingsPage() {
     setLogoError('')
 
     try {
-      // Handle pending logo upload
       let newLogoPath = brandingLogoPath
       if (pendingLogoFile) {
         setLogoUploading(true)
@@ -562,7 +548,6 @@ export default function GlobalSettingsPage() {
           setLogoUploading(false)
         }
       } else if (pendingLogoRemoval && brandingLogoPath) {
-        // Handle pending logo removal
         setLogoUploading(true)
         try {
           const res = await apiFetch('/api/settings/logo', { method: 'DELETE' })
@@ -581,7 +566,6 @@ export default function GlobalSettingsPage() {
         }
       }
 
-      // Handle pending favicon upload / removal — same shape as logo.
       let newFaviconPath = brandingFaviconPath
       if (pendingFaviconFile) {
         setFaviconUploading(true)

@@ -125,7 +125,6 @@ export async function GET(
           analyticsConsent: readAnalyticsConsent(request),
         })
 
-        // Set 30-minute deduplication window
         await redis.set(dedupeKey, '1', 'EX', 30 * 60)
       }
     }
@@ -196,7 +195,6 @@ export async function GET(
       sortedVideosByName[key] = videosByName[key]
     })
 
-    // Parallelize independent queries for better performance
     const [smtpConfigured, globalSettings, primaryRecipient] = await Promise.all([
       isSmtpConfigured(),
       prisma.settings.findUnique({

@@ -19,8 +19,7 @@ export const runtime = 'nodejs'
 
 
 
-// Rate limit configuration
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
 
 function getIdentifier(request: NextRequest, token: string, email: string): string{
   const ip = getClientIpAddress(request)
@@ -78,7 +77,6 @@ export async function POST(
       )
     }
 
-    // Validate code is numeric
     if (!/^\d+$/.test(code.trim())) {
       return NextResponse.json(
         { error: shareMessages.invalidCode || 'Invalid code' },
@@ -86,14 +84,11 @@ export async function POST(
       )
     }
 
-    // Get max auth attempts from settings
     const MAX_FAILED_ATTEMPTS = await getMaxAuthAttempts()
 
-    // Check rate limiting
     const redisClient = getRedis()
     const rateLimitKey = getIdentifier(request, token, email.toLowerCase().trim())
 
-    // Check if currently locked out from too many failed attempts
     const lockoutData = await redisClient.get(rateLimitKey)
     if (lockoutData) {
       const { count, lockoutUntil } = JSON.parse(lockoutData)
@@ -102,7 +97,6 @@ export async function POST(
       if (lockoutUntil && lockoutUntil > now) {
         const retryAfter = Math.ceil((lockoutUntil - now) / 1000)
 
-        // Log security event for rate limit hit
         const ipAddress = getClientIpAddress(request)
 
         await logSecurityEvent({
@@ -125,7 +119,6 @@ export async function POST(
       }
     }
 
-    // Get project
     const project = await prisma.project.findUnique({
       where: { slug: token },
       select: {
@@ -142,7 +135,6 @@ export async function POST(
       )
     }
 
-    // Check if OTP is enabled for this project
     if (project.authMode !== 'OTP' && project.authMode !== 'BOTH') {
       return NextResponse.json(
         { error: shareMessages.otpNotEnabled || 'OTP authentication not enabled for this project' },
@@ -158,7 +150,6 @@ export async function POST(
     const result = await verifyOTP(email, project.id, code)
 
     if (!result.success) {
-      // FAILED attempt - increment rate limit counter
       const now = Date.now()
       const existingData = await redisClient.get(rateLimitKey)
 
@@ -167,7 +158,6 @@ export async function POST(
 
       if (existingData) {
         const parsed = JSON.parse(existingData)
-        // Reset if window expired
         if (now - parsed.firstAttempt > RATE_LIMIT_WINDOW_MS) {
           count = 1
           firstAttempt = now
@@ -187,7 +177,6 @@ export async function POST(
       const ttlSeconds = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
       await redisClient.setex(rateLimitKey, ttlSeconds, JSON.stringify(rateLimitEntry))
 
-      // Log security event for failed OTP verification
       const ipAddress = getClientIpAddress(request)
       await logSecurityEvent({
         type: 'OTP_VERIFICATION_FAILED',
@@ -237,7 +226,6 @@ export async function POST(
       )
     }
 
-    // SUCCESS - Clear rate limit on successful verification
     await redisClient.del(rateLimitKey)
 
     // Get recipient ID for token (secure: only UUID, no PII in token)
@@ -259,7 +247,6 @@ export async function POST(
       ttlSeconds: shareTokenTtl,
     })
 
-    // Log security event for successful OTP verification
     const ipAddress = getClientIpAddress(request)
     await logSecurityEvent({
       type: 'OTP_VERIFICATION_SUCCESS',

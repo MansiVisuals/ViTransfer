@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if PassKey is configured
     const configured = await isPasskeyConfigured()
     if (!configured) {
       return NextResponse.json(
@@ -67,7 +66,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate authentication options
     const { options, sessionId } = await generatePasskeyAuthenticationOptions(email)
 
     return NextResponse.json({

@@ -1,15 +1,4 @@
 /**
- * Timecode utility functions
- * Supports both drop-frame (DF) and non-drop-frame (NDF) timecode
- *
- * Format:
- * - Non-drop-frame: HH:MM:SS:FF (e.g., "00:00:32:15") - uses colons
- * - Drop-frame: HH:MM:SS;FF (e.g., "00:00:32;15") - uses semicolon before frames
- *
- * Drop-frame is used for 29.97fps and 59.94fps to maintain sync with real-world time
- */
-
-/**
  * Determine if a frame rate should use drop-frame timecode
  * @param fps - Frames per second
  * @returns True if drop-frame should be used
@@ -28,7 +17,6 @@ export function isDropFrame(fps: number): boolean {
  * @returns Total seconds as a float
  */
 export function timecodeToSeconds(timecode: string, fps: number = 24): number {
-  // Accept both : and ; as separator before frames
   const normalized = timecode.replace(';', ':')
   const parts = normalized.split(':')
 
@@ -225,11 +213,11 @@ export function timecodeToSeekSeconds(timecode: string, fps: number = 24): numbe
  * @returns Formatted timecode for display
  */
 export function formatTimecodeDisplay(timecode: string): string {
-  // Detect if this is drop-frame (contains semicolon) or non-drop-frame (all colons)
+  // Detect if this is drop-frame (contains semicolon)
   const isDF = timecode.includes(';')
   const separator = isDF ? ';' : ':'
 
-  // Normalize to parse, then reconstruct with proper separator
+  // Normalize semicolon to colon for parsing
   const normalized = timecode.replace(';', ':')
   const parts = normalized.split(':')
 

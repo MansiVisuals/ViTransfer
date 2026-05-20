@@ -3,16 +3,9 @@ import DOMPurify from 'isomorphic-dompurify'
 import { isValidTimecode } from '@/lib/timecode'
 import { NextResponse } from 'next/server'
 
-/**
- * Input Validation Schemas
- * Comprehensive validation for all user inputs
- */
-
-// ============================================================================
 // COMMON SCHEMAS
 // ============================================================================
 
-// Email validation with strict RFC compliance
 export const emailSchema = z
   .string()
   .min(5, 'Email must be at least 5 characters')
@@ -21,7 +14,6 @@ export const emailSchema = z
   .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid email format')
   .transform(email => email.toLowerCase().trim())
 
-// Password validation (12+ chars, uppercase, lowercase, number, special)
 export const passwordSchema = z
   .string()
   .min(12, 'Password must be at least 12 characters')
@@ -31,7 +23,6 @@ export const passwordSchema = z
   .regex(/[0-9]/, 'Password must contain at least one number')
   .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
 
-// Username validation
 export const usernameSchema = z
   .string()
   .min(3, 'Username must be at least 3 characters')
@@ -39,7 +30,6 @@ export const usernameSchema = z
   .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, hyphens, and underscores')
   .transform(username => username.trim())
 
-// Safe string (prevents XSS)
 export const safeStringSchema = (minLength = 1, maxLength = 255) =>
   z
     .string()
@@ -50,15 +40,12 @@ export const safeStringSchema = (minLength = 1, maxLength = 255) =>
       message: 'Invalid characters detected'
     })
 
-// Content field (allows more characters, sanitized)
 export const contentSchema = z
   .string()
   .min(1, 'Content cannot be empty')
   .max(10000, 'Content must not exceed 10,000 characters')
   .trim()
   .transform(content => {
-    // Sanitize HTML to prevent XSS attacks
-    // Allow only safe formatting tags
     return DOMPurify.sanitize(content, {
       ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
       ALLOWED_ATTR: ['href', 'target'],
@@ -67,12 +54,10 @@ export const contentSchema = z
     })
   })
 
-// CUID validation
 export const cuidSchema = z
   .string()
   .regex(/^c[a-z0-9]{24}$/, 'Invalid ID format')
 
-// URL validation
 export const urlSchema = z
   .string()
   .url('Invalid URL format')

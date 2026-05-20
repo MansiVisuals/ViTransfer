@@ -10,10 +10,7 @@ import { logError } from '@/lib/logging'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/**
- * GET /api/push/subscribe
- * List all push subscriptions for the current admin user
- */
+// GET /api/push/subscribe - List push subscriptions for current admin
 export async function GET(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
@@ -39,8 +36,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    // Mask endpoint for privacy (just show domain). A malformed stored endpoint shouldn't
-    // poison the whole response — return an empty origin if it can't be parsed.
+    // Mask endpoint for privacy (just show domain)
     const maskedSubscriptions = subscriptions.map((sub) => {
       let origin = ''
       try {
@@ -61,10 +57,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/push/subscribe
- * Subscribe the browser to push notifications
- */
+// POST /api/push/subscribe - Subscribe browser to push notifications
 export async function POST(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
@@ -75,7 +68,6 @@ export async function POST(request: NextRequest) {
     return authResult
   }
 
-  // Rate limit: 20 subscription attempts per hour per admin
   const rateLimitResult = await rateLimit(
     request,
     { windowMs: 60 * 60 * 1000, maxRequests: 20, message: webPushMessages.tooManySubscriptionAttempts || 'Too many subscription attempts. Please wait.' },
@@ -88,7 +80,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { endpoint, keys, deviceName, subscribedEvents } = body
 
-    // Validate required fields
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
       return NextResponse.json(
         { error: webPushMessages.missingRequiredSubscriptionFields || 'Missing required subscription fields' },
@@ -106,30 +97,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate subscribedEvents if provided
+    // Validate subscribedEvents
     const events = subscribedEvents || [...NOTIFICATION_EVENT_TYPES]
     const validEvents = events.filter((e: string) =>
       NOTIFICATION_EVENT_TYPES.includes(e as typeof NOTIFICATION_EVENT_TYPES[number])
     )
 
-    // Get user agent for device identification
     const userAgent = request.headers.get('user-agent') || undefined
 
-    // Check if this device/browser is already registered to another admin
     const existing = await prisma.pushSubscription.findUnique({
       where: { endpoint },
       select: { userId: true, deviceName: true },
     })
 
     if (existing && existing.userId !== authResult.id) {
-      // Device belongs to another admin - don't transfer, show friendly message
       return NextResponse.json(
         { error: webPushMessages.deviceAlreadyRegisteredByAnotherAdmin || 'This device is already registered for push notifications by another admin.' },
         { status: 409 } // Conflict
       )
     }
 
-    // Create or update subscription (same admin refreshing their subscription)
     const subscription = await prisma.pushSubscription.upsert({
       where: { endpoint },
       create: {
@@ -165,10 +152,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/push/subscribe
- * Update subscription settings (e.g., subscribed events)
- */
+// PATCH /api/push/subscribe - Update subscription settings
 export async function PATCH(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
@@ -179,7 +163,6 @@ export async function PATCH(request: NextRequest) {
     return authResult
   }
 
-  // Rate limit: 60 updates per hour per admin
   const rateLimitResult = await rateLimit(
     request,
     { windowMs: 60 * 60 * 1000, maxRequests: 60, message: webPushMessages.tooManySubscriptionUpdates || 'Too many updates. Please wait.' },
@@ -199,7 +182,6 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Verify subscription belongs to user
     const existing = await prisma.pushSubscription.findFirst({
       where: {
         id: subscriptionId,
@@ -214,7 +196,6 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Build update data
     const updateData: { deviceName?: string; subscribedEvents?: string[] } = {}
 
     if (deviceName !== undefined) {
@@ -250,17 +231,13 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-/**
- * Extract a friendly device name from user agent
- */
+/** Extract a friendly device name from user agent */
 function getDeviceNameFromUserAgent(userAgent?: string): string {
   if (!userAgent) return 'Unknown Device'
 
-  // Check for common patterns
   if (userAgent.includes('iPhone')) return 'iPhone'
   if (userAgent.includes('iPad')) return 'iPad'
   if (userAgent.includes('Android')) {
-    // Try to extract device model
     const match = userAgent.match(/Android[^;]*;\s*([^)]+)/i)
     if (match && match[1]) {
       const model = match[1].trim().split(' Build')[0]

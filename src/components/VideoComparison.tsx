@@ -36,7 +36,6 @@ export default function VideoComparison({
   onClose,
 }: VideoComparisonProps) {
   const t = useTranslations('videos')
-  // Sort versions by version number ascending so selectors are ordered logically
   const sorted = [...videoVersions].sort((a, b) => a.version - b.version)
 
   // Default: A = second-to-last (previous), B = last (latest)

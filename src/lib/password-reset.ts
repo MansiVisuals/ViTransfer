@@ -8,12 +8,7 @@ type PasswordResetPayloadV1 = {
   exp: number
 }
 
-/**
- * Generate a secure password reset token
- * 
- * @param input - User ID and email
- * @returns Encrypted token string
- */
+/** Generate a secure password reset token */
 export function generatePasswordResetToken(input: {
   userId: string
   userEmail: string
@@ -33,12 +28,7 @@ export function generatePasswordResetToken(input: {
   return encrypt(JSON.stringify(payload))
 }
 
-/**
- * Verify and decode a password reset token
- *
- * @param token - Encrypted token string
- * @returns Decoded payload or null if invalid/expired
- */
+/** Verify and decode a password reset token */
 export function verifyPasswordResetToken(token: string): {
   userId: string
   userEmail: string
@@ -83,13 +73,7 @@ export function verifyPasswordResetTokenWithReason(token: string): {
   }
 }
 
-/**
- * Build password reset URL
- * 
- * @param appUrl - Application base URL
- * @param token - Reset token
- * @returns Full reset URL
- */
+/** Build password reset URL */
 export function buildPasswordResetUrl(appUrl: string, token: string): string {
   const base = appUrl.replace(/\/$/, '')
   return `${base}/reset-password#token=${encodeURIComponent(token)}`

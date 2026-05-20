@@ -31,7 +31,6 @@ export interface VideoMetadata {
  * @throws Error if text contains invalid characters or exceeds length limit
  */
 function validateAndSanitizeWatermarkText(text: string): string {
-  // Length check (prevent excessively long watermarks)
   if (text.length > 100) {
     throw new Error('Watermark text exceeds 100 character limit')
   }
@@ -59,7 +58,6 @@ function validateAndSanitizeWatermarkText(text: string): string {
 
 export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata> {
   return new Promise((resolve, reject) => {
-    // Remove '-v quiet' to capture detailed error messages
     const args = [
       '-v', 'verbose', // Enable verbose logging for debug
       '-print_format', 'json',
@@ -210,7 +208,6 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
   }
 
-  // Get CPU allocation from centralized config
   // This coordinates with worker concurrency to prevent CPU overload
   const cpuAllocation = getCpuAllocation()
   const threads = cpuAllocation.threadsPerJob
@@ -284,7 +281,6 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     const spacing = isVertical ? 30 : 50
     const font = `/usr/share/fonts/dejavu/DejaVuSans.ttf`
 
-    // Position coordinate map
     const positionMap: Record<WatermarkPosition, { x: string; y: string; fs: number; shadow: number }> = {
       'center':       { x: '(w-text_w)/2', y: '(h-text_h)/2', fs: centerFontPx, shadow: 2 },
       'top-left':     { x: `${spacing}`, y: `${spacing}`, fs: cornerFontPx, shadow: 1 },
@@ -317,7 +313,6 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     logMessage('[FFMPEG DEBUG] Built filter complex:', filterComplex)
   }
 
-  // Build ffmpeg arguments with optimizations
   const args = [
     '-v', 'verbose', // Enable verbose logging for debug
     '-i', inputPath,
@@ -360,12 +355,10 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
       const text = data.toString()
       stderr += text
 
-      // In debug mode, log all stderr output
       if (DEBUG) {
         logMessage('[FFMPEG STDERR]', text.trim())
       }
 
-      // Parse progress from stderr
       if (onProgress && duration > 0) {
         const timeMatch = text.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/)
         if (timeMatch) {
@@ -388,7 +381,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     })
 
     ffmpeg.on('close', (code) => {
-      // Cleanup watermark temp file and directory
+      // Cleanup watermark temp file
       if (watermarkTextFile && fs.existsSync(watermarkTextFile)) {
         try {
           const tmpDir = path.dirname(watermarkTextFile)

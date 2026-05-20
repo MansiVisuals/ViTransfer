@@ -67,7 +67,6 @@ export async function GET(
       return ipRateLimitResult
     }
 
-    // Get authentication context once
     const authContext = await getAuthContext(request)
 
     const redis = getRedis()
@@ -80,13 +79,11 @@ export async function GET(
 
     const preliminaryTokenData = JSON.parse(rawTokenData)
 
-    // Use token's session ID for all users
     const sessionId = preliminaryTokenData.sessionId
 
     // Determine if this is an admin request (JWT token OR explicit isAdmin flag in token data)
     const isAdminRequest = authContext.isAdmin || preliminaryTokenData.isAdmin === true
 
-    // For admin users, verify they have access to the project
     if (isAdminRequest) {
       const project = await prisma.project.findUnique({
         where: { id: preliminaryTokenData.projectId },
@@ -220,7 +217,6 @@ export async function GET(
     let filename: string | null = null
     let contentType = getVideoContentType(video.originalFileName || '')
 
-    // Handle asset download
     if (assetId && isDownload) {
       const asset = await prisma.videoAsset.findUnique({
         where: { id: assetId }
@@ -245,7 +241,6 @@ export async function GET(
       filename = asset.fileName
       contentType = asset.fileType
     } else {
-      // Handle video download/stream
       if (verifiedToken.quality === 'thumbnail') {
         filePath = video.thumbnailPath
       } else if (isDownload && isAdminRequest && originalPath) {
@@ -349,7 +344,6 @@ export async function GET(
         : `${video.project.title.replace(/[^a-z0-9]/gi, '_')}_${verifiedToken.quality}${(video.originalFileName || '.mp4').slice((video.originalFileName || '.mp4').lastIndexOf('.'))}`)
       const sanitizedFilename = sanitizeFilenameForHeader(rawFilename)
 
-      // For non-asset downloads, use original file's content type
       if (!assetId) {
         contentType = isThumbnail ? 'image/jpeg' : getVideoContentType(video.originalFileName || '')
       }
@@ -445,7 +439,6 @@ export async function GET(
       const fileStream = createReadStream(fullPath, { start, end, highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
       const readableStream = createWebReadableStream(fileStream)
 
-      // For non-asset streams, determine Content-Type
       if (!assetId) {
         if (isThumbnail) {
           contentType = 'image/jpeg'
@@ -475,7 +468,6 @@ export async function GET(
     const fileStream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK_BYTES })
     const readableStream = createWebReadableStream(fileStream)
 
-    // For non-asset streams, determine Content-Type
     if (!assetId) {
       if (isThumbnail) {
         contentType = 'image/jpeg'

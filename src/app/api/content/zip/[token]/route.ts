@@ -29,7 +29,6 @@ export async function GET(
 
     const { token } = await params
 
-    // Rate limit by IP
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: 30,
@@ -81,7 +80,6 @@ export async function GET(
       return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
-    // Get video with project
     const video = await prisma.video.findUnique({
       where: { id: videoId },
       include: { project: true },
@@ -91,7 +89,6 @@ export async function GET(
       return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
-    // Get all requested assets
     const assets = await prisma.videoAsset.findMany({
       where: {
         id: { in: assetIds },
@@ -137,7 +134,6 @@ export async function GET(
       logError('ZIP archive error:', err)
     })
 
-    // Add video file to archive if requested
     let appendedCount = 0
     if (includeVideo && video.originalStoragePath) {
       try {
@@ -151,7 +147,6 @@ export async function GET(
       }
     }
 
-    // Add asset files to archive
     for (const asset of assets) {
       try {
         const fileStream = await downloadFile(asset.storagePath)
@@ -170,17 +165,14 @@ export async function GET(
     // Finalize archive (must be called before streaming)
     void archive.finalize()
 
-    // Convert Node.js readable stream to Web ReadableStream
     const readableStream = Readable.toWeb(archive as any) as ReadableStream
 
-    // Generate filename
     const sanitizedVideoName = video.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const suffix = includeVideo ? 'complete' : 'assets'
     const zipFilename = sanitizeFilenameForHeader(
       `${sanitizedVideoName}_${video.versionLabel}_${suffix}.zip`
     )
 
-    // Stream ZIP directly to browser (no memory loading)
     return new NextResponse(readableStream, {
       headers: {
         'Content-Type': 'application/zip',

@@ -158,6 +158,7 @@ export async function GET(
       approvedAt: video.approvedAt,
       thumbnailPath: video.thumbnailPath,
       createdAt: video.createdAt,
+      hasAssets: (video._count?.assets ?? 0) > 0,
       // Explicitly omit: projectId, originalStoragePath, preview720Path, preview1080Path,
       // cleanPreview720Path, cleanPreview1080Path, processingError, processingProgress,
       // uploadProgress

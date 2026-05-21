@@ -1081,6 +1081,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               projectTitle={project.title}
               projectDescription={isGuest ? undefined : project.description}
               clientName={isGuest ? undefined : project.clientName}
+              allowAssetDownload={project.allowAssetDownload}
             />
           </div>
           <div className="pb-4 text-center">

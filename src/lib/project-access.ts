@@ -184,6 +184,9 @@ export async function fetchProjectWithVideos(
             status: 'READY',
           },
           orderBy: { version: 'desc' },
+          include: {
+            _count: { select: { assets: { where: { uploadCompletedAt: { not: null } } } } },
+          },
         },
       },
     })
@@ -195,6 +198,9 @@ export async function fetchProjectWithVideos(
       videos: {
         where: { status: 'READY' as const },
         orderBy: { version: 'desc' },
+        include: {
+          _count: { select: { assets: { where: { uploadCompletedAt: { not: null } } } } },
+        },
       },
     },
   })

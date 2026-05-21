@@ -7,14 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
-## [1.1.2] - 2026-05-21
+## [1.1.2] - 2026-05-22
+
+### Added
+- Share page grid: small icon on a video tile when it has downloadable assets (only shown when `allowAssetDownload` is enabled).
 
 ### Fixed
 - Mobile player controls clipping fullscreen icon ([#73](https://github.com/MansiVisuals/ViTransfer/issues/73)) — moved frame-back / play / frame-forward to a YouTube-style center overlay on mobile so the bottom bar fits.
-- Restored two security WHY comments in `SharePageClient.tsx` (email-enumeration on OTP verify; JWT-not-authoritative on portal session exchange) that were lost in the prior comment cleanup.
-- Fixed a stray `)` in `src/app/api/users/[id]/route.ts` left by the comment cleanup, which broke `next build`.
-- Restored `PlaceholderDefinition` interface in `email-template-system.ts` (removed by the cleanup but still referenced).
-- Restored `prisma`, `revokeAllUserTokens`, `logError`, `logMessage` imports in `session-invalidation.ts` (removed by the cleanup but still referenced throughout).
+
+### Updated
+- Version bumped to `1.1.2`.
 
 ## [1.1.1] - 2026-05-09
 

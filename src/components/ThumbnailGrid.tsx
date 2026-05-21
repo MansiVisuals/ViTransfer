@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { CheckCircle2, Film, Layers } from 'lucide-react'
+import { CheckCircle2, Film, Layers, Files } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ThumbnailGridProps {
@@ -14,6 +14,7 @@ interface ThumbnailGridProps {
   projectTitle?: string
   projectDescription?: string
   clientName?: string
+  allowAssetDownload?: boolean
 }
 
 export default function ThumbnailGrid({
@@ -24,6 +25,7 @@ export default function ThumbnailGrid({
   projectTitle,
   projectDescription,
   clientName,
+  allowAssetDownload = false,
 }: ThumbnailGridProps) {
   const t = useTranslations('share')
   const tv = useTranslations('videos')
@@ -83,6 +85,7 @@ export default function ThumbnailGrid({
         {videoNames.map((name) => {
           const videos = videosByName[name]
           const hasApprovedVideo = videos.some((v: any) => v.approved === true)
+          const hasAssets = allowAssetDownload && videos.some((v: any) => v.hasAssets === true)
           const versionCount = videos.length
           const thumbnailUrl = thumbnailsByName.get(name)
 
@@ -126,6 +129,17 @@ export default function ThumbnailGrid({
 
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
+
+                {/* Assets indicator */}
+                {hasAssets && (
+                  <div
+                    className="absolute top-2 left-2 bg-black/70 text-white rounded-full p-1"
+                    title={t('includesAssets')}
+                    aria-label={t('includesAssets')}
+                  >
+                    <Files className="w-3 h-3 sm:w-4 sm:h-4" />
+                  </div>
+                )}
 
                 {/* Approved badge */}
                 {hasApprovedVideo && (

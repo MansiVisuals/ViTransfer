@@ -50,7 +50,12 @@ export const EMAIL_TEMPLATE_TYPES = {
 
 export type EmailTemplateType = keyof typeof EMAIL_TEMPLATE_TYPES
 
-// Common placeholders available in all templates
+export interface PlaceholderDefinition {
+  key: string
+  description: string
+  example: string
+}
+
 export const COMMON_PLACEHOLDERS: PlaceholderDefinition[] = [
   { key: '{{COMPANY_NAME}}', description: 'Your company name from settings', example: 'Acme Studios' },
   { key: '{{RECIPIENT_NAME}}', description: 'Name of the email recipient', example: 'John Doe' },

@@ -259,7 +259,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
           const data = await response.json()
 
-          // Portal-issued session: exchange for a project-scoped share token
+          // Portal-issued session: exchange for a project-scoped share token.
+          // Server re-checks recipient membership — the JWT alone is not authoritative.
           const portalToken = loadPortalSession()
           if (portalToken) {
             try {
@@ -701,7 +702,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
       if (response.ok) {
         setOtpSent(true)
-        setError('') 
+        setError('')
       } else {
         setError(data.error || t('failedToSendCode'))
       }
@@ -738,6 +739,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         await fetchProjectData(data.shareToken)
       } else {
+        // Generic error to prevent email enumeration
         setError(t('invalidCode'))
       }
     } catch (error) {

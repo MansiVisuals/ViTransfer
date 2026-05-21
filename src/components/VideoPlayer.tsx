@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { Video, ProjectStatus, Comment } from '@prisma/client'
 import { Button } from './ui/button'
-import { CheckCircle2, GitCompareArrows } from 'lucide-react'
+import { CheckCircle2, GitCompareArrows, Play, Pause, SkipBack, SkipForward } from 'lucide-react'
 import CustomVideoControls from './CustomVideoControls'
 import VideoComparison from './VideoComparison'
 import ProjectInfo from './ProjectInfo'
@@ -86,6 +86,7 @@ export default function VideoPlayer({
   authenticatedName = null,
 }: VideoPlayerProps) {
   const t = useTranslations('videos')
+  const tControls = useTranslations('controls')
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(initialVideoIndex)
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [resolvedPlaybackQuality, setResolvedPlaybackQuality] = useState<'720p' | '1080p' | '2160p'>(defaultQuality)
@@ -884,6 +885,44 @@ export default function VideoPlayer({
                       onCancel={handleDrawingCancel}
                     />
                   </>
+                )}
+
+                {/* Mobile-only center playback overlay (frame back / play / frame forward) */}
+                {!isDrawingMode && (
+                  <div
+                    className={`sm:hidden absolute inset-0 z-10 flex items-center justify-center gap-6 pointer-events-none transition-opacity duration-300 ${
+                      showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleFrameStep('backward')}
+                      className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 active:bg-black/70 touch-manipulation"
+                      aria-label={tControls('previousFrame')}
+                    >
+                      <SkipBack className="w-5 h-5 text-white" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePlayPause}
+                      className="pointer-events-auto flex items-center justify-center w-12 h-12 rounded-full bg-black/50 active:bg-black/70 touch-manipulation"
+                      aria-label={isPlaying ? tControls('pauseVideo') : tControls('playVideo')}
+                    >
+                      {isPlaying ? (
+                        <Pause className="w-6 h-6 text-white fill-white" />
+                      ) : (
+                        <Play className="w-6 h-6 text-white fill-white" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleFrameStep('forward')}
+                      className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 active:bg-black/70 touch-manipulation"
+                      aria-label={tControls('nextFrame')}
+                    >
+                      <SkipForward className="w-5 h-5 text-white" />
+                    </button>
+                  </div>
                 )}
 
                 {/* Custom Video Controls with Integrated Timeline */}

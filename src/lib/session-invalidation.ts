@@ -1,4 +1,7 @@
 import { getRedis } from './redis'
+import { prisma } from './db'
+import { revokeAllUserTokens } from './token-revocation'
+import { logError, logMessage } from '@/lib/logging'
 
 async function scanAndDeleteKeys(
   pattern: string

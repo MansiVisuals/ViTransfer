@@ -32,7 +32,7 @@ export async function GET(
     windowMs: 60 * 1000,
     maxRequests: 60,
     message: usersMessages.tooManyRequestsSlowDown || 'Too many requests. Please slow down.'
-  }, 'user-read'))
+  }, 'user-read')
 
   if (rateLimitResult) {
     return rateLimitResult

@@ -4,7 +4,7 @@ import { logWarn } from './logging'
 /** Revoke a JWT token by adding it to the Redis blacklist. Throws if Redis is unavailable (fail closed). */
 export async function revokeToken(token: string, expiresIn: number): Promise<void> {
   const redis = getRedis()
-  
+
   // Use token signature (last part) as key to save space
   const tokenParts = token.split('.')
   const signature = tokenParts[tokenParts.length - 1]

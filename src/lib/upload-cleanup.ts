@@ -29,21 +29,17 @@ export async function cleanupOrphanedUploads() {
         const filePath = path.join(TUS_UPLOAD_DIR, file)
         const stats = fs.statSync(filePath)
 
-        // Skip if not a file
         if (!stats.isFile()) {
           continue
         }
 
-        // Calculate age in hours
         const ageMs = now - stats.mtimeMs
         const ageHours = ageMs / (1000 * 60 * 60)
 
-        // Remove files older than MAX_AGE_HOURS
         if (ageHours > MAX_AGE_HOURS) {
           fs.unlinkSync(filePath)
           cleanedCount++
 
-          // Also check for .info file and remove it
           const infoPath = `${filePath}.info`
           if (fs.existsSync(infoPath)) {
             fs.unlinkSync(infoPath)
@@ -66,7 +62,6 @@ export async function cleanupOrphanedUploads() {
  */
 export async function cleanupStuckUploads() {
   try {
-    // Find videos stuck in UPLOADING state for more than 24 hours
     const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
     const stuckVideos = await prisma.video.findMany({
@@ -82,7 +77,6 @@ export async function cleanupStuckUploads() {
       return
     }
 
-    // Mark them as ERROR
     for (const video of stuckVideos) {
       await prisma.video.update({
         where: { id: video.id },

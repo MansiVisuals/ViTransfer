@@ -164,7 +164,6 @@ export function useS3MultipartUpload() {
         ): Promise<string> {
           return new Promise<string>((resolve, reject) => {
             const xhr = new XMLHttpRequest()
-            // Tear down on external abort
             const onAbort = () => xhr.abort()
             signal.addEventListener('abort', onAbort, { once: true })
 

@@ -79,10 +79,6 @@ function formatS3Error(operation: string, key: string, err: unknown): Error {
  * For files >= 100MB (or unknown-size streams), uses parallel multipart
  * upload. Smaller buffers go via a single PUT. Streams of unknown size are
  * always multipart so we never have to buffer the whole file in RAM.
- *
- * The previous implementation peeked at the stream and concat'd every chunk
- * into a Buffer before deciding — that's a memory bomb on multi-GB transcoded
- * outputs and a hard cap on what the worker can ship.
  */
 export async function s3UploadFile(
   key: string,
@@ -93,7 +89,6 @@ export async function s3UploadFile(
   const MULTIPART_THRESHOLD = 100 * 1024 * 1024
   const PART_SIZE = 25 * 1024 * 1024
 
-  // Buffer input
   if (Buffer.isBuffer(body)) {
     if (body.length >= MULTIPART_THRESHOLD) {
       return s3UploadFileMultipart(key, body, contentType, body.length, PART_SIZE)
@@ -108,7 +103,6 @@ export async function s3UploadFile(
     return
   }
 
-  // Stream input
   // Known size and below threshold → single PUT (SDK handles streaming the body)
   if (size !== undefined && size < MULTIPART_THRESHOLD) {
     try {
@@ -137,16 +131,7 @@ const SERVER_MULTIPART_CONCURRENCY = (() => {
   return Number.isFinite(v) && v >= 1 && v <= 16 ? Math.floor(v) : 4
 })()
 
-/** Upload a file using multipart upload. Internal helper for large files.
- *
- * For Buffer input: slices into part-sized chunks and uploads them in
- * parallel via a worker pool (was sequential — could be 4× slower on fast
- * links to MinIO).
- *
- * For Readable input: reads chunks of partSize off the stream and queues
- * them for parallel upload. We can't slice the stream up-front so we read
- * sequentially but upload concurrently — `inFlight` slots gate memory use.
- */
+/** Upload a file using multipart upload. Internal helper for large files. */
 async function s3UploadFileMultipart(
   key: string,
   body: Readable | Buffer,

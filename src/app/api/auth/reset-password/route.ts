@@ -15,25 +15,11 @@ import { logError, logMessage } from '@/lib/logging'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/**
- * Reset Password
- * 
- * POST /api/auth/reset-password
- * 
- * SECURITY:
- * - Rate limited
- * - Token verification (encrypted, time-limited)
- * - Single-use tokens (Redis tracking)
- * - Password validation
- * - Invalidates all existing sessions
- * - Logs security event
- */
 export async function POST(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const authMessages = messages?.auth || {}
 
-  // Rate limiting: 5 requests per 15 minutes
   const rateLimitResult = await rateLimit(request, {
     windowMs: 15 * 60 * 1000,
     maxRequests: 5,
@@ -41,7 +27,6 @@ export async function POST(request: NextRequest) {
   }, 'reset-password')
 
   if (rateLimitResult) {
-    // Log rate limit hit
     await logSecurityEvent({
       type: 'ADMIN_PASSWORD_RESET_RATE_LIMIT_HIT',
       severity: 'WARNING',
@@ -72,7 +57,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate password strength
     const passwordValidation = validatePassword(newPassword)
     if (!passwordValidation.isValid) {
       return NextResponse.json(
@@ -81,7 +65,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify and decode token
     const tokenResult = verifyPasswordResetTokenWithReason(token)
     if (!tokenResult.valid) {
       const eventType = tokenResult.reason === 'expired'
@@ -109,7 +92,6 @@ export async function POST(request: NextRequest) {
 
     const wasSet = await redis.set(tokenKey, '1', 'EX', 30 * 60, 'NX')
     if (!wasSet) {
-      // Token was already consumed by a prior request
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
         severity: 'WARNING',
@@ -125,7 +107,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: {
@@ -144,7 +125,6 @@ export async function POST(request: NextRequest) {
 
     // Verify email matches (extra security)
     if (user.email.toLowerCase() !== payload.userEmail.toLowerCase()) {
-      // Log token mismatch (security concern)
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_TOKEN_INVALID',
         severity: 'WARNING',
@@ -160,16 +140,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash new password
     const hashedPassword = await hashPassword(newPassword)
 
-    // Update password
     await prisma.user.update({
       where: { id: user.id },
       data: { password: hashedPassword },
     })
 
-    // Invalidate all sessions for this user (security: force re-login everywhere)
+    // Invalidate all sessions (force re-login everywhere)
     await invalidateAdminSessions(user.id)
 
     // Log security event (includes email for server-side audit trail)

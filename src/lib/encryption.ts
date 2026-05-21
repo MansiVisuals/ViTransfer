@@ -44,7 +44,6 @@ if (!skipValidation && !process.env.ENCRYPTION_KEY) {
   }
 }
 
-// Get encryption key from environment or use insecure default for dev
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'DEV_ONLY_INSECURE_KEY_32BYTES!'
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 16
@@ -70,24 +69,18 @@ function validateEncryptionKey(): void {
 
 /**
  * Derive encryption key using scrypt (Key Derivation Function)
- * This is more secure than simple padding as it:
- * 1. Creates a consistent 32-byte key from any input length
- * 2. Uses a deterministic salt for consistent key generation
- * 3. Applies computational hardening (though minimal for performance)
  */
 function getEncryptionKey(): Buffer {
   const crypto = getCrypto()
 
-  // Use a fixed salt for deterministic key derivation
-  // This ensures the same ENCRYPTION_KEY always produces the same derived key
+  // Fixed salt for deterministic key derivation
   const salt = 'vitransfer-encryption-v1'
 
-  // Use scrypt with minimal cost for fast key derivation
   // N=1024, r=8, p=1 provides good security with minimal performance impact
   return crypto.scryptSync(ENCRYPTION_KEY, salt, 32, {
-    N: 1024,  // CPU/memory cost (lower = faster, still secure for deterministic derivation)
-    r: 8,     // Block size
-    p: 1      // Parallelization
+    N: 1024,
+    r: 8,
+    p: 1
   })
 }
 
@@ -216,7 +209,6 @@ export function validatePassword(password: string): {
     errors.push('Password must be at least 12 characters long')
   }
   
-  // Character requirements
   if (!/[A-Z]/.test(password)) {
     errors.push('Password must contain at least one uppercase letter')
   }
@@ -229,7 +221,6 @@ export function validatePassword(password: string): {
     errors.push('Password must contain at least one number')
   }
   
-  // Require special character
   if (!/[^A-Za-z0-9]/.test(password)) {
     errors.push('Password must contain at least one special character (!@#$%^&*)')
   }
@@ -299,7 +290,6 @@ export function validatePassword(password: string): {
     }
   }
   
-  // Calculate strength
   let strength: 'weak' | 'medium' | 'strong' = 'weak'
   if (errors.length === 0) {
     if (password.length >= 16 && /[^A-Za-z0-9].*[^A-Za-z0-9]/.test(password)) {

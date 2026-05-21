@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
     return authResult
   }
 
-  // Rate limit
   const rateLimitResult = await rateLimit(
     request,
     { windowMs: 60 * 1000, maxRequests: 60, message: emailTemplateMessages.tooManyPreviewRequests || 'Too many preview requests. Please slow down.' },
@@ -53,7 +52,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { type, subject, bodyContent } = body
 
-    // Validate template type
     if (!type || !Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
       return NextResponse.json(
         { error: emailTemplateMessages.invalidTemplateType || 'Invalid template type' },
@@ -77,25 +75,20 @@ export async function POST(request: NextRequest) {
 
     const templateType = type as EmailTemplateType
 
-    // Get email settings for branding
-    // Force refresh settings for preview to ensure we get latest accent color and logo
     const settings = await getEmailSettings(true)
     const companyName = settings.companyName || 'Your Company'
     const appDomain = settings.appDomain || 'https://example.com'
     const brand = getEmailBrand(settings.accentColor)
     const emailHeaderStyle = settings.emailHeaderStyle || 'LOGO_AND_NAME'
-    // Add cache-busting timestamp for preview (browser caches aggressively)
     const baseLogoUrl = buildBrandingLogoUrl(settings)
     const brandingLogoUrl = `${baseLogoUrl}?ts=${Date.now()}`
 
-    // Get localized preview messages
     const previewMessages = emailTemplateMessages || {}
     const emailCommonMessages = messages?.email?.common || {}
 
-    // Generate sample values for placeholders
     const sampleValues = generateSampleValues(templateType, companyName, appDomain, brand, previewMessages, emailCommonMessages)
 
-    // Ensure every declared placeholder has a value to avoid raw {{PLACEHOLDER}} tokens in preview
+    // Fill in any missing placeholders to avoid raw {{PLACEHOLDER}} tokens in preview
     const completeSampleValues = { ...sampleValues }
     for (const placeholder of getPlaceholdersForType(templateType)) {
       const key = placeholder.key.replace(/^\{\{|\}\}$/g, '')
@@ -104,11 +97,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Replace placeholders in subject and body
     const processedSubject = replacePlaceholders(subject, completeSampleValues)
     let processedBody = replacePlaceholders(bodyContent, completeSampleValues)
 
-    // Process {{LOGO}} placeholder
     if (brandingLogoUrl) {
       const logoHtml = `<img src="${escapeHtml(brandingLogoUrl)}" alt="Logo" height="44" style="display:inline-block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:200px; vertical-align:middle;" />`
       processedBody = processedBody.replace(/\{\{LOGO\}\}/g, logoHtml)
@@ -116,13 +107,10 @@ export async function POST(request: NextRequest) {
       processedBody = processedBody.replace(/\{\{LOGO\}\}/g, '')
     }
 
-    // Process button syntax: {{BUTTON:Label:URL}}
     processedBody = processButtonSyntax(processedBody, brand)
 
-    // Process CSS classes into inline styles
     processedBody = processEmailClasses(processedBody, brand)
 
-    // Wrap in email shell
     const html = renderEmailShell({
       companyName,
       title: getEmailTitle(templateType, previewMessages),

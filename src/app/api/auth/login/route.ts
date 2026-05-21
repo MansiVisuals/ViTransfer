@@ -14,27 +14,8 @@ export const runtime = 'nodejs'
 
 
 
-// Prevent static generation for this route
 export const dynamic = 'force-dynamic'
 
-/**
- * Secure Login Endpoint
- * 
- * POST /api/auth/login
- * 
- * Security Features:
- * 1. Rate limiting on FAILED attempts only (6 failed attempts in 15 minutes)
- * 2. Successful logins clear the rate limit counter
- * 3. Input validation using Zod schema
- * 4. Secure password verification with bcrypt
- * 5. JWT tokens with short TTL (15 min access, 7 day refresh) returned explicitly in JSON
- * 
- * Rate Limiting Strategy:
- * - Only failed login attempts increment the counter
- * - Successful login clears the counter
- * - Prevents brute force attacks without blocking legitimate users
- * - 6 attempts allows for typos while preventing automated attacks
- */
 export async function POST(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
@@ -204,7 +185,6 @@ export async function POST(request: NextRequest) {
     }
 
     // SUCCESSFUL LOGIN: Clear rate limit counter for this username/email
-    // User successfully authenticated, reset failed attempt counter
     await clearRateLimit(request, 'login', email)
 
     const fingerprint = fingerprintHash(request.headers.get('user-agent') || 'unknown')
@@ -237,7 +217,6 @@ export async function POST(request: NextRequest) {
       },
     }).catch(() => {})
 
-    // Return user data (without password)
     return NextResponse.json({
       success: true,
       user: {

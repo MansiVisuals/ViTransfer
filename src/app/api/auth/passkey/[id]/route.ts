@@ -10,17 +10,6 @@ export const runtime = 'nodejs'
 
 
 
-/**
- * Delete PassKey
- *
- * DELETE /api/auth/passkey/[id]?userId=<optional>
- *
- * SECURITY:
- * - Requires admin authentication (JWT)
- * - If userId is provided, admin can delete that user's passkey (for support)
- * - If userId is not provided, deletes current user's passkey
- * - Ownership verified in deletePasskey function
- */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,7 +19,6 @@ export async function DELETE(
   const authMessages = messages?.auth || {}
 
   try {
-    // Require admin authentication
     const user = await requireApiAdmin(request)
     if (user instanceof Response) return user
 
@@ -40,11 +28,9 @@ export async function DELETE(
       return NextResponse.json({ error: authMessages.credentialIdRequired || 'Credential ID required' }, { status: 400 })
     }
 
-    // Get userId from query params (optional - defaults to current user)
     const { searchParams } = new URL(request.url)
     const targetUserId = searchParams.get('userId') || user.id
 
-    // Delete passkey (ownership verified inside, but admin can override)
     const result = await deletePasskey(targetUserId, credentialId, true) // true = adminOverride
 
     if (!result.success) {
@@ -68,19 +54,6 @@ export async function DELETE(
   }
 }
 
-/**
- * Update PassKey Name
- *
- * PATCH /api/auth/passkey/[id]
- *
- * SECURITY:
- * - Requires admin authentication (JWT)
- * - Users can only update their own passkeys
- * - Ownership verified in updatePasskeyName function
- *
- * Body:
- * - name: string (new passkey name)
- */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -90,7 +63,6 @@ export async function PATCH(
   const authMessages = messages?.auth || {}
 
   try {
-    // Require admin authentication
     const user = await requireApiAdmin(request)
     if (user instanceof Response) return user
 
@@ -100,7 +72,6 @@ export async function PATCH(
       return NextResponse.json({ error: authMessages.credentialIdRequired || 'Credential ID required' }, { status: 400 })
     }
 
-    // Parse request body
     const body = await request.json()
     const { name } = body
 
@@ -111,7 +82,6 @@ export async function PATCH(
       )
     }
 
-    // Limit name length
     if (name.length > 100) {
       return NextResponse.json(
         { error: authMessages.passkeyNameTooLong || 'Name too long (max 100 characters)' },
@@ -127,7 +97,6 @@ export async function PATCH(
       )
     }
 
-    // Update passkey name (ownership verified inside)
     const result = await updatePasskeyName(user.id, credentialId, name.trim())
 
     if (!result.success) {

@@ -10,7 +10,6 @@ import {
 import { htmlToText } from 'html-to-text'
 import { logError } from './logging'
 
-// Email header style options for branding
 export type EmailHeaderStyle = 'NONE' | 'LOGO_ONLY' | 'NAME_ONLY' | 'LOGO_AND_NAME'
 
 // Accent color presets (must match AppearanceSection.tsx)
@@ -27,7 +26,6 @@ const ACCENT_COLOR_HEX: Record<string, string> = {
   gold: '#DEC091',
 }
 
-// Helper to generate a lighter tint of a color for backgrounds
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   return result ? {
@@ -49,7 +47,6 @@ function getAccentSoftColors(accentHex: string): { bg: string; border: string } 
   return { bg, border }
 }
 
-// Email brand colors type
 export interface EmailBrandColors {
   accent: string
   accentGradient: string
@@ -63,7 +60,6 @@ export interface EmailBrandColors {
   muted: string
 }
 
-// Default brand colors (blue accent)
 export const EMAIL_BRAND: EmailBrandColors = {
   accent: '#007AFF',
   accentGradient: 'linear-gradient(135deg, #0A84FF 0%, #007AFF 100%)',
@@ -127,39 +123,31 @@ export function processButtonSyntax(content: string, brand: EmailBrandColors): s
  * then convert those divs to other tags, then process outer container boxes.
  */
 export function processEmailClasses(content: string, brand: EmailBrandColors): string {
-  // STEP 1: Process inner inline elements first (these don't contain other elements)
+  // Process inner inline elements first (these don't contain other elements)
   
-  // Process accent-text class (for version labels etc)
   content = content.replace(
     /<span class="accent-text">([\s\S]*?)<\/span>/gi,
     `<span style="color:${brand.accent}; font-weight:600;">$1</span>`
   )
 
-  // STEP 2: Process inner div elements that don't contain other divs
   // Convert info-label divs to <p> tags so they don't interfere with outer box matching
-  
-  // Handle info-label with additional inline styles - merge them
   content = content.replace(
     /<div class="info-label" style="([^"]*)">([\s\S]*?)<\/div>/gi,
     `<p style="font-size:12px; font-weight:bold; color:${brand.muted}; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.12em; $1">$2</p>`
   )
   
-  // Handle info-label without additional styles
   content = content.replace(
     /<div class="info-label">([\s\S]*?)<\/div>/gi,
     `<p style="font-size:12px; font-weight:bold; color:${brand.muted}; margin:0 0 8px 0; text-transform:uppercase; letter-spacing:0.12em;">$1</p>`
   )
 
-  // Process info-value class - convert to <p> tag
   content = content.replace(
     /<div class="info-value">([\s\S]*?)<\/div>/gi,
     `<p style="font-size:15px; color:${brand.text}; margin:0; padding:4px 0;">$1</p>`
   )
 
-  // STEP 3: Now process container boxes (info-box, secondary-box, etc.)
-  // These can now be matched correctly since inner divs with classes are converted to <p> tags
+  // Process container boxes (inner divs with classes are now converted to <p> tags)
   
-  // Process info-box with additional inline styles (e.g., style="text-align: center;")
   content = content.replace(
     /<div class="info-box" style="([^"]*)">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
@@ -169,7 +157,6 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     </table>`
   )
 
-  // Process info-box class without additional styles
   content = content.replace(
     /<div class="info-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
@@ -179,7 +166,6 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     </table>`
   )
 
-  // Process secondary-box class (neutral background)
   content = content.replace(
     /<div class="secondary-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
@@ -189,7 +175,6 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     </table>`
   )
 
-  // Process protected-note class
   content = content.replace(
     /<div class="protected-note">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
@@ -199,7 +184,6 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     </table>`
   )
 
-  // Process success-box class
   content = content.replace(
     /<div class="success-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
@@ -209,7 +193,6 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     </table>`
   )
 
-  // Process warning-box class
   content = content.replace(
     /<div class="warning-box">([\s\S]*?)<\/div>/gi,
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;">
@@ -219,13 +202,11 @@ export function processEmailClasses(content: string, brand: EmailBrandColors): s
     </table>`
   )
 
-  // STEP 4: Process inline paragraph formatting
   content = content.replace(
     /<p style="margin: 0">/gi,
     `<p style="margin:0 0 16px 0; font-size:15px; color:${brand.textSubtle}; line-height:1.6;">`
   )
 
-  // Convert plain newlines to breaks for basic formatting
   content = content.replace(/\n\n/g, '</p><p style="margin:0 0 16px 0; font-size:15px; color:' + brand.textSubtle + '; line-height:1.6;">')
 
   return content
@@ -242,21 +223,16 @@ export function processTemplateContent(
 ): string {
   const safeValues = sanitizePlaceholderValues(values)
 
-  // Replace placeholders
   let processed = replacePlaceholders(content, safeValues)
   
-  // Process {{LOGO}} placeholder - replace with inline image
   if (logoUrl) {
     const logoHtml = `<img src="${logoUrl}" alt="Logo" height="44" style="display:inline-block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:200px; vertical-align:middle;" />`
     processed = processed.replace(/\{\{LOGO\}\}/g, logoHtml)
   } else {
-    // Remove {{LOGO}} placeholder if no logo is configured
     processed = processed.replace(/\{\{LOGO\}\}/g, '')
   }
   
-  // Process button syntax
   processed = processButtonSyntax(processed, brand)
-  // Process CSS classes to inline styles
   processed = processEmailClasses(processed, brand)
   return processed
 }
@@ -322,11 +298,9 @@ function sanitizePlaceholderValues(values: Record<string, string>): Record<strin
 
 /**
  * Build the branding logo URL for emails
- * Uses PNG endpoint which serves custom logo or default logo with accent color
  */
 export function buildBrandingLogoUrl(settings: EmailSettings): string {
   const base = settings.appDomain?.replace(/\/$/, '') || ''
-  // PNG endpoint serves custom logo if uploaded, otherwise default logo with accent color
   return base ? `${base}/api/branding/logo-png` : '/api/branding/logo-png'
 }
 
@@ -346,7 +320,6 @@ export function renderEmailButton({
   const backgroundColor = variant === 'primary' ? brand.accent : brand.surfaceAlt
   const textColor = variant === 'primary' ? '#ffffff' : brand.textSubtle
   const borderStyle = variant === 'primary' ? 'none' : `1px solid ${brand.border}`
-  // Generate shadow color from accent
   const shadowColor = variant === 'primary' ? `${brand.accent}40` : 'transparent'
   const shadowStyle = variant === 'primary' ? `0 4px 12px ${shadowColor}` : 'none'
 
@@ -482,18 +455,15 @@ export function renderEmailShell({
   const safeSubtitle = subtitle ? escapeHtml(subtitle) : ''
   const safePreheader = preheader ? escapeHtml(preheader) : ''
   
-  // Logo is always available now (PNG endpoint serves custom or default with accent color)
+  // Logo is always available (PNG endpoint serves custom or default with accent color)
   const logo = brandingLogoUrl
     ? `<img src="${escapeHtml(brandingLogoUrl)}" alt="${safeCompanyName}" height="44" width="auto" style="display:block; border:0; outline:none; text-decoration:none; height:44px; width:auto; max-width:132px;" />`
     : ''
   
-  // Determine what to show based on emailHeaderStyle
   const showLogo = (emailHeaderStyle === 'LOGO_ONLY' || emailHeaderStyle === 'LOGO_AND_NAME') && logo
   const showCompanyName = emailHeaderStyle === 'NAME_ONLY' || emailHeaderStyle === 'LOGO_AND_NAME'
   const showBrandingPill = emailHeaderStyle !== 'NONE' && (showLogo || showCompanyName)
 
-  // Build the branding pill using table layout (Outlook compatible)
-  // Using a semi-transparent white overlay effect with solid fallback color
   const pillBgColor = '#ffffff'
   const brandingPillContent = showBrandingPill ? `
               <!--[if mso]>
@@ -611,32 +581,25 @@ const CACHE_DURATION = 30 * 1000 // 30 seconds (reduced for testing)
 
 /**
  * Invalidate the email settings cache
- * Call this when settings are updated to ensure fresh data
  */
 export function invalidateEmailSettingsCache(): void {
   cachedSettings = null
   settingsCacheTime = 0
 }
 
-/**
- * Get email settings from database with caching
- * @param forceRefresh - If true, bypasses cache and fetches fresh data
- */
+/** Get email settings from database with caching */
 export async function getEmailSettings(forceRefresh = false): Promise<EmailSettings> {
   const now = Date.now()
   
-  // Return cached settings if still valid and not forcing refresh
   if (!forceRefresh && cachedSettings && (now - settingsCacheTime) < CACHE_DURATION) {
     return cachedSettings
   }
 
-  // Fetch fresh settings
   const settings = await prisma.settings.findUnique({
     where: { id: 'default' },
   })
 
-  // Decrypt the password if it exists
-  // Note: emailHeaderStyle is cast to handle pre-migration state
+  // emailHeaderStyle is cast to handle pre-migration state
   cachedSettings = settings ? {
     smtpServer: settings.smtpServer,
     smtpPort: settings.smtpPort,
@@ -669,10 +632,7 @@ export async function getEmailSettings(forceRefresh = false): Promise<EmailSetti
   return cachedSettings
 }
 
-/**
- * Resolve the preferred locale for a recipient email.
- * Checks ClientContact.language first, falls back to system language.
- */
+/** Resolve the preferred locale for a recipient email */
 export async function getRecipientLocale(recipientEmail: string): Promise<string> {
   try {
     const contact = await prisma.clientContact.findFirst({
@@ -687,29 +647,24 @@ export async function getRecipientLocale(recipientEmail: string): Promise<string
   return settings.language || 'en'
 }
 
-/**
- * Create a nodemailer transporter with current SMTP settings or provided config
- */
 async function createTransporter(customConfig?: any) {
-  // Use custom config if provided, otherwise load from database
   const settings = customConfig || await getEmailSettings()
 
   if (!settings.smtpServer || !settings.smtpPort || !settings.smtpUsername || !settings.smtpPassword) {
     throw new Error('SMTP settings are not configured. Please configure email settings in the admin panel.')
   }
 
-  // Determine secure settings based on smtpSecure option
   const secureOption = settings.smtpSecure || 'STARTTLS'
   let secure = false
   let requireTLS = false
 
   if (secureOption === 'TLS') {
-    secure = true // Use SSL/TLS (port 465)
+    secure = true
   } else if (secureOption === 'STARTTLS') {
-    secure = false // Use STARTTLS (port 587)
+    secure = false
     requireTLS = true
   } else {
-    secure = false // No encryption
+    secure = false
     requireTLS = false
   }
 
@@ -725,9 +680,7 @@ async function createTransporter(customConfig?: any) {
   })
 }
 
-/**
- * Send an email
- */
+/** Send an email */
 export async function sendEmail({
   to,
   subject,
@@ -761,9 +714,7 @@ export async function sendEmail({
   }
 }
 
-/**
- * Email template: New version uploaded
- */
+/** Email template: New version uploaded */
 export async function sendNewVersionEmail({
   clientEmail,
   clientName,
@@ -790,14 +741,11 @@ export async function sendNewVersionEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Use recipient locale override, fall back to system language
   const locale = localeOverride || settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('NEW_VERSION', locale)
 
-  // Build placeholder values (use both CLIENT_NAME and RECIPIENT_NAME for flexibility)
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
     '{{RECIPIENT_NAME}}': clientName,
@@ -811,10 +759,8 @@ export async function sendNewVersionEmail({
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
   const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
-  // Process subject line (replace placeholders)
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, {
     ...placeholderValues,
     '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
@@ -824,7 +770,6 @@ export async function sendNewVersionEmail({
     bodyContent += renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages)
   }
 
-  // Add password protected note if applicable
   if (isPasswordProtected) {
     const protectedLabel = emailMessages.common?.protectedProject || 'Protected project:'
     const protectedNotice = emailMessages.common?.protectedProjectNotice || 'Use the password sent separately to access this project.'
@@ -854,9 +799,7 @@ export async function sendNewVersionEmail({
   })
 }
 
-/**
- * Email template: Project approved
- */
+/** Email template: Project approved */
 export async function sendProjectApprovedEmail({
   clientEmail,
   clientName,
@@ -887,12 +830,10 @@ export async function sendProjectApprovedEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Use recipient locale override, fall back to system language
   const locale = localeOverride || settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
   const approvedMsg = emailMessages.projectApproved || {}
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('PROJECT_APPROVED', locale)
 
   const statusTitle = isComplete
@@ -930,7 +871,6 @@ export async function sendProjectApprovedEmail({
     }
   }
 
-  // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
     '{{RECIPIENT_NAME}}': clientName,
@@ -943,10 +883,8 @@ export async function sendProjectApprovedEmail({
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
   const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
-  // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, {
     ...placeholderValues,
     '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
@@ -973,9 +911,7 @@ export async function sendProjectApprovedEmail({
   })
 }
 
-/**
- * Email template: Single comment notification (to clients)
- */
+/** Email template: Single comment notification (to clients) */
 export async function sendCommentNotificationEmail({
   clientEmail,
   clientName,
@@ -1012,12 +948,10 @@ export async function sendCommentNotificationEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Use recipient locale override, fall back to system language
   const locale = localeOverride || settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
   const attachmentsLabel = emailMessages.common?.attachmentsLabel || 'Attachments'
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('COMMENT_NOTIFICATION', locale)
 
   const tcLink = buildTimecodeDeepLink(shareUrl, { videoName, commentId, timecode, fps })
@@ -1028,7 +962,6 @@ export async function sendCommentNotificationEmail({
     ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">${attachmentsLabel}</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
     : ''
 
-  // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
     '{{RECIPIENT_NAME}}': clientName,
@@ -1045,10 +978,8 @@ export async function sendCommentNotificationEmail({
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
   const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
-  // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, {
     ...placeholderValues,
     '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
@@ -1077,9 +1008,7 @@ export async function sendCommentNotificationEmail({
   })
 }
 
-/**
- * Email template: Single comment notification (to admins)
- */
+/** Email template: Single comment notification (to admins) */
 export async function sendAdminCommentNotificationEmail({
   adminEmails,
   clientName,
@@ -1114,12 +1043,10 @@ export async function sendAdminCommentNotificationEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Load locale-aware email messages
   const locale = settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
   const attachmentsLabel = emailMessages.common?.attachmentsLabel || 'Attachments'
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('ADMIN_COMMENT_NOTIFICATION', locale)
 
   // Admin deep-links go to admin share page, not public share page
@@ -1134,7 +1061,6 @@ export async function sendAdminCommentNotificationEmail({
     ? `<div style="margin-top: 12px; padding: 10px 14px; background: ${brand.surfaceAlt || '#f5f5f5'}; border-radius: 8px; border: 1px solid ${brand.border || '#e5e5e5'};"><div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: ${brand.muted || '#888'}; margin-bottom: 6px; font-weight: 700;">${attachmentsLabel}</div>${attachmentNames.map(name => `<div style="font-size: 13px; color: ${brand.text || '#333'}; line-height: 1.8;">${escapeHtml(name)}</div>`).join('')}</div>`
     : ''
 
-  // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
     '{{RECIPIENT_NAME}}': 'Admin',
@@ -1150,10 +1076,8 @@ export async function sendAdminCommentNotificationEmail({
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
-  // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   const shellTitle = emailMessages.adminCommentNotification?.title || 'New Comment'
@@ -1186,9 +1110,7 @@ export async function sendAdminCommentNotificationEmail({
   }
 }
 
-/**
- * Email template: Project approved by client (to admin)
- */
+/** Email template: Project approved by client (to admin) */
 export async function sendAdminProjectApprovedEmail({
   adminEmails,
   clientName,
@@ -1287,9 +1209,7 @@ export async function sendAdminProjectApprovedEmail({
   }
 }
 
-/**
- * Email template: General project notification (entire project with all ready deliverables)
- */
+/** Email template: General project notification */
 export async function sendProjectGeneralNotificationEmail({
   clientEmail,
   clientName,
@@ -1316,14 +1236,11 @@ export async function sendProjectGeneralNotificationEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Use recipient locale override, fall back to system language
   const locale = localeOverride || settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('PROJECT_GENERAL', locale)
 
-  // Build video list HTML
   const readyToViewLabel = emailMessages.common?.readyToView || 'Ready to view'
   const videoListHtml = readyVideos.length > 0 ? `
     <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:16px; margin-bottom:24px;">
@@ -1344,7 +1261,6 @@ export async function sendProjectGeneralNotificationEmail({
       </div>`
     : ''
 
-  // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
     '{{RECIPIENT_NAME}}': clientName,
@@ -1358,10 +1274,8 @@ export async function sendProjectGeneralNotificationEmail({
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
   const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
-  // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, {
     ...placeholderValues,
     '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
@@ -1390,9 +1304,7 @@ export async function sendProjectGeneralNotificationEmail({
   })
 }
 
-/**
- * Email template: Send password in separate email for security
- */
+/** Email template: Send password in separate email */
 export async function sendPasswordEmail({
   clientEmail,
   clientName,
@@ -1413,14 +1325,11 @@ export async function sendPasswordEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Use recipient locale override, fall back to system language
   const locale = localeOverride || settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('PASSWORD', locale)
 
-  // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{CLIENT_NAME}}': clientName,
     '{{RECIPIENT_NAME}}': clientName,
@@ -1431,10 +1340,8 @@ export async function sendPasswordEmail({
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
   const unsubscribeSection = unsubscribeUrl ? renderUnsubscribeSection(unsubscribeUrl, brand, emailMessages) : ''
 
-  // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   let bodyContent = processTemplateContent(template.bodyContent, {
     ...placeholderValues,
     '{{UNSUBSCRIBE_SECTION}}': unsubscribeSection,
@@ -1463,9 +1370,7 @@ export async function sendPasswordEmail({
   })
 }
 
-/**
- * Email template: Admin password reset
- */
+/** Email template: Admin password reset */
 export async function sendPasswordResetEmail({
   adminEmail,
   adminName,
@@ -1480,14 +1385,11 @@ export async function sendPasswordResetEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Load locale-aware email messages
   const locale = settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('PASSWORD_RESET', locale)
 
-  // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{RECIPIENT_NAME}}': adminName,
     '{{RESET_URL}}': resetUrl,
@@ -1496,10 +1398,8 @@ export async function sendPasswordResetEmail({
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
-  // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   const shellTitle = emailMessages.passwordReset?.title || 'Password Reset'
@@ -1524,9 +1424,7 @@ export async function sendPasswordResetEmail({
   })
 }
 
-/**
- * Email template: Due date reminder (to admins)
- */
+/** Email template: Due date reminder (to admins) */
 export async function sendDueDateReminderEmail({
   adminEmails,
   projectTitle,
@@ -1543,16 +1441,13 @@ export async function sendDueDateReminderEmail({
   const brand = getEmailBrand(settings.accentColor)
   const brandingLogoUrl = buildBrandingLogoUrl(settings)
 
-  // Load locale-aware email messages
   const locale = settings.language || 'en'
   const emailMessages = await loadEmailMessages(locale)
 
-  // Get custom template or use default (with locale for default templates)
   const template = await getEmailTemplate('DUE_DATE_REMINDER', locale)
 
   const adminUrl = settings.appDomain ? `${settings.appDomain}/admin` : ''
 
-  // Build placeholder values
   const placeholderValues: Record<string, string> = {
     '{{RECIPIENT_NAME}}': 'Admin',
     '{{PROJECT_TITLE}}': projectTitle,
@@ -1563,10 +1458,8 @@ export async function sendDueDateReminderEmail({
   }
   const safePlaceholderValues = sanitizePlaceholderValues(placeholderValues)
 
-  // Process subject line
   const subject = replacePlaceholders(template.subject, safePlaceholderValues)
 
-  // Process body content with placeholders, buttons, and inline styles
   const bodyContent = processTemplateContent(template.bodyContent, placeholderValues, brand, brandingLogoUrl)
 
   const shellTitle = emailMessages.dueDateReminder?.title || 'Deadline Reminder'
@@ -1604,7 +1497,6 @@ export async function sendDueDateReminderEmail({
  */
 export async function testEmailConnection(testEmail: string, customConfig?: any) {
   try {
-    // Use custom config if provided, otherwise load from database
     const settings = customConfig || await getEmailSettings()
     const transporter = await createTransporter(customConfig)
     const brand = getEmailBrand(settings.accentColor)
@@ -1613,10 +1505,8 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
   const emailMessages = await loadEmailMessages(locale).catch(() => null)
   const smtpTestMessages = emailMessages?.smtpTest || {}
 
-    // Verify connection
     await transporter.verify()
 
-    // Send test email
     const html = renderEmailShell({
       companyName: settings.companyName || 'ViTransfer',
       title: smtpTestMessages.title || 'SMTP Test Succeeded',
@@ -1641,7 +1531,6 @@ export async function testEmailConnection(testEmail: string, customConfig?: any)
       `,
     })
 
-    // Send directly with transporter if custom config, otherwise use sendEmail
     if (customConfig) {
       await transporter.sendMail({
         from: settings.smtpFromAddress,

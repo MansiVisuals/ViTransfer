@@ -47,12 +47,10 @@ export async function ensureDefaultAdmin() {
     })
 
     if (anyAdmin) {
-      // Initialize security settings even if admin exists
       await ensureSecuritySettings()
       return
     }
 
-    // No admin exists - require credentials from environment variables
     // SECURITY: No default credentials - must be set in .env file
     const adminEmail = process.env.ADMIN_EMAIL
     const adminPassword = process.env.ADMIN_PASSWORD
@@ -75,13 +73,11 @@ export async function ensureDefaultAdmin() {
       throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in environment variables for initial setup')
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(adminEmail)) {
       throw new Error(`Invalid ADMIN_EMAIL format: ${adminEmail}`)
     }
 
-    // Validate password strength
     if (adminPassword.length < 8) {
       throw new Error('ADMIN_PASSWORD must be at least 8 characters long')
     }
@@ -111,7 +107,6 @@ export async function ensureDefaultAdmin() {
     logMessage('Admin user created successfully!')
     logMessage('')
 
-    // Initialize security settings
     await ensureSecuritySettings()
   } catch (error) {
     logError('Error ensuring default admin:', error)

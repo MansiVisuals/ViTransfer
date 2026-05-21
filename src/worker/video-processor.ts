@@ -15,18 +15,6 @@ import {
   debugLog
 } from './video-processor-helpers'
 
-/**
- * Main video processing orchestrator
- *
- * Stages:
- * 1. Download and validate video file
- * 2. Fetch processing settings from database
- * 3. Calculate output dimensions
- * 4. Process preview with watermark
- * 5. Generate thumbnail
- * 6. Finalize and update database
- * 7. Cleanup temporary files
- */
 export async function processVideo(job: Job<VideoProcessingJob>) {
   const { videoId, originalStoragePath, projectId } = job.data
 
@@ -40,14 +28,12 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
   const processingStart = Date.now()
 
   try {
-    // Stage 1: Update status to processing (may already be PROCESSING from TUS handler)
+    // May already be PROCESSING from TUS handler
     logMessage(`[WORKER] Setting video ${videoId} to PROCESSING status (if not already)`)
     await updateVideoStatus(videoId, 'PROCESSING', 0)
 
-    // Stage 2: Download and validate video
     const videoInfo = await downloadAndValidateVideo(videoId, originalStoragePath, tempFiles)
 
-    // Stage 3: Fetch processing settings
     const settings = await fetchProcessingSettings(projectId, videoId)
 
     if (settings.skipTranscoding) {
@@ -71,10 +57,8 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
         settings.resolution
       )
     } else {
-      // Stage 4: Calculate output dimensions
       const dimensions = calculateOutputDimensions(videoInfo.metadata, settings.resolution)
 
-      // Stage 5: Process preview with watermark
       const previewPath = await processPreview(
         videoId,
         projectId,
@@ -85,7 +69,6 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
         videoInfo.metadata.duration
       )
 
-      // Stage 6: Generate and upload thumbnail
       const thumbnailPath = await processThumbnail(
         videoId,
         projectId,
@@ -94,7 +77,6 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
         tempFiles
       )
 
-      // Stage 7: Finalize - update database with results
       await finalizeVideo(
         videoId,
         previewPath,
@@ -104,12 +86,10 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
       )
     }
 
-    // Success!
     const totalTime = Date.now() - processingStart
     logMessage(`[WORKER] Successfully processed video ${videoId} in ${(totalTime / 1000).toFixed(2)}s`)
 
   } catch (error) {
-    // Handle error - update database and log
     await handleProcessingError(videoId, error)
     throw error
 

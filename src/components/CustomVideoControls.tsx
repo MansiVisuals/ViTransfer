@@ -561,7 +561,7 @@ export default function CustomVideoControls({
   return (
     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2 sm:p-3 rounded-b-xl">
       {/* Timeline Container */}
-      <div className="mb-2 sm:mb-3 px-1">
+      <div className="mb-0 sm:mb-3 px-1">
         <div
           ref={timelineRef}
           className="relative h-10 sm:h-12 group cursor-pointer touch-none"
@@ -728,42 +728,42 @@ export default function CustomVideoControls({
       <div className="flex items-center justify-between gap-2 sm:gap-3 px-1">
         {/* Left Controls */}
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Frame Back */}
-          <button
-            onClick={() => onFrameStep('backward')}
-            className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label={t('previousFrame')}
-            title={`${t('previousFrame')} (Ctrl+J)`}
-          >
-            <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </button>
+          {/* Frame Back / Play / Frame Forward — desktop only; mobile shows these as a center overlay (see VideoPlayer.tsx) */}
+          <div className="hidden sm:flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={() => onFrameStep('backward')}
+              className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
+              aria-label={t('previousFrame')}
+              title={`${t('previousFrame')} (Ctrl+J)`}
+            >
+              <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </button>
 
-          {/* Play/Pause */}
-          <button
-            onClick={onPlayPause}
-            className="p-2.5 sm:p-3 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label={isPlaying ? t('pauseVideo') : t('playVideo')}
-            title={isPlaying ? `${t('pauseVideo')} (Ctrl+Space)` : `${t('playVideo')} (Ctrl+Space)`}
-          >
-            {isPlaying ? (
-              <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
-            ) : (
-              <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
-            )}
-          </button>
+            <button
+              onClick={onPlayPause}
+              className="p-2.5 sm:p-3 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
+              aria-label={isPlaying ? t('pauseVideo') : t('playVideo')}
+              title={isPlaying ? `${t('pauseVideo')} (Ctrl+Space)` : `${t('playVideo')} (Ctrl+Space)`}
+            >
+              {isPlaying ? (
+                <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
+              ) : (
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white fill-white" />
+              )}
+            </button>
 
-          {/* Frame Forward */}
-          <button
-            onClick={() => onFrameStep('forward')}
-            className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
-            aria-label={t('nextFrame')}
-            title={`${t('nextFrame')} (Ctrl+L)`}
-          >
-            <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </button>
+            <button
+              onClick={() => onFrameStep('forward')}
+              className="p-2 sm:p-2.5 hover:bg-white/10 active:bg-white/20 rounded-lg transition-colors touch-manipulation"
+              aria-label={t('nextFrame')}
+              title={`${t('nextFrame')} (Ctrl+L)`}
+            >
+              <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </button>
+          </div>
 
           {/* Time Display */}
-          <div className="text-white text-xs sm:text-sm font-mono ml-1 sm:ml-2 whitespace-nowrap">
+          <div className="text-white text-xs sm:text-sm font-mono sm:ml-2 whitespace-nowrap">
             {formatTimeWithMode(currentTime, videoFps, videoDuration, timestampDisplayMode)} / {formatTimeWithMode(videoDuration, videoFps, videoDuration, timestampDisplayMode)}
           </div>
         </div>

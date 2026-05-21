@@ -1,12 +1,5 @@
 /**
- * TUS Context Tracking
- *
- * Ensures same file uploaded to different videos/projects gets fresh upload.
- * Clears TUS fingerprints when context changes to prevent resuming wrong upload.
- */
-
-/**
- * Generate TUS fingerprint for a file (matches TUS library format exactly)
+ * Generate TUS fingerprint for a file
  * TUS format: tus-br-{name}-{type}-{size}-{lastModified}-{endpoint}
  */
 export function generateFileFingerprint(file: File, endpoint?: string): string {
@@ -115,12 +108,10 @@ export function ensureFreshUploadOnContextChange(file: File, newContext: string)
   const lastContext = getFileContext(file)
 
   if (lastContext && lastContext !== newContext) {
-    // Context changed! Clear TUS fingerprint to force fresh upload
     clearTUSFingerprint(file)
     clearUploadMetadata(file)
   }
 
-  // Store new context
   storeFileContext(file, newContext)
 }
 
@@ -134,7 +125,6 @@ export function clearStaleContextData(): void {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
       if (key && key.startsWith('vitransfer-context:')) {
-        // Remove all context keys (they don't have timestamps, so remove all on cleanup)
         keysToRemove.push(key)
       }
     }

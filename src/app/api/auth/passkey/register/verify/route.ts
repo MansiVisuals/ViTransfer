@@ -36,19 +36,15 @@ export async function POST(request: NextRequest) {
   const authMessages = messages?.auth || {}
 
   try {
-    // Require admin authentication
     const user = await requireApiAdmin(request)
     if (user instanceof Response) return user
 
-    // Parse request body
     const body = await request.json()
     const response = (body || {}) as RegistrationResponseJSON
 
-    // Get client info for security tracking
     const userAgent = request.headers.get('user-agent') || undefined
     const ipAddress = getClientIpAddress(request)
 
-    // Verify registration
     const result = await verifyPasskeyRegistration(
       user,
       response,

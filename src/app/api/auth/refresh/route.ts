@@ -11,34 +11,6 @@ export const runtime = 'nodejs'
 
 
 export const dynamic = 'force-dynamic'
-
-/**
- * Secure Token Refresh Endpoint
- *
- * JWT Security Best Practices Implemented:
- *
- * 1. REFRESH TOKEN ROTATION
- *    - Each refresh generates NEW refresh token
- *    - Old refresh token is immediately revoked
- *    - Prevents token replay attacks
- *
- * 2. FINGERPRINT VALIDATION
- *    - Validates User-Agent consistency
- *    - Detects token theft across devices
- *    - Optional: Can add IP address validation
- *
- * 3. AUTOMATIC REVOCATION ON SUSPICIOUS ACTIVITY
- *    - If stolen token is reused, revoke ALL user tokens
- *    - Forces re-authentication everywhere
- *    - Mitigates token theft impact
- *
- * 4. SHORT-LIVED ACCESS TOKENS
- *    - Access token: 15 minutes
- *    - Refresh token: 3 days
- *    - Limits exposure window
- *
- * 5. Explicit bearer tokens only (no implicit browser credentials)
- */
 export async function POST(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
@@ -55,7 +27,6 @@ export async function POST(request: NextRequest) {
 
     const tokenHash = hashToken(presentedToken)
 
-    // Rate limit per refresh token hash to reduce brute-force/rotation abuse
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
       maxRequests: 8,

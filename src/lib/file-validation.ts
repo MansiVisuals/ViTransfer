@@ -1,8 +1,3 @@
-/**
- * File Upload Security
- * Validates file types and sizes to prevent malicious uploads
- */
-
 import { logMessage } from './logging'
 
 // Allowed video MIME types
@@ -170,7 +165,6 @@ export function validateUploadedFile(
   // Sanitize filename first
   const sanitizedFilename = sanitizeFilename(filename)
 
-  // Check for suspicious filenames
   if (isSuspiciousFilename(filename)) {
     return {
       valid: false,
@@ -178,7 +172,6 @@ export function validateUploadedFile(
     }
   }
 
-  // Validate extension
   if (!validateFileExtension(sanitizedFilename)) {
     return {
       valid: false,
@@ -186,7 +179,6 @@ export function validateUploadedFile(
     }
   }
 
-  // Validate MIME type
   if (!validateMimeType(mimeType)) {
     return {
       valid: false,
@@ -211,7 +203,6 @@ export function validateAssetFile(
   // Sanitize filename first
   const sanitizedFilename = sanitizeFilename(filename)
 
-  // Check for suspicious filenames
   if (isSuspiciousFilename(filename)) {
     return {
       valid: false,
@@ -221,11 +212,9 @@ export function validateAssetFile(
 
   const ext = sanitizedFilename.toLowerCase().slice(sanitizedFilename.lastIndexOf('.'))
 
-  // If category specified, validate against that category
   if (category && category in ALLOWED_ASSET_TYPES) {
     const categoryConfig = ALLOWED_ASSET_TYPES[category as keyof typeof ALLOWED_ASSET_TYPES]
 
-    // Check extension
     if (!categoryConfig.extensions.includes(ext)) {
       return {
         valid: false,
@@ -257,15 +246,11 @@ export function validateAssetFile(
     }
   }
 
-  // If no category, detect from extension OR MIME type
-  // First try to find by extension (most reliable)
   // SECURITY: Extension-based detection is acceptable here because:
   // 1. Worker performs strict magic byte validation (defense-in-depth)
   // 2. Suspicious extensions (.exe, .sh, etc.) are blocked above
   for (const [cat, config] of Object.entries(ALLOWED_ASSET_TYPES)) {
     if (config.extensions.includes(ext)) {
-      // Extension matches, accept it
-      // Worker will validate actual file content via magic bytes
       return {
         valid: true,
         sanitizedFilename,
@@ -285,7 +270,6 @@ export function validateAssetFile(
     }
   }
 
-  // No category matched
   return {
     valid: false,
     error: `Unsupported file type: ${ext}. Please upload images, audio, documents, or project files.`

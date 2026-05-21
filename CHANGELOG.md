@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.1.2] - 2026-05-22
+
+### Added
+- Share page grid: small icon on a video tile when it has downloadable assets (only shown when `allowAssetDownload` is enabled).
+
+### Fixed
+- Mobile player controls clipping fullscreen icon ([#73](https://github.com/MansiVisuals/ViTransfer/issues/73)) — moved frame-back / play / frame-forward to a YouTube-style center overlay on mobile so the bottom bar fits.
+
 ## [1.1.1] - 2026-05-09
 
 ### Security

@@ -38,11 +38,9 @@ export function formatTimestamp(seconds: number): string {
   const minutes = Math.floor((seconds % 3600) / 60)
   const secs = Math.floor(seconds % 60)
 
-  // Show hours format for videos 60+ minutes
   if (hours > 0) {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
-  // Show minutes format for videos under 60 minutes
   return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
@@ -60,7 +58,6 @@ export function formatDate(date: Date | string): string {
     ? Intl.DateTimeFormat().resolvedOptions().timeZone
     : process.env.TZ!
 
-  // Format date parts using Intl.DateTimeFormat with timezone
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     year: 'numeric',
@@ -103,7 +100,6 @@ export function formatDateTime(date: Date | string): string {
 
   const dateStr = formatDate(d)
 
-  // Format time using Intl.DateTimeFormat with timezone
   const timeFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     hour: '2-digit',
@@ -133,7 +129,6 @@ export async function generateUniqueSlug(
   let slug = generateSlug(title)
   let counter = 1
 
-  // Check if slug exists
   while (true) {
     const existing = await prisma.project.findUnique({
       where: { slug },
@@ -143,7 +138,6 @@ export async function generateUniqueSlug(
       break
     }
 
-    // Append counter to make it unique
     slug = `${generateSlug(title)}-${counter}`
     counter++
   }
@@ -167,14 +161,6 @@ export function getClientIpAddress(request: NextRequest): string {
   return request.headers.get('x-real-ip') || 'unknown'
 }
 
-/**
- * Color assignment system with persistence and uniqueness guarantees
- * Ensures different names always get different colors within the same palette
- * 
- * @param name - User's name for color generation
- * @param isSender - True if this is the sender (your message), false for receiver
- */
-
 // In-memory color registry (persists during page session)
 const colorRegistry = {
   sender: new Map<string, string>(),
@@ -187,16 +173,13 @@ export function getUserColor(name: string | null | undefined, isSender: boolean 
     return { border: 'border-gray-500' }
   }
 
-  // Normalize name for consistency (trim, lowercase)
   const normalizedName = name.trim().toLowerCase()
   const palette = isSender ? 'sender' : 'receiver'
   
-  // Check if this name already has a color assigned
   if (colorRegistry[palette].has(normalizedName)) {
     return { border: colorRegistry[palette].get(normalizedName)! }
   }
 
-  // Expanded color palettes for better distribution
   const senderColors = [
     // Earth tones for sender (admins/studio) - 20 colors
     'border-amber-700',
@@ -247,15 +230,12 @@ export function getUserColor(name: string | null | undefined, isSender: boolean 
 
   const colors = isSender ? senderColors : receiverColors
   
-  // Get already assigned colors in this palette
   const assignedColors = new Set(colorRegistry[palette].values())
   
-  // Find first available color (not yet assigned)
   let selectedColor: string
   const availableColors = colors.filter(color => !assignedColors.has(color))
   
   if (availableColors.length > 0) {
-    // Use improved hash function for better distribution among available colors
     const hash = hashString(normalizedName)
     const colorIndex = Math.abs(hash) % availableColors.length
     selectedColor = availableColors[colorIndex]
@@ -266,7 +246,6 @@ export function getUserColor(name: string | null | undefined, isSender: boolean 
     selectedColor = colors[colorIndex]
   }
   
-  // Store the assignment
   colorRegistry[palette].set(normalizedName, selectedColor)
   
   return { border: selectedColor }

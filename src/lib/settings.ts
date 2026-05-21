@@ -156,7 +156,6 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
     const value = settings.sessionTimeoutValue
     const unit = settings.sessionTimeoutUnit
 
-    // Convert to seconds based on unit
     switch (unit) {
       case 'MINUTES':
         cachedSessionTimeout.value = value * 60
@@ -189,7 +188,6 @@ export async function getClientSessionTimeoutSeconds(): Promise<number> {
  * Environment variables ADMIN_ACCESS_TTL_SECONDS / ADMIN_REFRESH_TTL_SECONDS take precedence.
  */
 export async function getAdminSessionTimeoutSeconds(): Promise<number> {
-  // Environment variable takes precedence
   const envOverride = process.env.ADMIN_ACCESS_TTL_SECONDS
   if (envOverride) {
     const parsed = parseInt(envOverride, 10)
@@ -249,29 +247,16 @@ export async function getAdminSessionTimeoutSeconds(): Promise<number> {
  * Check if HTTPS enforcement is enabled
  *
  * Priority: Environment variable (HTTPS_ENABLED) > Database setting > Default (true)
- *
- * IMPORTANT: Environment variable ALWAYS takes precedence - this is the escape hatch!
- * If you get locked out on localhost, set HTTPS_ENABLED=false in docker-compose.yml
- *
- * When HTTPS is OFF:
- * - No HSTS header
- * - Use for: localhost, internal LAN (set HTTPS_ENABLED=false in docker-compose)
- *
- * When HTTPS is ON (default for security):
- * - HSTS header enabled (forces browser to use HTTPS)
- * - Use for: production deployments with HTTPS (direct or reverse proxy)
+ * IMPORTANT: Environment variable ALWAYS takes precedence (escape hatch for localhost).
  */
 /**
  * Initialize security settings from environment variables on container startup
- * This should be called once when the application starts
  */
 export async function initializeSecuritySettings() {
   try {
     const httpsEnabled = getHttpsEnvironmentOverride()
 
     if (httpsEnabled !== null) {
-
-      // Update database with environment variable value
       await prisma.securitySettings.upsert({
         where: { id: 'default' },
         update: { httpsEnabled },
@@ -413,13 +398,10 @@ export async function getWebAuthnConfig(): Promise<{
     // RP_ID is the hostname without protocol or port
     const rpID = url.hostname
 
-    // Origin is the full protocol + hostname + port (if non-standard)
     const origin = url.origin
 
-    // Support localhost for development
     const origins = [origin]
     if (rpID === 'localhost' || rpID === '127.0.0.1') {
-      // Allow both localhost and 127.0.0.1 for development
       origins.push('http://localhost:3000', 'http://127.0.0.1:3000')
     }
 
@@ -429,7 +411,6 @@ export async function getWebAuthnConfig(): Promise<{
       origins,
     }
   } catch (error) {
-    // Re-throw configuration errors
     if (error instanceof Error && error.message.startsWith('PASSKEY_CONFIG_ERROR')) {
       throw error
     }
@@ -442,12 +423,8 @@ export async function getWebAuthnConfig(): Promise<{
 /**
  * Check if PassKey authentication is properly configured
  *
- * STRICT VALIDATION:
- * - Production: Real domain + HTTPS enabled
- * - Development: Localhost + HTTPS disabled
- * - NO MIXED CONFIGURATIONS (localhost+HTTPS or domain+no-HTTPS)
- *
- * Returns false if appDomain is not set or configuration is invalid
+ * Production: Real domain + HTTPS enabled
+ * Development: Localhost + HTTPS disabled
  */
 export async function isPasskeyConfigured(): Promise<boolean> {
   try {
@@ -459,8 +436,6 @@ export async function isPasskeyConfigured(): Promise<boolean> {
       config.rpID === '127.0.0.1'
 
     // Valid configurations (no mixing):
-    // 1. Production: Real domain + HTTPS enabled
-    // 2. Development: Localhost + HTTPS disabled
     const isValidConfig =
       (!isLocalhost && httpsEnabled) ||
       (isLocalhost && !httpsEnabled)
@@ -472,8 +447,7 @@ export async function isPasskeyConfigured(): Promise<boolean> {
 }
 
 /**
- * Get detailed passkey configuration status
- * Used for admin UI to show why passkey is not available
+ * Get detailed passkey configuration status for admin UI
  */
 export async function getPasskeyConfigStatus(): Promise<{
   available: boolean

@@ -5,22 +5,6 @@ import { getClientIpAddress } from './utils'
 import { getRedis } from './redis'
 import { logError, logWarn } from '@/lib/logging'
 
-/**
- * Production-Ready Redis-based Rate Limiting
- *
- * Security Features:
- * - NO in-memory fallback (fail closed for security)
- * - Persistent across server restarts (Redis storage)
- * - Works in distributed environments (multiple instances)
- * - Automatic expiration via Redis TTL
- * - Fails securely: returns error if Redis is unavailable
- *
- * Production Requirements:
- * - Redis MUST be available
- * - No graceful degradation that could bypass rate limiting
- * - Fail closed, not open
- */
-
 interface RateLimitEntry {
   count: number
   firstAttempt: number
@@ -40,7 +24,7 @@ function getIdentifier(request: NextRequest, prefix: string = '', customKey?: st
     return `ratelimit:${prefix}:${hash}`
   }
   
-  // Default: Use IP + User Agent for general rate limiting
+  // Use IP + User Agent for general rate limiting
   const ip = getClientIpAddress(request)
   
   const userAgent = request.headers.get('user-agent') || 'unknown'
@@ -128,7 +112,6 @@ export async function rateLimit(
       return null
     }
 
-    // Increment counter
     const newCount = entry.count + 1
     const updatedEntry: RateLimitEntry = {
       count: newCount,
@@ -171,9 +154,6 @@ export async function rateLimit(
  * Login-specific rate limiter
  * Only increments on failed attempts, clears on success
  * Throws error if Redis is unavailable (fail closed)
- * 
- * @param customKey - Optional custom identifier (e.g., username/email for login attempts)
- *                    This prevents bypass via browser rotation
  */
 export async function checkRateLimit(
   request: NextRequest,

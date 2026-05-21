@@ -29,7 +29,6 @@ interface RouteParams {
 
 /**
  * GET /api/settings/email-templates/[type]
- * Get a specific email template by type
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const authResult = await requireApiAdmin(request)
@@ -44,7 +43,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const templateMessages = messages?.settings?.emailTemplates
 
-  // Rate limit
   const rateLimitResult = await rateLimit(
     request,
     { windowMs: 60 * 1000, maxRequests: 60, message: templateMessages?.tooManyRequestsSlowDown || 'Too many requests. Please slow down.' },
@@ -52,7 +50,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   )
   if (rateLimitResult) return rateLimitResult
 
-  // Validate template type
   if (!Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
     return NextResponse.json(
       { error: templateMessages?.invalidTemplateType || 'Invalid template type' },
@@ -63,7 +60,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const templateType = type as EmailTemplateType
 
   try {
-    // Get the configured language for localized display
     const template = await getEmailTemplate(templateType, locale)
     const metadata = TEMPLATE_METADATA.find(m => m.type === templateType)
     const placeholders = await getLocalizedPlaceholdersForType(templateType, locale)
@@ -113,7 +109,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 /**
  * PUT /api/settings/email-templates/[type]
- * Update a specific email template
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const authResult = await requireApiAdmin(request)
@@ -127,7 +122,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const templateMessages = messages?.settings?.emailTemplates
 
-  // Rate limit
   const rateLimitResult = await rateLimit(
     request,
     { windowMs: 60 * 1000, maxRequests: 30, message: templateMessages?.tooManyUpdatesSlowDown || 'Too many updates. Please slow down.' },
@@ -135,7 +129,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   )
   if (rateLimitResult) return rateLimitResult
 
-  // Validate template type
   if (!Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
     return NextResponse.json(
       { error: templateMessages?.invalidTemplateType || 'Invalid template type' },
@@ -163,7 +156,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Basic validation - subject shouldn't be too long
     if (subject.length > 200) {
       return NextResponse.json(
         { error: templateMessages?.subjectTooLong || 'Subject is too long (max 200 characters)' },
@@ -171,7 +163,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Body content shouldn't be too large
     if (bodyContent.length > 50000) {
       return NextResponse.json(
         { error: templateMessages?.bodyContentTooLarge || 'Body content is too large (max 50KB)' },
@@ -196,7 +187,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 /**
  * DELETE /api/settings/email-templates/[type]
- * Reset a template to its default content
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const authResult = await requireApiAdmin(request)
@@ -210,7 +200,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const templateMessages = messages?.settings?.emailTemplates
 
-  // Rate limit
   const rateLimitResult = await rateLimit(
     request,
     { windowMs: 60 * 1000, maxRequests: 30, message: templateMessages?.tooManyRequestsSlowDown || 'Too many requests. Please slow down.' },
@@ -218,7 +207,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   )
   if (rateLimitResult) return rateLimitResult
 
-  // Validate template type
   if (!Object.keys(EMAIL_TEMPLATE_TYPES).includes(type)) {
     return NextResponse.json(
       { error: templateMessages?.invalidTemplateType || 'Invalid template type' },
@@ -231,7 +219,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     await resetEmailTemplate(templateType)
 
-    // Get the configured language to return localized defaults
     // Try localized default first
     let subject = ''
     let bodyContent = ''
@@ -268,7 +255,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
 /**
  * PATCH /api/settings/email-templates/[type]
- * Enable or disable a specific template override
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const authResult = await requireApiAdmin(request)

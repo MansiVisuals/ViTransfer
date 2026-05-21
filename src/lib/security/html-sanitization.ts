@@ -1,13 +1,6 @@
 import DOMPurify from 'isomorphic-dompurify'
 
 /**
- * HTML Sanitization Utilities
- *
- * Server-side HTML sanitization for user-generated content
- * Prevents XSS attacks by stripping malicious HTML/JavaScript
- */
-
-/**
  * Sanitize HTML content for comments
  *
  * Allows: Basic formatting (bold, italic, links, lists, paragraphs)
@@ -21,7 +14,6 @@ export function sanitizeCommentHtml(html: string): string {
     return ''
   }
 
-  // Configure DOMPurify with strict settings
   const clean = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       // Text formatting
@@ -51,7 +43,6 @@ export function sanitizeCommentHtml(html: string): string {
     FORCE_BODY: false,
   })
 
-  // Additional post-processing for links
   // Force external links to open in new tab and add rel=noopener
   const withSafeLinks = clean.replace(
     /<a\s+([^>]*?)href="([^"]*)"([^>]*?)>/gi,
@@ -78,7 +69,6 @@ export function sanitizeText(text: string): string {
     return ''
   }
 
-  // Strip all HTML tags
   const clean = DOMPurify.sanitize(text, {
     ALLOWED_TAGS: [],
     ALLOWED_ATTR: [],

@@ -19,20 +19,14 @@ import {
 export const runtime = 'nodejs'
 
 
-// Prevent static generation for this route
 export const dynamic = 'force-dynamic'
 
-/**
- * GET /api/comments?projectId=xxx
- * Fetch all comments for a project
- */
 export async function GET(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const commentsMessages = messages?.comments || {}
   const shareMessages = messages?.share || {}
 
-  // Rate limiting: 60 requests per minute
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 60,
@@ -47,7 +41,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId') ?? ''
 
-    // Fetch the project to check password protection
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: {
@@ -67,7 +60,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // SECURITY: If feedback is hidden, return empty array (don't expose comments)
+    // SECURITY: If feedback is hidden, don't expose comments
     if (project.hideFeedback) {
       return NextResponse.json([])
     }
@@ -81,12 +74,10 @@ export async function GET(request: NextRequest) {
 
     const { isAdmin, isAuthenticated, isGuest } = accessCheck
 
-    // Block guest users from seeing comments (guests only have 'view' permission)
     if (isGuest) {
       return NextResponse.json([])
     }
 
-    // Get primary recipient for author name fallback
     const primaryRecipient = await getPrimaryRecipient(projectId)
     // Priority: companyName → primary recipient → 'Client'
     const fallbackName = project.companyName || primaryRecipient?.name || 'Client'
@@ -158,7 +149,6 @@ export async function POST(request: NextRequest) {
   const commentsMessages = messages?.comments || {}
   const shareMessages = messages?.share || {}
 
-  // Rate limiting to prevent comment spam
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
     maxRequests: 10,
@@ -170,16 +160,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Get authentication context first (before body parsing)
     const authContext = await getAuthContext(request)
 
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
     const body = parsed.data
 
-    // Note: Don't log body - may contain PII (emails)
-
-    // Validate and sanitize input
     const validation = validateRequest(createCommentSchema, body)
     if (!validation.success) {
       return NextResponse.json(
@@ -219,7 +205,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate comment permissions
     const permissionCheck = await validateCommentPermissions({
       projectId,
       isInternal: isInternal || false,
@@ -233,7 +218,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get project for access verification
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: {
@@ -250,7 +234,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify project access using dual auth pattern
+    // Verify project access
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode, {
       allowGuest: false,
       requiredPermission: 'comment',
@@ -273,14 +257,12 @@ export async function POST(request: NextRequest) {
 
     const { isAdmin, isAuthenticated } = accessCheck
 
-    // Resolve author information
     const { authorEmail: finalAuthorEmail, fallbackName } = await resolveCommentAuthor({
       projectId,
       authorEmail,
       recipientId
     })
 
-    // Sanitize and validate content
     const contentValidation = await sanitizeAndValidateContent({
       content,
       authorName
@@ -305,10 +287,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Keep API behavior: if version is omitted, infer from current video record.
+    // If version is omitted, infer from current video record
     const finalVideoVersion = videoVersion || video.version
 
-    // Create comment in database
+    // Create comment
     const comment = await prisma.comment.create({
       data: {
         projectId,
@@ -351,7 +333,6 @@ export async function POST(request: NextRequest) {
 
     // Link client assets to comment
     if (assetIds && assetIds.length > 0) {
-      // Validate each asset exists, belongs to correct video, is client-uploaded, and unlinked
       const assets = await prisma.videoAsset.findMany({
         where: {
           id: { in: assetIds },
@@ -385,7 +366,6 @@ export async function POST(request: NextRequest) {
       attachmentNames = linkedAssets.map(a => a.fileName)
     }
 
-    // Handle notifications asynchronously
     await handleCommentNotifications({
       comment,
       projectId,
@@ -394,10 +374,8 @@ export async function POST(request: NextRequest) {
       attachmentNames,
     })
 
-    // Fetch all comments for the project (to keep UI in sync)
     const allComments = await fetchProjectComments(projectId)
 
-    // Sanitize the response data
     const sanitizedComments = allComments.map((comment: any) =>
       sanitizeComment(comment, isAdmin, isAuthenticated, fallbackName)
     )

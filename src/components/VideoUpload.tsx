@@ -51,7 +51,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  // Set file from initialFile prop when it changes
   useEffect(() => {
     if (initialFile) {
       setFile(initialFile)
@@ -75,9 +74,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
     }
   }, [uploading, paused])
 
-  // Validate video file format
   async function validateVideoFile(file: File): Promise<{ valid: boolean; error?: string }> {
-    // Check file size is not zero
     if (file.size === 0) {
       return { valid: false, error: t('fileEmpty') }
     }
@@ -117,7 +114,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         return { valid: true }
       }
 
-      // Check for other valid MP4 atoms
       const validAtoms = ['wide', 'free', 'moov']
       const atomType = String.fromCharCode(...headerBytes.subarray(4, 8))
       if (validAtoms.includes(atomType)) {
@@ -136,8 +132,7 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
   async function handleUpload() {
     if (!file) return
 
-    // Validate video name is provided
-    if (!videoName || !videoName.trim()) {
+      if (!videoName || !videoName.trim()) {
       setError(t('videoNameRequired'))
       return
     }
@@ -151,14 +146,12 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
     setError(null)
 
     try {
-      // Step 0: Validate file format
       const validation = await validateVideoFile(file)
 
       if (!validation.valid) {
         throw new Error(validation.error || 'Invalid video file')
       }
 
-      // Check if file was uploaded to different project and clear TUS fingerprint if needed
       ensureFreshUploadOnContextChange(file, contextKey)
 
       const existingMetadata = getUploadMetadata(file)
@@ -169,7 +162,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         (existingMetadata.versionLabel || '') === (trimmedVersionLabel || '')
       let createdVideoRecord = false
 
-      // Step 1: Reuse existing video record if we have metadata, otherwise create a new one
       if (canResumeExisting) {
         videoIdRef.current = existingMetadata!.videoId
         // Refresh metadata timestamp so it stays valid
@@ -198,7 +190,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         })
       }
 
-      // Step 2: Upload — S3 direct or TUS depending on storage provider
       if (storageProvider === 's3') {
         // ── S3 direct multipart upload ────────────────────────────────────────
         const key = `s3-video-${videoIdRef.current}`
@@ -259,10 +250,8 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
           // TUS server endpoint (absolute URL for fingerprint consistency)
           endpoint: `${window.location.origin}/api/uploads`,
 
-          // Retry configuration - exponential backoff
           retryDelays: TUS_RETRY_DELAYS_MS,
 
-          // Metadata
           metadata: {
             filename: file.name,
             filetype: file.type || 'video/mp4',
@@ -292,12 +281,10 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
           onAfterResponse: createTusAfterResponseHandler(uploadRef),
           onShouldRetry: createTusShouldRetryHandler(uploadRef),
 
-          // Progress callback
           onProgress: (bytesUploaded, bytesTotal) => {
             const percentage = Math.round((bytesUploaded / bytesTotal) * 100)
             setProgress(percentage)
 
-            // Calculate upload speed
             const now = Date.now()
             const timeDiff = (now - lastTime) / 1000 // seconds
             const bytesDiff = bytesUploaded - lastLoaded
@@ -311,12 +298,10 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
             }
           },
 
-          // Success callback
           onSuccess: () => {
             setUploading(false)
             setProgress(100)
 
-            // Clear file context since upload completed
             clearFileContext(file)
             clearUploadMetadata(file)
             clearTUSFingerprint(file)
@@ -327,11 +312,9 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
             uploadRef.current = null
             videoIdRef.current = null
             router.refresh()
-            // Notify parent component
             onUploadComplete?.()
           },
 
-          // Error callback
           onError: async (error) => {
             let errorMessage = getTusUploadErrorMessage(error)
 
@@ -368,10 +351,8 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
         clearTUSFingerprint(file)
       }
 
-      // Store upload reference for pause/resume
       uploadRef.current = upload
 
-      // Start the upload
       upload.start()
       } // end TUS else block
 
@@ -385,11 +366,9 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
     if (!uploadRef.current) return
 
     if (paused) {
-      // Resume upload
       uploadRef.current.start()
       setPaused(false)
     } else {
-      // Pause upload
       uploadRef.current.abort()
       setPaused(true)
     }
@@ -408,7 +387,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
       }
     }
 
-    // Delete the video record from database if it was created
     if (videoIdRef.current) {
       try {
         await apiDelete(`/api/videos/${videoIdRef.current}`)
@@ -429,7 +407,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
     }
   }
 
-  // Drag and drop handlers
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -451,7 +428,6 @@ export default function VideoUpload({ projectId, videoName, onUploadComplete, in
 
     if (!uploading && e.dataTransfer.files.length > 0) {
       const droppedFile = e.dataTransfer.files[0]
-      // Only accept video files
       if (droppedFile.type.startsWith('video/')) {
         setFile(droppedFile)
       } else {

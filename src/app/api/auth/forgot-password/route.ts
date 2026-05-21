@@ -14,23 +14,14 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * Request Password Reset
- * 
  * POST /api/auth/forgot-password
- * 
- * SECURITY:
- * - Rate limited to prevent abuse
- * - Always returns success (prevents email enumeration)
- * - Logs security events
- * - Token expires in 30 minutes
- * - Silently handles missing SMTP configuration (no information leak)
+ * SECURITY: Always returns success to prevent email enumeration.
  */
 export async function POST(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const authMessages = messages?.auth || {}
 
-  // Strict rate limiting: 3 requests per 15 minutes
   const rateLimitResult = await rateLimit(request, {
     windowMs: 15 * 60 * 1000,
     maxRequests: 3,
@@ -63,8 +54,7 @@ export async function POST(request: NextRequest) {
       return successResponse
     }
 
-    // Per-email rate limit: prevents flooding one victim's inbox by rotating IPs.
-    // Mirrors the email-keyed limit on the login endpoint.
+    // Per-email rate limit: prevents flooding one victim's inbox by rotating IPs
     const emailRateLimitResult = await rateLimit(request, {
       windowMs: 15 * 60 * 1000,
       maxRequests: 3,
@@ -81,12 +71,10 @@ export async function POST(request: NextRequest) {
           email,
         },
       })
-      // Return generic success even on rate-limit so attackers can't tell which
-      // emails are being targeted. The IP-based limit above already returns 429.
+      // Return generic success so attackers can't tell which emails are being targeted
       return successResponse
     }
 
-    // Find user by email or username
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -102,7 +90,6 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      // Log failed attempt (potential attack)
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_UNKNOWN_EMAIL',
         severity: 'INFO',
@@ -114,7 +101,6 @@ export async function POST(request: NextRequest) {
       return successResponse
     }
 
-    // Check SMTP configuration (silently fail if not configured)
     const settings = await prisma.settings.findFirst()
     const smtpConfigured = !!(
       settings?.smtpServer &&
@@ -133,7 +119,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Generate secure reset token
     const token = generatePasswordResetToken({
       userId: user.id,
       userEmail: user.email,
@@ -157,7 +142,6 @@ export async function POST(request: NextRequest) {
     }
     const resetUrl = buildPasswordResetUrl(appUrl, token)
 
-    // Send email (only if SMTP is configured, but always return success)
     if (smtpConfigured) {
       try {
         await sendPasswordResetEmail({
@@ -166,7 +150,6 @@ export async function POST(request: NextRequest) {
           resetUrl,
         })
 
-        // Log successful email sent
         await logSecurityEvent({
           type: 'ADMIN_PASSWORD_RESET_EMAIL_SENT',
           severity: 'INFO',
@@ -178,7 +161,6 @@ export async function POST(request: NextRequest) {
         })
       } catch (emailError) {
         logError(`[PASSWORD_RESET] Email send error for userId ${user.id}`, emailError)
-        // Log email failure
         await logSecurityEvent({
           type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
           severity: 'WARNING',
@@ -192,7 +174,6 @@ export async function POST(request: NextRequest) {
         // Still return success to prevent info leak
       }
     } else {
-      // SMTP not configured - log for admin awareness but still return success
       logMessage(`[PASSWORD_RESET] SMTP not configured, reset token generated but email not sent (userId=${user.id})`)
       await logSecurityEvent({
         type: 'ADMIN_PASSWORD_RESET_EMAIL_FAILED',
@@ -209,7 +190,6 @@ export async function POST(request: NextRequest) {
     return successResponse
   } catch (error) {
     logError('[PASSWORD_RESET] Error:', error)
-    // Return success even on error to prevent info leak
     return NextResponse.json({
       success: true,
       message: authMessages.passwordResetEmailSentGeneric || 'If an account exists with this email, you will receive password reset instructions.',

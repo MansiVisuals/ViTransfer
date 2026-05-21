@@ -65,7 +65,6 @@ const tusServer: Server = new Server({
           }
         }
 
-        // Verify comment permission
         if (!sharePayload.permissions?.includes('comment')) {
           throw {
             status_code: 403,
@@ -157,7 +156,6 @@ const tusServer: Server = new Server({
         }
       }
 
-      // Enforce configurable max upload size from Global Settings
       const appSettings = await prisma.settings.findUnique({
         where: { id: 'default' },
         select: { maxUploadSizeGB: true },
@@ -236,7 +234,6 @@ const tusServer: Server = new Server({
       }
 
       if (projectUploadId && isAdmin) {
-        // Admin project upload — verify record exists
         const projectUpload = await prisma.projectUpload.findUnique({
           where: { id: projectUploadId },
           select: { id: true },
@@ -314,7 +311,6 @@ async function handleVideoUploadFinish(tusFilePath: string, upload: any, videoId
     upload.metadata?.filetype as string || 'video/mp4'
   )
 
-  // Update video status to PROCESSING since upload is complete and job will be queued
   await prisma.video.update({
     where: { id: videoId },
     data: {
@@ -368,7 +364,6 @@ async function handleAssetUploadFinish(tusFilePath: string, upload: any, assetId
     },
   })
 
-  // Queue asset for magic byte validation in worker
   const assetQueue = getAssetQueue()
 
   await assetQueue.add('process-asset', {

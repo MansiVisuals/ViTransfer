@@ -16,34 +16,13 @@ export const runtime = 'nodejs'
 
 
 
-/**
- * Verify PassKey Authentication Response
- *
- * POST /api/auth/passkey/authenticate/verify
- *
- * SECURITY:
- * - Rate limiting on FAILED attempts (same as password login)
- * - Retrieves and DELETES challenge from Redis (one-time use)
- * - Verifies WebAuthn signature
- * - Updates credential counter (replay attack prevention)
- * - Creates JWT session on success
- * - Tracks IP for security
- *
- * Body:
- * - response: AuthenticationResponseJSON from @simplewebauthn/browser
- * - email?: string (optional, for better UX)
- *
- * Returns:
- * - { success: true, user: AuthUser } on success
- * - { success: false, error: string } on failure
- */
+// POST /api/auth/passkey/authenticate/verify
 export async function POST(request: NextRequest) {
   const locale = await getConfiguredLocale().catch(() => 'en')
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const authMessages = messages?.auth || {}
 
   try {
-    // Parse request body
     const parsed = await safeParseBody(request)
     if (!parsed.success) return parsed.response
     const body = parsed.data
@@ -57,7 +36,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check rate limit (tied to IP for usernameless auth)
+    // Rate limit tied to IP for usernameless auth
     const rateLimitKey = getClientIpAddress(request)
     const rateLimitCheck = await checkRateLimit(request, 'login', rateLimitKey)
     if (rateLimitCheck.limited) {
@@ -76,18 +55,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get client IP for security tracking
     const ipAddress = getClientIpAddress(request)
 
-    // Verify authentication
     const result = await verifyPasskeyAuthentication(response, sessionId, ipAddress)
 
     if (!result.success || !result.user) {
-      // FAILED LOGIN: Increment rate limit counter
       const { lockedOut } = await incrementRateLimit(request, 'login', rateLimitKey)
 
       if (lockedOut) {
-        // Lockout just triggered — send SECURITY_ALERT (not ADMIN_ACCESS)
         void enqueueExternalNotification({
           eventType: 'SECURITY_ALERT',
           title: authMessages.securityAlertTitle || 'Security Alert',
@@ -100,7 +75,6 @@ export async function POST(request: NextRequest) {
           },
         }).catch(() => {})
       } else {
-        // Normal failed attempt — send ADMIN_ACCESS warning
         void enqueueExternalNotification({
           eventType: 'ADMIN_ACCESS',
           title: authMessages.failedLoginAttemptTitle || 'Failed Login Attempt',
@@ -139,7 +113,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // SUCCESSFUL LOGIN: Clear rate limit counter
+    // SUCCESSFUL LOGIN: Clear rate limit
     await clearRateLimit(request, 'login', rateLimitKey)
 
     const fingerprint = crypto.createHash('sha256').update(request.headers.get('user-agent') || 'unknown').digest('base64url')
@@ -160,7 +134,6 @@ export async function POST(request: NextRequest) {
       },
     }).catch(() => {})
 
-    // Return user data (without password)
     return NextResponse.json({
       success: true,
       user: {

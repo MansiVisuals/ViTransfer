@@ -34,7 +34,6 @@ interface DeviceCodeData {
 export function generateDeviceCode(): { deviceCode: string; userCode: string } {
   const deviceCode = crypto.randomBytes(32).toString('base64url')
 
-  // Generate user code: 4 uppercase letters + 4 digits (ABCD-1234)
   const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ' // Excluded I and O to avoid confusion
   const digits = '23456789' // Excluded 0 and 1 to avoid confusion
 
@@ -77,7 +76,6 @@ export async function storeDeviceCode(
     JSON.stringify(data)
   )
 
-  // Store user code → device code mapping
   await redis.setex(
     `device_code:uc:${userCode}`,
     DEVICE_CODE_TTL,
@@ -97,7 +95,6 @@ export async function getDeviceCodeStatus(
 
   try {
     const data = JSON.parse(raw) as DeviceCodeData
-    // Check if expired
     if (Date.now() > data.expiresAt) {
       data.status = 'expired'
     }
@@ -116,13 +113,11 @@ export async function authorizeDeviceCode(
 ): Promise<{ success: boolean; error?: string }> {
   const redis = getRedis()
 
-  // Look up device code from user code
   const deviceCode = await redis.get(`device_code:uc:${userCode}`)
   if (!deviceCode) {
     return { success: false, error: 'Invalid or expired user code' }
   }
 
-  // Get device code data
   const raw = await redis.get(`device_code:dc:${deviceCode}`)
   if (!raw) {
     return { success: false, error: 'Device code expired' }
@@ -138,11 +133,9 @@ export async function authorizeDeviceCode(
     return { success: false, error: 'Device code expired' }
   }
 
-  // Mark as authorized with user ID
   data.status = 'authorized'
   data.userId = userId
 
-  // Update with remaining TTL
   const remainingTtl = Math.ceil((data.expiresAt - Date.now()) / 1000)
   if (remainingTtl <= 0) {
     return { success: false, error: 'Device code expired' }
@@ -176,7 +169,6 @@ export async function consumeDeviceCode(
     return null
   }
 
-  // Mark as consumed and delete
   await redis.del(`device_code:dc:${deviceCode}`)
   await redis.del(`device_code:poll:${deviceCode}`)
 
@@ -201,7 +193,6 @@ export async function checkPollRate(deviceCode: string): Promise<boolean> {
     }
   }
 
-  // Record this poll timestamp
   await redis.setex(key, DEVICE_CODE_TTL, now.toString())
-  return false // OK
+  return false
 }

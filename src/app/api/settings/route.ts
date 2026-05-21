@@ -15,7 +15,6 @@ export const runtime = 'nodejs'
 
 
 
-// Prevent static generation for this route
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
@@ -23,10 +22,9 @@ export async function GET(request: NextRequest) {
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const settingsMessages = messages?.settings || {}
 
-  // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
-    return authResult // Return 401/403 response
+    return authResult
   }
 
   // Rate limiting to prevent enumeration/scraping
@@ -80,10 +78,9 @@ export async function PATCH(request: NextRequest) {
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const settingsMessages = messages?.settings || {}
 
-  // Check authentication
   const authResult = await requireApiAdmin(request)
   if (authResult instanceof Response) {
-    return authResult // Return 401/403 response
+    return authResult
   }
 
   try {
@@ -417,7 +414,6 @@ export async function PATCH(request: NextRequest) {
       passwordUpdate = undefined
     }
 
-    // Build update data (only include password if it should be updated)
     const updateData: any = {
       language,
       defaultTheme,
@@ -458,12 +454,10 @@ export async function PATCH(request: NextRequest) {
       privacyDisclosureText: privacyDisclosureText !== undefined ? (privacyDisclosureText || null) : undefined,
     }
 
-    // Only update password if it's not the placeholder
     if (passwordUpdate !== undefined) {
       updateData.smtpPassword = passwordUpdate
     }
 
-    // Check if admin notification schedule is changing (to flush pending notifications)
     let previousAdminSchedule: string | null = null
     if (adminNotificationSchedule !== undefined) {
       const current = await prisma.settings.findUnique({
@@ -473,7 +467,6 @@ export async function PATCH(request: NextRequest) {
       previousAdminSchedule = current?.adminNotificationSchedule || null
     }
 
-    // Update or create the settings
     const settings = await prisma.settings.upsert({
       where: { id: 'default' },
       update: updateData,

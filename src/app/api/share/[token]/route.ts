@@ -125,7 +125,6 @@ export async function GET(
           analyticsConsent: readAnalyticsConsent(request),
         })
 
-        // Set 30-minute deduplication window
         await redis.set(dedupeKey, '1', 'EX', 30 * 60)
       }
     }
@@ -159,6 +158,7 @@ export async function GET(
       approvedAt: video.approvedAt,
       thumbnailPath: video.thumbnailPath,
       createdAt: video.createdAt,
+      hasAssets: (video._count?.assets ?? 0) > 0,
       // Explicitly omit: projectId, originalStoragePath, preview720Path, preview1080Path,
       // cleanPreview720Path, cleanPreview1080Path, processingError, processingProgress,
       // uploadProgress
@@ -196,7 +196,6 @@ export async function GET(
       sortedVideosByName[key] = videosByName[key]
     })
 
-    // Parallelize independent queries for better performance
     const [smtpConfigured, globalSettings, primaryRecipient] = await Promise.all([
       isSmtpConfigured(),
       prisma.settings.findUnique({

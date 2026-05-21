@@ -68,7 +68,6 @@ export async function uploadFile(
   const writeStream = fs.createWriteStream(fullPath)
   await pipeline(inputStream, writeStream)
 
-  // Verify file was written with correct size
   const stats = await fs.promises.stat(fullPath)
   if (stats.size !== size) {
     await fs.promises.unlink(fullPath).catch(() => {})

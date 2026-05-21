@@ -35,7 +35,6 @@ interface ApprovalNotificationContext {
 export async function sendImmediateNotification(context: NotificationContext, target: 'client' | 'admin' = 'client') {
   const { comment, project, video, attachmentNames } = context
 
-  // Check if notification was cancelled (comment deleted)
   const redis = getRedis()
   const cancelled = await redis.get(`comment_cancelled:${comment.id}`)
 
@@ -54,7 +53,6 @@ export async function sendImmediateNotification(context: NotificationContext, ta
     const allRecipients = await getProjectRecipients(comment.projectId)
     const recipients = allRecipients.filter(r => {
       if (!r.receiveNotifications || !r.email) return false
-      // Skip the author (client who wrote this comment)
       if (!comment.isInternal && authorEmail && r.email.toLowerCase() === authorEmail) return false
       return true
     })
@@ -81,7 +79,6 @@ export async function sendImmediateNotification(context: NotificationContext, ta
         unsubscribeUrl = undefined
       }
 
-      // Resolve per-recipient locale
       const recipientLocale = await getRecipientLocale(recipient.email!)
 
       return sendCommentNotificationEmail({
@@ -117,7 +114,6 @@ export async function sendImmediateNotification(context: NotificationContext, ta
       select: { email: true, name: true }
     })
 
-    // Skip the author admin
     const targetAdmins = admins.filter(a => {
       if (comment.isInternal && authorEmail && a.email.toLowerCase() === authorEmail) return false
       return true
@@ -172,7 +168,6 @@ export async function queueNotification(
   logMessage(`[QUEUE]   Video: ${video?.name || 'N/A'} (${video?.versionLabel || 'N/A'})`)
   logMessage(`[QUEUE]   Author: ${comment.authorName || (comment.isInternal ? 'Admin' : 'Client')}`)
 
-  // Get parent comment context if this is a reply
   let parentCommentData = null
   if (isReply && comment.parentId) {
     const parentComment = await prisma.comment.findUnique({
@@ -230,7 +225,6 @@ export async function queueNotification(
 export async function handleApprovalNotification(context: ApprovalNotificationContext) {
   const { project, video, approved, isComplete = false } = context
 
-  // Determine notification type based on whether ALL videos are approved
   const type = isComplete ? 'PROJECT_APPROVED' : (approved ? 'VIDEO_APPROVED' : 'VIDEO_UNAPPROVED')
 
   logMessage(`[APPROVAL] Handling ${type} for "${project.title}"`)
@@ -238,7 +232,6 @@ export async function handleApprovalNotification(context: ApprovalNotificationCo
     logMessage(`[APPROVAL]   Video: ${video.name}`)
   }
 
-  // ALWAYS send approval notifications immediately, regardless of schedule
   logMessage(`[APPROVAL]   Sending immediately (approvals always bypass schedule)...`)
   await sendApprovalImmediately(context)
 }
@@ -261,7 +254,6 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
   const allRecipients = await getProjectRecipients(project.id)
   const recipients = allRecipients.filter(r => r.receiveNotifications && r.email)
 
-  // Get all admins
   const admins = await prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: { email: true, name: true }
@@ -285,10 +277,8 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
         unsubscribeUrl = undefined
       }
 
-      // Check if this recipient is the one who approved
       const isApprover = authorEmail && recipient.email?.toLowerCase() === authorEmail.toLowerCase()
 
-      // Resolve per-recipient locale
       const recipientLocale = await getRecipientLocale(recipient.email!)
 
       return sendProjectApprovedEmail({
@@ -393,7 +383,6 @@ export async function flushPendingAdminNotifications(): Promise<void> {
       return
     }
 
-    // Filter out cancelled notifications
     const redis = getRedis()
     const validNotifications = []
     const cancelledIds: string[] = []
@@ -421,7 +410,6 @@ export async function flushPendingAdminNotifications(): Promise<void> {
       return
     }
 
-    // Group by project
     const projectGroups: Record<string, any> = {}
     for (const notification of validNotifications) {
       const projectId = notification.projectId
@@ -472,7 +460,6 @@ export async function flushPendingAdminNotifications(): Promise<void> {
       })
     }
 
-    // Mark as sent
     const ids = validNotifications.map(n => n.id)
     const now = new Date()
     await prisma.notificationQueue.updateMany({
@@ -518,7 +505,6 @@ export async function flushPendingClientNotifications(projectId: string): Promis
       return
     }
 
-    // Filter out cancelled notifications
     const redis = getRedis()
     const validNotifications = []
     const cancelledIds: string[] = []
@@ -596,7 +582,6 @@ export async function flushPendingClientNotifications(projectId: string): Promis
       })
     }
 
-    // Mark as sent
     const ids = validNotifications.map(n => n.id)
     const now = new Date()
     await prisma.notificationQueue.updateMany({

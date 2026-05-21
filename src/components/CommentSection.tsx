@@ -213,12 +213,10 @@ export default function CommentSection({
     }
   }, [projectId, fetchComments])
 
-  // Get latest video version
   const latestVideoVersion = videos.length > 0
     ? Math.max(...videos.map(v => v.version))
     : null
 
-  // Check if currently selected video is approved
   const currentVideo = videos.find(v => v.id === selectedVideoId)
   const currentVideoDuration = currentVideo?.duration ?? null
   const isCurrentVideoApproved = currentVideo ? (currentVideo as any).approved === true : false
@@ -231,7 +229,6 @@ export default function CommentSection({
   // Local comments only used as fallback if hook hasn't loaded
   const mergedComments = comments.length > 0 ? comments : localComments
 
-  // Filter comments based on currently selected video
   const displayComments = (() => {
     if (!selectedVideoId) {
       // No video selected - show all or latest version only
@@ -244,12 +241,10 @@ export default function CommentSection({
     return mergedComments.filter(comment => comment.videoId === selectedVideoId)
   })()
 
-  // Sort top-level comments chronologically
   const sortedComments = [...displayComments].sort((a, b) => {
     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   })
 
-  // Sort replies under each parent chronologically
   sortedComments.forEach(comment => {
     if (comment.replies && comment.replies.length > 0) {
       comment.replies.sort((a: Comment, b: Comment) => {
@@ -266,7 +261,6 @@ export default function CommentSection({
     }
   }, [displayComments.length])
 
-  // Check if commenting on current video is allowed
   const isCurrentVideoAllowed = () => {
     if (!restrictToLatestVersion) return true
     if (!selectedVideoId) return true
@@ -282,7 +276,6 @@ export default function CommentSection({
 
   const replyingToComment = mergedComments.find(c => c.id === replyingToCommentId) || null
 
-  // Format message time
   const formatMessageTime = (date: Date) => {
     const now = new Date()
     const diffMs = now.getTime() - new Date(date).getTime()
@@ -298,11 +291,9 @@ export default function CommentSection({
   }
 
   const handleSeekToTimestamp = (timestamp: number, videoId: string, videoVersion: number | null) => {
-    // Check if we're on a page with a video player by checking if the event listener exists
     const hasVideoPlayer = typeof window !== 'undefined' && document.querySelector('video')
 
     if (hasVideoPlayer) {
-      // If video player is present (admin share page or public share page), dispatch event
       window.dispatchEvent(new CustomEvent('seekToTime', {
         detail: { timestamp, videoId, videoVersion }
       }))
@@ -311,7 +302,6 @@ export default function CommentSection({
       const video = videos.find(v => v.id === videoId)
       if (!video) return
 
-      // Navigate to admin share page with video, version, and timestamp parameters
       const adminShareUrl = `/admin/projects/${projectId}/share?video=${encodeURIComponent(video.name)}&version=${videoVersion || video.version}&t=${Math.floor(timestamp)}`
       window.location.href = adminShareUrl
     }

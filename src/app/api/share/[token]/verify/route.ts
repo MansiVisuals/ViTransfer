@@ -20,22 +20,14 @@ export const runtime = 'nodejs'
 
 
 
-// Rate limit configuration
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
 
-/**
- * Constant-time string comparison to prevent timing attacks
- * @param a - First string to compare
- * @param b - Second string to compare
- * @returns true if strings are equal, false otherwise
- */
 function constantTimeCompare(a: string, b: string): boolean {
   const bufA = Buffer.from(a, 'utf8')
   const bufB = Buffer.from(b, 'utf8')
 
   // If lengths differ, still compare dummy buffers to maintain constant time
   if (bufA.length !== bufB.length) {
-    // Compare two equal-length dummy buffers to maintain timing
     crypto.timingSafeEqual(Buffer.alloc(32), Buffer.alloc(32))
     return false
   }
@@ -127,20 +119,16 @@ export async function POST(
       return NextResponse.json({ success: true })
     }
 
-    // Decrypt the stored password and compare with provided password using constant-time comparison
     let isValid = false
     try {
       const decryptedPassword = decrypt(project.sharePassword)
-      // Use constant-time comparison to prevent timing attacks
       isValid = constantTimeCompare(password, decryptedPassword)
     } catch (error) {
       logError('Error decrypting password:', error)
-      // If decryption fails, password is invalid
       isValid = false
     }
 
     if (!isValid) {
-      // FAILED attempt - increment rate limit counter
       const now = Date.now()
       const existingData = await redis.get(rateLimitKey)
 
@@ -149,7 +137,6 @@ export async function POST(
 
       if (existingData) {
         const parsed = JSON.parse(existingData)
-        // Reset if window expired
         if (now - parsed.firstAttempt > RATE_LIMIT_WINDOW_MS) {
           count = 1
           firstAttempt = now
@@ -169,7 +156,6 @@ export async function POST(
       const ttlSeconds = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
       await redis.setex(rateLimitKey, ttlSeconds, JSON.stringify(rateLimitEntry))
 
-      // Log security event for failed password attempt
       const ipAddress = getClientIpAddress(request)
 
       await logSecurityEvent({
@@ -185,11 +171,9 @@ export async function POST(
         wasBlocked: false,
       })
 
-      // If this was the 5th failed attempt, return rate limit error
       if (count >= MAX_FAILED_ATTEMPTS) {
         const retryAfter = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
 
-        // Log additional event for lockout
         await logSecurityEvent({
           type: 'PASSWORD_LOCKOUT',
           severity: 'CRITICAL',
@@ -229,7 +213,6 @@ export async function POST(
       return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
-    // SUCCESS - clear any existing rate limit data
     await redis.del(rateLimitKey)
 
     const shareTokenTtl = await getShareTokenTtlSeconds()
@@ -241,7 +224,6 @@ export async function POST(
       ttlSeconds: shareTokenTtl,
     })
 
-    // Log successful password-based access
     await logSecurityEvent({
       type: 'PASSWORD_ACCESS',
       severity: 'INFO',

@@ -85,7 +85,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Basic IP validation
     const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/
     if (!ipPattern.test(ipAddress)) {
       return NextResponse.json(
@@ -94,7 +93,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if already blocked
     const existing = await prisma.blockedIP.findUnique({
       where: { ipAddress }
     })
@@ -114,7 +112,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Invalidate cache
     await invalidateBlocklistCache()
 
     return NextResponse.json({
@@ -168,7 +165,6 @@ export async function DELETE(request: NextRequest) {
       where: { id }
     })
 
-    // Invalidate cache
     await invalidateBlocklistCache()
 
     return NextResponse.json({

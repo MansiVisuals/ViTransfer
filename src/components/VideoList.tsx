@@ -34,15 +34,11 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
   const [uploadingAssetsFor, setUploadingAssetsFor] = useState<string | null>(null)
   const [assetRefreshTrigger, setAssetRefreshTrigger] = useState(0)
 
-  // Version collapsing state - only latest version expanded by default
   const [expandedVersions, setExpandedVersions] = useState<Set<string>>(() => {
     const sorted = [...initialVideos].sort((a, b) => b.version - a.version)
     return new Set(sorted[0]?.id ? [sorted[0].id] : [])
   })
   const [showAllVersions, setShowAllVersions] = useState(false)
-
-  // Polling removed from VideoList to prevent duplicate polling
-  // Parent component (Project page) handles polling for processing videos
 
   // Update local state when props change
   useEffect(() => {
@@ -70,10 +66,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     // Optimistically remove from UI immediately
     setVideos(prev => prev.filter(v => v.id !== videoId))
 
-    // Perform deletion in background without blocking UI
     apiDelete(`/api/videos/${videoId}`)
       .then(() => {
-        // Refresh in background
         onRefresh?.()
       })
       .catch(() => {
@@ -104,10 +98,8 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
     // Trigger immediate UI update for comment section approval banner
     window.dispatchEvent(new CustomEvent('videoApprovalChanged'))
 
-    // Perform approval in background without blocking UI
     apiPatch(`/api/videos/${videoId}`, { approved: !currentlyApproved })
       .then(() => {
-        // Refresh in background
         onRefresh?.()
       })
       .catch(() => {
@@ -199,7 +191,6 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
     setDownloadingId(videoId)
 
-    // Generate download token and open link - non-blocking
     apiFetch(`/api/videos/${videoId}/download-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -238,17 +229,14 @@ export default function VideoList({ videos: initialVideos, isAdmin = true, onRef
 
   const handleShowAllVersions = () => {
     if (showAllVersions) {
-      // Collapse back to just latest
       const sorted = [...videos].sort((a, b) => b.version - a.version)
       setExpandedVersions(new Set(sorted[0]?.id ? [sorted[0].id] : []))
     } else {
-      // Expand all
       setExpandedVersions(new Set(videos.map(v => v.id)))
     }
     setShowAllVersions(!showAllVersions)
   }
 
-  // Sort videos by version descending (latest first)
   const sortedVideos = [...videos].sort((a, b) => b.version - a.version)
   const latestVideoId = sortedVideos[0]?.id
 

@@ -45,14 +45,12 @@ export function WebPushSection({ active }: { active: boolean }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
 
-  // Check browser support
   const isPushSupported =
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
     'PushManager' in window &&
     'Notification' in window
 
-  // Load subscriptions
   const loadSubscriptions = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -74,7 +72,6 @@ export function WebPushSection({ active }: { active: boolean }) {
           setCurrentDeviceSubscribed(true)
           setCurrentSubscriptionId(storedId)
         } else {
-          // Stored ID no longer exists on server (subscription was removed)
           localStorage.removeItem('vitransfer_push_subscription_id')
           setCurrentDeviceSubscribed(false)
           setCurrentSubscriptionId(null)
@@ -94,10 +91,8 @@ export function WebPushSection({ active }: { active: boolean }) {
   useEffect(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return
 
-    // Initial check
     setPermissionState(Notification.permission)
 
-    // Listen for permission changes via Permissions API (works in most browsers)
     let permissionStatus: PermissionStatus | null = null
     const handlePermissionChange = () => {
       setPermissionState(Notification.permission)
@@ -107,10 +102,9 @@ export function WebPushSection({ active }: { active: boolean }) {
       permissionStatus = status
       status.addEventListener('change', handlePermissionChange)
     }).catch(() => {
-      // Permissions API not supported, fall back to visibilitychange only
     })
 
-    // Also re-check when PWA comes back to foreground (covers macOS system settings changes)
+    // Re-check when PWA comes back to foreground (covers macOS system settings changes)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setPermissionState(Notification.permission)
@@ -137,7 +131,6 @@ export function WebPushSection({ active }: { active: boolean }) {
     setSuccess(null)
 
     try {
-      // Request notification permission
       const permission = await Notification.requestPermission()
       setPermissionState(permission)
 
@@ -146,23 +139,19 @@ export function WebPushSection({ active }: { active: boolean }) {
         return
       }
 
-      // Get VAPID public key
       const vapidResponse = await apiFetch('/api/push/vapid-public-key')
       if (!vapidResponse.ok) {
         throw new Error(t('failedVapid'))
       }
       const { publicKey } = await vapidResponse.json()
 
-      // Subscribe to push manager
       const registration = await navigator.serviceWorker.ready
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
       })
 
-      // Send subscription to server
       const keys = subscription.toJSON().keys
-      // apiPost returns parsed JSON directly, throws on error
       const data = await apiPost('/api/push/subscribe', {
         endpoint: subscription.endpoint,
         keys: {
@@ -191,7 +180,6 @@ export function WebPushSection({ active }: { active: boolean }) {
     setSuccess(null)
 
     try {
-      // Unsubscribe from push manager
       const registration = await navigator.serviceWorker.ready
       const subscription = await registration.pushManager.getSubscription()
       if (subscription) {
@@ -219,7 +207,6 @@ export function WebPushSection({ active }: { active: boolean }) {
   const handleRemoveSubscription = async (subscriptionId: string) => {
     setError(null)
     try {
-      // apiPost returns parsed JSON directly, throws on error
       await apiPost('/api/push/unsubscribe', { subscriptionId })
       if (subscriptionId === currentSubscriptionId) {
         localStorage.removeItem('vitransfer_push_subscription_id')
@@ -237,7 +224,6 @@ export function WebPushSection({ active }: { active: boolean }) {
     setError(null)
     setSuccess(null)
     try {
-      // apiPost returns parsed JSON directly, throws on error
       await apiPost('/api/push/test', { subscriptionId })
       setSuccess(t('testSent'))
     } catch (err) {
@@ -256,7 +242,6 @@ export function WebPushSection({ active }: { active: boolean }) {
       : currentEvents.filter((e) => e !== eventType)
 
     try {
-      // apiPatch returns parsed JSON directly, throws on error
       await apiPatch('/api/push/subscribe', {
         subscriptionId,
         subscribedEvents: newEvents,
@@ -270,7 +255,6 @@ export function WebPushSection({ active }: { active: boolean }) {
   // Update device name
   const handleUpdateName = async (subscriptionId: string) => {
     try {
-      // apiPatch returns parsed JSON directly, throws on error
       await apiPatch('/api/push/subscribe', {
         subscriptionId,
         deviceName: editName,
@@ -481,7 +465,7 @@ export function WebPushSection({ active }: { active: boolean }) {
   )
 }
 
-// Helper to convert VAPID public key
+// Convert VAPID public key to Uint8Array
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')

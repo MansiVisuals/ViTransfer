@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { parseBearerToken, verifyAdminAccessToken, verifyShareToken } from '@/lib/auth'
 
-/**
- * Shared authentication and authorization for S3 multipart upload routes
- * (presign, complete, abort).
- *
- * Verifies bearer token (admin or share), enforces ownership for non-admins,
- * and resolves the S3 key from the database — never from client input.
- */
-
 interface S3UploadTarget {
   videoId?: string
   assetId?: string

@@ -39,7 +39,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Parse URL parameters for video seeking
   const urlTimestamp = searchParams?.get('t') ? parseFloat(searchParams.get('t')!) : null
   const urlVideoName = searchParams?.get('video') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
@@ -120,7 +119,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     await new Promise((resolve) => setTimeout(resolve, exponentialDelay + jitterMs))
   }, [])
 
-  /** Read GDPR analytics consent from localStorage for inclusion in auth request headers */
+  /** Read GDPR analytics consent from localStorage */
   const getConsentHeader = (): Record<string, string> => {
     try {
       const stored = localStorage.getItem(PRIVACY_STORAGE_KEY)
@@ -130,7 +129,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return {}
   }
 
-  // Load stored token once (persist across refresh)
   useEffect(() => {
     if (!storageKey) return
     const stored = loadShareToken(storageKey)
@@ -139,11 +137,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [storageKey])
 
-  // Restore authenticatedEmail from server-provided authenticatedRecipientId (for OTP users)
   // Server extracts recipientId from token - client never decodes token
   useEffect(() => {
     if (!project?.authenticatedRecipientId || !project?.recipients?.length) return
-    // Match server-provided recipientId with recipients to get email/name
     const recipient = project.recipients.find((r: any) => r.id === project.authenticatedRecipientId)
     if (recipient?.email) {
       if (!authenticatedEmail) setAuthenticatedEmail(recipient.email)
@@ -151,7 +147,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [project?.authenticatedRecipientId, project?.recipients, authenticatedEmail, authenticatedName])
 
-  // Resolve authenticated name from recipients when we have email but no name
   useEffect(() => {
     if (!authenticatedEmail || authenticatedName || !project?.recipients?.length) return
     const recipient = project.recipients.find(
@@ -160,7 +155,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     if (recipient?.name) setAuthenticatedName(recipient.name)
   }, [authenticatedEmail, authenticatedName, project?.recipients])
 
-  // Fetch comments separately for security
   const fetchComments = useCallback(async () => {
     if (!token || !shareToken) return
 
@@ -177,16 +171,13 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         setComments(commentsData)
       }
     } catch (error) {
-      // Failed to load comments
     } finally {
       setCommentsLoading(false)
     }
   }, [token, shareToken])
 
-  // Listen for comment updates (post, delete, etc.)
   useEffect(() => {
     const handleCommentPosted = (e: CustomEvent) => {
-      // Use the comments data from the event if available, otherwise refetch
       if (e.detail?.comments) {
         setComments(e.detail.comments)
       } else {
@@ -207,7 +198,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [fetchComments])
 
-  // Fetch project data function (for refresh after approval)
   const fetchProjectData = async (tokenOverride?: string | null) => {
     try {
       const authToken = tokenOverride || shareToken
@@ -216,7 +206,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         headers: { ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}), ...getConsentHeader() }
       })
 
-      // Recover automatically from stale/expired stored share token.
+      // Recover from stale/expired stored share token
       if (projectResponse.status === 401 && authToken) {
         saveShareToken(storageKey, null)
         setShareToken(null)
@@ -235,23 +225,18 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         }
         setProject(projectData)
 
-        // Clear token cache to force re-fetch of video tokens with updated approval status
         tokenCacheRef.current.clear()
 
-        // Fetch comments after project loads (if not hidden)
         if (!projectData.hideFeedback) {
           fetchComments()
         }
       }
     } catch (error) {
-      // Failed to load project data
     }
   }
 
-  // Company name and default quality now loaded from project settings
-  // This ensures they're only accessible after authentication
+  // Company name and default quality loaded from project settings
 
-  // Load project data (handles auth check implicitly via API response)
   useEffect(() => {
     let isMounted = true
 
@@ -267,8 +252,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         if (response.status === 401) {
           saveShareToken(storageKey, null)
 
-          // If a stale share token was sent, clear in-memory state and retry once.
-          // This removes the need for a manual F5 when a cached token expires.
           if (shareToken) {
             setShareToken(null)
             return
@@ -276,9 +259,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
           const data = await response.json()
 
-          // Portal-issued session: exchange for a project-scoped share token, bypassing
-          // password/OTP. Server re-checks recipient membership; the JWT alone is not
-          // authoritative.
+          // Portal-issued session: exchange for a project-scoped share token.
+          // Server re-checks recipient membership — the JWT alone is not authoritative.
           const portalToken = loadPortalSession()
           if (portalToken) {
             try {
@@ -339,8 +321,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         }
 
         if (response.status === 403 || response.status === 404) {
-          // Server already validated slug exists, this shouldn't happen
-          // but handle gracefully by showing project not found
           return
         }
 
@@ -358,7 +338,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
             if (projectData.settings) {
               setCompanyName(projectData.settings.companyName || 'Studio')
-              // Prefer per-project resolution, fall back to global default
               setDefaultQuality(projectData.previewResolution || projectData.settings.defaultPreviewResolution || '720p')
             }
 
@@ -368,7 +347,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           }
         }
       } catch (error) {
-        // Silent fail
       }
     }
 
@@ -379,21 +357,17 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [token, shareToken, storageKey, fetchComments])
 
-  // Set active video when project loads, handling URL parameters
   useEffect(() => {
     if (project?.videosByName) {
       const videoNames = Object.keys(project.videosByName)
       if (videoNames.length === 0) return
 
-      // Determine which video group should be active
       if (!activeVideoName) {
         let videoNameToUse: string | null = null
 
-        // Priority 1: URL parameter for video name
         if (urlVideoName && project.videosByName[urlVideoName]) {
           videoNameToUse = urlVideoName
         }
-        // Priority 2: Saved video name from recent approval
         else {
           const savedVideoName = sessionStorage.getItem('approvedVideoName')
           if (savedVideoName) {
@@ -404,7 +378,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           }
         }
 
-        // Priority 3: First video
         if (!videoNameToUse) {
           videoNameToUse = videoNames[0]
         }
@@ -414,7 +387,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         const videos = project.videosByName[videoNameToUse]
         setActiveVideosRaw(videos)
 
-        // If URL specifies a version, calculate the index for initial selection
+        // If URL specifies a version, calculate the index
         if (urlVersion !== null && videos) {
           const targetIndex = videos.findIndex((v: any) => v.version === urlVersion)
           if (targetIndex !== -1) {
@@ -422,12 +395,10 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           }
         }
 
-        // Set initial seek time if URL parameter exists
         if (urlTimestamp !== null) {
           setInitialSeekTime(urlTimestamp)
         }
       } else {
-        // Keep activeVideos in sync when project data refreshes (ensures updated approval status/thumbnails/tokens)
         const videos = project.videosByName[activeVideoName]
         if (videos) {
           setActiveVideosRaw(videos)
@@ -508,7 +479,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           if (video.approved) {
             // Check if project uses preview for approved playback
             if (project?.usePreviewForApprovedPlayback) {
-              // Use preview tokens for streaming, original for download
               const [token720, token1080, token2160, originalToken] = await Promise.all([
                 fetchVideoTokenWithRetry(video.id, '720p'),
                 fetchVideoTokenWithRetry(video.id, '1080p'),
@@ -520,7 +490,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               streamToken2160p = token2160
               downloadToken = originalToken
             } else {
-              // Default: original for everything
               const originalToken = await fetchVideoTokenWithRetry(video.id, 'original')
               streamToken720p = originalToken
               streamToken1080p = originalToken
@@ -595,7 +564,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [activeVideosRaw, shareToken, fetchTokensForVideos])
 
-  // Fetch thumbnails for all video groups (for grid and reel display)
   useEffect(() => {
     let isMounted = true
 
@@ -640,37 +608,30 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }, [project?.videosByName, shareToken, fetchVideoTokenWithRetry])
 
-  // Determine initial view state based on URL params
   useEffect(() => {
     if (!project?.videosByName) return
 
-    // If URL specifies a video, go to player
     if (urlVideoName && project.videosByName[urlVideoName]) {
       setViewState('player')
       return
     }
 
-    // Default: show grid (same behavior for single and multiple videos)
     setViewState('grid')
   }, [project?.videosByName, urlVideoName])
 
-  // Handle video selection - update URL so refresh preserves state
   const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)
     setActiveVideosRaw(project.videosByName[videoName])
     setViewState('player')
 
-    // Update URL with video parameter (preserves state on refresh)
     const params = new URLSearchParams(searchParams?.toString() || '')
     params.set('video', videoName)
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [project?.videosByName, searchParams, pathname, router])
 
-  // Handle back to grid - remove video param from URL
   const handleBackToGrid = useCallback(() => {
     setViewState('grid')
 
-    // Remove video parameter from URL
     const params = new URLSearchParams(searchParams?.toString() || '')
     params.delete('video')
     const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
@@ -718,7 +679,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         }
       }
     } catch {
-      // Silently fail - user can retry
     } finally {
       setDownloadingAll(false)
     }
@@ -742,9 +702,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
       if (response.ok) {
         setOtpSent(true)
-        setError('') // Clear any previous errors
+        setError('')
       } else {
-        // Show generic message to prevent email enumeration
         setError(data.error || t('failedToSendCode'))
       }
     } catch (error) {
@@ -776,10 +735,11 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         }
         setIsAuthenticated(true)
         setIsGuest(false)
-        setAuthenticatedEmail(email) // Save the authenticated email
+        setAuthenticatedEmail(email)
 
         await fetchProjectData(data.shareToken)
       } else {
+        // Generic error to prevent email enumeration
         setError(t('invalidCode'))
       }
     } catch (error) {
@@ -851,7 +811,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     }
   }
 
-  // Show loading state
   if (isPasswordProtected === null) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
@@ -860,11 +819,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     )
   }
 
-  // Show authentication prompt
   if (isPasswordProtected && !isAuthenticated) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
-        {/* Language and theme toggles for auth view */}
         <div className="fixed top-3 right-3 z-20 flex items-center gap-2">
           <LanguageToggle />
           <ThemeToggle />
@@ -884,7 +841,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Password Authentication - hide when OTP code is being entered */}
               {(authMode === 'PASSWORD' || authMode === 'BOTH') && !otpSent && (
                 <div className="space-y-4">
                   {authMode === 'BOTH' && (
@@ -914,7 +870,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               </div>
             )}
 
-            {/* Divider for BOTH mode - hide when OTP code is being entered */}
             {authMode === 'BOTH' && !otpSent && (
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -926,7 +881,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               </div>
             )}
 
-            {/* OTP Authentication */}
             {(authMode === 'OTP' || authMode === 'BOTH') && (
               <div className="space-y-4">
                 {authMode === 'BOTH' && (
@@ -999,14 +953,12 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               </div>
             )}
 
-            {/* Error message */}
             {error && (
               <div className="p-3 bg-destructive-visible border border-destructive-visible rounded-lg">
                 <p className="text-sm text-destructive">{error}</p>
               </div>
             )}
 
-            {/* Guest Entry Button - hide when OTP code is being entered */}
             {guestMode && !otpSent && (
               <>
                 <div className="relative">
@@ -1035,7 +987,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     )
   }
 
-  // Show project not found
   if (!project) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center p-4">
@@ -1051,27 +1002,21 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   // Filter to READY videos first
   let readyVideos = activeVideos.filter((v: any) => v.status === 'READY')
 
-  // If any video is approved, show ONLY approved videos (for both admin and client)
   const hasApprovedVideo = readyVideos.some((v: any) => v.approved)
   if (hasApprovedVideo) {
     readyVideos = readyVideos.filter((v: any) => v.approved)
   }
 
-  // Filter comments to only show comments for active videos
   const activeVideoIds = new Set(activeVideos.map((v: any) => v.id))
   const filteredComments = comments.filter((comment: any) => {
-    // Show general comments (no videoId) or comments for active videos
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
-  // Show thumbnail grid when in grid view (scrollable)
   if (viewState === 'grid') {
     return (
       <>
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
-        {/* Grid view toolbar */}
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm z-20 flex-shrink-0">
-          {/* Left: download all + reverse share upload */}
           <div className="flex items-center gap-2" data-tutorial="grid-actions">
             {(() => {
               if (isGuest) return null
@@ -1107,7 +1052,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
             })()}
           </div>
 
-          {/* Right: language, theme, tutorial */}
           <div className="flex items-center gap-2 ml-auto">
             <LanguageToggle />
             <ThemeToggle />
@@ -1137,9 +1081,9 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               projectTitle={project.title}
               projectDescription={isGuest ? undefined : project.description}
               clientName={isGuest ? undefined : project.clientName}
+              allowAssetDownload={project.allowAssetDownload}
             />
           </div>
-          {/* Powered by footer */}
           <div className="pb-4 text-center">
             <a
               href="https://www.vitransfer.com"
@@ -1161,12 +1105,12 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     )
   }
 
-  // Whether to show comment panel (not hidden by project settings, user toggle, or guest status)
+  // Whether to show comment panel
   const showCommentPanel = !project.hideFeedback && !isGuest && !hideComments
 
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
-      {/* Thumbnail Reel - always visible, collapsible */}
+      {/* Thumbnail Reel */}
         <ThumbnailReel
           videosByName={project.videosByName}
           thumbnailsByName={thumbnailsByName}
@@ -1194,7 +1138,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           }
         />
 
-      {/* Main Content Area - scrollable on mobile, fixed on desktop (xl breakpoint for better vertical video support) */}
+      {/* Main Content Area */}
       <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row p-2 sm:p-3 gap-2 sm:gap-3">
         {readyVideos.length === 0 ? (
           <div className="flex-1 flex items-center justify-center p-4">
@@ -1208,7 +1152,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           </div>
         ) : (
           <>
-            {/* Video Player - natural height on mobile, fills space on desktop */}
+            {/* Video Player */}
             <div data-tutorial="video-player" className={`xl:h-full xl:min-h-0 xl:flex-1 min-w-0 flex flex-col ${showCommentPanel ? 'xl:flex-[2] 2xl:flex-[2.5]' : ''}`}>
               <VideoPlayer
                 videos={readyVideos}
@@ -1239,7 +1183,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               />
             </div>
 
-            {/* Comments Section - max one screen height on mobile, side panel on desktop */}
             {showCommentPanel && (
               <div data-tutorial="comments" className="max-h-[100vh] xl:shrink xl:flex-1 xl:max-w-[30%] 2xl:max-w-[25%] xl:min-w-[280px] flex flex-col xl:max-h-full xl:h-full overflow-hidden rounded-xl bg-card">
                 <CommentSection
@@ -1272,7 +1215,6 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         )}
       </div>
 
-      {/* Privacy Disclosure Banner */}
       {project.settings?.privacyDisclosureEnabled && (
         <PrivacyBanner customText={project.settings.privacyDisclosureText} slug={token} shareToken={shareToken} />
       )}

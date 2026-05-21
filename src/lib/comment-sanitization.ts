@@ -1,16 +1,3 @@
-/**
- * Comment Sanitization Utility
- *
- * SECURITY-FIRST: Zero PII exposure policy
- * - Clients NEVER see real names or emails (even on public shares)
- * - Only admins in admin panel get full data for management
- * - All email/notification handling is server-side only
- *
- * Extracted from duplicate code in:
- * - src/app/api/comments/route.ts
- * - src/app/api/comments/[id]/route.ts
- * - src/app/api/share/[token]/comments/route.ts
- */
 import { secondsToTimecode, parseTimecodeInput, isValidTimecode } from './timecode'
 
 // Fallback for legacy comments that still have a numeric timestamp column
@@ -101,7 +88,6 @@ export function sanitizeComment(
     }))
   }
 
-  // Recursively sanitize replies
   if (comment.replies && Array.isArray(comment.replies)) {
     sanitized.replies = comment.replies.map((reply: any) =>
       sanitizeComment(reply, isAdmin, isAuthenticated, clientName)

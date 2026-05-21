@@ -15,9 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Mobile player controls clipping fullscreen icon ([#73](https://github.com/MansiVisuals/ViTransfer/issues/73)) — moved frame-back / play / frame-forward to a YouTube-style center overlay on mobile so the bottom bar fits.
 
-### Updated
-- Version bumped to `1.1.2`.
-
 ## [1.1.1] - 2026-05-09
 
 ### Security

@@ -1,5 +1,5 @@
 import { prisma } from './db'
-import { hashPassword } from './encryption'
+import { hashPassword, validatePassword } from './encryption'
 import { logError, logMessage } from './logging'
 
 /**
@@ -78,8 +78,11 @@ export async function ensureDefaultAdmin() {
       throw new Error(`Invalid ADMIN_EMAIL format: ${adminEmail}`)
     }
 
-    if (adminPassword.length < 8) {
-      throw new Error('ADMIN_PASSWORD must be at least 8 characters long')
+    const adminPasswordCheck = validatePassword(adminPassword)
+    if (!adminPasswordCheck.isValid) {
+      throw new Error(
+        `ADMIN_PASSWORD does not meet security requirements: ${adminPasswordCheck.errors.join('; ')}`
+      )
     }
 
     logMessage('')

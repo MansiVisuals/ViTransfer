@@ -146,15 +146,14 @@ export async function generateUniqueSlug(
 }
 
 export function getClientIpAddress(request: NextRequest): string {
-  // Only trust CF-Connecting-IP when the request actually came through Cloudflare
-  // (cf-ray is always set by Cloudflare and cannot be spoofed by clients)
+  // Header-derived and client-settable — only trustworthy when the origin is reachable
+  // solely via the proxy/CDN (a directly-exposed origin lets clients spoof IPs).
   const isCloudflare = !!request.headers.get('cf-ray')
   if (isCloudflare) {
     const cfIp = request.headers.get('cf-connecting-ip')
     if (cfIp) return cfIp
   }
 
-  // For non-Cloudflare deployments, use X-Forwarded-For (first entry from trusted proxy)
   const xff = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
   if (xff) return xff
 

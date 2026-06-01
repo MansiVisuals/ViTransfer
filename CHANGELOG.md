@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.1.3] - 2026-06-01
+
+### Security
+- Share-password verification now enforces a global per-link attempt cap, so rotating client IPs can no longer bypass the per-IP lockout to brute-force a share password.
+- The initial admin password (`ADMIN_PASSWORD`) must now meet the full strength policy (12+ characters with mixed case, a number, and a special character).
+- Public JSON endpoints cap request body size and reject oversized payloads with `413`.
+- Rate-limit counters are updated atomically to prevent under-counting under concurrent requests.
+- Removed unused per-request Postgres session-context calls (dead row-level-security scaffolding).
+- Documented that IP-based rate limits and blocklists only hold when the origin is reachable solely through your reverse proxy/CDN ([SECURITY.md](SECURITY.md)).
+
 ## [1.1.2] - 2026-05-22
 
 ### Added

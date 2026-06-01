@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unused per-request Postgres session-context calls (dead row-level-security scaffolding).
 - Documented that IP-based rate limits and blocklists only hold when the origin is reachable solely through your reverse proxy/CDN ([SECURITY.md](SECURITY.md)).
 
+### Fixed
+- Share page: video thumbnails now load on the first visit when using S3 storage (a redundant post-login project re-fetch was racing the thumbnail loader).
+
 ## [1.1.2] - 2026-05-22
 
 ### Added

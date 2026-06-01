@@ -51,15 +51,40 @@ async function getRateLimitEntry(identifier: string): Promise<RateLimitEntry | n
   }
 }
 
-async function setRateLimitEntry(
-  identifier: string,
-  entry: RateLimitEntry,
-  ttlMs: number
-): Promise<void> {
-  const redis = getRedis()
-  const ttlSeconds = Math.ceil(ttlMs / 1000)
-  await redis.setex(identifier, ttlSeconds, JSON.stringify(entry))
-}
+// Atomic counter update (avoids the GET/SET race). ARGV: now, windowMs, lockThreshold, ttl, checkLockout ('1'/'0'). Returns [limited, retryAfter, count].
+const RATE_LIMIT_SCRIPT = `
+local now = tonumber(ARGV[1])
+local windowMs = tonumber(ARGV[2])
+local lockThreshold = tonumber(ARGV[3])
+local ttl = tonumber(ARGV[4])
+local checkLockout = ARGV[5]
+
+local data = redis.call('GET', KEYS[1])
+local entry = nil
+if data then
+  local ok, decoded = pcall(cjson.decode, data)
+  if ok then entry = decoded end
+end
+
+if checkLockout == '1' and entry and entry.lockoutUntil and entry.lockoutUntil > now then
+  return {1, math.ceil((entry.lockoutUntil - now) / 1000), entry.count}
+end
+
+if (not entry) or (now - entry.firstAttempt > windowMs) then
+  redis.call('SETEX', KEYS[1], ttl, cjson.encode({count = 1, firstAttempt = now, lastAttempt = now}))
+  return {0, 0, 1}
+end
+
+local newCount = entry.count + 1
+local updated = {count = newCount, firstAttempt = entry.firstAttempt, lastAttempt = now}
+if newCount >= lockThreshold then
+  updated.lockoutUntil = now + windowMs
+  redis.call('SETEX', KEYS[1], ttl, cjson.encode(updated))
+  return {1, math.ceil(windowMs / 1000), newCount}
+end
+redis.call('SETEX', KEYS[1], ttl, cjson.encode(updated))
+return {0, 0, newCount}
+`
 
 async function deleteRateLimitEntry(identifier: string): Promise<void> {
   const redis = getRedis()
@@ -82,13 +107,23 @@ export async function rateLimit(
   customKey?: string
 ): Promise<NextResponse | null> {
   try {
+    const redis = getRedis()
     const key = getIdentifier(request, identifier, customKey)
     const now = Date.now()
-    const entry = await getRateLimitEntry(key)
+    const ttlSeconds = Math.ceil(options.windowMs / 1000)
 
-    // Check for active lockout
-    if (entry?.lockoutUntil && entry.lockoutUntil > now) {
-      const retryAfter = Math.ceil((entry.lockoutUntil - now) / 1000)
+    const [limited, retryAfter] = (await redis.eval(
+      RATE_LIMIT_SCRIPT,
+      1,
+      key,
+      String(now),
+      String(options.windowMs),
+      String(options.maxRequests + 1),
+      String(ttlSeconds),
+      '1',
+    )) as [number, number, number]
+
+    if (limited === 1) {
       return NextResponse.json(
         { error: options.message || 'Too many requests', retryAfter },
         {
@@ -102,43 +137,6 @@ export async function rateLimit(
       )
     }
 
-    // Reset if window expired
-    if (!entry || now - entry.firstAttempt > options.windowMs) {
-      await setRateLimitEntry(
-        key,
-        { count: 1, firstAttempt: now, lastAttempt: now },
-        options.windowMs
-      )
-      return null
-    }
-
-    const newCount = entry.count + 1
-    const updatedEntry: RateLimitEntry = {
-      count: newCount,
-      firstAttempt: entry.firstAttempt,
-      lastAttempt: now,
-    }
-
-    // Check if limit exceeded
-    if (newCount > options.maxRequests) {
-      updatedEntry.lockoutUntil = now + options.windowMs
-      await setRateLimitEntry(key, updatedEntry, options.windowMs)
-      
-      const retryAfter = Math.ceil(options.windowMs / 1000)
-      return NextResponse.json(
-        { error: options.message || 'Too many requests', retryAfter },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(retryAfter),
-            'X-RateLimit-Limit': String(options.maxRequests),
-            'X-RateLimit-Remaining': '0',
-          }
-        }
-      )
-    }
-
-    await setRateLimitEntry(key, updatedEntry, options.windowMs)
     return null
   } catch (error) {
     logError('Rate limiting error:', error)
@@ -194,8 +192,8 @@ export async function incrementRateLimit(
   try {
     const identifier = getIdentifier(request, type, customKey)
     const now = Date.now()
-    const entry = await getRateLimitEntry(identifier)
     const windowMs = 15 * 60 * 1000 // 15 minutes
+    const ttlSeconds = Math.ceil(windowMs / 1000)
 
     // Get maxAttempts from SecuritySettings
     const settings = await prisma.securitySettings.findUnique({
@@ -204,30 +202,19 @@ export async function incrementRateLimit(
     })
     const maxAttempts = settings?.passwordAttempts || 5
 
-    if (!entry || now - entry.firstAttempt > windowMs) {
-      await setRateLimitEntry(
-        identifier,
-        { count: 1, firstAttempt: now, lastAttempt: now },
-        windowMs
-      )
-      return { lockedOut: false }
-    }
+    const redis = getRedis()
+    const [limited] = (await redis.eval(
+      RATE_LIMIT_SCRIPT,
+      1,
+      identifier,
+      String(now),
+      String(windowMs),
+      String(maxAttempts),
+      String(ttlSeconds),
+      '0',
+    )) as [number, number, number]
 
-    const newCount = entry.count + 1
-    const updatedEntry: RateLimitEntry = {
-      count: newCount,
-      firstAttempt: entry.firstAttempt,
-      lastAttempt: now,
-    }
-
-    if (newCount >= maxAttempts) {
-      updatedEntry.lockoutUntil = now + windowMs
-      await setRateLimitEntry(identifier, updatedEntry, windowMs)
-      return { lockedOut: true }
-    }
-
-    await setRateLimitEntry(identifier, updatedEntry, windowMs)
-    return { lockedOut: false }
+    return { lockedOut: limited === 1 }
   } catch (error) {
     logError('Rate limit increment error:', error)
     // Fail closed for security-sensitive flows (e.g. login/password verification).

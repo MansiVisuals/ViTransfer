@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
+import { safeParseBodyTolerant } from '@/lib/validation'
 import { verifyPasswordResetTokenWithReason } from '@/lib/password-reset'
 import { hashPassword, validatePassword } from '@/lib/encryption'
 import { invalidateAdminSessions } from '@/lib/session-invalidation'
@@ -39,7 +40,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json().catch(() => ({}))
+    const parsed = await safeParseBodyTolerant(request)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const token = typeof body?.token === 'string' ? body.token.trim() : ''
     const newPassword = typeof body?.password === 'string' ? body.password : ''
 

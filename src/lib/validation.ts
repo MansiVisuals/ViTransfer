@@ -444,25 +444,87 @@ export const updateSettingsSchema = z.object({
 // HELPER FUNCTIONS
 // ============================================================================
 
+const DEFAULT_MAX_BODY_BYTES = 1_000_000 // 1 MB
+
+type CappedBody =
+  | { ok: true; data: any }
+  | { ok: false; reason: 'too_large' | 'invalid' }
+
+// Reads the JSON body with a hard byte ceiling, aborting the stream once exceeded so an
+// oversized payload is never fully buffered into memory.
+async function readJsonCapped(request: Request, maxBytes: number): Promise<CappedBody> {
+  const declared = request.headers.get('content-length')
+  if (declared && Number(declared) > maxBytes) return { ok: false, reason: 'too_large' }
+
+  if (!request.body) {
+    const text = await request.text().catch(() => '')
+    if (text.length > maxBytes) return { ok: false, reason: 'too_large' }
+    if (!text) return { ok: false, reason: 'invalid' }
+    try { return { ok: true, data: JSON.parse(text) } } catch { return { ok: false, reason: 'invalid' } }
+  }
+
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {})
+        return { ok: false, reason: 'too_large' }
+      }
+      chunks.push(value)
+    }
+  } catch {
+    return { ok: false, reason: 'invalid' }
+  }
+
+  if (total === 0) return { ok: false, reason: 'invalid' }
+  const merged = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  try {
+    return { ok: true, data: JSON.parse(new TextDecoder().decode(merged)) }
+  } catch {
+    return { ok: false, reason: 'invalid' }
+  }
+}
+
+const bodyTooLargeResponse = () => NextResponse.json({ error: 'Request body too large' }, { status: 413 })
+
 /**
- * Safely parse JSON body from a request.
- * Returns 400 on invalid/missing JSON instead of letting it bubble to 500.
+ * Safely parse a JSON body, capped at maxBytes (default 1 MB).
+ * Returns 413 if oversized, 400 on invalid/missing JSON.
  */
 export async function safeParseBody(
-  request: Request
+  request: Request,
+  options: { maxBytes?: number } = {}
 ): Promise<{ success: true; data: any } | { success: false; response: NextResponse }> {
-  try {
-    const data = await request.json()
-    return { success: true, data }
-  } catch {
-    return {
-      success: false,
-      response: NextResponse.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
-      ),
-    }
+  const result = await readJsonCapped(request, options.maxBytes ?? DEFAULT_MAX_BODY_BYTES)
+  if (result.ok) return { success: true, data: result.data }
+  if (result.reason === 'too_large') return { success: false, response: bodyTooLargeResponse() }
+  return { success: false, response: NextResponse.json({ error: 'Invalid request body' }, { status: 400 }) }
+}
+
+/**
+ * Like safeParseBody but tolerates an empty/invalid body (returns {}) for routes that treat a
+ * missing body as "no fields provided". Still rejects oversized payloads with 413.
+ */
+export async function safeParseBodyTolerant(
+  request: Request,
+  options: { maxBytes?: number } = {}
+): Promise<{ success: true; data: any } | { success: false; response: NextResponse }> {
+  const result = await readJsonCapped(request, options.maxBytes ?? DEFAULT_MAX_BODY_BYTES)
+  if (!result.ok && result.reason === 'too_large') {
+    return { success: false, response: bodyTooLargeResponse() }
   }
+  return { success: true, data: result.ok ? result.data : {} }
 }
 
 // Saved-view state for the admin Projects Dashboard.

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
+import { safeParseBodyTolerant } from '@/lib/validation'
 import { verifyRecipientUnsubscribeToken } from '@/lib/unsubscribe'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
@@ -22,7 +23,9 @@ export async function POST(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult
 
   try {
-    const body = await request.json().catch(() => null)
+    const parsed = await safeParseBodyTolerant(request)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const token = typeof body?.token === 'string' ? body.token : ''
 
     const payload = token ? verifyRecipientUnsubscribeToken(token) : null

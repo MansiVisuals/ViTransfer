@@ -185,15 +185,6 @@ export function parseTimecodeInput(input: string, fps: number = 24): string {
 }
 
 /**
- * Get timecode format label (DF or NDF)
- * @param fps - Frames per second
- * @returns "DF" for drop-frame, "NDF" for non-drop-frame
- */
-export function getTimecodeLabel(fps: number): string {
-  return isDropFrame(fps) ? 'DF' : 'NDF'
-}
-
-/**
  * Convert timecode string to seconds with a half-frame offset for seeking.
  * Landing in the middle of the target frame prevents browser seek imprecision
  * from snapping to the previous frame.

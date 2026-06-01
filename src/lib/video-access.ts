@@ -464,35 +464,3 @@ export async function invalidateBlocklistCache(): Promise<void> {
   const redis = getRedis()
   await redis.del(BLOCKLIST_CACHE_KEY_IPS, BLOCKLIST_CACHE_KEY_DOMAINS)
 }
-
-export async function revokeProjectVideoTokens(projectId: string): Promise<void> {
-  const redis = getRedis()
-  const stream = redis.scanStream({ match: 'video_access:*', count: 100 })
-  const keysToDelete: string[] = []
-
-  for await (const keys of stream) {
-    for (const key of keys) {
-      const data = await redis.get(key)
-      if (!data) continue
-
-      try {
-        const tokenData: VideoAccessToken = JSON.parse(data)
-        if (tokenData.projectId === projectId) {
-          keysToDelete.push(key)
-        }
-      } catch (error) {
-        logError(`[SECURITY] Corrupted token data during revocation, will delete (key=${key})`, error)
-        keysToDelete.push(key)
-      }
-    }
-  }
-
-  if (keysToDelete.length > 0) {
-    const pipeline = redis.pipeline()
-    keysToDelete.forEach((key) => pipeline.del(key))
-    await pipeline.exec()
-  }
-
-  // Bump token version so in-memory verification cache is invalidated across requests
-  await redis.incr(TOKEN_REV_VERSION_KEY)
-}

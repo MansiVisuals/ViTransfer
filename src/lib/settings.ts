@@ -31,50 +31,6 @@ export async function invalidateSecuritySettingsCache(): Promise<void> {
 }
 
 /**
- * Get the company name from settings
- * Returns 'Studio' as default if not set
- */
-export async function getCompanyName(): Promise<string> {
-  try {
-    const settings = await prisma.settings.findUnique({
-      where: { id: 'default' },
-      select: { companyName: true },
-    })
-
-    return settings?.companyName || 'Studio'
-  } catch (error) {
-    logError('Error fetching company name:', error)
-    return 'Studio' // Fallback to default
-  }
-}
-
-/**
- * Get all settings
- */
-export async function getSettings() {
-  try {
-    let settings = await prisma.settings.findUnique({
-      where: { id: 'default' },
-    })
-
-    if (!settings) {
-      // Create default settings if they don't exist
-      settings = await prisma.settings.create({
-        data: {
-          id: 'default',
-          companyName: 'Studio',
-        },
-      })
-    }
-
-    return settings
-  } catch (error) {
-    logError('Error fetching settings:', error)
-    return null
-  }
-}
-
-/**
  * Check if SMTP is configured
  */
 export async function isSmtpConfigured(): Promise<boolean> {

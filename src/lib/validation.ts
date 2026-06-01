@@ -102,8 +102,6 @@ export const notificationUrlSchema = urlSchema
 // NOTIFICATION SCHEMAS (External providers via worker)
 // ============================================================================
 
-export const notificationProviderSchema = z.enum(['GOTIFY', 'NTFY', 'PUSHOVER', 'TELEGRAM'])
-
 export const notificationEventTypeSchema = z.enum([
   'SHARE_ACCESS',
   'ADMIN_ACCESS',
@@ -205,13 +203,6 @@ export const createUserSchema = z.object({
   password: passwordSchema,
   name: safeStringSchema(1, 255).optional(),
   role: z.enum(['ADMIN']).optional()
-})
-
-export const updateUserSchema = z.object({
-  email: emailSchema.optional(),
-  username: usernameSchema.optional(),
-  password: passwordSchema.optional(),
-  name: safeStringSchema(1, 255).optional()
 })
 
 export const loginSchema = z.object({
@@ -349,13 +340,6 @@ export const updateProjectSchema = z.object({
 // VIDEO SCHEMAS
 // ============================================================================
 
-export const createVideoSchema = z.object({
-  projectId: cuidSchema,
-  versionLabel: safeStringSchema(1, 50).optional(),
-  originalFileName: safeStringSchema(1, 255),
-  originalFileSize: z.number().int().positive().max(10 * 1024 * 1024 * 1024) // Max 10GB
-})
-
 // ============================================================================
 // COMMENT SCHEMAS
 // ============================================================================
@@ -403,41 +387,6 @@ export const createCommentSchema = z.object({
   isInternal: z.boolean().optional(),
   assetIds: z.array(z.string()).max(50).optional(),
   annotations: annotationDataSchema.optional().nullable(),
-})
-
-export const updateCommentSchema = z.object({
-  content: contentSchema.optional(),
-  authorName: safeStringSchema(1, 255).optional()
-})
-
-// ============================================================================
-// SETTINGS SCHEMAS
-// ============================================================================
-
-export const updateSettingsSchema = z.object({
-  companyName: safeStringSchema(0, 100)
-    .refine(val => !val || !/[\r\n]/.test(val), {
-      message: 'Company name cannot contain line breaks'
-    })
-    .optional(),
-  smtpServer: z.string().max(255).optional(),
-  smtpPort: z.number().int().min(1).max(65535).optional(),
-  smtpUsername: z.string().max(255).optional(),
-  smtpPassword: z.string().max(255).optional(),
-  smtpFromAddress: emailSchema.optional(),
-  smtpSecure: z.enum(['STARTTLS', 'TLS', 'NONE']).optional(),
-  appDomain: urlSchema.optional(),
-  defaultPreviewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
-  defaultSkipTranscoding: z.boolean().optional(),
-  defaultWatermarkText: safeStringSchema(0, 100).optional(),
-  defaultWatermarkPositions: z.string().refine(val => {
-    const valid = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
-    return val.split(',').map(p => p.trim()).every(p => valid.includes(p))
-  }, { message: 'Invalid watermark position(s)' }).optional(),
-  defaultWatermarkOpacity: z.number().int().min(10).max(100).optional(),
-  defaultWatermarkFontSize: z.enum(['small', 'medium', 'large']).optional(),
-  maxUploadSizeGB: z.number().int().min(1).max(1000).optional(), // 1GB to 1000GB
-  maxCommentAttachments: z.number().int().min(1).max(50).optional() // 1-50 files per comment batch
 })
 
 // ============================================================================

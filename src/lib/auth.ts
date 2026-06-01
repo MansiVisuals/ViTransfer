@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
@@ -131,19 +130,6 @@ export async function verifyAdminAccessToken(token: string): Promise<AdminAccess
     if (!ADMIN_ACCESS_SECRET) return null
     const decoded = jwt.verify(token, ADMIN_ACCESS_SECRET, { algorithms: ['HS256'] }) as AdminAccessPayload
     if (decoded.type !== 'admin_access') return null
-    if (await isTokenRevoked(token)) return null
-    if (await isUserTokensRevoked(decoded.userId, decoded.iat)) return null
-    return decoded
-  } catch {
-    return null
-  }
-}
-
-export async function verifyAdminRefreshToken(token: string): Promise<AdminRefreshPayload | null> {
-  try {
-    if (!ADMIN_REFRESH_SECRET) return null
-    const decoded = jwt.verify(token, ADMIN_REFRESH_SECRET, { algorithms: ['HS256'] }) as AdminRefreshPayload
-    if (decoded.type !== 'admin_refresh') return null
     if (await isTokenRevoked(token)) return null
     if (await isUserTokensRevoked(decoded.userId, decoded.iat)) return null
     return decoded
@@ -333,34 +319,9 @@ export async function getCurrentUserFromRequest(request: NextRequest): Promise<A
   return user
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
-  const headerStore = await headers()
-  const bearerHeader = headerStore.get('authorization')
-  if (!bearerHeader) return null
-  const [scheme, token] = bearerHeader.split(' ')
-  if (!token || scheme.toLowerCase() !== 'bearer') return null
-  const payload = await verifyAdminAccessToken(token)
-  if (!payload) return null
-
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: { id: true, email: true, name: true, role: true },
-  })
-
-  return user
-}
-
 export async function requireApiAdmin(request: NextRequest): Promise<AuthUser | Response> {
   const user = await getCurrentUserFromRequest(request)
   if (!user || user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return user
-}
-
-export async function requireApiAuth(request: NextRequest): Promise<AuthUser | Response> {
-  const user = await getCurrentUserFromRequest(request)
-  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return user
@@ -391,26 +352,6 @@ export async function getAuthContext(request: NextRequest): Promise<{
   const isAdmin = user?.role === 'ADMIN'
 
   return { user, isAdmin, shareContext }
-}
-
-export async function getAdminOverrideFromRequest(request: NextRequest): Promise<AuthUser | null> {
-  const adminHeader = parseBearerToken(request, 'x-admin-authorization')
-  if (!adminHeader) return null
-  const payload = await verifyAdminAccessToken(adminHeader)
-  if (!payload) return null
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: { id: true, email: true, name: true, role: true },
-  })
-  return user
-}
-
-export async function requireShareToken(request: NextRequest) {
-  const token = await getShareContext(request)
-  if (!token) {
-    return NextResponse.json({ error: 'Share token required' }, { status: 401 })
-  }
-  return token
 }
 
 function remainingTtl(token: string, secret: string | undefined | null): number {

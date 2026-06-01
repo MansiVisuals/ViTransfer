@@ -378,19 +378,3 @@ export function formatSessionId(sessionId: string | undefined): string {
   if (!sessionId) return 'None'
   return sessionId.length > 16 ? `${sessionId.substring(0, 16)}...` : sessionId
 }
-
-/**
- * Get all event types by category
- */
-export function getEventTypesByCategory(): Record<string, SecurityEventType[]> {
-  const categories: Record<string, SecurityEventType[]> = {}
-
-  Object.entries(SECURITY_EVENT_METADATA).forEach(([type, metadata]) => {
-    if (!categories[metadata.category]) {
-      categories[metadata.category] = []
-    }
-    categories[metadata.category].push(type as SecurityEventType)
-  })
-
-  return categories
-}

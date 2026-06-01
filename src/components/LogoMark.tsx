@@ -12,7 +12,7 @@ type LogoMarkProps = {
 /**
  * Reusable ViTransfer logomark. Accent fill uses the global accent color by default.
  */
-export function LogoMark({
+function LogoMark({
   size = 64,
   accent = 'hsl(var(--primary, 211 100% 50%))',
   className,

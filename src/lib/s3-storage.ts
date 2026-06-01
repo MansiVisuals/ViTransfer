@@ -270,15 +270,6 @@ export async function s3DeleteDirectory(prefix: string): Promise<void> {
   } while (continuationToken)
 }
 
-/** Return the byte size of an object via HeadObject. */
-export async function s3GetFileSize(key: string): Promise<number> {
-  const res = await getS3Client().send(new HeadObjectCommand({ Bucket: getS3Bucket(), Key: key }))
-  if (res.ContentLength === undefined) {
-    throw new Error(`S3 HeadObject returned no ContentLength for key: ${key}`)
-  }
-  return res.ContentLength
-}
-
 /** Return true if the object exists; false on 404; rethrows on any other error. */
 export async function s3FileExists(key: string): Promise<boolean> {
   try {

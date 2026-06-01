@@ -71,11 +71,3 @@ export async function isUserTokensRevoked(userId: string, tokenIssuedAt?: number
   const revocationTime = parseInt(revocationTimestamp, 10) / 1000 // Convert ms to seconds for JWT comparison
   return tokenIssuedAt < revocationTime
 }
-
-/** Clear user revocation (e.g., after password reset). Throws if Redis is unavailable (fail closed). */
-export async function clearUserRevocation(userId: string): Promise<void> {
-  const redis = getRedis()
-
-  const key = `blacklist:user:${userId}`
-  await redis.del(key)
-}

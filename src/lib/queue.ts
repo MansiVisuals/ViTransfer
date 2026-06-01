@@ -188,9 +188,3 @@ export const videoQueue = new Proxy({} as Queue<VideoProcessingJob>, {
     return getVideoQueue()[prop as keyof Queue<VideoProcessingJob>]
   }
 })
-
-export const assetQueue = new Proxy({} as Queue<AssetProcessingJob>, {
-  get(_target, prop) {
-    return getAssetQueue()[prop as keyof Queue<AssetProcessingJob>]
-  }
-})

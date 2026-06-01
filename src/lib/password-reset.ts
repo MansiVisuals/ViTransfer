@@ -28,15 +28,6 @@ export function generatePasswordResetToken(input: {
   return encrypt(JSON.stringify(payload))
 }
 
-/** Verify and decode a password reset token */
-export function verifyPasswordResetToken(token: string): {
-  userId: string
-  userEmail: string
-} | null {
-  const result = verifyPasswordResetTokenWithReason(token)
-  return result.valid ? result.payload : null
-}
-
 /**
  * Verify a password reset token and return the failure reason.
  * Used by the reset-password route to distinguish expired vs invalid tokens.

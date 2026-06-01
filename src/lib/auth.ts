@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
-import { prisma, setDatabaseUserContext } from './db'
+import { prisma } from './db'
 import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
 import { getRedis } from './redis'
@@ -330,10 +330,6 @@ export async function getCurrentUserFromRequest(request: NextRequest): Promise<A
     select: { id: true, email: true, name: true, role: true },
   })
 
-  if (user) {
-    await setDatabaseUserContext(user.id, user.role)
-  }
-
   return user
 }
 
@@ -350,10 +346,6 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     where: { id: payload.userId },
     select: { id: true, email: true, name: true, role: true },
   })
-
-  if (user) {
-    await setDatabaseUserContext(user.id, user.role)
-  }
 
   return user
 }
@@ -410,9 +402,6 @@ export async function getAdminOverrideFromRequest(request: NextRequest): Promise
     where: { id: payload.userId },
     select: { id: true, email: true, name: true, role: true },
   })
-  if (user) {
-    await setDatabaseUserContext(user.id, user.role)
-  }
   return user
 }
 

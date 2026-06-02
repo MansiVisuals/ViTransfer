@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Internal dead-code cleanup: removed unused functions, schemas, and types — verified unreferenced, no API or behavior change.
+- Dropped redundant `@next/eslint-plugin-next` devDependency (provided transitively by `eslint-config-next`).
 
 ## [1.1.2] - 2026-05-22
 

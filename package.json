@@ -49,7 +49,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@next/eslint-plugin-next": "^16.2.6",
     "@types/archiver": "^7.0.0",
     "@types/html-to-text": "^9.0.4",
     "@types/jsonwebtoken": "^9.0.10",

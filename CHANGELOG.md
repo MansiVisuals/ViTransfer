@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Share page: video thumbnails now load on the first visit when using S3 storage (a redundant post-login project re-fetch was racing the thumbnail loader).
 
+### Changed
+- Declared `sharp` as a direct dependency (previously resolved only transitively via Next).
+
 ### Removed
 - Internal dead-code cleanup: removed unused functions, schemas, and types — verified unreferenced, no API or behavior change.
 

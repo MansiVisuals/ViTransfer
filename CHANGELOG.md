@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.3] - 2026-06-01
 
+### Added
+- `REDIS_DB` env var to select the Redis logical database, so ViTransfer can share a Redis instance with other apps without key collisions ([#75](https://github.com/MansiVisuals/ViTransfer/issues/75)).
+
 ### Security
 - Share-password verification now enforces a global per-link attempt cap, so rotating client IPs can no longer bypass the per-IP lockout to brute-force a share password.
 - The initial admin password (`ADMIN_PASSWORD`) must now meet the full strength policy (12+ characters with mixed case, a number, and a special character).

@@ -52,11 +52,11 @@ export function clientLabelFor(p: ProjectListItem): string | null {
   return p.clientCompany?.name || p.companyName || null
 }
 
-export function yearFor(p: ProjectListItem): string {
+function yearFor(p: ProjectListItem): string {
   return new Date(p.createdAt).getFullYear().toString()
 }
 
-export function dueBucketFor(p: ProjectListItem, now: Date = new Date()): DueBucket {
+function dueBucketFor(p: ProjectListItem, now: Date = new Date()): DueBucket {
   if (!p.dueDate) return 'none'
   // Completed-ish projects never count as overdue (matches existing UI semantics)
   const isCompleted = p.status === 'APPROVED' || p.status === 'ARCHIVED' || p.status === 'SHARE_ONLY'
@@ -72,7 +72,7 @@ export function dueBucketFor(p: ProjectListItem, now: Date = new Date()): DueBuc
   return 'later'
 }
 
-export function matchesSearch(p: ProjectListItem, query: string): boolean {
+function matchesSearch(p: ProjectListItem, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
   if (p.title?.toLowerCase().includes(q)) return true
@@ -86,7 +86,7 @@ export function matchesSearch(p: ProjectListItem, query: string): boolean {
   return false
 }
 
-export function matchesFilters(p: ProjectListItem, f: ProjectsFilterState): boolean {
+function matchesFilters(p: ProjectListItem, f: ProjectsFilterState): boolean {
   if (f.statuses.size > 0 && !f.statuses.has(p.status)) return false
   if (f.clientKeys.size > 0 && !f.clientKeys.has(clientKeyFor(p))) return false
   if (f.years.size > 0 && !f.years.has(yearFor(p))) return false
@@ -106,7 +106,7 @@ const STATUS_PRIORITY: Record<string, number> = {
   ARCHIVED: 4,
 }
 
-export function sortProjects(list: ProjectListItem[], sort: SortKey): ProjectListItem[] {
+function sortProjects(list: ProjectListItem[], sort: SortKey): ProjectListItem[] {
   const sorted = [...list]
   const ts = (d: string | Date) => new Date(d).getTime()
   switch (sort) {

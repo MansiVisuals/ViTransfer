@@ -102,7 +102,7 @@ export const notificationUrlSchema = urlSchema
 // NOTIFICATION SCHEMAS (External providers via worker)
 // ============================================================================
 
-export const notificationEventTypeSchema = z.enum([
+const notificationEventTypeSchema = z.enum([
   'SHARE_ACCESS',
   'ADMIN_ACCESS',
   'CLIENT_COMMENT',
@@ -478,7 +478,7 @@ export async function safeParseBodyTolerant(
 
 // Saved-view state for the admin Projects Dashboard.
 // Mirrors SerializedFilterState from src/lib/projects-filter.ts; kept in lockstep.
-export const savedViewStateSchema = z.object({
+const savedViewStateSchema = z.object({
   q: z.string().max(200),
   statuses: z.array(z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED'])).max(8),
   clientKeys: z.array(z.string().max(200)).max(500),

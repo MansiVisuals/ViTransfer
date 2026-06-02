@@ -61,7 +61,7 @@ function getS3Client(): S3Client {
   return _s3Client
 }
 
-export function getS3Bucket(): string {
+function getS3Bucket(): string {
   const bucket = process.env.S3_BUCKET
   if (!bucket) throw new Error('S3_BUCKET is not configured')
   return bucket

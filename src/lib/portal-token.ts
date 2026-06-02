@@ -51,7 +51,7 @@ export async function revokePortalSession(sessionId: string, remainingSeconds: n
   await redis.setex(`${DENYLIST_PREFIX}${sessionId}`, Math.ceil(remainingSeconds), '1')
 }
 
-export async function isPortalSessionRevoked(sessionId: string): Promise<boolean> {
+async function isPortalSessionRevoked(sessionId: string): Promise<boolean> {
   const redis = getRedis()
   const exists = await redis.exists(`${DENYLIST_PREFIX}${sessionId}`)
   return exists === 1

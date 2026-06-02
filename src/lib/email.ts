@@ -60,7 +60,7 @@ export interface EmailBrandColors {
   muted: string
 }
 
-export const EMAIL_BRAND: EmailBrandColors = {
+const EMAIL_BRAND: EmailBrandColors = {
   accent: '#007AFF',
   accentGradient: 'linear-gradient(135deg, #0A84FF 0%, #007AFF 100%)',
   accentSoftBg: '#eff6ff',

@@ -1,4 +1,4 @@
-export const ALLOWED_ASSET_EXTENSIONS = {
+const ALLOWED_ASSET_EXTENSIONS = {
   thumbnail: ['.jpg', '.jpeg', '.png'],
   image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tif', '.tiff', '.psd', '.ai', '.eps'],
   audio: ['.wav', '.mp3', '.aac', '.flac', '.m4a', '.ogg', '.wma'],

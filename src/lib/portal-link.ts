@@ -6,9 +6,9 @@ import { loadLocaleMessages } from '@/i18n/locale'
 import { getRecipientLocale } from './email'
 
 const TOKEN_PREFIX = 'portal_link:'
-export const PORTAL_LINK_TTL_SECONDS = 5 * 60
+const PORTAL_LINK_TTL_SECONDS = 5 * 60
 
-export interface PortalLinkRecord {
+interface PortalLinkRecord {
   email: string
   ipHash: string
   uaHash: string

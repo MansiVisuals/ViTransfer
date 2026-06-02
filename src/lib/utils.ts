@@ -111,7 +111,7 @@ export function formatDateTime(date: Date | string): string {
   return `${dateStr} ${timeStr}`
 }
 
-export function generateSlug(title: string): string {
+function generateSlug(title: string): string {
   return title
     .toLowerCase()
     .trim()

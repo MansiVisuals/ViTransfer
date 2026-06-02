@@ -1,4 +1,4 @@
-export type SecurityEventType =
+type SecurityEventType =
   // Admin Login Events
   | 'ADMIN_PASSWORD_LOGIN_SUCCESS'
   | 'ADMIN_PASSWORD_LOGIN_FAILED'
@@ -53,9 +53,9 @@ export type SecurityEventType =
   | 'BLOCKED_IP_ATTEMPT'
   | 'RATE_LIMIT_HIT'
 
-export type SecurityEventSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
+type SecurityEventSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
 
-export interface SecurityEventMetadata {
+interface SecurityEventMetadata {
   label: string
   description: string
   category: 'Admin Auth' | 'Passkey Auth' | 'Device Auth' | 'Share Auth' | 'Video Access' | 'Security'
@@ -65,7 +65,7 @@ export interface SecurityEventMetadata {
 /**
  * Security event metadata for UI display
  */
-export const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMetadata> = {
+const SECURITY_EVENT_METADATA: Record<SecurityEventType, SecurityEventMetadata> = {
   // Admin Login Events
   ADMIN_PASSWORD_LOGIN_SUCCESS: {
     label: 'Admin Basic Auth Login Success',

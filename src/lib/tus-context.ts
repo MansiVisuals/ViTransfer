@@ -2,7 +2,7 @@
  * Generate TUS fingerprint for a file
  * TUS format: tus-br-{name}-{type}-{size}-{lastModified}-{endpoint}
  */
-export function generateFileFingerprint(file: File, endpoint?: string): string {
+function generateFileFingerprint(file: File, endpoint?: string): string {
   const tusEndpoint = endpoint || (typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads')
   return ['tus-br', file.name, file.type, file.size, file.lastModified, tusEndpoint].join('-')
 }

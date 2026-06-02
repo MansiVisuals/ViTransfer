@@ -84,7 +84,7 @@ export function getRedisForQueue(): IORedis {
  * Alias for backwards compatibility
  * Some modules use getRedisConnection() instead of getRedis()
  */
-export const getRedisConnection = getRedis
+const getRedisConnection = getRedis
 
 /**
  * Atomically consume a single-use Redis token via Lua script.

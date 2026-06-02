@@ -251,7 +251,7 @@ export async function refreshAdminTokens(params: {
   }
 }
 
-export async function revokeTokenFamily(userId: string) {
+async function revokeTokenFamily(userId: string) {
   // Reuse user-level revocation for blast radius control
   const redis = getRedis()
   await redis.setex(`blacklist:user:${userId}`, REFRESH_TOKEN_DURATION, Date.now().toString())

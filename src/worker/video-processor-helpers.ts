@@ -15,18 +15,18 @@ export const RESOLUTION_PRESETS = {
   '2160p': { horizontal: { width: 3840, height: 2160 }, verticalWidth: 2160 }
 } as const
 
-export const THUMBNAIL_CONFIG = {
+const THUMBNAIL_CONFIG = {
   percentage: 0.1,  // 10% into video
   min: 0.5,         // Minimum 0.5 seconds
   max: 10           // Maximum 10 seconds
 } as const
 
-export const PROGRESS_WEIGHTS = {
+const PROGRESS_WEIGHTS = {
   transcode: 0.8,   // Transcoding is 80% of total progress
   thumbnail: 0.2    // Thumbnail is remaining 20%
 } as const
 
-export const VALID_VIDEO_TYPES = [
+const VALID_VIDEO_TYPES = [
   'video/mp4',
   'video/quicktime',
   'video/x-msvideo',

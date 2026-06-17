@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The initial admin password (`ADMIN_PASSWORD`) must now meet the full strength policy (12+ characters with mixed case, a number, and a special character).
 - Public JSON endpoints cap request body size and reject oversized payloads with `413`.
 - Rate-limit counters are updated atomically to prevent under-counting under concurrent requests.
+- Bumped transitive `dompurify` 3.4.7 → 3.4.11 ([GHSA-gvmj-g25r-r7wr](https://github.com/advisories/GHSA-gvmj-g25r-r7wr)) and `esbuild` 0.28.0 → 0.28.1 ([GHSA-gv7w-rqvm-qjhr](https://github.com/advisories/GHSA-gv7w-rqvm-qjhr)), clearing both open Dependabot alerts.
 - Removed unused per-request Postgres session-context calls (dead row-level-security scaffolding).
 - Documented that IP-based rate limits and blocklists only hold when the origin is reachable solely through your reverse proxy/CDN ([SECURITY.md](SECURITY.md)).
 
@@ -43,6 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@types/node` 24.12.3 → 24.12.4, `@types/react` 19.2.14 → 19.2.16.
 - `@types/nodemailer` 6.4.23 → 8.0.0 (aligns with `nodemailer` 8.x runtime).
 - `@tus/server` 2.0.0 → 2.4.1 — lifted the deliberate `2.0.0` pin now that upstream requires `srvx` ≥ 0.11.15, past the GHSA-p36q-q72m-gchr fix.
+- `next` / `eslint-config-next` 16.2.7 → 16.2.9.
+- `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1058.0 → 3.1071.0.
+- `bullmq` 5.76.6 → 5.78.1.
+- `nodemailer` 8.0.10 → 8.0.11.
+- `isomorphic-dompurify` 3.15.0 → 3.17.0.
+- `@radix-ui/*` (dialog, label, select, slot, switch) in-range bumps.
+- `@types/node` 24.12.4 → 24.13.2, `@types/react` 19.2.16 → 19.2.17, `@types/nodemailer` 8.0.0 → 8.0.1.
+- Pinned `ioredis` to `5.10.1` to match `bullmq`'s exact requirement, keeping a single shared copy (avoids a duplicate-instance type mismatch when passing the Redis client to BullMQ).
 
 ## [1.1.2] - 2026-05-22
 

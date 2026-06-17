@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
+import { safeParseBodyTolerant } from '@/lib/validation'
 import { generatePasswordResetToken, buildPasswordResetUrl } from '@/lib/password-reset'
 import { sendPasswordResetEmail } from '@/lib/email'
 import { logSecurityEvent } from '@/lib/video-access'
@@ -41,7 +42,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json().catch(() => ({}))
+    const parsed = await safeParseBodyTolerant(request)
+    if (!parsed.success) return parsed.response
+    const body = parsed.data
     const email = typeof body?.email === 'string' ? body.email.trim() : ''
 
     // Always return success to prevent email enumeration

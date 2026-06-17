@@ -60,16 +60,8 @@ export function logMessage(message: string, ...extra: unknown[]): void {
   writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
-export function logInfo(message: string, ...extra: unknown[]): void {
-  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
-}
-
 export function logWarn(message: string, ...extra: unknown[]): void {
   writeStderr(sanitizeLogValue(formatLogParts([message, ...extra])))
-}
-
-export function logDebug(message: string, ...extra: unknown[]): void {
-  writeStdout(sanitizeLogValue(formatLogParts([message, ...extra])))
 }
 
 export function logError(message: string, error?: unknown, ...extra: unknown[]): void {

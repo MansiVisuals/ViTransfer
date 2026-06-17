@@ -12,6 +12,7 @@
 | `POSTGRES_PASSWORD` | Yes | PostgreSQL password (hex only) | - | Generated with `openssl rand -hex 32` |
 | `POSTGRES_DB` | Yes | PostgreSQL database name | `vitransfer` | `vitransfer` |
 | `REDIS_PASSWORD` | Yes | Redis password (hex only) | - | Generated with `openssl rand -hex 32` |
+| `REDIS_DB` | No | Redis logical database index (lets you share one Redis instance across apps) | `0` | `3` |
 | `ENCRYPTION_KEY` | Yes | Data encryption key (base64) | - | Generated with `openssl rand -base64 32` |
 | `JWT_SECRET` | Yes | JWT signing secret (base64) | - | Generated with `openssl rand -base64 64` |
 | `JWT_REFRESH_SECRET` | Yes | JWT refresh secret (base64) | - | Generated with `openssl rand -base64 64` |

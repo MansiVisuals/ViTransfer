@@ -171,8 +171,8 @@ export async function getVideoMetadata(inputPath: string): Promise<VideoMetadata
   })
 }
 
-export type WatermarkPosition = 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-export type WatermarkFontSize = 'small' | 'medium' | 'large'
+type WatermarkPosition = 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+type WatermarkFontSize = 'small' | 'medium' | 'large'
 
 export interface TranscodeOptions {
   inputPath: string

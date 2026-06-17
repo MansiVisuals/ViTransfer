@@ -1,8 +1,7 @@
-import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
-import { prisma, setDatabaseUserContext } from './db'
+import { prisma } from './db'
 import { verifyPassword } from './encryption'
 import { revokeToken, isTokenRevoked, isUserTokensRevoked } from './token-revocation'
 import { getRedis } from './redis'
@@ -139,19 +138,6 @@ export async function verifyAdminAccessToken(token: string): Promise<AdminAccess
   }
 }
 
-export async function verifyAdminRefreshToken(token: string): Promise<AdminRefreshPayload | null> {
-  try {
-    if (!ADMIN_REFRESH_SECRET) return null
-    const decoded = jwt.verify(token, ADMIN_REFRESH_SECRET, { algorithms: ['HS256'] }) as AdminRefreshPayload
-    if (decoded.type !== 'admin_refresh') return null
-    if (await isTokenRevoked(token)) return null
-    if (await isUserTokensRevoked(decoded.userId, decoded.iat)) return null
-    return decoded
-  } catch {
-    return null
-  }
-}
-
 export async function verifyShareToken(token: string): Promise<SharePayload | null> {
   try {
     if (!SHARE_TOKEN_SECRET) return null
@@ -265,7 +251,7 @@ export async function refreshAdminTokens(params: {
   }
 }
 
-export async function revokeTokenFamily(userId: string) {
+async function revokeTokenFamily(userId: string) {
   // Reuse user-level revocation for blast radius control
   const redis = getRedis()
   await redis.setex(`blacklist:user:${userId}`, REFRESH_TOKEN_DURATION, Date.now().toString())
@@ -330,45 +316,12 @@ export async function getCurrentUserFromRequest(request: NextRequest): Promise<A
     select: { id: true, email: true, name: true, role: true },
   })
 
-  if (user) {
-    await setDatabaseUserContext(user.id, user.role)
-  }
-
-  return user
-}
-
-export async function getCurrentUser(): Promise<AuthUser | null> {
-  const headerStore = await headers()
-  const bearerHeader = headerStore.get('authorization')
-  if (!bearerHeader) return null
-  const [scheme, token] = bearerHeader.split(' ')
-  if (!token || scheme.toLowerCase() !== 'bearer') return null
-  const payload = await verifyAdminAccessToken(token)
-  if (!payload) return null
-
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: { id: true, email: true, name: true, role: true },
-  })
-
-  if (user) {
-    await setDatabaseUserContext(user.id, user.role)
-  }
-
   return user
 }
 
 export async function requireApiAdmin(request: NextRequest): Promise<AuthUser | Response> {
   const user = await getCurrentUserFromRequest(request)
   if (!user || user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return user
-}
-
-export async function requireApiAuth(request: NextRequest): Promise<AuthUser | Response> {
-  const user = await getCurrentUserFromRequest(request)
-  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return user
@@ -399,29 +352,6 @@ export async function getAuthContext(request: NextRequest): Promise<{
   const isAdmin = user?.role === 'ADMIN'
 
   return { user, isAdmin, shareContext }
-}
-
-export async function getAdminOverrideFromRequest(request: NextRequest): Promise<AuthUser | null> {
-  const adminHeader = parseBearerToken(request, 'x-admin-authorization')
-  if (!adminHeader) return null
-  const payload = await verifyAdminAccessToken(adminHeader)
-  if (!payload) return null
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    select: { id: true, email: true, name: true, role: true },
-  })
-  if (user) {
-    await setDatabaseUserContext(user.id, user.role)
-  }
-  return user
-}
-
-export async function requireShareToken(request: NextRequest) {
-  const token = await getShareContext(request)
-  if (!token) {
-    return NextResponse.json({ error: 'Share token required' }, { status: 401 })
-  }
-  return token
 }
 
 function remainingTtl(token: string, secret: string | undefined | null): number {

@@ -61,7 +61,7 @@ function getS3Client(): S3Client {
   return _s3Client
 }
 
-export function getS3Bucket(): string {
+function getS3Bucket(): string {
   const bucket = process.env.S3_BUCKET
   if (!bucket) throw new Error('S3_BUCKET is not configured')
   return bucket
@@ -268,15 +268,6 @@ export async function s3DeleteDirectory(prefix: string): Promise<void> {
     }
     continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
   } while (continuationToken)
-}
-
-/** Return the byte size of an object via HeadObject. */
-export async function s3GetFileSize(key: string): Promise<number> {
-  const res = await getS3Client().send(new HeadObjectCommand({ Bucket: getS3Bucket(), Key: key }))
-  if (res.ContentLength === undefined) {
-    throw new Error(`S3 HeadObject returned no ContentLength for key: ${key}`)
-  }
-  return res.ContentLength
 }
 
 /** Return true if the object exists; false on 404; rethrows on any other error. */

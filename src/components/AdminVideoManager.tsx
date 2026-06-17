@@ -25,7 +25,7 @@ interface AdminVideoManagerProps {
   enableRevisions?: boolean
 }
 
-export interface AdminVideoManagerHandle {
+interface AdminVideoManagerHandle {
   triggerUpload: () => void
 }
 

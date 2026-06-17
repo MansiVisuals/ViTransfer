@@ -56,7 +56,7 @@ export interface PlaceholderDefinition {
   example: string
 }
 
-export const COMMON_PLACEHOLDERS: PlaceholderDefinition[] = [
+const COMMON_PLACEHOLDERS: PlaceholderDefinition[] = [
   { key: '{{COMPANY_NAME}}', description: 'Your company name from settings', example: 'Acme Studios' },
   { key: '{{RECIPIENT_NAME}}', description: 'Name of the email recipient', example: 'John Doe' },
   { key: '{{APP_DOMAIN}}', description: 'Your application domain URL', example: 'https://review.acme.com' },
@@ -64,7 +64,7 @@ export const COMMON_PLACEHOLDERS: PlaceholderDefinition[] = [
 ]
 
 // Template-specific placeholder definitions
-export const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinition[]> = {
+const TEMPLATE_PLACEHOLDERS: Record<EmailTemplateType, PlaceholderDefinition[]> = {
   NEW_VERSION: [
     ...COMMON_PLACEHOLDERS,
     { key: '{{PROJECT_TITLE}}', description: 'Title of the project', example: 'Summer Campaign 2026' },
@@ -273,7 +273,7 @@ export interface DefaultTemplate {
   bodyContent: string
 }
 
-export const DEFAULT_TEMPLATES: DefaultTemplate[] = TEMPLATE_METADATA
+const DEFAULT_TEMPLATES: DefaultTemplate[] = TEMPLATE_METADATA
   .map(meta => buildLocalizedDefaultTemplate(meta.type, {}))
   .filter((template): template is DefaultTemplate => Boolean(template))
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generatePasskeyAuthenticationOptions } from '@/lib/passkey'
 import { isPasskeyConfigured } from '@/lib/settings'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { safeParseBodyTolerant } from '@/lib/validation'
 import { getClientIpAddress } from '@/lib/utils'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
@@ -35,8 +36,9 @@ export async function POST(request: NextRequest) {
 
   try {
     // Parse request body early to get email for rate limiting
-    const body = await request.json().catch(() => ({}))
-    const { email } = body
+    const parsed = await safeParseBodyTolerant(request)
+    if (!parsed.success) return parsed.response
+    const { email } = parsed.data
 
     // SECURITY: Rate limit check (prevents DoS, email enumeration)
     const rateLimitKey = email || getClientIpAddress(request)

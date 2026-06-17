@@ -15,7 +15,7 @@ type BrandLogoProps = {
  * Displays custom uploaded SVG logo when configured, otherwise falls back to LogoMark.
  * Fetches brandingLogoPath from /api/settings/theme (cached in localStorage).
  */
-export function BrandLogo({ size = 64, height, className, ariaHidden = false }: BrandLogoProps) {
+function BrandLogo({ size = 64, height, className, ariaHidden = false }: BrandLogoProps) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const resolvedHeight = height || size
 

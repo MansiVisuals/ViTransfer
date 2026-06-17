@@ -117,6 +117,7 @@ docker scout cves mansivisuals/vitransfer:latest
 - Limit admin user accounts to necessary personnel
 
 ### Network Security
+- Reach the app only through your reverse proxy/CDN — client IPs are read from forwarded headers (`cf-connecting-ip`/`x-forwarded-for`), so a directly-exposed origin lets clients spoof IPs and bypass IP-based rate limits and blocklists
 - Use firewall rules to restrict access
 - Consider VPN for admin access
 - Enable fail2ban or similar intrusion prevention

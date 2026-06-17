@@ -102,9 +102,7 @@ export const notificationUrlSchema = urlSchema
 // NOTIFICATION SCHEMAS (External providers via worker)
 // ============================================================================
 
-export const notificationProviderSchema = z.enum(['GOTIFY', 'NTFY', 'PUSHOVER', 'TELEGRAM'])
-
-export const notificationEventTypeSchema = z.enum([
+const notificationEventTypeSchema = z.enum([
   'SHARE_ACCESS',
   'ADMIN_ACCESS',
   'CLIENT_COMMENT',
@@ -205,13 +203,6 @@ export const createUserSchema = z.object({
   password: passwordSchema,
   name: safeStringSchema(1, 255).optional(),
   role: z.enum(['ADMIN']).optional()
-})
-
-export const updateUserSchema = z.object({
-  email: emailSchema.optional(),
-  username: usernameSchema.optional(),
-  password: passwordSchema.optional(),
-  name: safeStringSchema(1, 255).optional()
 })
 
 export const loginSchema = z.object({
@@ -349,13 +340,6 @@ export const updateProjectSchema = z.object({
 // VIDEO SCHEMAS
 // ============================================================================
 
-export const createVideoSchema = z.object({
-  projectId: cuidSchema,
-  versionLabel: safeStringSchema(1, 50).optional(),
-  originalFileName: safeStringSchema(1, 255),
-  originalFileSize: z.number().int().positive().max(10 * 1024 * 1024 * 1024) // Max 10GB
-})
-
 // ============================================================================
 // COMMENT SCHEMAS
 // ============================================================================
@@ -405,69 +389,96 @@ export const createCommentSchema = z.object({
   annotations: annotationDataSchema.optional().nullable(),
 })
 
-export const updateCommentSchema = z.object({
-  content: contentSchema.optional(),
-  authorName: safeStringSchema(1, 255).optional()
-})
-
-// ============================================================================
-// SETTINGS SCHEMAS
-// ============================================================================
-
-export const updateSettingsSchema = z.object({
-  companyName: safeStringSchema(0, 100)
-    .refine(val => !val || !/[\r\n]/.test(val), {
-      message: 'Company name cannot contain line breaks'
-    })
-    .optional(),
-  smtpServer: z.string().max(255).optional(),
-  smtpPort: z.number().int().min(1).max(65535).optional(),
-  smtpUsername: z.string().max(255).optional(),
-  smtpPassword: z.string().max(255).optional(),
-  smtpFromAddress: emailSchema.optional(),
-  smtpSecure: z.enum(['STARTTLS', 'TLS', 'NONE']).optional(),
-  appDomain: urlSchema.optional(),
-  defaultPreviewResolution: z.enum(['720p', '1080p', '2160p']).optional(),
-  defaultSkipTranscoding: z.boolean().optional(),
-  defaultWatermarkText: safeStringSchema(0, 100).optional(),
-  defaultWatermarkPositions: z.string().refine(val => {
-    const valid = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
-    return val.split(',').map(p => p.trim()).every(p => valid.includes(p))
-  }, { message: 'Invalid watermark position(s)' }).optional(),
-  defaultWatermarkOpacity: z.number().int().min(10).max(100).optional(),
-  defaultWatermarkFontSize: z.enum(['small', 'medium', 'large']).optional(),
-  maxUploadSizeGB: z.number().int().min(1).max(1000).optional(), // 1GB to 1000GB
-  maxCommentAttachments: z.number().int().min(1).max(50).optional() // 1-50 files per comment batch
-})
-
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
+const DEFAULT_MAX_BODY_BYTES = 1_000_000 // 1 MB
+
+type CappedBody =
+  | { ok: true; data: any }
+  | { ok: false; reason: 'too_large' | 'invalid' }
+
+// Reads the JSON body with a hard byte ceiling, aborting the stream once exceeded so an
+// oversized payload is never fully buffered into memory.
+async function readJsonCapped(request: Request, maxBytes: number): Promise<CappedBody> {
+  const declared = request.headers.get('content-length')
+  if (declared && Number(declared) > maxBytes) return { ok: false, reason: 'too_large' }
+
+  if (!request.body) {
+    const text = await request.text().catch(() => '')
+    if (text.length > maxBytes) return { ok: false, reason: 'too_large' }
+    if (!text) return { ok: false, reason: 'invalid' }
+    try { return { ok: true, data: JSON.parse(text) } } catch { return { ok: false, reason: 'invalid' } }
+  }
+
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {})
+        return { ok: false, reason: 'too_large' }
+      }
+      chunks.push(value)
+    }
+  } catch {
+    return { ok: false, reason: 'invalid' }
+  }
+
+  if (total === 0) return { ok: false, reason: 'invalid' }
+  const merged = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  try {
+    return { ok: true, data: JSON.parse(new TextDecoder().decode(merged)) }
+  } catch {
+    return { ok: false, reason: 'invalid' }
+  }
+}
+
+const bodyTooLargeResponse = () => NextResponse.json({ error: 'Request body too large' }, { status: 413 })
+
 /**
- * Safely parse JSON body from a request.
- * Returns 400 on invalid/missing JSON instead of letting it bubble to 500.
+ * Safely parse a JSON body, capped at maxBytes (default 1 MB).
+ * Returns 413 if oversized, 400 on invalid/missing JSON.
  */
 export async function safeParseBody(
-  request: Request
+  request: Request,
+  options: { maxBytes?: number } = {}
 ): Promise<{ success: true; data: any } | { success: false; response: NextResponse }> {
-  try {
-    const data = await request.json()
-    return { success: true, data }
-  } catch {
-    return {
-      success: false,
-      response: NextResponse.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
-      ),
-    }
+  const result = await readJsonCapped(request, options.maxBytes ?? DEFAULT_MAX_BODY_BYTES)
+  if (result.ok) return { success: true, data: result.data }
+  if (result.reason === 'too_large') return { success: false, response: bodyTooLargeResponse() }
+  return { success: false, response: NextResponse.json({ error: 'Invalid request body' }, { status: 400 }) }
+}
+
+/**
+ * Like safeParseBody but tolerates an empty/invalid body (returns {}) for routes that treat a
+ * missing body as "no fields provided". Still rejects oversized payloads with 413.
+ */
+export async function safeParseBodyTolerant(
+  request: Request,
+  options: { maxBytes?: number } = {}
+): Promise<{ success: true; data: any } | { success: false; response: NextResponse }> {
+  const result = await readJsonCapped(request, options.maxBytes ?? DEFAULT_MAX_BODY_BYTES)
+  if (!result.ok && result.reason === 'too_large') {
+    return { success: false, response: bodyTooLargeResponse() }
   }
+  return { success: true, data: result.ok ? result.data : {} }
 }
 
 // Saved-view state for the admin Projects Dashboard.
 // Mirrors SerializedFilterState from src/lib/projects-filter.ts; kept in lockstep.
-export const savedViewStateSchema = z.object({
+const savedViewStateSchema = z.object({
   q: z.string().max(200),
   statuses: z.array(z.enum(['IN_REVIEW', 'APPROVED', 'SHARE_ONLY', 'ARCHIVED'])).max(8),
   clientKeys: z.array(z.string().max(200)).max(500),

@@ -27,7 +27,7 @@ function debugLog(message: string, data?: any) {
  * Process a clean (non-watermarked) preview for approved video playback
  * This is triggered when a video is approved AND the project has usePreviewForApprovedPlayback enabled with watermarks
  */
-export async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<void> {
+async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<void> {
   const { videoId, projectId, originalStoragePath, resolution } = job.data
 
   logMessage(`[CLEAN PREVIEW] Processing clean preview for video ${videoId} at ${resolution}`)

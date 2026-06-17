@@ -37,11 +37,6 @@ export function setTokens(tokens: { accessToken: string; refreshToken: string })
   notifyListeners()
 }
 
-export function updateAccessToken(accessToken: string) {
-  inMemoryAccessToken = accessToken
-  notifyListeners()
-}
-
 export function clearTokens() {
   inMemoryAccessToken = null
   cachedRefreshToken = null

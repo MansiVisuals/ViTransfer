@@ -4,6 +4,8 @@ import { logError, logMessage } from './logging'
 let redis: IORedis | null = null
 let redisForQueue: IORedis | null = null
 
+const REDIS_DB = Math.max(0, parseInt(process.env.REDIS_DB || '0', 10) || 0)
+
 /**
  * Get or create Redis connection
  * Throws error if Redis is not configured
@@ -19,6 +21,7 @@ export function getRedis(): IORedis {
     host: process.env.REDIS_HOST,
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD,
+    db: REDIS_DB,
     maxRetriesPerRequest: 3,
     enableReadyCheck: true,
     retryStrategy: (times) => {
@@ -56,6 +59,7 @@ export function getRedisForQueue(): IORedis {
     host: process.env.REDIS_HOST,
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD,
+    db: REDIS_DB,
     maxRetriesPerRequest: null, // Required by BullMQ
     enableReadyCheck: false,     // Required by BullMQ
     lazyConnect: true,
@@ -84,7 +88,7 @@ export function getRedisForQueue(): IORedis {
  * Alias for backwards compatibility
  * Some modules use getRedisConnection() instead of getRedis()
  */
-export const getRedisConnection = getRedis
+const getRedisConnection = getRedis
 
 /**
  * Atomically consume a single-use Redis token via Lua script.

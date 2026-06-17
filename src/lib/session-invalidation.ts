@@ -138,55 +138,6 @@ export async function invalidateAdminSessions(userId: string): Promise<void> {
 }
 
 /**
- * Invalidate share sessions for a specific recipient
- *
- * Use when:
- * - Recipient is removed from project
- * - Recipient email is changed (forces re-authentication)
- *
- * @param recipientId - The recipient ID whose sessions should be invalidated
- * @returns Number of sessions invalidated
- */
-export async function invalidateRecipientSessions(recipientId: string): Promise<number> {
-  try {
-    // Find all share page access records for this recipient
-    const sessions = await prisma.sharePageAccess.findMany({
-      where: {
-        email: {
-          not: null
-        }
-      },
-      select: {
-        sessionId: true,
-        email: true
-      },
-      distinct: ['sessionId']
-    })
-
-    // Get recipient email to match
-    const recipient = await prisma.projectRecipient.findUnique({
-      where: { id: recipientId },
-      select: { email: true, projectId: true }
-    })
-
-    if (!recipient?.email) {
-      return 0
-    }
-
-    const recipientSessions = sessions.filter(s =>
-      s.email?.toLowerCase() === recipient.email?.toLowerCase()
-    )
-
-    const invalidated = await revokeShareSessions(recipientSessions.map((session) => session.sessionId))
-    logMessage(`[SESSION_INVALIDATION] Invalidated ${invalidated} sessions for recipient ${recipientId} (${recipient.email})`)
-    return invalidated
-  } catch (error) {
-    logError('[SESSION_INVALIDATION] Error invalidating recipient sessions:', error)
-    throw error
-  }
-}
-
-/**
  * Invalidate share sessions for a specific email across all projects
  *
  * Use when:
@@ -213,38 +164,6 @@ export async function invalidateSessionsByEmail(email: string): Promise<number> 
     return invalidated
   } catch (error) {
     logError('[SESSION_INVALIDATION] Error invalidating sessions by email:', error)
-    throw error
-  }
-}
-
-/**
- * Invalidate all guest sessions for a specific project
- *
- * Use when:
- * - Guest mode is disabled but you want to keep authenticated sessions
- * - Security concern with anonymous access
- * - Need to force guests to re-enter (after guestLatestOnly changes)
- *
- * @param projectId - The project ID to invalidate guest sessions for
- * @returns Number of guest sessions invalidated
- */
-export async function invalidateGuestSessions(projectId: string): Promise<number> {
-  try {
-    // Get all unique session IDs for GUEST access method
-    const sessions = await prisma.sharePageAccess.findMany({
-      where: {
-        projectId,
-        accessMethod: 'GUEST'
-      },
-      select: { sessionId: true },
-      distinct: ['sessionId']
-    })
-
-    const invalidated = await revokeShareSessions(sessions.map((session) => session.sessionId))
-    logMessage(`[SESSION_INVALIDATION] Invalidated ${invalidated} guest sessions for project ${projectId}`)
-    return invalidated
-  } catch (error) {
-    logError('[SESSION_INVALIDATION] Error invalidating guest sessions:', error)
     throw error
   }
 }

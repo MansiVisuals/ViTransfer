@@ -2,7 +2,7 @@
  * Generate TUS fingerprint for a file
  * TUS format: tus-br-{name}-{type}-{size}-{lastModified}-{endpoint}
  */
-export function generateFileFingerprint(file: File, endpoint?: string): string {
+function generateFileFingerprint(file: File, endpoint?: string): string {
   const tusEndpoint = endpoint || (typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads')
   return ['tus-br', file.name, file.type, file.size, file.lastModified, tusEndpoint].join('-')
 }
@@ -56,13 +56,6 @@ export function clearTUSFingerprint(file: File): void {
 }
 
 /**
- * Check if TUS has a fingerprint for this file
- */
-export function hasTUSFingerprint(file: File): boolean {
-  return getTUSFingerprintKey(file) !== null
-}
-
-/**
  * Store context (videoId/projectId) for a file
  */
 export function storeFileContext(file: File, context: string): void {
@@ -113,26 +106,6 @@ export function ensureFreshUploadOnContextChange(file: File, newContext: string)
   }
 
   storeFileContext(file, newContext)
-}
-
-/**
- * Clear all stale context data (older than 7 days)
- */
-export function clearStaleContextData(): void {
-  try {
-    const keysToRemove: string[] = []
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith('vitransfer-context:')) {
-        keysToRemove.push(key)
-      }
-    }
-
-    keysToRemove.forEach(key => localStorage.removeItem(key))
-  } catch (error) {
-    // Silent failure
-  }
 }
 
 /**

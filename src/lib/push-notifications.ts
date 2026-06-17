@@ -64,7 +64,7 @@ function generateVapidKeys(): VapidKeys {
  * Get or create VAPID keys (auto-generate on first use)
  * Keys are stored encrypted in the database
  */
-export async function getOrCreateVapidKeys(): Promise<VapidKeys> {
+async function getOrCreateVapidKeys(): Promise<VapidKeys> {
   const settings = await prisma.settings.findUnique({
     where: { id: 'default' },
     select: { vapidPublicKey: true, vapidPrivateKey: true },

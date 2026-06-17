@@ -21,6 +21,9 @@ export const runtime = 'nodejs'
 
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
+const RATE_LIMIT_TTL_SECONDS = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
+// Global (all-IP) cap — the per-IP lockout is bypassable by rotating IPs.
+const GLOBAL_MAX_FAILED_ATTEMPTS = 50
 
 function constantTimeCompare(a: string, b: string): boolean {
   const bufA = Buffer.from(a, 'utf8')
@@ -47,6 +50,57 @@ function getIdentifier(request: NextRequest, token: string): string {
   return `ratelimit:share-verify-failed:${token}:${hash}`
 }
 
+function getGlobalIdentifier(token: string): string {
+  return `ratelimit:share-verify-failed-global:${token}`
+}
+
+interface FailedAttemptEntry {
+  count: number
+  firstAttempt: number
+  lastAttempt: number
+  lockoutUntil?: number
+}
+
+async function getActiveLockout(
+  redis: ReturnType<typeof getRedis>,
+  key: string,
+  now: number
+): Promise<{ retryAfter: number; count: number } | null> {
+  const data = await redis.get(key)
+  if (!data) return null
+  const { count, lockoutUntil } = JSON.parse(data) as FailedAttemptEntry
+  if (lockoutUntil && lockoutUntil > now) {
+    return { retryAfter: Math.ceil((lockoutUntil - now) / 1000), count }
+  }
+  return null
+}
+
+async function registerFailedAttempt(
+  redis: ReturnType<typeof getRedis>,
+  key: string,
+  now: number,
+  maxAttempts: number
+): Promise<number> {
+  const existing = await redis.get(key)
+  let count = 1
+  let firstAttempt = now
+  if (existing) {
+    const prev = JSON.parse(existing) as FailedAttemptEntry
+    if (now - prev.firstAttempt <= RATE_LIMIT_WINDOW_MS) {
+      count = prev.count + 1
+      firstAttempt = prev.firstAttempt
+    }
+  }
+  const entry: FailedAttemptEntry = {
+    count,
+    firstAttempt,
+    lastAttempt: now,
+    lockoutUntil: count >= maxAttempts ? now + RATE_LIMIT_WINDOW_MS : undefined,
+  }
+  await redis.setex(key, RATE_LIMIT_TTL_SECONDS, JSON.stringify(entry))
+  return count
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -59,39 +113,33 @@ export async function POST(
     const notificationsText = messages?.notificationsText
     const redis = getRedis()
     const rateLimitKey = getIdentifier(request, token)
+    const globalRateLimitKey = getGlobalIdentifier(token)
+    const now = Date.now()
 
     // Get max auth attempts from settings
     const MAX_FAILED_ATTEMPTS = await getMaxAuthAttempts()
 
-    // Check if currently locked out from too many failed attempts
-    const lockoutData = await redis.get(rateLimitKey)
-    if (lockoutData) {
-      const { count, lockoutUntil } = JSON.parse(lockoutData)
-      const now = Date.now()
+    const activeLockout =
+      (await getActiveLockout(redis, rateLimitKey, now)) ||
+      (await getActiveLockout(redis, globalRateLimitKey, now))
 
-      if (lockoutUntil && lockoutUntil > now) {
-        const retryAfter = Math.ceil((lockoutUntil - now) / 1000)
+    if (activeLockout) {
+      await logSecurityEvent({
+        type: 'PASSWORD_RATE_LIMIT_HIT',
+        severity: 'WARNING',
+        ipAddress: getClientIpAddress(request),
+        details: {
+          shareToken: token,
+          failedAttempts: activeLockout.count,
+          retryAfter: activeLockout.retryAfter,
+        },
+        wasBlocked: true,
+      })
 
-        // Log security event for rate limit hit
-        const ipAddress = getClientIpAddress(request)
-
-        await logSecurityEvent({
-          type: 'PASSWORD_RATE_LIMIT_HIT',
-          severity: 'WARNING',
-          ipAddress,
-          details: {
-            shareToken: token,
-            failedAttempts: count,
-            retryAfter,
-          },
-          wasBlocked: true,
-        })
-
-        return NextResponse.json(
-          { error: shareMessages?.tooManyPasswordAttempts || 'Too many failed password attempts. Please try again later.', retryAfter },
-          { status: 429, headers: { 'Retry-After': String(retryAfter) } }
-        )
-      }
+      return NextResponse.json(
+        { error: shareMessages?.tooManyPasswordAttempts || 'Too many failed password attempts. Please try again later.', retryAfter: activeLockout.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(activeLockout.retryAfter) } }
+      )
     }
     
     const parsed = await safeParseBody(request)
@@ -129,49 +177,28 @@ export async function POST(
     }
 
     if (!isValid) {
-      const now = Date.now()
-      const existingData = await redis.get(rateLimitKey)
-
-      let count = 1
-      let firstAttempt = now
-
-      if (existingData) {
-        const parsed = JSON.parse(existingData)
-        if (now - parsed.firstAttempt > RATE_LIMIT_WINDOW_MS) {
-          count = 1
-          firstAttempt = now
-        } else {
-          count = parsed.count + 1
-          firstAttempt = parsed.firstAttempt
-        }
-      }
-
-      const rateLimitEntry = {
-        count,
-        firstAttempt,
-        lastAttempt: now,
-        lockoutUntil: count >= MAX_FAILED_ATTEMPTS ? now + RATE_LIMIT_WINDOW_MS : undefined
-      }
-
-      const ttlSeconds = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
-      await redis.setex(rateLimitKey, ttlSeconds, JSON.stringify(rateLimitEntry))
+      const count = await registerFailedAttempt(redis, rateLimitKey, now, MAX_FAILED_ATTEMPTS)
+      const globalCount = await registerFailedAttempt(redis, globalRateLimitKey, now, GLOBAL_MAX_FAILED_ATTEMPTS)
+      const lockedOut = count >= MAX_FAILED_ATTEMPTS || globalCount >= GLOBAL_MAX_FAILED_ATTEMPTS
 
       const ipAddress = getClientIpAddress(request)
 
       await logSecurityEvent({
         type: 'FAILED_PASSWORD_ATTEMPT',
-        severity: count >= MAX_FAILED_ATTEMPTS ? 'CRITICAL' : 'WARNING',
+        severity: lockedOut ? 'CRITICAL' : 'WARNING',
         projectId: project.id,
         ipAddress,
         details: {
           shareToken: token,
           attemptNumber: count,
           maxAttempts: MAX_FAILED_ATTEMPTS,
+          globalAttempts: globalCount,
+          globalMaxAttempts: GLOBAL_MAX_FAILED_ATTEMPTS,
         },
         wasBlocked: false,
       })
 
-      if (count >= MAX_FAILED_ATTEMPTS) {
+      if (lockedOut) {
         const retryAfter = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
 
         await logSecurityEvent({
@@ -182,7 +209,9 @@ export async function POST(
           details: {
             shareToken: token,
             failedAttempts: count,
+            globalAttempts: globalCount,
             lockoutDuration: retryAfter,
+            scope: globalCount >= GLOBAL_MAX_FAILED_ATTEMPTS ? 'global' : 'ip',
           },
           wasBlocked: true,
         })

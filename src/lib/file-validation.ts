@@ -1,7 +1,7 @@
 import { logMessage } from './logging'
 
 // Allowed video MIME types
-export const ALLOWED_VIDEO_TYPES = [
+const ALLOWED_VIDEO_TYPES = [
   'video/mp4',
   'video/quicktime',
   'video/x-msvideo',
@@ -55,7 +55,7 @@ export const ALLOWED_ASSET_TYPES = {
 /**
  * Validate file extension
  */
-export function validateFileExtension(filename: string): boolean {
+function validateFileExtension(filename: string): boolean {
   if (!filename || typeof filename !== 'string') {
     return false
   }
@@ -67,7 +67,7 @@ export function validateFileExtension(filename: string): boolean {
 /**
  * Validate MIME type
  */
-export function validateMimeType(mimeType: string): boolean {
+function validateMimeType(mimeType: string): boolean {
   if (!mimeType || typeof mimeType !== 'string') {
     return false
   }

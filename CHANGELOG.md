@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.1.3] - 2026-06-17
+
+### Added
+- `REDIS_DB` env var to select the Redis logical database, so ViTransfer can share a Redis instance with other apps without key collisions ([#75](https://github.com/MansiVisuals/ViTransfer/issues/75)).
+
+### Security
+- Share-password verification now enforces a global per-link attempt cap, so rotating client IPs can no longer bypass the per-IP lockout to brute-force a share password.
+- The initial admin password (`ADMIN_PASSWORD`) must now meet the full strength policy (12+ characters with mixed case, a number, and a special character).
+- Public JSON endpoints cap request body size and reject oversized payloads with `413`.
+- Rate-limit counters are updated atomically to prevent under-counting under concurrent requests.
+- Bumped transitive `dompurify` 3.4.7 → 3.4.11 ([GHSA-gvmj-g25r-r7wr](https://github.com/advisories/GHSA-gvmj-g25r-r7wr)) and `esbuild` 0.28.0 → 0.28.1 ([GHSA-gv7w-rqvm-qjhr](https://github.com/advisories/GHSA-gv7w-rqvm-qjhr)), clearing both open Dependabot alerts.
+- Removed unused per-request Postgres session-context calls (dead row-level-security scaffolding).
+- Documented that IP-based rate limits and blocklists only hold when the origin is reachable solely through your reverse proxy/CDN ([SECURITY.md](SECURITY.md)).
+
+### Fixed
+- Share page: video thumbnails now load on the first visit when using S3 storage (a redundant post-login project re-fetch was racing the thumbnail loader).
+
+### Changed
+- Declared `sharp` as a direct dependency (previously resolved only transitively via Next).
+
+### Removed
+- Internal dead-code cleanup: removed unused functions, schemas, and types — verified unreferenced, no API or behavior change.
+- Dropped redundant `@next/eslint-plugin-next` devDependency (provided transitively by `eslint-config-next`).
+
+### Updated
+- `next` / `eslint-config-next` 16.2.6 → 16.2.9.
+- `react` / `react-dom` 19.2.6 → 19.2.7.
+- `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` 3.1045.0 → 3.1071.0.
+- `next-intl` 4.11.1 → 4.13.0.
+- `nodemailer` 8.0.7 → 8.0.11.
+- `postcss` 8.5.14 → 8.5.15.
+- `isomorphic-dompurify` 3.12.0 → 3.17.0.
+- `tsx` 4.21.0 → 4.22.4.
+- `@simplewebauthn/server` 13.3.0 → 13.3.1.
+- `bullmq` 5.76.6 → 5.78.1.
+- `@radix-ui/*` (dialog, label, select, slot, switch) in-range bumps.
+- `@types/node` 24.12.3 → 24.13.2, `@types/react` 19.2.14 → 19.2.17.
+- `@types/nodemailer` 6.4.23 → 8.0.1 (aligns with `nodemailer` 8.x runtime).
+- `@tus/server` 2.0.0 → 2.4.1 — lifted the deliberate `2.0.0` pin now that upstream requires `srvx` ≥ 0.11.15, past the GHSA-p36q-q72m-gchr fix.
+- Pinned `ioredis` to `5.10.1` to match `bullmq`'s exact requirement, keeping a single shared copy (avoids a duplicate-instance type mismatch when passing the Redis client to BullMQ).
+
 ## [1.1.2] - 2026-05-22
 
 ### Added

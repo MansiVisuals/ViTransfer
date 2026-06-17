@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request)
 
-    const parsed = await safeParseBody(request)
+    const parsed = await safeParseBody(request, { maxBytes: 5_000_000 })
     if (!parsed.success) return parsed.response
     const body = parsed.data
 

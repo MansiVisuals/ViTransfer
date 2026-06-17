@@ -42,7 +42,7 @@ export async function apiFetch(
   }
 }
 
-export async function apiJson<T = any>(
+async function apiJson<T = any>(
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<T> {

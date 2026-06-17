@@ -3,7 +3,7 @@
  * @param fps - Frames per second
  * @returns True if drop-frame should be used
  */
-export function isDropFrame(fps: number): boolean {
+function isDropFrame(fps: number): boolean {
   // Drop-frame is used for 29.97 and 59.94 fps (NTSC rates)
   const rounded = Math.round(fps * 100) / 100
   return rounded === 29.97 || rounded === 59.94
@@ -182,15 +182,6 @@ export function parseTimecodeInput(input: string, fps: number = 24): string {
   }
 
   throw new Error(`Invalid timecode input: ${input}`)
-}
-
-/**
- * Get timecode format label (DF or NDF)
- * @param fps - Frames per second
- * @returns "DF" for drop-frame, "NDF" for non-drop-frame
- */
-export function getTimecodeLabel(fps: number): string {
-  return isDropFrame(fps) ? 'DF' : 'NDF'
 }
 
 /**

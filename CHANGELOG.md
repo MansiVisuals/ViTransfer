@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.1.4] - 2026-06-24
+
+### Security
+- `nodemailer` 8.x → 9.0.1 ([GHSA-p6gq-j5cr-w38f](https://github.com/advisories/GHSA-p6gq-j5cr-w38f)), clearing the open Dependabot alert.
+
+### Fixed
+- Project deletion now removes video asset and reverse-share upload files explicitly, not just video files — these previously orphaned on disk when the directory/prefix sweep couldn't run (S3 without `ListBucket`, or flaky network-backed mounts).
+
+### Updated
+- `@aws-sdk/client-s3` / `@aws-sdk/s3-request-presigner` 3.1071.0 → 3.1075.0.
+- `bullmq` 5.78.1 → 5.79.1.
+- `driver.js` 1.4.0 → 1.5.0.
+- `isomorphic-dompurify` 3.17.0 → 3.18.0.
+- `@simplewebauthn/server` 13.3.1 → 13.3.2.
+- `typescript-eslint` 8.61.1 → 8.62.0.
+- Additional in-range transitive bumps.
+
 ## [1.1.3] - 2026-06-17
 
 ### Added

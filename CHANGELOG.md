@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Updated
 - `archiver` 7.0.1 → 8.0.0 (migrated to the `ZipArchive` class; v8 dropped the callable default export).
 - `html-to-text` 9.0.5 → 10.0.0.
+- `lucide-react` 0.563.0 → 1.21.0 (v1 dropped brand icons; inlined the GitHub mark in the admin header).
 - `@aws-sdk/client-s3` / `@aws-sdk/s3-request-presigner` 3.1071.0 → 3.1075.0.
 - `bullmq` 5.78.1 → 5.79.1.
 - `driver.js` 1.4.0 → 1.5.0.

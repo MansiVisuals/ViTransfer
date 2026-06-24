@@ -5,7 +5,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { logSecurityEvent, trackVideoAccess } from '@/lib/video-access'
-import archiver from 'archiver'
+import { ZipArchive } from 'archiver'
 import { Readable } from 'stream'
 import crypto from 'crypto'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -126,7 +126,7 @@ export async function GET(
     // store: true (no compression) — videos and most asset files are already
     // compressed, so deflate would burn CPU for no size win and would actually
     // bottleneck the stream. Store mode is just header + raw bytes, much faster.
-    const archive = archiver('zip', {
+    const archive = new ZipArchive({
       store: true,
     })
 

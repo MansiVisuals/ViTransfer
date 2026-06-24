@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project deletion now removes video asset and reverse-share upload files explicitly, not just video files — these previously orphaned on disk when the directory/prefix sweep couldn't run (S3 without `ListBucket`, or flaky network-backed mounts).
 
 ### Updated
+- `archiver` 7.0.1 → 8.0.0 (migrated to the `ZipArchive` class; v8 dropped the callable default export).
+- `html-to-text` 9.0.5 → 10.0.0.
 - `@aws-sdk/client-s3` / `@aws-sdk/s3-request-presigner` 3.1071.0 → 3.1075.0.
 - `bullmq` 5.78.1 → 5.79.1.
 - `driver.js` 1.4.0 → 1.5.0.

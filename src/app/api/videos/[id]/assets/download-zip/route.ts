@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
-import archiver from 'archiver'
+import { ZipArchive } from 'archiver'
 import { Readable } from 'stream'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -102,7 +102,7 @@ export async function POST(
     }
 
     // Create zip archive
-    const archive = archiver('zip', {
+    const archive = new ZipArchive({
       zlib: { level: 6 }, // Compression level
     })
 

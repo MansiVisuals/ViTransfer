@@ -497,7 +497,8 @@ export async function DELETE(
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
-        videos: true,
+        videos: { include: { assets: true } },
+        projectUploads: true,
       },
     })
 
@@ -505,41 +506,38 @@ export async function DELETE(
       return NextResponse.json({ error: projectMessages.projectNotFoundApi || 'Project not found' }, { status: 404 })
     }
 
+    // Collect every stored file referenced by this project's videos, their
+    // assets, and reverse-share uploads. Deleting each explicitly (rather than
+    // relying solely on the directory sweep below) ensures files are removed
+    // even when the recursive/prefix delete can't run — e.g. S3 without
+    // ListBucket, or a flaky network-backed mount.
+    const filePaths: (string | null)[] = []
     for (const video of project.videos) {
+      filePaths.push(
+        video.originalStoragePath,
+        video.preview2160Path,
+        video.preview1080Path,
+        video.preview720Path,
+        video.cleanPreview2160Path,
+        video.cleanPreview1080Path,
+        video.cleanPreview720Path,
+        video.thumbnailPath,
+        ...video.assets.map((asset) => asset.storagePath),
+      )
+    }
+    filePaths.push(...project.projectUploads.map((upload) => upload.storagePath))
+
+    for (const filePath of filePaths) {
+      if (!filePath) continue
       try {
-        if (video.originalStoragePath) {
-          await deleteFile(video.originalStoragePath)
-        }
-
-        if ((video as any).preview2160Path) {
-          await deleteFile((video as any).preview2160Path)
-        }
-        if (video.preview1080Path) {
-          await deleteFile(video.preview1080Path)
-        }
-        if (video.preview720Path) {
-          await deleteFile(video.preview720Path)
-        }
-
-        if ((video as any).cleanPreview2160Path) {
-          await deleteFile((video as any).cleanPreview2160Path)
-        }
-        if (video.cleanPreview1080Path) {
-          await deleteFile(video.cleanPreview1080Path)
-        }
-        if (video.cleanPreview720Path) {
-          await deleteFile(video.cleanPreview720Path)
-        }
-
-        if (video.thumbnailPath) {
-          await deleteFile(video.thumbnailPath)
-        }
+        await deleteFile(filePath)
       } catch (error) {
-        logError(`Failed to delete files for video ${video.id}:`, error)
-        // Continue deleting other files even if one fails
+        logError(`Failed to delete file ${filePath} for project ${id}:`, error)
+        // Continue deleting remaining files even if one fails
       }
     }
 
+    // Final sweep: remove the project directory and any stray/empty folders.
     try {
       await deleteDirectory(`projects/${id}`)
     } catch (error) {

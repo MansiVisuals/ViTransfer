@@ -22,6 +22,7 @@ interface ProjectUpload {
 
 interface ProjectUploadsBlockProps {
   projectId: string
+  onCountChange?: (count: number) => void
 }
 
 function formatDate(dateStr: string): string {
@@ -69,7 +70,7 @@ function getUploaderDisplay(upload: ProjectUpload, unknownLabel: string): string
   return upload.uploadedByName || upload.uploadedByEmail || unknownLabel
 }
 
-export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockProps) {
+export default function ProjectUploadsBlock({ projectId, onCountChange }: ProjectUploadsBlockProps) {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
 
@@ -98,6 +99,12 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
   useEffect(() => {
     fetchUploads()
   }, [fetchUploads])
+
+  useEffect(() => {
+    if (!loading) {
+      onCountChange?.(uploads.length)
+    }
+  }, [uploads, loading, onCountChange])
 
   const handleDownload = async (upload: ProjectUpload) => {
     setDownloadingId(upload.id)

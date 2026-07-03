@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { ChevronDown, ChevronUp, Video, CheckCircle2, Pencil } from 'lucide-react'
+import { ChevronDown, ChevronUp, Video, CheckCircle2, Pencil, Upload } from 'lucide-react'
 import VideoUpload from './VideoUpload'
 import VideoList from './VideoList'
 import { InlineEdit } from './InlineEdit'
 import { VideoUploadModal } from './VideoUploadModal'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { apiPatch } from '@/lib/api-client'
+import { apiPatch, apiFetch } from '@/lib/api-client'
 import { useTranslations } from 'next-intl'
 
 interface AdminVideoManagerProps {
@@ -60,6 +60,48 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
   const [editingGroupName, setEditingGroupName] = useState<string | null>(null)
   const [editGroupValue, setEditGroupValue] = useState('')
   const [savingGroupName, setSavingGroupName] = useState<string | null>(null)
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({})
+  const [sessionId] = useState<string>(() => `admin:${Date.now()}`)
+
+  // Fetch a thumbnail per video group (latest version that has one)
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchThumbnails = async () => {
+      const groups = videos.reduce((acc: Record<string, any[]>, video) => {
+        ;(acc[video.name] = acc[video.name] || []).push(video)
+        return acc
+      }, {})
+
+      const entries = await Promise.all(
+        Object.entries(groups).map(async ([name, groupVideos]) => {
+          const videoWithThumb = [...(groupVideos as any[])]
+            .sort((a, b) => b.version - a.version)
+            .find(v => v.thumbnailPath)
+          if (!videoWithThumb) return null
+
+          try {
+            const res = await apiFetch(
+              `/api/admin/video-token?videoId=${videoWithThumb.id}&projectId=${projectId}&quality=thumbnail&sessionId=${sessionId}`,
+              { cache: 'no-store' }
+            )
+            if (!res.ok) return null
+            const data = await res.json()
+            return data.token ? ([name, `/api/content/${data.token}`] as const) : null
+          } catch {
+            return null
+          }
+        })
+      )
+
+      if (!cancelled) {
+        setThumbnails(Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>))
+      }
+    }
+
+    fetchThumbnails()
+    return () => { cancelled = true }
+  }, [videos, projectId, sessionId])
 
   // Expose triggerUpload method to parent via ref
   useImperativeHandle(ref, () => ({
@@ -152,6 +194,21 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
         onUploadComplete={handleUploadComplete}
       />
 
+      {sortedGroupNames.length === 0 && (
+        <Card>
+          <CardContent className="py-10 text-center space-y-3">
+            <Video className="w-8 h-8 mx-auto text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">{t('noVideosYet')}</p>
+            {projectStatus !== 'APPROVED' && (
+              <Button variant="outline" size="sm" onClick={() => setIsUploadModalOpen(true)}>
+                <Upload className="w-3.5 h-3.5 mr-1" />
+                {t('uploadFirstVideo')}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {sortedGroupNames.map((groupName) => {
         const groupVideos = videoGroups[groupName]
         const isExpanded = expandedGroup === groupName
@@ -173,7 +230,19 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
               onClick={() => toggleGroup(groupName)}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Video className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                {thumbnails[groupName] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumbnails[groupName]}
+                    alt={groupName}
+                    loading="lazy"
+                    className="w-14 h-8 rounded object-cover border border-border bg-muted flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-14 h-8 rounded border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                    <Video className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {editingGroupName === groupName ? (

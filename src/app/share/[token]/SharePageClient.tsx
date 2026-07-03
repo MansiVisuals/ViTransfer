@@ -21,6 +21,7 @@ import LanguageToggle from '@/components/LanguageToggle'
 import { ShareTutorial } from '@/components/ShareTutorial'
 import PrivacyBanner, { PRIVACY_STORAGE_KEY } from '@/components/PrivacyBanner'
 import ReverseShareUploadPanel from '@/components/ReverseShareUploadPanel'
+import SharePhotoSection from '@/components/SharePhotoSection'
 
 interface SharePageClientProps {
   token: string
@@ -1004,6 +1005,13 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               clientName={isGuest ? undefined : project.clientName}
               allowAssetDownload={project.allowAssetDownload}
             />
+            {!isGuest && project.hasPhotos && project.id && shareToken && (
+              <SharePhotoSection
+                projectId={project.id}
+                shareToken={shareToken}
+                allowPhotoDownload={project.allowPhotoDownload}
+              />
+            )}
           </div>
           <div className="pb-4 text-center">
             <a

@@ -50,6 +50,7 @@ interface Project {
   watermarkFontSize: string
   applyPreviewLut: boolean
   allowAssetDownload: boolean
+  allowPhotoDownload: boolean
   allowClientAssetUpload: boolean
   allowReverseShare: boolean
   clientCanApprove: boolean
@@ -101,6 +102,7 @@ export default function ProjectSettingsPage() {
   const [watermarkFontSize, setWatermarkFontSize] = useState('medium')
   const [applyPreviewLut, setApplyPreviewLut] = useState(true)
   const [allowAssetDownload, setAllowAssetDownload] = useState(true)
+  const [allowPhotoDownload, setAllowPhotoDownload] = useState(true)
   const [allowClientAssetUpload, setAllowClientAssetUpload] = useState(false)
   const [allowReverseShare, setAllowReverseShare] = useState(false)
   const [clientCanApprove, setClientCanApprove] = useState(true)
@@ -186,6 +188,7 @@ export default function ProjectSettingsPage() {
         setWatermarkFontSize(data.watermarkFontSize || 'medium')
         setApplyPreviewLut(data.applyPreviewLut ?? true)
         setAllowAssetDownload(data.allowAssetDownload ?? true)
+        setAllowPhotoDownload(data.allowPhotoDownload ?? true)
         setAllowClientAssetUpload(data.allowClientAssetUpload ?? false)
         setAllowReverseShare(data.allowReverseShare ?? false)
         setClientCanApprove(data.clientCanApprove ?? true)
@@ -298,6 +301,7 @@ export default function ProjectSettingsPage() {
         watermarkFontSize,
         applyPreviewLut,
         allowAssetDownload,
+        allowPhotoDownload,
         allowClientAssetUpload,
         allowReverseShare,
         clientCanApprove,
@@ -768,6 +772,20 @@ export default function ProjectSettingsPage() {
                     id="allowAssetDownload"
                     checked={allowAssetDownload}
                     onCheckedChange={setAllowAssetDownload}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="allowPhotoDownload">{t('allowPhotoDownloads')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('allowPhotoDownloadsDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="allowPhotoDownload"
+                    checked={allowPhotoDownload}
+                    onCheckedChange={setAllowPhotoDownload}
                   />
                 </div>
 

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.1] - 2026-07-03
+
+### Added
+- Photo galleries: per-project albums with admin uploads (TUS + S3), automatic webp thumbnails, sort toggle, admin-selectable album cover, and a client gallery on the share page with lightbox and multi-select. Also shown on the admin share preview.
+- Photo zip downloads: selected photos, one album, or the whole project (folder per album).
+- Per-project `allowPhotoDownload` toggle for client photo downloads.
+- Drag & drop: photos onto an open album; folders onto the Photos section create an album per folder and upload its photos.
+- Video thumbnails on the admin project page.
+- Collapsible Videos / Photos / Client Uploads sections with counts, plus an at-a-glance summary row (videos, approved, photos, uploads, due date).
+- Empty state with upload CTA when a project has no videos.
+
+### Changed
+- Upload Videos button moved from the page header into the Videos section header.
+- Archive and Delete separated into a danger zone in the project actions panel.
+
 ## [1.1.4] - 2026-07-03
 
 ### Security

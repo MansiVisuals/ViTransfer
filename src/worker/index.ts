@@ -1,5 +1,5 @@
 import { Worker, Queue } from 'bullmq'
-import { VideoProcessingJob, AssetProcessingJob, ProjectUploadProcessingJob, ExternalNotificationJob } from '../lib/queue'
+import { VideoProcessingJob, AssetProcessingJob, ProjectUploadProcessingJob, ExternalNotificationJob, PhotoProcessingJob } from '../lib/queue'
 import { initStorage } from '../lib/storage'
 import { runCleanup } from '../lib/upload-cleanup'
 import { getRedisForQueue, closeRedisConnection } from '../lib/redis'
@@ -7,6 +7,7 @@ import { getCpuAllocation, logCpuAllocation } from '../lib/cpu-config'
 import { processVideo } from './video-processor'
 import { processAsset } from './asset-processor'
 import { processProjectUpload } from './project-upload-processor'
+import { processPhoto } from './photo-processor'
 import { processAdminNotifications } from './admin-notifications'
 import { processClientNotifications } from './client-notifications'
 import { processExternalNotificationJob } from './external-notifications/processExternalNotificationJob'
@@ -138,6 +139,22 @@ async function main() {
 
   logMessage('[WORKER] Project upload processing worker started')
 
+  // Create photo processing worker
+  const photoWorker = new Worker<PhotoProcessingJob>('photo-processing', processPhoto, {
+    connection: getRedisForQueue(),
+    concurrency: concurrency * 2, // Photos are lighter than videos
+  })
+
+  photoWorker.on('completed', (job) => {
+    logMessage(`[WORKER] Photo job ${job.id} completed successfully`)
+  })
+
+  photoWorker.on('failed', (job, err) => {
+    logError(`[WORKER ERROR] Photo job ${job?.id} failed`, err)
+  })
+
+  logMessage('[WORKER] Photo processing worker started')
+
   // Create notification processing queue with repeatable job
   logMessage('Setting up notification processing...')
   const notificationQueue = new Queue('notification-processing', {
@@ -259,6 +276,7 @@ async function main() {
     await Promise.all([
       worker.close(),
       assetWorker.close(),
+      photoWorker.close(),
       notificationWorker.close(),
       externalNotificationWorker.close(),
       cleanPreviewWorker.close(),
@@ -276,6 +294,7 @@ async function main() {
     await Promise.all([
       worker.close(),
       assetWorker.close(),
+      photoWorker.close(),
       notificationWorker.close(),
       externalNotificationWorker.close(),
       cleanPreviewWorker.close(),

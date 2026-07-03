@@ -276,6 +276,54 @@ export function validateAssetFile(
   }
 }
 
+// Allowed photo types for photo albums (browser-displayable + sharp-supported)
+// SVG intentionally excluded - can contain embedded JavaScript/XSS payloads
+export const ALLOWED_PHOTO_TYPES = {
+  extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif'],
+  mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
+}
+
+/**
+ * Validate photo file for photo albums
+ */
+export function validatePhotoFile(
+  filename: string,
+  mimeType: string
+): { valid: boolean; error?: string; sanitizedFilename?: string } {
+  const sanitizedFilename = sanitizeFilename(filename)
+
+  if (isSuspiciousFilename(filename)) {
+    return {
+      valid: false,
+      error: 'Filename contains suspicious patterns'
+    }
+  }
+
+  const ext = sanitizedFilename.toLowerCase().slice(sanitizedFilename.lastIndexOf('.'))
+
+  if (!ALLOWED_PHOTO_TYPES.extensions.includes(ext)) {
+    return {
+      valid: false,
+      error: `Invalid photo type. Allowed: ${ALLOWED_PHOTO_TYPES.extensions.join(', ')}`
+    }
+  }
+
+  // Accept generic binary MIME — worker performs strict magic byte validation
+  const normalizedMime = mimeType.toLowerCase()
+  if (!ALLOWED_PHOTO_TYPES.mimeTypes.includes(normalizedMime) &&
+      normalizedMime !== 'application/octet-stream') {
+    return {
+      valid: false,
+      error: `Invalid MIME type for photo. Received: ${mimeType}`
+    }
+  }
+
+  return {
+    valid: true,
+    sanitizedFilename
+  }
+}
+
 /**
  * Sanitize a MIME content-type string.
  * Strips parameters (e.g. "; charset=utf-8") and lowercases.

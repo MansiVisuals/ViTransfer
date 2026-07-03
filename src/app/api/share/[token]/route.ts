@@ -196,7 +196,7 @@ export async function GET(
       sortedVideosByName[key] = videosByName[key]
     })
 
-    const [smtpConfigured, globalSettings, primaryRecipient] = await Promise.all([
+    const [smtpConfigured, globalSettings, primaryRecipient, photoAlbumCount] = await Promise.all([
       isSmtpConfigured(),
       prisma.settings.findUnique({
         where: { id: 'default' },
@@ -209,7 +209,13 @@ export async function GET(
           privacyDisclosureText: true,
         },
       }),
-      getPrimaryRecipient(project.id)
+      getPrimaryRecipient(project.id),
+      isGuest ? Promise.resolve(0) : prisma.photoAlbum.count({
+        where: {
+          projectId: project.id,
+          photos: { some: { uploadCompletedAt: { not: null } } },
+        },
+      })
     ])
 
     let allRecipients: Array<{id: string, name: string | null, email: string | null}> = []
@@ -298,6 +304,8 @@ export async function GET(
       }),
 
       allowAssetDownload: project.allowAssetDownload,
+      allowPhotoDownload: project.allowPhotoDownload,
+      hasPhotos: photoAlbumCount > 0,
       allowClientAssetUpload: project.allowClientAssetUpload,
       allowReverseShare: project.allowReverseShare,
       clientCanApprove: project.clientCanApprove,

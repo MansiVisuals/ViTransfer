@@ -24,6 +24,7 @@ export interface S3UploadTarget {
   videoId?: string
   assetId?: string
   projectUploadId?: string
+  photoId?: string
   /** Explicit bearer token — set for share-token-authenticated uploads */
   bearerToken?: string
 }
@@ -85,6 +86,7 @@ export function useS3MultipartUpload() {
           videoId: active.target.videoId,
           assetId: active.target.assetId,
           projectUploadId: active.target.projectUploadId,
+          photoId: active.target.photoId,
         },
         authHeader
       )
@@ -118,6 +120,7 @@ export function useS3MultipartUpload() {
             videoId: target.videoId,
             assetId: target.assetId,
             projectUploadId: target.projectUploadId,
+            photoId: target.photoId,
             filename: file.name,
             contentType: file.type || 'application/octet-stream',
             fileSize: file.size,
@@ -269,6 +272,7 @@ export function useS3MultipartUpload() {
             videoId: target.videoId,
             assetId: target.assetId,
             projectUploadId: target.projectUploadId,
+            photoId: target.photoId,
             parts: completedParts,
             fileSize: file.size,
             contentType: file.type || 'application/octet-stream',

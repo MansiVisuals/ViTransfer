@@ -7,7 +7,7 @@ import {
   s3AbortMultipartUpload,
 } from '@/lib/s3-storage'
 import { ALL_ALLOWED_EXTENSIONS } from '@/lib/asset-validation'
-import { FILE_LIMITS, sanitizeContentType } from '@/lib/file-validation'
+import { FILE_LIMITS, ALLOWED_PHOTO_TYPES, sanitizeContentType } from '@/lib/file-validation'
 import { verifyS3UploadAccess } from '@/lib/s3-upload-auth'
 import { logError } from '@/lib/logging'
 import { rateLimit } from '@/lib/rate-limit'
@@ -42,24 +42,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { videoId, assetId, projectUploadId, filename, contentType, fileSize } = body as {
+    const { videoId, assetId, projectUploadId, photoId, filename, contentType, fileSize } = body as {
       videoId?: string
       assetId?: string
       projectUploadId?: string
+      photoId?: string
       filename: string
       contentType: string
       fileSize: number
     }
 
-    if (!videoId && !assetId && !projectUploadId) {
+    if (!videoId && !assetId && !projectUploadId && !photoId) {
       return NextResponse.json(
-        { error: 'Missing required field: videoId, assetId, or projectUploadId' },
+        { error: 'Missing required field: videoId, assetId, projectUploadId, or photoId' },
         { status: 400 }
       )
     }
 
     // ── Authentication & ownership ──────────────────────────────────────────────
-    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId }, { requireUploadPermission: true })
+    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId }, { requireUploadPermission: true })
     if (authResult.errorResponse) return authResult.errorResponse
 
     // ── Rate limit: 30 presign requests per minute per client ─────────────────
@@ -123,6 +124,13 @@ export async function POST(request: NextRequest) {
       if (!FILE_LIMITS.ALLOWED_EXTENSIONS.includes(ext)) {
         return NextResponse.json(
           { error: `Invalid video format: ${ext}. Allowed: ${FILE_LIMITS.ALLOWED_EXTENSIONS.join(', ')}` },
+          { status: 400 }
+        )
+      }
+    } else if (photoId) {
+      if (!ALLOWED_PHOTO_TYPES.extensions.includes(ext)) {
+        return NextResponse.json(
+          { error: `Invalid photo format: ${ext}. Allowed: ${ALLOWED_PHOTO_TYPES.extensions.join(', ')}` },
           { status: 400 }
         )
       }

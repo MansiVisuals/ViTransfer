@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ThemeToggle from '@/components/ThemeToggle'
+import SharePhotoSection from '@/components/SharePhotoSection'
 import { useTranslations } from 'next-intl'
 
 const MAX_TOKEN_FETCH_ATTEMPTS = 2
@@ -575,6 +576,10 @@ export default function AdminSharePage() {
               projectTitle={project.title}
               projectDescription={project.description}
               clientName={clientDisplayName}
+            />
+            <SharePhotoSection
+              projectId={id}
+              allowPhotoDownload={project.allowPhotoDownload ?? true}
             />
           </div>
         </div>

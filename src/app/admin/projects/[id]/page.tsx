@@ -8,7 +8,8 @@ import Link from 'next/link'
 import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import ProjectUploadsBlock from '@/components/ProjectUploadsBlock'
-import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp } from 'lucide-react'
+import PhotoAlbumsBlock from '@/components/PhotoAlbumsBlock'
+import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp, Images, ChevronDown, ChevronUp, CheckCircle2, CalendarDays } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { useTranslations } from 'next-intl'
 import { logError } from '@/lib/logging'
@@ -16,9 +17,12 @@ import { logError } from '@/lib/logging'
 // Force dynamic rendering (no static pre-rendering)
 export const dynamic = 'force-dynamic'
 
+const SECTIONS_COLLAPSED_KEY = 'vitransfer-admin-project-sections-collapsed'
+
 export default function ProjectPage() {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
+  const tv = useTranslations('videos')
   const params = useParams()
   const router = useRouter()
   const id = params?.id as string
@@ -27,7 +31,35 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true)
   const [shareUrl, setShareUrl] = useState('')
   const [sortMode, setSortMode] = useState<'status' | 'alphabetical'>('alphabetical')
+  const [albumSortMode, setAlbumSortMode] = useState<'date' | 'alphabetical'>('date')
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  const [photoCounts, setPhotoCounts] = useState<{ albums: number; photos: number } | null>(null)
+  const [uploadsCount, setUploadsCount] = useState<number | null>(null)
   const videoManagerRef = useRef<{ triggerUpload: () => void } | null>(null)
+
+  const handlePhotoCounts = useCallback((albumCount: number, photoCount: number) => {
+    setPhotoCounts({ albums: albumCount, photos: photoCount })
+  }, [])
+
+  const handleUploadsCount = useCallback((count: number) => {
+    setUploadsCount(count)
+  }, [])
+
+  // Restore per-section collapse state (shared across projects)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SECTIONS_COLLAPSED_KEY)
+      if (raw) setCollapsedSections(JSON.parse(raw))
+    } catch {}
+  }, [])
+
+  const toggleSection = (key: string) => {
+    setCollapsedSections(prev => {
+      const next = { ...prev, [key]: !prev[key] }
+      try { localStorage.setItem(SECTIONS_COLLAPSED_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
 
   // Fetch project data function (extracted so it can be called on upload complete)
   const fetchProject = useCallback(async () => {
@@ -140,6 +172,12 @@ export default function ProjectPage() {
   // Filter comments to only show comments for active videos
   const iconBadgeClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
   const iconBadgeIconClassName = 'w-4 h-4 text-primary'
+  const countBadgeClassName = 'text-sm font-normal text-muted-foreground'
+
+  const videoGroupNames: string[] = Array.from(new Set(project.videos.map((v: any) => v.name)))
+  const approvedGroupCount = videoGroupNames.filter(name =>
+    project.videos.some((v: any) => v.name === name && v.approved)
+  ).length
 
   return (
     <div className="flex-1 min-h-0 bg-background">
@@ -153,16 +191,6 @@ export default function ProjectPage() {
             </Button>
           </Link>
           <div className="flex items-center gap-2">
-            {project && project.status !== 'APPROVED' && (
-              <Button
-                variant="default"
-                size="default"
-                onClick={() => videoManagerRef.current?.triggerUpload()}
-              >
-                <Upload className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t('uploadVideos')}</span>
-              </Button>
-            )}
             <Link href={`/admin/projects/${id}/settings`}>
               <Button variant="outline" size="default">
                 <Settings className="w-4 h-4 sm:mr-2" />
@@ -170,6 +198,38 @@ export default function ProjectPage() {
               </Button>
             </Link>
           </div>
+        </div>
+
+        {/* At-a-glance project summary */}
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5" title={t('videos')}>
+            <Video className="w-3.5 h-3.5" />
+            {videoGroupNames.length}
+          </span>
+          {approvedGroupCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-success" title={tv('approved')}>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {approvedGroupCount}
+            </span>
+          )}
+          {photoCounts !== null && (
+            <span className="inline-flex items-center gap-1.5" title={t('photos')}>
+              <Images className="w-3.5 h-3.5" />
+              {photoCounts.photos}
+            </span>
+          )}
+          {project.allowReverseShare && uploadsCount !== null && (
+            <span className="inline-flex items-center gap-1.5" title={t('clientUploads')}>
+              <FolderUp className="w-3.5 h-3.5" />
+              {uploadsCount}
+            </span>
+          )}
+          {project.dueDate && (
+            <span className="inline-flex items-center gap-1.5" title={t('dueDateLabel')}>
+              <CalendarDays className="w-3.5 h-3.5" />
+              {new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </span>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -188,49 +248,133 @@ export default function ProjectPage() {
           <div className="lg:col-span-2 lg:row-start-1 space-y-6 min-w-0">
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <span className={iconBadgeClassName}>
-                    <Video className={iconBadgeIconClassName} />
-                  </span>
-                  {t('videos')}
+                <h2 className="text-xl font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('videos')}
+                    aria-expanded={!collapsedSections.videos}
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                  >
+                    <span className={iconBadgeClassName}>
+                      <Video className={iconBadgeIconClassName} />
+                    </span>
+                    {t('videos')}
+                    {project.videos.length > 0 && (
+                      <span className={countBadgeClassName}>{videoGroupNames.length}</span>
+                    )}
+                    {collapsedSections.videos
+                      ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
+                  </button>
                 </h2>
-                {project.videos.length > 0 && (
+                {!collapsedSections.videos && (
+                  <div className="flex items-center gap-2">
+                    {project.videos.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
+                        className="text-muted-foreground hover:text-foreground"
+                        title={sortMode === 'status' ? t('sortAlphabetically') : t('sortByStatus')}
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {project.status !== 'APPROVED' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => videoManagerRef.current?.triggerUpload()}
+                      >
+                        <Upload className="w-3.5 h-3.5 sm:mr-1" />
+                        <span className="hidden sm:inline">{t('uploadVideos')}</span>
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              {/* Hidden, not unmounted — keeps upload queue state and the triggerUpload ref alive while collapsed */}
+              <div className={collapsedSections.videos ? 'hidden' : undefined}>
+                <AdminVideoManager
+                  ref={videoManagerRef}
+                  projectId={project.id}
+                  videos={project.videos}
+                  projectStatus={project.status}
+                  restrictToLatestVersion={project.restrictCommentsToLatestVersion}
+                  onRefresh={fetchProject}
+                  sortMode={sortMode}
+                  maxRevisions={project.maxRevisions}
+                  enableRevisions={project.enableRevisions}
+                />
+              </div>
+            </div>
+
+            {/* Photo albums */}
+            <div className="min-w-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('photos')}
+                    aria-expanded={!collapsedSections.photos}
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                  >
+                    <span className={iconBadgeClassName}>
+                      <Images className={iconBadgeIconClassName} />
+                    </span>
+                    {t('photos')}
+                    {photoCounts !== null && photoCounts.albums > 0 && (
+                      <span className={countBadgeClassName}>{photoCounts.albums}</span>
+                    )}
+                    {collapsedSections.photos
+                      ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
+                  </button>
+                </h2>
+                {!collapsedSections.photos && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
+                    onClick={() => setAlbumSortMode(current => current === 'date' ? 'alphabetical' : 'date')}
                     className="text-muted-foreground hover:text-foreground"
-                    title={sortMode === 'status' ? t('sortAlphabetically') : t('sortByStatus')}
+                    title={albumSortMode === 'date' ? t('sortAlphabetically') : t('sortByDate')}
                   >
                     <ArrowUpDown className="w-4 h-4" />
                   </Button>
                 )}
               </div>
-              <AdminVideoManager
-                ref={videoManagerRef}
-                projectId={project.id}
-                videos={project.videos}
-                projectStatus={project.status}
-                restrictToLatestVersion={project.restrictCommentsToLatestVersion}
-                onRefresh={fetchProject}
-                sortMode={sortMode}
-                maxRevisions={project.maxRevisions}
-                enableRevisions={project.enableRevisions}
-              />
+              <div className={collapsedSections.photos ? 'hidden' : undefined}>
+                <PhotoAlbumsBlock projectId={project.id} sortMode={albumSortMode} onCountsChange={handlePhotoCounts} />
+              </div>
             </div>
 
             {/* Client Uploads block — only shown when reverse share is enabled */}
             {project.allowReverseShare && (
               <div className="min-w-0">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <span className={iconBadgeClassName}>
-                      <FolderUp className={iconBadgeIconClassName} />
-                    </span>
-                    {t('clientUploads')}
+                  <h2 className="text-xl font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('clientUploads')}
+                      aria-expanded={!collapsedSections.clientUploads}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                      <span className={iconBadgeClassName}>
+                        <FolderUp className={iconBadgeIconClassName} />
+                      </span>
+                      {t('clientUploads')}
+                      {uploadsCount !== null && uploadsCount > 0 && (
+                        <span className={countBadgeClassName}>{uploadsCount}</span>
+                      )}
+                      {collapsedSections.clientUploads
+                        ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
+                    </button>
                   </h2>
                 </div>
-                <ProjectUploadsBlock projectId={project.id} />
+                <div className={collapsedSections.clientUploads ? 'hidden' : undefined}>
+                  <ProjectUploadsBlock projectId={project.id} onCountChange={handleUploadsCount} />
+                </div>
               </div>
             )}
           </div>

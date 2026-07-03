@@ -1,8 +1,9 @@
 import { Server } from '@tus/server'
 import { FileStore } from '@tus/file-store'
 import { prisma } from '@/lib/db'
-import { videoQueue, getAssetQueue, getProjectUploadQueue } from '@/lib/queue'
+import { videoQueue, getAssetQueue, getProjectUploadQueue, getPhotoQueue } from '@/lib/queue'
 import { ALL_ALLOWED_EXTENSIONS } from '@/lib/asset-validation'
+import { ALLOWED_PHOTO_TYPES } from '@/lib/file-validation'
 import { initStorage, moveFile } from '@/lib/storage'
 import path from 'path'
 import fs from 'fs'
@@ -148,11 +149,12 @@ const tusServer: Server = new Server({
       const videoId = upload.metadata?.videoId as string
       const assetId = upload.metadata?.assetId as string
       const projectUploadId = upload.metadata?.projectUploadId as string
+      const photoId = upload.metadata?.photoId as string
 
-      if (!videoId && !assetId && !projectUploadId) {
+      if (!videoId && !assetId && !projectUploadId && !photoId) {
         throw {
           status_code: 400,
-          body: 'Missing required metadata: videoId, assetId, or projectUploadId'
+          body: 'Missing required metadata: videoId, assetId, projectUploadId, or photoId'
         }
       }
 
@@ -247,6 +249,28 @@ const tusServer: Server = new Server({
         }
       }
 
+      if (photoId) {
+        // Photo uploads are admin-only
+        if (!isAdmin) {
+          throw {
+            status_code: 403,
+            body: 'Admin access required for photo uploads'
+          }
+        }
+
+        const photo = await prisma.photo.findUnique({
+          where: { id: photoId },
+          select: { id: true },
+        })
+
+        if (!photo) {
+          throw {
+            status_code: 404,
+            body: 'Photo record not found'
+          }
+        }
+      }
+
       return { metadata: upload.metadata }
     } catch (error) {
       logError('[UPLOAD] Error in onUploadCreate:', error)
@@ -259,6 +283,7 @@ const tusServer: Server = new Server({
     const videoId = upload.metadata?.videoId as string
     const assetId = upload.metadata?.assetId as string
     const projectUploadId = upload.metadata?.projectUploadId as string
+    const photoId = upload.metadata?.photoId as string
 
     try {
       if (videoId) {
@@ -267,8 +292,10 @@ const tusServer: Server = new Server({
         return await handleAssetUploadFinish(tusFilePath, upload, assetId, tusServer)
       } else if (projectUploadId) {
         return await handleProjectUploadFinish(tusFilePath, upload, projectUploadId, tusServer)
+      } else if (photoId) {
+        return await handlePhotoUploadFinish(tusFilePath, upload, photoId)
       } else {
-        logMessage('[UPLOAD] No videoId, assetId, or projectUploadId in upload metadata')
+        logMessage('[UPLOAD] No videoId, assetId, projectUploadId, or photoId in upload metadata')
         return {}
       }
     } catch (error) {
@@ -431,6 +458,48 @@ async function handleProjectUploadFinish(tusFilePath: string, upload: any, proje
   return {}
 }
 
+async function handlePhotoUploadFinish(tusFilePath: string, upload: any, photoId: string) {
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId }
+  })
+
+  if (!photo) {
+    logMessage(`[UPLOAD] Photo not found: ${photoId}`)
+    await cleanupTUSFile(tusFilePath)
+    throw new Error(`Photo record not found for upload completion: ${photoId}`)
+  }
+
+  const fileSize = await verifyUploadedFile(tusFilePath, upload.size)
+
+  await validateUploadedPhotoFile(tusFilePath, upload.metadata?.filename as string)
+
+  await initStorage()
+
+  const actualFileType = upload.metadata?.filetype as string || 'application/octet-stream'
+  await moveFile(tusFilePath, photo.storagePath, fileSize, actualFileType)
+
+  await prisma.photo.update({
+    where: { id: photoId },
+    data: {
+      fileType: actualFileType,
+      fileSize: BigInt(fileSize),
+      uploadCompletedAt: new Date(),
+    },
+  })
+
+  const photoQueue = getPhotoQueue()
+  await photoQueue.add('process-photo', {
+    photoId: photo.id,
+    storagePath: photo.storagePath,
+  })
+
+  logMessage(`[UPLOAD] Photo uploaded and queued for processing: ${photoId}`)
+
+  await cleanupTUSMetadata(tusFilePath)
+
+  return {}
+}
+
 async function verifyUploadedFile(tusFilePath: string, expectedSize?: number): Promise<number> {
   if (!fs.existsSync(tusFilePath)) {
     throw new Error('Uploaded file not found on disk')
@@ -486,6 +555,21 @@ async function validateUploadedAssetFile(tusFilePath: string, filename?: string)
   // This ensures proper file content validation happens during processing
   // without causing Next.js build issues with the file-type ESM module
   logMessage(`[UPLOAD] Asset extension validation passed, magic byte check will run in worker`)
+}
+
+async function validateUploadedPhotoFile(tusFilePath: string, filename?: string) {
+  if (filename) {
+    const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
+    if (!ALLOWED_PHOTO_TYPES.extensions.includes(ext)) {
+      await cleanupTUSFile(tusFilePath)
+      throw new Error(
+        `Invalid file extension: ${ext}. Allowed: ${ALLOWED_PHOTO_TYPES.extensions.join(', ')}`
+      )
+    }
+  }
+
+  // NOTE: Magic byte validation is performed in the photo-processor worker
+  logMessage(`[UPLOAD] Photo extension validation passed, magic byte check will run in worker`)
 }
 
 async function cleanupTUSFile(tusFilePath: string) {

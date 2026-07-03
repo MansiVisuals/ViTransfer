@@ -14,22 +14,23 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { uploadId, videoId, assetId, projectUploadId } = body as {
+    const { uploadId, videoId, assetId, projectUploadId, photoId } = body as {
       uploadId: string
       videoId?: string
       assetId?: string
       projectUploadId?: string
+      photoId?: string
     }
 
-    if (!videoId && !assetId && !projectUploadId) {
+    if (!videoId && !assetId && !projectUploadId && !photoId) {
       return NextResponse.json(
-        { error: 'Missing required field: videoId, assetId, or projectUploadId' },
+        { error: 'Missing required field: videoId, assetId, projectUploadId, or photoId' },
         { status: 400 }
       )
     }
 
     // Authenticate and verify ownership (no feature-flag checks for abort)
-    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId })
+    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId })
     if (authResult.errorResponse) return authResult.errorResponse
 
     // Rate limit: 30 abort requests per minute per client

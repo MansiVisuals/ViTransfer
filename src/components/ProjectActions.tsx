@@ -503,36 +503,43 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             </div>
           )}
 
-          <Button
-            variant="outline"
-            size="default"
-            className="w-full"
-            onClick={handleToggleArchive}
-            disabled={isArchiving}
-          >
-            {project.status === 'ARCHIVED' ? (
-              <>
-                <ArchiveRestore className="w-4 h-4 mr-2" />
-                {isArchiving ? t('unarchiving') : t('unarchiveProject')}
-              </>
-            ) : (
-              <>
-                <Archive className="w-4 h-4 mr-2" />
-                {isArchiving ? t('archiving') : t('archiveProject')}
-              </>
-            )}
-          </Button>
+          {/* Danger zone — separated from everyday actions to prevent misclicks */}
+          <div className="pt-4 mt-4 border-t border-border space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('dangerZone')}
+            </p>
 
-          <Button
-            variant="destructive"
-            size="default"
-            className="w-full"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {isDeleting ? tc('deleting') : t('deleteProject')}
-          </Button>
+            <Button
+              variant="outline"
+              size="default"
+              className="w-full"
+              onClick={handleToggleArchive}
+              disabled={isArchiving}
+            >
+              {project.status === 'ARCHIVED' ? (
+                <>
+                  <ArchiveRestore className="w-4 h-4 mr-2" />
+                  {isArchiving ? t('unarchiving') : t('unarchiveProject')}
+                </>
+              ) : (
+                <>
+                  <Archive className="w-4 h-4 mr-2" />
+                  {isArchiving ? t('archiving') : t('archiveProject')}
+                </>
+              )}
+            </Button>
+
+            <Button
+              variant="destructive"
+              size="default"
+              className="w-full"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {isDeleting ? tc('deleting') : t('deleteProject')}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

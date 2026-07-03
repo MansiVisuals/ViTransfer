@@ -292,6 +292,7 @@ export const updateProjectSchema = z.object({
 
   // Download settings
   allowAssetDownload: z.boolean().optional(),
+  allowPhotoDownload: z.boolean().optional(),
 
   // Client asset upload
   allowClientAssetUpload: z.boolean().optional(),

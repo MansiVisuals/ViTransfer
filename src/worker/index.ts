@@ -14,6 +14,7 @@ import { processExternalNotificationJob } from './external-notifications/process
 import { createCleanPreviewWorker } from './clean-preview-processor'
 import { processDueDateReminders } from './due-date-reminders'
 import { cleanupOldTempFiles, ensureTempDir } from './cleanup'
+import { runPreviewThumbnailBackfill } from './backfill'
 import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
@@ -253,6 +254,11 @@ async function main() {
   // Cleanup old temp files on startup
   logMessage('Running initial temp file cleanup...')
   await cleanupOldTempFiles()
+
+  // One-time backfill: preview thumbnails for pre-1.2.1 client uploads/photos
+  await runPreviewThumbnailBackfill().catch((err) => {
+    logError('Preview thumbnail backfill failed', err)
+  })
 
   // Schedule periodic cleanup every 6 hours (TUS uploads)
   const tusCleanupInterval = setInterval(async () => {

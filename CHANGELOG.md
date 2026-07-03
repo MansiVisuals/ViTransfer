@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Photo zip downloads on the share page: selected photos, one album, or the whole project (folder per album), gated by a new per-project `allowPhotoDownload` toggle.
 - Drag & drop: photos onto an open album; folders onto the Photos section create an album per folder and upload its photos.
 - Photo downloads and client uploads wired into project analytics: new stats and activity feed events (album, photo list, uploader).
-- Client upload previews: the worker now generates thumbnails for reverse-share uploads — image thumbs, video frame grabs, and audio waveforms — shown in the Client Uploads list.
+- Client upload previews: the worker now generates thumbnails for reverse-share uploads — image thumbs, video frame grabs, and audio waveforms — shown in the Client Uploads list. A one-time backfill on worker start generates previews for existing uploads.
 - Video thumbnails on the admin project page.
 - Collapsible Videos / Photos / Client Uploads sections with counts on the admin project page.
 - Share page: grid/list view toggle for videos, denser video grid.

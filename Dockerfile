@@ -66,7 +66,7 @@ ENV NODE_ENV=production
 RUN apk add --no-cache python3 py3-pip \
     && python3 -m venv /opt/apprise-venv \
     && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.10.0 \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.11.0 \
     && apk del --no-cache py3-pip
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
-## [1.1.4] - 2026-06-24
+## [1.1.4] - 2026-07-03
 
 ### Security
 - `nodemailer` 8.x → 9.0.1 ([GHSA-p6gq-j5cr-w38f](https://github.com/advisories/GHSA-p6gq-j5cr-w38f)), clearing the open Dependabot alert.

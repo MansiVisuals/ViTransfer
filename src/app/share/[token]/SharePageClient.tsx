@@ -21,6 +21,7 @@ import LanguageToggle from '@/components/LanguageToggle'
 import { ShareTutorial } from '@/components/ShareTutorial'
 import PrivacyBanner, { PRIVACY_STORAGE_KEY } from '@/components/PrivacyBanner'
 import ReverseShareUploadPanel from '@/components/ReverseShareUploadPanel'
+import SharePhotoSection from '@/components/SharePhotoSection'
 
 interface SharePageClientProps {
   token: string
@@ -939,38 +940,13 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm z-20 flex-shrink-0">
           <div className="flex items-center gap-2" data-tutorial="grid-actions">
-            {(() => {
-              if (isGuest) return null
-              const approvedCount = project.videosByName
-                ? Object.values(project.videosByName as Record<string, any[]>)
-                    .filter((versions) => versions.some((v: any) => v.approved))
-                    .length
-                : 0
-              const showDownloadAll = project.allowAssetDownload && approvedCount >= 2
-              const showUpload = project.allowReverseShare && shareToken
-              if (!showDownloadAll && !showUpload) return null
-              return (
-                <>
-                  {showDownloadAll && (
-                    <button
-                      onClick={handleDownloadAll}
-                      disabled={downloadingAll}
-                      className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      {downloadingAll ? <Loader2 className="h-5 w-5 text-foreground animate-spin" /> : <Download className="h-5 w-5 text-foreground" />}
-                      <span className="hidden sm:inline text-sm font-medium text-foreground">{t('downloadAllVideos', { count: approvedCount })}</span>
-                    </button>
-                  )}
-                  {showUpload && (
-                    <ReverseShareUploadPanel
-                      shareToken={shareToken}
-                      shareSlug={token}
-                      maxFiles={project.settings?.maxReverseShareFiles ?? 10}
-                    />
-                  )}
-                </>
-              )
-            })()}
+            {!isGuest && project.allowReverseShare && shareToken && (
+              <ReverseShareUploadPanel
+                shareToken={shareToken}
+                shareSlug={token}
+                maxFiles={project.settings?.maxReverseShareFiles ?? 10}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
@@ -994,16 +970,36 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8" data-tutorial="video-grid">
-            <ThumbnailGrid
-              videosByName={project.videosByName}
-              thumbnailsByName={thumbnailsByName}
-              thumbnailsLoading={thumbnailsLoading}
-              onVideoSelect={handleVideoSelect}
-              projectTitle={project.title}
-              projectDescription={isGuest ? undefined : project.description}
-              clientName={isGuest ? undefined : project.clientName}
-              allowAssetDownload={project.allowAssetDownload}
-            />
+            {(() => {
+              const approvedCount = project.videosByName
+                ? Object.values(project.videosByName as Record<string, any[]>)
+                    .filter((versions) => versions.some((v: any) => v.approved))
+                    .length
+                : 0
+              const showDownloadAll = !isGuest && project.allowAssetDownload && approvedCount >= 2
+              return (
+                <ThumbnailGrid
+                  videosByName={project.videosByName}
+                  thumbnailsByName={thumbnailsByName}
+                  thumbnailsLoading={thumbnailsLoading}
+                  onVideoSelect={handleVideoSelect}
+                  projectTitle={project.title}
+                  projectDescription={isGuest ? undefined : project.description}
+                  clientName={isGuest ? undefined : project.clientName}
+                  allowAssetDownload={project.allowAssetDownload}
+                  onDownloadAll={showDownloadAll ? handleDownloadAll : undefined}
+                  downloadingAll={downloadingAll}
+                  downloadAllLabel={t('downloadAllVideos', { count: approvedCount })}
+                />
+              )
+            })()}
+            {!isGuest && project.hasPhotos && project.id && shareToken && (
+              <SharePhotoSection
+                projectId={project.id}
+                shareToken={shareToken}
+                allowPhotoDownload={project.allowPhotoDownload}
+              />
+            )}
           </div>
           <div className="pb-4 text-center">
             <a

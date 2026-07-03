@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
-import { getFilePath, sanitizeFilenameForHeader, isS3Mode, createWebReadableStream } from '@/lib/storage'
+import { getFilePath, sanitizeFilenameForHeader, isS3Mode, createWebReadableStream, downloadFile } from '@/lib/storage'
+import { Readable } from 'stream'
 import { s3GetPresignedDownloadUrl, s3FileExists } from '@/lib/s3-storage'
 import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
@@ -25,6 +26,11 @@ export async function GET(
 ) {
   const url = new URL(request.url)
   const dlt = url.searchParams.get('dlt')
+  // inline=1: serve through the server with inline disposition (admin previews
+  // via fetch+blob — a presigned-URL redirect would fail on CORS)
+  // thumb=1: serve the worker-generated webp thumbnail instead of the original
+  const inline = url.searchParams.get('inline') === '1'
+  const thumb = url.searchParams.get('thumb') === '1'
 
   let projectId: string
   let uploadId: string
@@ -87,6 +93,7 @@ export async function GET(
         fileSize: true,
         fileType: true,
         storagePath: true,
+        thumbnailPath: true,
       },
     })
 
@@ -95,6 +102,24 @@ export async function GET(
     }
 
     const safeFileName = sanitizeFilenameForHeader(upload.fileName)
+
+    if (inline) {
+      if (thumb && !upload.thumbnailPath) {
+        return NextResponse.json({ error: 'No thumbnail available' }, { status: 404 })
+      }
+      const fileStream = await downloadFile(thumb ? upload.thumbnailPath! : upload.storagePath)
+      const webStream = Readable.toWeb(fileStream as any) as ReadableStream
+      const headers: Record<string, string> = {
+        'Content-Type': thumb ? 'image/webp' : (upload.fileType || 'application/octet-stream'),
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'private, max-age=300',
+        'X-Content-Type-Options': 'nosniff',
+      }
+      if (!thumb) {
+        headers['Content-Length'] = upload.fileSize.toString()
+      }
+      return new NextResponse(webStream, { status: 200, headers })
+    }
 
     // ── S3 mode: redirect directly to presigned URL ──────────────────────────
     if (isS3Mode()) {

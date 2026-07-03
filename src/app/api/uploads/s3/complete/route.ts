@@ -4,7 +4,7 @@ import { isS3Mode } from '@/lib/storage'
 import { s3CompleteMultipartUpload } from '@/lib/s3-storage'
 import { sanitizeContentType } from '@/lib/file-validation'
 import { verifyS3UploadAccess } from '@/lib/s3-upload-auth'
-import { videoQueue, getAssetQueue, getProjectUploadQueue } from '@/lib/queue'
+import { videoQueue, getAssetQueue, getProjectUploadQueue, getPhotoQueue } from '@/lib/queue'
 import { logError, logMessage } from '@/lib/logging'
 import { rateLimit } from '@/lib/rate-limit'
 import { handleReverseShareUploadNotification } from '@/lib/upload-notifications'
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       videoId,
       assetId,
       projectUploadId,
+      photoId,
       parts,
       fileSize,
       contentType,
@@ -32,20 +33,21 @@ export async function POST(request: NextRequest) {
       videoId?: string
       assetId?: string
       projectUploadId?: string
+      photoId?: string
       parts: Array<{ partNumber: number; etag: string }>
       fileSize: number
       contentType?: string
     }
 
-    if (!videoId && !assetId && !projectUploadId) {
+    if (!videoId && !assetId && !projectUploadId && !photoId) {
       return NextResponse.json(
-        { error: 'Missing required field: videoId, assetId, or projectUploadId' },
+        { error: 'Missing required field: videoId, assetId, projectUploadId, or photoId' },
         { status: 400 }
       )
     }
 
     // ── Authentication & ownership ────────────────────────────────────────────
-    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId }, { requireUploadPermission: true })
+    const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId }, { requireUploadPermission: true })
     if (authResult.errorResponse) return authResult.errorResponse
 
     // ── Rate limit: 30 complete requests per minute per client ──────────���─────
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
     let dbVideo: { id: string; originalStoragePath: string; projectId: string; status: string } | null = null
     let dbAsset: { id: string; storagePath: string; category: string | null } | null = null
     let dbProjectUpload: { id: string; storagePath: string; projectId: string; fileName: string; uploadedByName: string | null; uploadedByEmail: string | null } | null = null
+    let dbPhoto: { id: string; storagePath: string } | null = null
 
     if (videoId) {
       const video = await prisma.video.findUnique({
@@ -121,6 +124,12 @@ export async function POST(request: NextRequest) {
         select: { id: true, storagePath: true, category: true },
       })
       if (!dbAsset) return NextResponse.json({ error: 'Asset record not found' }, { status: 404 })
+    } else if (photoId) {
+      dbPhoto = await prisma.photo.findUnique({
+        where: { id: photoId },
+        select: { id: true, storagePath: true },
+      })
+      if (!dbPhoto) return NextResponse.json({ error: 'Photo record not found' }, { status: 404 })
     } else {
       const pu = await prisma.projectUpload.findUnique({
         where: { id: projectUploadId! },
@@ -186,6 +195,25 @@ export async function POST(request: NextRequest) {
       })
 
       logMessage(`[S3 COMPLETE] Asset ${dbAsset.id} queued for processing`)
+    } else if (dbPhoto) {
+      const actualFileType = sanitizeContentType(contentType)
+
+      await prisma.photo.update({
+        where: { id: dbPhoto.id },
+        data: {
+          fileType: actualFileType,
+          fileSize: BigInt(fileSize),
+          uploadCompletedAt: new Date(),
+        },
+      })
+
+      const photoQueue = getPhotoQueue()
+      await photoQueue.add('process-photo', {
+        photoId: dbPhoto.id,
+        storagePath: dbPhoto.storagePath,
+      })
+
+      logMessage(`[S3 COMPLETE] Photo ${dbPhoto.id} queued for processing`)
     } else if (dbProjectUpload) {
       const actualFileType = sanitizeContentType(contentType)
 

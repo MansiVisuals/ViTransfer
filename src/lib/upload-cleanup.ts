@@ -133,6 +133,20 @@ export async function cleanupIncompleteUploadRecords() {
   } catch (error) {
     logError('[Upload Cleanup] Error cleaning up incomplete VideoAsset records:', error)
   }
+
+  try {
+    const deletedPhotos = await prisma.photo.deleteMany({
+      where: {
+        uploadCompletedAt: null,
+        createdAt: { lt: cutoffDate },
+      },
+    })
+    if (deletedPhotos.count > 0) {
+      logMessage(`[Upload Cleanup] Deleted ${deletedPhotos.count} incomplete Photo record(s)`)
+    }
+  } catch (error) {
+    logError('[Upload Cleanup] Error cleaning up incomplete Photo records:', error)
+  }
 }
 
 /**

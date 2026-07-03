@@ -1,9 +1,9 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { CheckCircle2, Film, Layers, Files } from 'lucide-react'
+import { CheckCircle2, Film, Layers, Files, Download, Loader2, LayoutGrid, List, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ThumbnailGridProps {
@@ -15,7 +15,13 @@ interface ThumbnailGridProps {
   projectDescription?: string
   clientName?: string
   allowAssetDownload?: boolean
+  /** Download-all-videos action, shown in the section header (like the photos section) */
+  onDownloadAll?: () => void
+  downloadingAll?: boolean
+  downloadAllLabel?: string
 }
+
+const VIDEO_VIEW_STORAGE_KEY = 'vitransfer-share-video-view'
 
 export default function ThumbnailGrid({
   videosByName,
@@ -26,9 +32,26 @@ export default function ThumbnailGrid({
   projectDescription,
   clientName,
   allowAssetDownload = false,
+  onDownloadAll,
+  downloadingAll = false,
+  downloadAllLabel,
 }: ThumbnailGridProps) {
   const t = useTranslations('share')
   const tv = useTranslations('videos')
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(VIDEO_VIEW_STORAGE_KEY)
+      if (stored === 'list' || stored === 'grid') setViewMode(stored)
+    } catch {}
+  }, [])
+
+  const changeViewMode = (mode: 'grid' | 'list') => {
+    setViewMode(mode)
+    try { localStorage.setItem(VIDEO_VIEW_STORAGE_KEY, mode) } catch {}
+  }
 
   // Sort videos: For review (not approved) first, then approved, both alphabetically
   const videoNames = useMemo(() => {
@@ -80,8 +103,93 @@ export default function ThumbnailGrid({
         </p>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:gap-6 xl:grid-cols-4 2xl:grid-cols-5">
+      {/* Section header — mirrors the photos section (title left, actions right) */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2 min-w-0">
+          <Film className="w-5 h-5 text-primary flex-shrink-0" />
+          {t('videos')}
+        </h2>
+        <div className="flex-1" />
+        {onDownloadAll && (
+          <button
+            type="button"
+            onClick={onDownloadAll}
+            disabled={downloadingAll}
+            className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-50 text-sm font-medium text-foreground"
+          >
+            {downloadingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            <span className="hidden sm:inline">{downloadAllLabel || t('videos')}</span>
+          </button>
+        )}
+        <div className="flex items-center rounded-lg border border-border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => changeViewMode('grid')}
+            className={cn('p-2 transition-colors', viewMode === 'grid' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
+            title={t('gridView')}
+            aria-label={t('gridView')}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => changeViewMode('list')}
+            className={cn('p-2 transition-colors', viewMode === 'list' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
+            title={t('listView')}
+            aria-label={t('listView')}
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'list' ? (
+        <div className="space-y-2">
+          {videoNames.map((name) => {
+            const videos = videosByName[name]
+            const hasApprovedVideo = videos.some((v: any) => v.approved === true)
+            const hasAssets = allowAssetDownload && videos.some((v: any) => v.hasAssets === true)
+            const versionCount = videos.length
+            const thumbnailUrl = thumbnailsByName.get(name)
+
+            return (
+              <button
+                key={name}
+                onClick={() => onVideoSelect(name)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-left"
+              >
+                <div className="relative w-20 h-12 rounded-md overflow-hidden bg-black border border-border flex-shrink-0">
+                  {thumbnailUrl ? (
+                    <Image
+                      src={thumbnailUrl}
+                      alt={name}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                      draggable={false}
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                      <Film className="w-4 h-4 text-muted-foreground/50" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {versionCount} {versionCount === 1 ? tv('versions').slice(0, -1) : tv('versions')}
+                  </p>
+                </div>
+                {hasAssets && <Files className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+                {hasApprovedVideo && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {videoNames.map((name) => {
           const videos = videosByName[name]
           const hasApprovedVideo = videos.some((v: any) => v.approved === true)
@@ -170,6 +278,7 @@ export default function ThumbnailGrid({
           )
         })}
       </div>
+      )}
     </div>
   )
 }

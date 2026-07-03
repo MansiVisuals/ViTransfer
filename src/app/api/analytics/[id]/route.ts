@@ -73,6 +73,24 @@ export async function GET(
             },
           },
         },
+        photoAlbums: {
+          select: {
+            id: true,
+            name: true,
+            photos: { select: { id: true, fileName: true } },
+          },
+        },
+        projectUploads: {
+          where: { uploadCompletedAt: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            fileName: true,
+            uploadedByName: true,
+            uploadedByEmail: true,
+            createdAt: true,
+          },
+        },
       },
     })
 
@@ -82,6 +100,10 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    // Split analytics: video-bound rows vs photo download events (videoId null)
+    const videoAnalyticsRows = project.analytics.filter(a => a.videoId && a.video)
+    const photoAnalyticsRows = project.analytics.filter(a => !a.videoId)
 
     // Group videos by name
     const videosByName = project.videos.reduce((acc, video) => {
@@ -98,12 +120,12 @@ export async function GET(
       const videoIds = versions.map(v => v.id)
 
       // Get all analytics for these video IDs
-      const videoAnalytics = project.analytics.filter(a => videoIds.includes(a.videoId))
+      const videoAnalytics = videoAnalyticsRows.filter(a => videoIds.includes(a.videoId!))
       const totalDownloads = videoAnalytics.length
 
       // Per-version breakdown
       const versionStats = versions.map(version => {
-        const versionAnalytics = project.analytics.filter(a => a.videoId === version.id)
+        const versionAnalytics = videoAnalyticsRows.filter(a => a.videoId === version.id)
         const downloads = versionAnalytics.length
         return {
           id: version.id,
@@ -141,27 +163,27 @@ export async function GET(
       createdAt: access.createdAt,
     }))
 
-    const downloadEvents = project.analytics.map(download => {
+    const downloadEvents = videoAnalyticsRows.map(download => {
       let assetFileName: string | undefined
       let assetFileNames: string[] | undefined
 
       if (download.assetId) {
         // Single asset download
-        const asset = download.video.assets.find(a => a.id === download.assetId)
+        const asset = download.video!.assets.find(a => a.id === download.assetId)
         assetFileName = asset?.fileName
       } else if (download.assetIds) {
         // Multiple asset download (ZIP)
         const assetIdArray = JSON.parse(download.assetIds) as string[]
         assetFileNames = assetIdArray
-          .map(id => download.video.assets.find(a => a.id === id)?.fileName)
+          .map(id => download.video!.assets.find(a => a.id === id)?.fileName)
           .filter((name): name is string => !!name)
       }
 
       return {
         id: download.id,
         type: 'DOWNLOAD' as const,
-        videoName: download.video.name,
-        versionLabel: download.video.versionLabel,
+        videoName: download.video!.name,
+        versionLabel: download.video!.versionLabel,
         assetId: download.assetId,
         assetIds: download.assetIds ? JSON.parse(download.assetIds) : undefined,
         assetFileName,
@@ -170,8 +192,38 @@ export async function GET(
       }
     })
 
+    // Photo download events (albumId null = whole-project zip)
+    const photosById = new Map(
+      project.photoAlbums.flatMap(album => album.photos.map(photo => [photo.id, photo.fileName] as const))
+    )
+    const albumsById = new Map(project.photoAlbums.map(album => [album.id, album.name]))
+
+    const photoDownloadEvents = photoAnalyticsRows.map(download => {
+      const photoIds: string[] = download.photoIds ? JSON.parse(download.photoIds) : []
+      return {
+        id: download.id,
+        type: 'PHOTO_DOWNLOAD' as const,
+        albumName: download.albumId ? albumsById.get(download.albumId) ?? null : null,
+        photoCount: photoIds.length,
+        photoFileNames: photoIds
+          .map(photoId => photosById.get(photoId))
+          .filter((name): name is string => !!name),
+        createdAt: download.createdAt,
+      }
+    })
+
+    // Client uploads (reverse share) — the records themselves are the activity
+    const clientUploadEvents = project.projectUploads.map(upload => ({
+      id: upload.id,
+      type: 'CLIENT_UPLOAD' as const,
+      fileName: upload.fileName,
+      uploaderName: upload.uploadedByName,
+      uploaderEmail: upload.uploadedByEmail,
+      createdAt: upload.createdAt,
+    }))
+
     // Merge and sort all activity by timestamp (newest first)
-    const allActivity = [...authEvents, ...downloadEvents].sort(
+    const allActivity = [...authEvents, ...downloadEvents, ...photoDownloadEvents, ...clientUploadEvents].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
 
@@ -191,6 +243,9 @@ export async function GET(
         accessByMethod,
         totalDownloads,
         videoCount: project.videos.length,
+        photoCount: project.photoAlbums.reduce((sum, album) => sum + album.photos.length, 0),
+        photoDownloads: photoAnalyticsRows.length,
+        clientUploads: project.projectUploads.length,
       },
       videoStats,
       activity: allActivity,

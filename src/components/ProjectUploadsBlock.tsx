@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Download, Trash2, Loader2, FileIcon, FileImage, FileVideo, FileMusic, FileArchive, FileText, FilePlay, Square, CheckSquare, Info } from 'lucide-react'
 import { formatFileSize } from '@/lib/utils'
@@ -15,6 +15,7 @@ interface ProjectUpload {
   fileSize: string
   fileType: string
   category: string | null
+  hasThumbnail: boolean
   uploadedByName: string | null
   uploadedByEmail: string | null
   createdAt: string
@@ -22,6 +23,7 @@ interface ProjectUpload {
 
 interface ProjectUploadsBlockProps {
   projectId: string
+  onCountChange?: (count: number) => void
 }
 
 function formatDate(dateStr: string): string {
@@ -69,7 +71,7 @@ function getUploaderDisplay(upload: ProjectUpload, unknownLabel: string): string
   return upload.uploadedByName || upload.uploadedByEmail || unknownLabel
 }
 
-export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockProps) {
+export default function ProjectUploadsBlock({ projectId, onCountChange }: ProjectUploadsBlockProps) {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
 
@@ -80,6 +82,8 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkDownloading, setBulkDownloading] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [previews, setPreviews] = useState<Record<string, string>>({})
+  const previewsRef = useRef<Record<string, string>>({})
 
   const fetchUploads = useCallback(async () => {
     try {
@@ -98,6 +102,45 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
   useEffect(() => {
     fetchUploads()
   }, [fetchUploads])
+
+  useEffect(() => {
+    if (!loading) {
+      onCountChange?.(uploads.length)
+    }
+  }, [uploads, loading, onCountChange])
+
+  // Load worker-generated preview thumbnails via authenticated fetch
+  useEffect(() => {
+    let cancelled = false
+
+    const loadPreviews = async () => {
+      for (const upload of uploads) {
+        if (cancelled) return
+        if (previewsRef.current[upload.id]) continue
+        if (!upload.hasThumbnail) continue
+
+        try {
+          const res = await apiFetch(`/api/projects/${projectId}/project-uploads/${upload.id}/download?inline=1&thumb=1`)
+          if (!res.ok) continue
+          const blob = await res.blob()
+          if (cancelled) return
+          const url = URL.createObjectURL(blob)
+          previewsRef.current[upload.id] = url
+          setPreviews(prev => ({ ...prev, [upload.id]: url }))
+        } catch {
+          // Preview is best-effort; row falls back to the file-type icon
+        }
+      }
+    }
+
+    loadPreviews()
+    return () => { cancelled = true }
+  }, [uploads, projectId])
+
+  // Revoke object URLs on unmount
+  useEffect(() => () => {
+    Object.values(previewsRef.current).forEach(url => URL.revokeObjectURL(url))
+  }, [])
 
   const handleDownload = async (upload: ProjectUpload) => {
     setDownloadingId(upload.id)
@@ -267,10 +310,22 @@ export default function ProjectUploadsBlock({ projectId }: ProjectUploadsBlockPr
                   {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
                 </button>
 
-                {getUploadIcon(upload.fileType, upload.fileName, upload.category)}
+                {previews[upload.id] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previews[upload.id]}
+                    alt={upload.fileName}
+                    className="w-20 h-12 rounded-md object-cover border border-border bg-muted flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                    {getUploadIcon(upload.fileType, upload.fileName, upload.category)}
+                  </div>
+                )}
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{upload.fileName}</p>
+                  <p className="text-xs text-muted-foreground">{formatFileSize(Number(upload.fileSize))}</p>
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">

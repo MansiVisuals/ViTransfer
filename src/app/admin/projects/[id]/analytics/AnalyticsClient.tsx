@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { BarChart3, Video, Eye, Download, ArrowLeft, Mail, Lock, UserCircle, Users, Globe, ChevronDown, ChevronRight } from 'lucide-react'
+import { BarChart3, Video, Eye, Download, ArrowLeft, Mail, Lock, UserCircle, Users, Globe, ChevronDown, ChevronRight, Images, FolderUp } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
 
@@ -39,7 +39,25 @@ interface DownloadActivity {
   createdAt: Date
 }
 
-type Activity = AuthActivity | DownloadActivity
+interface PhotoDownloadActivity {
+  id: string
+  type: 'PHOTO_DOWNLOAD'
+  albumName: string | null
+  photoCount: number
+  photoFileNames: string[]
+  createdAt: Date
+}
+
+interface ClientUploadActivity {
+  id: string
+  type: 'CLIENT_UPLOAD'
+  fileName: string
+  uploaderName: string | null
+  uploaderEmail: string | null
+  createdAt: Date
+}
+
+type Activity = AuthActivity | DownloadActivity | PhotoDownloadActivity | ClientUploadActivity
 
 interface AnalyticsData {
   project: {
@@ -60,6 +78,9 @@ interface AnalyticsData {
     }
     totalDownloads: number
     videoCount: number
+    photoCount: number
+    photoDownloads: number
+    clientUploads: number
   }
   videoStats: VideoStats[]
   activity: Activity[]
@@ -71,6 +92,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
   const t = useTranslations('analytics')
   const tc = useTranslations('common')
   const tp = useTranslations('projects')
+  const tph = useTranslations('photos')
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -208,6 +230,28 @@ export default function AnalyticsClient({ id }: { id: string }) {
                 <p className="text-base font-semibold tabular-nums">{stats.videoCount}</p>
               </div>
             </div>
+            {stats.photoCount > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                  <Images className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">{t('photoDownloads')}</p>
+                  <p className="text-base font-semibold tabular-nums">{stats.photoDownloads.toLocaleString()}</p>
+                </div>
+              </div>
+            )}
+            {stats.clientUploads > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+                  <FolderUp className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">{tp('clientUploads')}</p>
+                  <p className="text-base font-semibold tabular-nums">{stats.clientUploads.toLocaleString()}</p>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -294,8 +338,10 @@ export default function AnalyticsClient({ id }: { id: string }) {
                     const isExpanded = expandedItems.has(event.id)
                     const ActivityIcon = event.type === 'AUTH'
                       ? (event.accessMethod === 'OTP' ? Mail : event.accessMethod === 'PASSWORD' ? Lock : event.accessMethod === 'GUEST' ? UserCircle : Globe)
+                      : event.type === 'PHOTO_DOWNLOAD' ? Images
+                      : event.type === 'CLIENT_UPLOAD' ? FolderUp
                       : Download
-                    const iconColor = event.type === 'AUTH' ? 'text-primary' : 'text-success'
+                    const iconColor = event.type === 'AUTH' ? 'text-primary' : event.type === 'CLIENT_UPLOAD' ? 'text-info' : 'text-success'
 
                     return (
                       <div
@@ -313,6 +359,10 @@ export default function AnalyticsClient({ id }: { id: string }) {
                                 event.accessMethod === 'OTP' ? t('otp') :
                                 event.accessMethod === 'PASSWORD' ? t('password') :
                                 event.accessMethod === 'GUEST' ? t('guest') : t('public')
+                              ) : event.type === 'PHOTO_DOWNLOAD' ? (
+                                tp('photos')
+                              ) : event.type === 'CLIENT_UPLOAD' ? (
+                                t('upload')
                               ) : (
                                 event.assetIds ? t('zip') : event.assetId ? t('asset') : tc('download')
                               )}
@@ -322,6 +372,10 @@ export default function AnalyticsClient({ id }: { id: string }) {
                           <span className="flex-1 min-w-0 text-muted-foreground truncate">
                             {event.type === 'AUTH' ? (
                               event.email || (event.accessMethod === 'GUEST' ? t('guestVisitor') : t('publicVisitor'))
+                            ) : event.type === 'PHOTO_DOWNLOAD' ? (
+                              event.albumName || t('allAlbums')
+                            ) : event.type === 'CLIENT_UPLOAD' ? (
+                              event.fileName
                             ) : (
                               event.videoName
                             )}
@@ -356,6 +410,39 @@ export default function AnalyticsClient({ id }: { id: string }) {
                                     <div className="flex gap-2">
                                       <span className="text-muted-foreground">{tc('email')}:</span>
                                       <span className="break-all">{event.email}</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : event.type === 'PHOTO_DOWNLOAD' ? (
+                                <>
+                                  <div className="flex gap-2">
+                                    <span className="text-muted-foreground">{t('album')}:</span>
+                                    <span>{event.albumName || t('allAlbums')}</span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <span className="text-muted-foreground">{t('content')}:</span>
+                                    <span>{tph('photoCount', { count: event.photoCount })}</span>
+                                  </div>
+                                  {event.photoFileNames.length > 0 && (
+                                    <div className="pl-3 mt-1 border-l-2 border-border space-y-0.5">
+                                      {event.photoFileNames.map((fileName, idx) => (
+                                        <div key={idx} className="text-muted-foreground font-mono break-all">
+                                          {fileName}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
+                              ) : event.type === 'CLIENT_UPLOAD' ? (
+                                <>
+                                  <div className="flex gap-2">
+                                    <span className="text-muted-foreground">{tc('name')}:</span>
+                                    <span className="break-all">{event.fileName}</span>
+                                  </div>
+                                  {(event.uploaderName || event.uploaderEmail) && (
+                                    <div className="flex gap-2">
+                                      <span className="text-muted-foreground">{tp('uploadedBy')}:</span>
+                                      <span className="break-all">{event.uploaderName || event.uploaderEmail}</span>
                                     </div>
                                   )}
                                 </>

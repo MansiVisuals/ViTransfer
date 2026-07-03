@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { logSecurityEvent } from '@/lib/video-access'
+import { trackPhotoDownload } from '@/lib/photo-access'
 import { ZipArchive } from 'archiver'
 import { Readable } from 'stream'
 import crypto from 'crypto'
@@ -108,6 +109,14 @@ export async function GET(
     if (!consumed) {
       return NextResponse.json({ error: photoMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
+
+    // Track download fire-and-forget — must not delay the zip stream
+    void trackPhotoDownload({
+      projectId,
+      albumId: scope === 'project' ? undefined : albumId,
+      photoIds: photos.map(p => p.id),
+      isAdmin: tokenData.isAdmin === true,
+    }).catch(() => {})
 
     // Photos (JPEG/PNG/WebP) are already compressed — store mode streams faster
     const archive = new ZipArchive({

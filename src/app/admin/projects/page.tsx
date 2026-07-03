@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
-import { FolderKanban, Plus, Video, Eye, Download, EyeOff, RefreshCw, Copy, Check, Mail, AlertCircle } from 'lucide-react'
+import { FolderKanban, Plus, Eye, EyeOff, RefreshCw, Copy, Check, Mail, AlertCircle } from 'lucide-react'
 import ProjectsList from '@/components/ProjectsList'
 import ProjectsToolbar from '@/components/projects/ProjectsToolbar'
 import ProjectsFilterChips from '@/components/projects/ProjectsFilterChips'
@@ -37,13 +37,6 @@ import {
   type ProjectsFilterState,
   type SerializedFilterState,
 } from '@/lib/projects-filter'
-
-interface AnalyticsOverview {
-  totalProjects: number
-  totalVideos: number
-  totalVisits: number
-  totalDownloads: number
-}
 
 const FILTERS_STORAGE_KEY = 'admin_projects_filters'
 const VIEW_MODE_STORAGE_KEY = 'admin_projects_view'
@@ -81,7 +74,6 @@ export default function AdminPage() {
   const pathname = usePathname()
 
   const [projects, setProjects] = useState<ProjectListItem[] | null>(null)
-  const [analyticsData, setAnalyticsData] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<ProjectsFilterState>(() =>
     loadInitialFilters(new URLSearchParams(typeof window !== 'undefined' ? window.location.search : ''))
@@ -149,21 +141,13 @@ export default function AdminPage() {
 
   const loadProjects = async () => {
     try {
-      const [projectsRes, analyticsRes] = await Promise.all([
-        apiFetch('/api/projects'),
-        apiFetch('/api/analytics'),
-      ])
+      const projectsRes = await apiFetch('/api/projects')
 
       if (projectsRes.ok) {
         const data = await projectsRes.json()
         setProjects(data.projects || data || [])
       } else {
         setProjects([])
-      }
-
-      if (analyticsRes.ok) {
-        const a = await analyticsRes.json()
-        setAnalyticsData(a.projects || [])
       }
     } catch (error) {
       setProjects([])
@@ -559,22 +543,6 @@ export default function AdminPage() {
     )
   }
 
-  // Analytics: scope to currently filtered projects
-  const analytics: AnalyticsOverview | null = useMemo(() => {
-    if (!analyticsData) return null
-    const filteredIds = new Set(filteredProjects.map(p => p.id))
-    const filteredAnalytics = analyticsData.filter((p: any) => filteredIds.has(p.id))
-    return {
-      totalProjects: filteredAnalytics.length,
-      totalVideos: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.videoCount || 0), 0),
-      totalVisits: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalVisits || 0), 0),
-      totalDownloads: filteredAnalytics.reduce((sum: number, p: any) => sum + (p.totalDownloads || 0), 0),
-    }
-  }, [analyticsData, filteredProjects])
-
-  const metricIconWrapperClassName = 'rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10'
-  const metricIconClassName = 'w-4 h-4 text-primary'
-
   if (loading) {
     return (
       <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
@@ -633,49 +601,6 @@ export default function AdminPage() {
             <span className="hidden sm:inline">{t('newProject')}</span>
           </Button>
         </div>
-
-        {analytics && (
-          <Card className="p-3 mb-4">
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <FolderKanban className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{t('projectsCount')}</p>
-                  <p className="text-base font-semibold tabular-nums">{analytics.totalProjects.toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <Video className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{t('videos')}</p>
-                  <p className="text-base font-semibold tabular-nums">{analytics.totalVideos.toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <Eye className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{t('visits')}</p>
-                  <p className="text-base font-semibold tabular-nums">{analytics.totalVisits.toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={metricIconWrapperClassName}>
-                  <Download className={metricIconClassName} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{t('downloads')}</p>
-                  <p className="text-base font-semibold tabular-nums">{analytics.totalDownloads.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
 
         <ProjectsSavedViews
           views={savedViews}

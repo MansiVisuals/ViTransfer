@@ -149,66 +149,24 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
   const downloadButtonClass = 'p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-50 text-sm font-medium text-foreground'
 
   return (
-    <div className="mt-8">
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2 min-w-0">
-          <Images className="w-5 h-5 text-primary flex-shrink-0" />
-          {selectedAlbum ? (
-            <span className="truncate">{selectedAlbum.name}</span>
-          ) : (
-            t('photos')
-          )}
-        </h2>
-        <div className="flex-1" />
-        {selectedAlbum ? (
-          <>
-            {allowPhotoDownload && selectedIds.size > 0 && (
-              <button type="button" onClick={() => handleZipDownload('selection')} disabled={downloading} className={downloadButtonClass}>
-                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                <span className="hidden sm:inline">{t('downloadSelected', { count: selectedIds.size })}</span>
-              </button>
-            )}
-            {allowPhotoDownload && photos.length > 0 && (
-              <button type="button" onClick={() => handleZipDownload('album')} disabled={downloading} className={downloadButtonClass}>
-                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                <span className="hidden sm:inline">{t('downloadAlbum')}</span>
-              </button>
-            )}
-            <button type="button" onClick={() => setSelectedAlbum(null)} className={downloadButtonClass}>
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('backToAlbums')}</span>
-            </button>
-          </>
-        ) : (
-          allowPhotoDownload && albums.length > 1 && (
+    <>
+      {/* Albums overview — rendered inside the share grid page */}
+      <div className="mt-8">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2 min-w-0">
+            <Images className="w-5 h-5 text-primary flex-shrink-0" />
+            {t('photos')}
+          </h2>
+          <div className="flex-1" />
+          {allowPhotoDownload && albums.length > 1 && (
             <button type="button" onClick={() => handleZipDownload('project')} disabled={downloading} className={downloadButtonClass}>
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               <span className="hidden sm:inline">{t('downloadAllAlbums')}</span>
             </button>
-          )
-        )}
-      </div>
+          )}
+        </div>
 
-      {selectedAlbum ? (
-        photosLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : photos.length === 0 ? (
-          <div className="text-center py-8 text-sm text-muted-foreground">
-            {t('noPhotosYet')}
-          </div>
-        ) : (
-          <PhotoGrid
-            photos={photos}
-            buildPhotoUrl={buildPhotoUrl}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleSelect}
-            onPhotoClick={setLightboxIndex}
-          />
-        )
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
           {albums.map(album => (
             <button
               key={album.id}
@@ -226,15 +184,70 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                 ) : (
-                  <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                  <ImageIcon className="w-6 h-6 text-muted-foreground" />
                 )}
               </div>
-              <div className="px-3 py-2">
+              <div className="px-2 py-1.5">
                 <p className="text-sm font-medium truncate">{album.name}</p>
                 <p className="text-xs text-muted-foreground">{t('photoCount', { count: album.photoCount })}</p>
               </div>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Album view — full page, like entering a video's review page */}
+      {selectedAlbum && (
+        <div className="fixed inset-0 z-40 bg-background flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm flex-shrink-0">
+            <button type="button" onClick={() => setSelectedAlbum(null)} className={downloadButtonClass}>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('backToAlbums')}</span>
+            </button>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Images className="w-4 h-4 text-primary flex-shrink-0" />
+              <p className="text-sm font-semibold truncate">{selectedAlbum.name}</p>
+              <p className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
+                {t('photoCount', { count: selectedAlbum.photoCount })}
+              </p>
+            </div>
+            {allowPhotoDownload && selectedIds.size > 0 && (
+              <button type="button" onClick={() => handleZipDownload('selection')} disabled={downloading} className={downloadButtonClass}>
+                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                <span className="hidden sm:inline">{t('downloadSelected', { count: selectedIds.size })}</span>
+                <span className="sm:hidden">{selectedIds.size}</span>
+              </button>
+            )}
+            {allowPhotoDownload && photos.length > 0 && (
+              <button type="button" onClick={() => handleZipDownload('album')} disabled={downloading} className={downloadButtonClass}>
+                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                <span className="hidden sm:inline">{t('downloadAlbum')}</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+              {photosLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : photos.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  {t('noPhotosYet')}
+                </div>
+              ) : (
+                <PhotoGrid
+                  photos={photos}
+                  buildPhotoUrl={buildPhotoUrl}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  onPhotoClick={setLightboxIndex}
+                  dense
+                />
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -248,6 +261,6 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
           canDownload={allowPhotoDownload}
         />
       )}
-    </div>
+    </>
   )
 }

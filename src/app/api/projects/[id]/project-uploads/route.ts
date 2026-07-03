@@ -45,6 +45,7 @@ export async function GET(
       fileSize: u.fileSize.toString(),
       fileType: u.fileType,
       category: u.category,
+      hasThumbnail: !!u.thumbnailPath,
       uploadedByName: u.uploadedByName,
       uploadedByEmail: u.uploadedByEmail,
       createdAt: u.createdAt,
@@ -79,7 +80,7 @@ export async function DELETE(
 
     const upload = await prisma.projectUpload.findFirst({
       where: { id: uploadId, projectId },
-      select: { id: true, storagePath: true },
+      select: { id: true, storagePath: true, thumbnailPath: true },
     })
 
     if (!upload) {
@@ -87,6 +88,9 @@ export async function DELETE(
     }
 
     await deleteFile(upload.storagePath)
+    if (upload.thumbnailPath) {
+      await deleteFile(upload.thumbnailPath).catch(() => {})
+    }
     await prisma.projectUpload.delete({ where: { id: upload.id } })
 
     return NextResponse.json({ success: true })

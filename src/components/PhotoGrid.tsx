@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { CheckSquare, Square, ImageIcon, Loader2, Star, Trash2 } from 'lucide-react'
+import { CheckSquare, Square, ImageIcon, Loader2, Trash2 } from 'lucide-react'
 
 export interface GalleryPhoto {
   id: string
@@ -20,9 +20,8 @@ interface PhotoGridProps {
   onPhotoClick: (index: number) => void
   onDelete?: (photo: GalleryPhoto) => void
   deletingId?: string | null
-  /** Admin only: current album cover + setter (shows a star action per photo) */
-  coverPhotoId?: string | null
-  onSetCover?: (photo: GalleryPhoto) => void
+  /** Smaller tiles / more columns (share pages) */
+  dense?: boolean
 }
 
 export default function PhotoGrid({
@@ -33,13 +32,15 @@ export default function PhotoGrid({
   onPhotoClick,
   onDelete,
   deletingId,
-  coverPhotoId,
-  onSetCover,
+  dense = false,
 }: PhotoGridProps) {
   const t = useTranslations('photos')
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+    <div className={dense
+      ? 'grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1.5'
+      : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2'
+    }>
       {photos.map((photo, index) => {
         const isSelected = selectedIds.has(photo.id)
         return (
@@ -78,33 +79,18 @@ export default function PhotoGrid({
               {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
             </button>
 
-            {(onDelete || onSetCover) && (
-              <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
-                {onSetCover && photo.hasThumbnail && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onSetCover(photo) }}
-                    className={`p-1 rounded-md bg-background/70 backdrop-blur-sm transition-opacity ${coverPhotoId === photo.id ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground'}`}
-                    title={t('setAsCover')}
-                    aria-label={t('setAsCover')}
-                  >
-                    <Star className={`w-4 h-4 ${coverPhotoId === photo.id ? 'fill-current' : ''}`} />
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onDelete(photo) }}
-                    disabled={deletingId === photo.id}
-                    className="p-1 rounded-md bg-background/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity disabled:opacity-50"
-                    aria-label={t('deletePhoto')}
-                  >
-                    {deletingId === photo.id
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Trash2 className="w-4 h-4" />}
-                  </button>
-                )}
-              </div>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDelete(photo) }}
+                disabled={deletingId === photo.id}
+                className="absolute top-1.5 right-1.5 p-1 rounded-md bg-background/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity disabled:opacity-50"
+                aria-label={t('deletePhoto')}
+              >
+                {deletingId === photo.id
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Trash2 className="w-4 h-4" />}
+              </button>
             )}
 
             <div className="absolute bottom-0 inset-x-0 px-2 py-1 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">

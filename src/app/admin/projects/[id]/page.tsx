@@ -9,7 +9,7 @@ import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import ProjectUploadsBlock from '@/components/ProjectUploadsBlock'
 import PhotoAlbumsBlock from '@/components/PhotoAlbumsBlock'
-import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp, Images, ChevronDown, ChevronUp, CheckCircle2, CalendarDays } from 'lucide-react'
+import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp, Images, ChevronDown, ChevronUp } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { useTranslations } from 'next-intl'
 import { logError } from '@/lib/logging'
@@ -22,7 +22,6 @@ const SECTIONS_COLLAPSED_KEY = 'vitransfer-admin-project-sections-collapsed'
 export default function ProjectPage() {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
-  const tv = useTranslations('videos')
   const params = useParams()
   const router = useRouter()
   const id = params?.id as string
@@ -175,9 +174,6 @@ export default function ProjectPage() {
   const countBadgeClassName = 'text-sm font-normal text-muted-foreground'
 
   const videoGroupNames: string[] = Array.from(new Set(project.videos.map((v: any) => v.name)))
-  const approvedGroupCount = videoGroupNames.filter(name =>
-    project.videos.some((v: any) => v.name === name && v.approved)
-  ).length
 
   return (
     <div className="flex-1 min-h-0 bg-background">
@@ -198,38 +194,6 @@ export default function ProjectPage() {
               </Button>
             </Link>
           </div>
-        </div>
-
-        {/* At-a-glance project summary */}
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5" title={t('videos')}>
-            <Video className="w-3.5 h-3.5" />
-            {videoGroupNames.length}
-          </span>
-          {approvedGroupCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-success" title={tv('approved')}>
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {approvedGroupCount}
-            </span>
-          )}
-          {photoCounts !== null && (
-            <span className="inline-flex items-center gap-1.5" title={t('photos')}>
-              <Images className="w-3.5 h-3.5" />
-              {photoCounts.photos}
-            </span>
-          )}
-          {project.allowReverseShare && uploadsCount !== null && (
-            <span className="inline-flex items-center gap-1.5" title={t('clientUploads')}>
-              <FolderUp className="w-3.5 h-3.5" />
-              {uploadsCount}
-            </span>
-          )}
-          {project.dueDate && (
-            <span className="inline-flex items-center gap-1.5" title={t('dueDateLabel')}>
-              <CalendarDays className="w-3.5 h-3.5" />
-              {new Date(project.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-            </span>
-          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

@@ -1,8 +1,10 @@
 import crypto from 'crypto'
 import { NextRequest } from 'next/server'
+import { prisma } from './db'
 import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
 import { getRedis } from './redis'
+import { getSecuritySettings } from './video-access'
 import { logError, logMessage } from './logging'
 
 export interface AlbumAccessToken {
@@ -55,6 +57,38 @@ export async function generateAlbumAccessToken(
   await redis.setex(cacheKey, ttlSeconds, token)
 
   return token
+}
+
+/**
+ * Record a photo download event (mirrors trackVideoAccess: respects the
+ * analytics toggle and skips admin activity).
+ */
+export async function trackPhotoDownload(params: {
+  projectId: string
+  albumId?: string // undefined for whole-project zips
+  photoIds: string[]
+  isAdmin?: boolean
+}) {
+  const { projectId, albumId, photoIds, isAdmin } = params
+
+  const settings = await getSecuritySettings()
+  if (!settings.trackAnalytics) {
+    return
+  }
+
+  // Avoid inflating metrics with admin activity
+  if (isAdmin) {
+    return
+  }
+
+  await prisma.videoAnalytics.create({
+    data: {
+      projectId,
+      eventType: 'DOWNLOAD_COMPLETE',
+      albumId,
+      photoIds: JSON.stringify(photoIds),
+    },
+  })
 }
 
 /**

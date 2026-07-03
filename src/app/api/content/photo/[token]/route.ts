@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
-import { verifyAlbumAccessToken } from '@/lib/photo-access'
+import { verifyAlbumAccessToken, trackPhotoDownload } from '@/lib/photo-access'
 import { getSecuritySettings } from '@/lib/video-access'
 import { Readable } from 'stream'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -87,6 +87,16 @@ export async function GET(
 
     if (!filePath) {
       return NextResponse.json({ error: photoMessages.photoNotFound || 'Photo not found' }, { status: 404 })
+    }
+
+    // Track single-photo downloads fire-and-forget (viewing is not tracked)
+    if (isDownload) {
+      void trackPhotoDownload({
+        projectId: verifiedToken.projectId,
+        albumId: photo.albumId,
+        photoIds: [photo.id],
+        isAdmin: verifiedToken.isAdmin,
+      }).catch(() => {})
     }
 
     const fileStream = await downloadFile(filePath)

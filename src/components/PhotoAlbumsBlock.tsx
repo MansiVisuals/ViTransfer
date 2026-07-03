@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  ArrowLeft, Download, FolderPlus, ImageIcon, Loader2, Pencil, Plus, Trash2, Upload, X,
+  ArrowLeft, FolderPlus, ImageIcon, Loader2, Pencil, Plus, Star, Trash2, Upload, X,
 } from 'lucide-react'
+import { formatFileSize } from '@/lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
-import PhotoGrid, { GalleryPhoto } from './PhotoGrid'
+import type { GalleryPhoto } from './PhotoGrid'
 import PhotoLightbox from './PhotoLightbox'
 import { usePhotoUploadQueue } from '@/hooks/usePhotoUploadQueue'
 import { apiFetch } from '@/lib/api-client'
@@ -75,10 +76,8 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
   const [albumName, setAlbumName] = useState('')
   const [savingAlbum, setSavingAlbum] = useState(false)
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [downloading, setDownloading] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -147,12 +146,10 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
   useEffect(() => {
     if (selectedAlbum) {
       setPhotosLoading(true)
-      setSelectedIds(new Set())
       fetchPhotos(selectedAlbum.id)
     } else {
       setPhotos([])
       setContentToken(null)
-      setSelectedIds(new Set())
     }
   }, [selectedAlbum, fetchPhotos])
 
@@ -271,7 +268,6 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
       )
       if (res.ok) {
         setPhotos(prev => prev.filter(p => p.id !== photo.id))
-        setSelectedIds(prev => { const next = new Set(prev); next.delete(photo.id); return next })
         fetchAlbums()
       }
     } catch (error) {
@@ -279,45 +275,6 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
     } finally {
       setDeletingId(null)
     }
-  }
-
-  const handleZipDownload = async (scope: 'selection' | 'album') => {
-    if (!selectedAlbum) return
-    setDownloading(true)
-    try {
-      const res = await apiFetch(`/api/projects/${projectId}/photos/download-zip-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          scope === 'selection'
-            ? { scope, albumId: selectedAlbum.id, photoIds: Array.from(selectedIds) }
-            : { scope, albumId: selectedAlbum.id }
-        ),
-      })
-      if (!res.ok) return
-      const { url } = await res.json()
-      const a = document.createElement('a')
-      a.href = url
-      a.download = ''
-      a.rel = 'noopener'
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    } catch (error) {
-      logError('Error downloading photos:', error)
-    } finally {
-      setDownloading(false)
-    }
-  }
-
-  const toggleSelect = (photoId: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(photoId)) next.delete(photoId)
-      else next.add(photoId)
-      return next
-    })
   }
 
   // ── Drag & drop ───────────────────────────────────────────────────────────
@@ -467,19 +424,6 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
             <Trash2 className="w-4 h-4" />
           </button>
           <div className="flex-1" />
-          {selectedIds.size > 0 && (
-            <Button variant="outline" size="sm" onClick={() => handleZipDownload('selection')} disabled={downloading}>
-              {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin sm:mr-1" /> : <Download className="w-3.5 h-3.5 sm:mr-1" />}
-              <span className="hidden sm:inline">{t('downloadSelected', { count: selectedIds.size })}</span>
-              <span className="sm:hidden">{selectedIds.size}</span>
-            </Button>
-          )}
-          {photos.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => handleZipDownload('album')} disabled={downloading}>
-              {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin sm:mr-1" /> : <Download className="w-3.5 h-3.5 sm:mr-1" />}
-              <span className="hidden sm:inline">{t('downloadAlbum')}</span>
-            </Button>
-          )}
           <Button variant="default" size="sm" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-3.5 h-3.5 sm:mr-1" />
             <span className="hidden sm:inline">{t('uploadPhotos')}</span>
@@ -505,17 +449,70 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
             {t('noPhotosYet')}
           </div>
         ) : (
-          <PhotoGrid
-            photos={photos}
-            buildPhotoUrl={buildPhotoUrl}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleSelect}
-            onPhotoClick={setLightboxIndex}
-            onDelete={handleDeletePhoto}
-            deletingId={deletingId}
-            coverPhotoId={selectedAlbum.coverPhotoId}
-            onSetCover={handleSetCover}
-          />
+          <div className="space-y-2">
+            {photos.map((photo, index) => {
+              const isCover = selectedAlbum.coverPhotoId === photo.id
+              return (
+                <div
+                  key={photo.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setLightboxIndex(index)}
+                    className="flex-shrink-0 cursor-zoom-in"
+                    aria-label={photo.fileName}
+                  >
+                    {photo.hasThumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={buildPhotoUrl(photo.id, 'thumb')}
+                        alt={photo.fileName}
+                        loading="lazy"
+                        className="w-20 h-12 rounded-md object-cover border border-border bg-muted"
+                      />
+                    ) : (
+                      <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{photo.fileName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(Number(photo.fileSize))}
+                      {photo.width && photo.height ? ` • ${photo.width}×${photo.height}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {photo.hasThumbnail && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetCover(photo)}
+                        className={`p-1.5 rounded hover:bg-muted transition-colors ${isCover ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                        title={t('setAsCover')}
+                        aria-label={t('setAsCover')}
+                      >
+                        <Star className={`w-4 h-4 ${isCover ? 'fill-current' : ''}`} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePhoto(photo)}
+                      disabled={deletingId === photo.id}
+                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                      title={t('deletePhoto')}
+                      aria-label={t('deletePhoto')}
+                    >
+                      {deletingId === photo.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         )}
 
         {lightboxIndex !== null && (
@@ -525,7 +522,7 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
             buildPhotoUrl={buildPhotoUrl}
             onClose={() => setLightboxIndex(null)}
             onNavigate={setLightboxIndex}
-            canDownload
+            canDownload={false}
           />
         )}
 
@@ -585,11 +582,11 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
                   src={`/api/content/photo/${album.contentToken}?photoId=${album.coverPhotoId}&variant=thumb`}
                   alt={album.name}
                   loading="lazy"
-                  className="w-14 h-8 rounded object-cover border border-border bg-muted flex-shrink-0"
+                  className="w-20 h-12 rounded-md object-cover border border-border bg-muted flex-shrink-0"
                 />
               ) : (
-                <div className="w-14 h-8 rounded border border-border bg-muted flex items-center justify-center flex-shrink-0">
-                  <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                  <ImageIcon className="w-5 h-5 text-muted-foreground" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -603,8 +600,8 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
             onClick={() => { setAlbumName(''); setCreateOpen(true) }}
             className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed bg-card hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
           >
-            <div className="w-14 h-8 rounded border border-dashed border-border flex items-center justify-center flex-shrink-0">
-              <Plus className="w-4 h-4" />
+            <div className="w-20 h-12 rounded-md border border-dashed border-border flex items-center justify-center flex-shrink-0">
+              <Plus className="w-5 h-5" />
             </div>
             <span className="text-sm font-medium">{t('createAlbum')}</span>
           </button>

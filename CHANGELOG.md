@@ -10,17 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.1] - 2026-07-03
 
 ### Added
-- Photo galleries: per-project albums with admin uploads (TUS + S3), automatic webp thumbnails, sort toggle, admin-selectable album cover, and a client gallery on the share page with lightbox and multi-select. Also shown on the admin share preview.
-- Photo zip downloads: selected photos, one album, or the whole project (folder per album).
-- Per-project `allowPhotoDownload` toggle for client photo downloads.
+- Photo galleries: per-project albums with admin uploads (TUS + S3), automatic webp thumbnails, sort toggle, and admin-selectable album covers. Clients get a full-page album view on the share page with lightbox and multi-select; the admin share preview shows the identical gallery.
+- Photo zip downloads on the share page: selected photos, one album, or the whole project (folder per album), gated by a new per-project `allowPhotoDownload` toggle.
 - Drag & drop: photos onto an open album; folders onto the Photos section create an album per folder and upload its photos.
+- Photo downloads and client uploads wired into project analytics: new stats and activity feed events (album, photo list, uploader).
+- Client upload previews: the worker now generates thumbnails for reverse-share uploads — image thumbs, video frame grabs, and audio waveforms — shown in the Client Uploads list.
 - Video thumbnails on the admin project page.
-- Collapsible Videos / Photos / Client Uploads sections with counts, plus an at-a-glance summary row (videos, approved, photos, uploads, due date).
+- Collapsible Videos / Photos / Client Uploads sections with counts on the admin project page.
+- Share page: grid/list view toggle for videos, denser video grid.
 - Empty state with upload CTA when a project has no videos.
 
 ### Changed
-- Upload Videos button moved from the page header into the Videos section header.
-- Archive and Delete separated into a danger zone in the project actions panel.
+- Upload Videos button moved from the page header into the Videos section header; Download All Videos moved from the share page toolbar into the Videos section header.
+- Admin project page shows albums, photos, and client uploads as compact thumbnail lists; bulk download buttons removed from admin pages (downloads live on the share pages).
+
+### Removed
+- Analytics overview card (projects / videos / visits / downloads) on the projects dashboard.
 
 ## [1.1.4] - 2026-07-03
 

@@ -236,11 +236,11 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
                     src={thumbnails[groupName]}
                     alt={groupName}
                     loading="lazy"
-                    className="w-14 h-8 rounded object-cover border border-border bg-muted flex-shrink-0"
+                    className="w-20 h-12 rounded-md object-cover border border-border bg-muted flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-14 h-8 rounded border border-border bg-muted flex items-center justify-center flex-shrink-0">
-                    <Video className="w-4 h-4 text-muted-foreground" />
+                  <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                    <Video className="w-5 h-5 text-muted-foreground" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">

@@ -506,3 +506,43 @@ export async function generateThumbnail(
     })
   })
 }
+
+/**
+ * Render an audio waveform preview image (used for client upload thumbnails)
+ */
+export async function generateWaveformImage(
+  inputPath: string,
+  outputPath: string
+): Promise<void> {
+  const args = [
+    '-v', 'error',
+    '-i', inputPath,
+    '-filter_complex', 'showwavespic=s=512x288:colors=#7c8cf8',
+    '-frames:v', '1',
+    '-y',
+    outputPath
+  ]
+
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn('nice', ['-n', '10', ffmpegPath, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+    let stderr = ''
+
+    ffmpeg.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    ffmpeg.on('close', (code) => {
+      if (code === 0) {
+        resolve()
+      } else {
+        reject(new Error(`FFmpeg waveform generation failed: ${stderr}`))
+      }
+    })
+
+    ffmpeg.on('error', (err) => {
+      reject(new Error(`Failed to start FFmpeg: ${err.message}`))
+    })
+  })
+}

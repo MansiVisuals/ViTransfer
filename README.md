@@ -1,5 +1,7 @@
 # ViTransfer
 
+> **Docker repo change:** From v1.0.0 onward, the Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing setup, update your Docker Compose, Quadlet, or manual pull commands to use the new repository.
+
 **Professional Video Review & Approval Platform for Filmmakers**
 
 ViTransfer is a self-hosted web app for video teams to share work with clients, collect feedback, and manage approvals.
@@ -15,8 +17,6 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 ---
 
 > **v1.0** — ViTransfer is production-ready and used in production by many users. Development continues with occasional improvements and fixes as the platform is near feature-complete. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
-
-> **Docker repo change:** From v1.0.0 onward, the Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing setup, update your Docker Compose, Quadlet, or manual pull commands to use the new repository.
 
 **Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
 

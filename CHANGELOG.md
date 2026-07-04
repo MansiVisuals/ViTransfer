@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Share page back buttons now say "Back to overview" (was "All Videos" in the review page and "Albums" in the album view).
+- Album view top bar now matches the video review page: same floating bar with back button, prev/next album selector with expandable cover strip, and language/theme toggles.
+- Admin back buttons (project, settings, analytics) use the outlined button style.
 
 ## [1.2.1] - 2026-07-03
 

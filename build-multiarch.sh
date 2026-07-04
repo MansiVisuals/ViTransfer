@@ -2,10 +2,11 @@
 # ViTransfer Multi-Architecture Build Script
 # Usage: ./build-multiarch.sh [version] [--no-cache]
 # Examples:
-#   ./build-multiarch.sh 0.8.5        # Tags: 0.8.5, latest
+#   ./build-multiarch.sh 0.8.5        # Tags: 0.8.5, latest (release — always --no-cache)
 #   ./build-multiarch.sh --dev        # Tags: dev
 #   ./build-multiarch.sh -dev0.8.5    # Tags: dev-0.8.5
-#   ./build-multiarch.sh              # Tags: latest
+#   ./build-multiarch.sh              # Tags: latest (release — always --no-cache)
+# Release builds (any non-dev version) always build with --no-cache.
 
 set -e
 
@@ -18,14 +19,16 @@ BUILDER="multiarch-builder"
 
 # Parse arguments
 [[ "$1" == "--no-cache" || "$2" == "--no-cache" ]] && NO_CACHE="--no-cache"
+[[ "$VERSION" == "--no-cache" ]] && VERSION="latest"
 
-# Determine tags based on version
+# Determine tags based on version. Release builds (non-dev) always use
+# --no-cache so published images never carry stale cached layers.
 case "$VERSION" in
     -dev*)    VERSION="${VERSION:1}"; TAGS="$DOCKER_USER/$IMAGE:$VERSION" ;;
     --dev-*)  VERSION="${VERSION:2}"; TAGS="$DOCKER_USER/$IMAGE:$VERSION" ;;
     --dev|dev) VERSION="dev"; TAGS="$DOCKER_USER/$IMAGE:dev" ;;
-    latest)   TAGS="$DOCKER_USER/$IMAGE:latest" ;;
-    *)        TAGS="$DOCKER_USER/$IMAGE:$VERSION $DOCKER_USER/$IMAGE:latest" ;;
+    latest)   TAGS="$DOCKER_USER/$IMAGE:latest"; NO_CACHE="--no-cache" ;;
+    *)        TAGS="$DOCKER_USER/$IMAGE:$VERSION $DOCKER_USER/$IMAGE:latest"; NO_CACHE="--no-cache" ;;
 esac
 
 echo "ViTransfer Multi-Architecture Build"

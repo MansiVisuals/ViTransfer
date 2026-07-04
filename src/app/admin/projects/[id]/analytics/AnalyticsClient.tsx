@@ -175,7 +175,7 @@ export default function AnalyticsClient({ id }: { id: string }) {
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <Link href={`/admin/projects/${id}`}>
-              <Button variant="ghost" size="default" className="justify-start px-3 mb-2">
+              <Button variant="outline" size="default" className="justify-start px-3 mb-2">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">{t('backToProject')}</span>
                 <span className="sm:hidden">{tc('back')}</span>

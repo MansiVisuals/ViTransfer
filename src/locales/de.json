@@ -605,6 +605,8 @@
     "previousPhoto": "Vorheriges Foto",
     "nextPhoto": "Nächstes Foto",
     "backToAlbums": "Alben",
+    "previousAlbum": "Vorheriges Album",
+    "nextAlbum": "Nächstes Album",
     "createAlbum": "Neues Album",
     "renameAlbum": "Album umbenennen",
     "deleteAlbum": "Album löschen",

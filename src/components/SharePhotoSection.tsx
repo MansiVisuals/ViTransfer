@@ -2,9 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Download, ImageIcon, Images, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Grid3X3, ImageIcon, Images, Loader2 } from 'lucide-react'
 import PhotoGrid, { GalleryPhoto } from './PhotoGrid'
 import PhotoLightbox from './PhotoLightbox'
+import { Button } from './ui/button'
+import ThemeToggle from './ThemeToggle'
+import LanguageToggle from './LanguageToggle'
+import { cn } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
 
@@ -43,6 +47,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [reelExpanded, setReelExpanded] = useState(false)
 
   // Share sessions authenticate with the share bearer token; admin preview
   // sessions fall back to apiFetch (admin access token + refresh handling)
@@ -92,6 +97,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
 
   useEffect(() => {
     setSelectedIds(new Set())
+    setReelExpanded(false)
     if (selectedAlbum) {
       fetchPhotos(selectedAlbum.id)
     } else {
@@ -197,33 +203,165 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
         </div>
       </div>
 
-      {/* Album view — full page, like entering a video's review page */}
-      {selectedAlbum && (
+      {/* Album view — full page with the same top bar as the video review page */}
+      {selectedAlbum && (() => {
+        const albumIndex = albums.findIndex(a => a.id === selectedAlbum.id)
+        return (
         <div className="fixed inset-0 z-40 bg-background flex flex-col overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm flex-shrink-0">
-            <button type="button" onClick={() => setSelectedAlbum(null)} className={downloadButtonClass}>
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{ts('backToOverview')}</span>
-            </button>
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Images className="w-4 h-4 text-primary flex-shrink-0" />
-              <p className="text-sm font-semibold truncate">{selectedAlbum.name}</p>
-              <p className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
-                {t('photoCount', { count: selectedAlbum.photoCount })}
-              </p>
+          <div className="relative shrink-0 z-20 p-2 sm:p-3">
+            <div className="bg-card/95 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {/* Left: Back to overview */}
+                <div className="flex items-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedAlbum(null)}
+                    className="shrink-0 gap-1.5 px-2 sm:px-3 h-8"
+                    title={ts('backToOverview')}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                    <span className="hidden sm:inline text-sm">{ts('backToOverview')}</span>
+                  </Button>
+                </div>
+
+                {/* Center: Album selector */}
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => albumIndex > 0 && setSelectedAlbum(albums[albumIndex - 1])}
+                      disabled={albumIndex <= 0}
+                      className="h-7 w-7 sm:h-8 sm:w-8"
+                      title={t('previousAlbum')}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+
+                    <button
+                      onClick={() => setReelExpanded(prev => !prev)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all',
+                        'hover:bg-muted/80 active:scale-95',
+                        reelExpanded && 'bg-muted/50'
+                      )}
+                      title={selectedAlbum.name}
+                    >
+                      <Images className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground tabular-nums">
+                        {albumIndex + 1}/{albums.length}
+                      </span>
+                    </button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => albumIndex < albums.length - 1 && setSelectedAlbum(albums[albumIndex + 1])}
+                      disabled={albumIndex >= albums.length - 1}
+                      className="h-7 w-7 sm:h-8 sm:w-8"
+                      title={t('nextAlbum')}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Right: downloads + language/theme toggles */}
+                <div className="flex items-center gap-1">
+                  {allowPhotoDownload && selectedIds.size > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleZipDownload('selection')}
+                      disabled={downloading}
+                      className="gap-1.5 px-2 h-8"
+                      title={t('downloadSelected', { count: selectedIds.size })}
+                    >
+                      {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                      <span className="text-sm tabular-nums">{selectedIds.size}</span>
+                    </Button>
+                  )}
+                  {allowPhotoDownload && photos.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleZipDownload('album')}
+                      disabled={downloading}
+                      className="h-8 w-8"
+                      title={t('downloadAlbum')}
+                    >
+                      {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    </Button>
+                  )}
+                  {shareToken && <LanguageToggle />}
+                  <ThemeToggle />
+                </div>
+              </div>
             </div>
-            {allowPhotoDownload && selectedIds.size > 0 && (
-              <button type="button" onClick={() => handleZipDownload('selection')} disabled={downloading} className={downloadButtonClass}>
-                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                <span className="hidden sm:inline">{t('downloadSelected', { count: selectedIds.size })}</span>
-                <span className="sm:hidden">{selectedIds.size}</span>
-              </button>
+
+            {/* Floating album covers overlay — same pattern as the video reel */}
+            {reelExpanded && (
+              <div className="absolute left-2 right-2 sm:left-3 sm:right-3 top-full z-30 mt-1">
+                <div className="bg-background/90 backdrop-blur-md shadow-lg rounded-xl">
+                  <div className="px-2 py-3 sm:px-4">
+                    <div
+                      className="flex gap-2 sm:gap-3 overflow-x-auto overscroll-x-contain snap-x snap-mandatory justify-center"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+                    >
+                      {albums.map(album => {
+                        const isActive = album.id === selectedAlbum.id
+                        return (
+                          <button
+                            key={album.id}
+                            onClick={() => { setSelectedAlbum(album); setReelExpanded(false) }}
+                            className={cn(
+                              'shrink-0 rounded-md sm:rounded-lg overflow-hidden snap-start',
+                              'bg-muted border-2 transition-all duration-150',
+                              'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background',
+                              'w-[80px] sm:w-[110px] md:w-[130px] lg:w-[150px]',
+                              isActive
+                                ? 'border-primary ring-2 ring-primary/30'
+                                : 'border-transparent hover:border-border'
+                            )}
+                          >
+                            <div className="aspect-video relative bg-black">
+                              {album.coverPhotoId && album.contentToken ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={`/api/content/photo/${album.contentToken}?photoId=${album.coverPhotoId}&variant=thumb`}
+                                  alt={album.name}
+                                  loading="lazy"
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  draggable={false}
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                  <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground/50" />
+                                </div>
+                              )}
+                              {isActive && <div className="absolute inset-0 bg-primary/10" />}
+                            </div>
+                            <div className="px-1.5 py-1 sm:px-2 sm:py-1.5 bg-card/80">
+                              <p className={cn(
+                                'text-[10px] sm:text-xs truncate text-center',
+                                isActive ? 'text-primary font-medium' : 'text-foreground'
+                              )}>
+                                {album.name}
+                              </p>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
-            {allowPhotoDownload && photos.length > 0 && (
-              <button type="button" onClick={() => handleZipDownload('album')} disabled={downloading} className={downloadButtonClass}>
-                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                <span className="hidden sm:inline">{t('downloadAlbum')}</span>
-              </button>
+
+            {/* Click outside to close */}
+            {reelExpanded && (
+              <div className="fixed inset-0 z-20" onClick={() => setReelExpanded(false)} aria-hidden="true" />
             )}
           </div>
 
@@ -250,7 +388,8 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {lightboxIndex !== null && (
         <PhotoLightbox

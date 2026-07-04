@@ -30,6 +30,7 @@ interface SharePhotoSectionProps {
  */
 export default function SharePhotoSection({ projectId, shareToken, allowPhotoDownload }: SharePhotoSectionProps) {
   const t = useTranslations('photos')
+  const ts = useTranslations('share')
 
   const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
@@ -202,7 +203,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm flex-shrink-0">
             <button type="button" onClick={() => setSelectedAlbum(null)} className={downloadButtonClass}>
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('backToAlbums')}</span>
+              <span className="hidden sm:inline">{ts('backToOverview')}</span>
             </button>
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <Images className="w-4 h-4 text-primary flex-shrink-0" />

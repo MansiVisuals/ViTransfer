@@ -12,6 +12,8 @@ import { logError, logMessage } from '../lib/logging'
 
 const THUMBNAIL_SIZE = 512 // longest edge in pixels
 const THUMBNAIL_QUALITY = 75
+const PREVIEW_SIZE = 2048 // longest edge — lightbox rendition, originals are download-only
+const PREVIEW_QUALITY = 82
 
 /**
  * Process uploaded photo - validate magic bytes, extract dimensions,
@@ -55,7 +57,7 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
       throw new Error(`File content is not an allowed photo type. Detected: ${fileType?.mime || 'unknown'}`)
     }
 
-    // Extract dimensions and generate thumbnail (animated GIFs keep first frame)
+    // Extract dimensions and generate renditions (animated GIFs keep first frame)
     const image = sharp(tempFilePath)
     const metadata = await image.metadata()
 
@@ -68,6 +70,17 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
     const thumbnailPath = `projects/${photo.album.projectId}/photos/${photo.album.id}/thumbs/${photoId}.webp`
     await uploadFile(thumbnailPath, thumbnailBuffer, thumbnailBuffer.length, 'image/webp')
 
+    // Web-sized preview for the lightbox — large originals (25-90 MB PNGs)
+    // are far too slow to view inline; they remain available for download
+    const previewBuffer = await image
+      .rotate()
+      .resize(PREVIEW_SIZE, PREVIEW_SIZE, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: PREVIEW_QUALITY })
+      .toBuffer()
+
+    const previewPath = `projects/${photo.album.projectId}/photos/${photo.album.id}/previews/${photoId}.webp`
+    await uploadFile(previewPath, previewBuffer, previewBuffer.length, 'image/webp')
+
     // EXIF orientation 5-8 swaps width/height for display
     const orientationSwaps = (metadata.orientation || 1) >= 5
     await prisma.photo.update({
@@ -75,6 +88,7 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
       data: {
         fileType: fileType.mime,
         thumbnailPath,
+        previewPath,
         width: (orientationSwaps ? metadata.height : metadata.width) ?? null,
         height: (orientationSwaps ? metadata.width : metadata.height) ?? null,
       },

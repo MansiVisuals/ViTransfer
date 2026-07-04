@@ -4,13 +4,16 @@ import { getProjectUploadQueue, getPhotoQueue } from '../lib/queue'
 import { logError, logMessage } from '../lib/logging'
 
 // One-time flag per backfill generation — reprocessing is idempotent, the flag
-// just avoids re-enqueuing on every worker restart
-const BACKFILL_FLAG_KEY = 'backfill:v1.2.1:preview-thumbnails'
+// just avoids re-enqueuing on every worker restart. Bump the version when a
+// release adds new derived data so the backfill runs again.
+const BACKFILL_FLAG_KEY = 'backfill:v1.2.2:preview-thumbnails'
 
 /**
- * 1.2.1 backfill: client uploads gained worker-generated preview thumbnails
- * (image/video/audio). Re-enqueue processing for completed uploads that
- * predate the change, and for photos whose thumbnail generation failed.
+ * Backfill worker-generated renditions:
+ * - 1.2.1: client uploads gained preview thumbnails (image/video/audio)
+ * - 1.2.2: photos gained 2048px lightbox previews
+ * Re-enqueue processing for rows that predate these changes or whose
+ * generation failed.
  */
 export async function runPreviewThumbnailBackfill() {
   const redis = getRedis()
@@ -45,7 +48,7 @@ export async function runPreviewThumbnailBackfill() {
     const photos = await prisma.photo.findMany({
       where: {
         uploadCompletedAt: { not: null },
-        thumbnailPath: null,
+        OR: [{ thumbnailPath: null }, { previewPath: null }],
         NOT: { fileType: { startsWith: 'INVALID' } },
       },
       select: { id: true, storagePath: true },

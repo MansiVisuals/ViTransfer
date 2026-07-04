@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.2] - 2026-07-04
+
+### Fixed
+- Photo lightbox now serves a 2048px webp preview instead of the original file — large originals (25-90 MB PNGs) made viewing very slow. Originals are still used for downloads. A one-time backfill generates previews for existing photos on worker start.
+
+### Changed
+- Share page back buttons now say "Back to overview" (was "All Videos" in the review page and "Albums" in the album view).
+
 ## [1.2.1] - 2026-07-03
 
 ### Added

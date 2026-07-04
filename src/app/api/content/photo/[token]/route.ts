@@ -82,8 +82,16 @@ export async function GET(
       )
     }
 
+    // Viewing serves worker-generated webp renditions (thumb or preview) —
+    // originals can be 25-90 MB and are only streamed for explicit downloads.
+    // previewPath falls back to the original for photos processed before previews existed.
     const useThumb = variant === 'thumb' && !isDownload
-    const filePath = useThumb ? photo.thumbnailPath : photo.storagePath
+    const useWebpRendition = !isDownload
+    const filePath = isDownload
+      ? photo.storagePath
+      : useThumb
+        ? photo.thumbnailPath
+        : photo.previewPath || photo.storagePath
 
     if (!filePath) {
       return NextResponse.json({ error: photoMessages.photoNotFound || 'Photo not found' }, { status: 404 })
@@ -102,13 +110,15 @@ export async function GET(
     const fileStream = await downloadFile(filePath)
     const webStream = Readable.toWeb(fileStream as any) as ReadableStream
 
+    const servingWebp = useThumb || (useWebpRendition && !!photo.previewPath)
     const headers: Record<string, string> = {
-      'Content-Type': useThumb ? 'image/webp' : photo.fileType,
+      'Content-Type': servingWebp ? 'image/webp' : photo.fileType,
       'Cache-Control': 'private, max-age=3600',
       'X-Content-Type-Options': 'nosniff',
     }
 
-    if (!useThumb) {
+    // Content-Length is only known for the original file
+    if (filePath === photo.storagePath) {
       headers['Content-Length'] = photo.fileSize.toString()
     }
 

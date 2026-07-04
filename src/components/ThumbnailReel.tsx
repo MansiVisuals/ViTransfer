@@ -142,10 +142,10 @@ export default function ThumbnailReel({
                 size="sm"
                 onClick={onBackToGrid}
                 className="shrink-0 gap-1.5 px-2 sm:px-3 h-8"
-                title={tShare('backToAllVideos')}
+                title={tShare('backToOverview')}
               >
                 <Grid3X3 className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">{tShare('allVideos')}</span>
+                <span className="hidden sm:inline text-sm">{tShare('backToOverview')}</span>
               </Button>
             )}
           </div>

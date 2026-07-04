@@ -442,7 +442,7 @@ export default function ProjectSettingsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <Link href={`/admin/projects/${projectId}`}>
-                <Button variant="ghost" size="default" className="justify-start px-3">
+                <Button variant="outline" size="default" className="justify-start px-3">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">{t('backToProject')}</span>
                   <span className="sm:hidden">{tc('back')}</span>

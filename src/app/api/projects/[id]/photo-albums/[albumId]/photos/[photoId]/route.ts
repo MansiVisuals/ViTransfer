@@ -43,11 +43,14 @@ export async function DELETE(
 
     await prisma.photo.delete({ where: { id: photoId } })
 
-    // Remove original + thumbnail from storage
+    // Remove original + renditions from storage
     try {
       await deleteFile(photo.storagePath)
       if (photo.thumbnailPath) {
         await deleteFile(photo.thumbnailPath)
+      }
+      if (photo.previewPath) {
+        await deleteFile(photo.previewPath)
       }
     } catch (storageError) {
       logError('Error deleting photo files from storage:', storageError)

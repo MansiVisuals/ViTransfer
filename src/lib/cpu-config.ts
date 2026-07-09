@@ -9,43 +9,27 @@ export interface CpuAllocation {
   maxThreadsUsed: number
 }
 
+function parseEnvInt(name: string, max: number): number | null {
+  const parsed = parseInt(process.env[name] ?? '', 10)
+  if (!Number.isFinite(parsed) || parsed < 1) return null
+  return Math.min(parsed, max)
+}
+
 /**
- * Calculate optimal CPU allocation.
- * Targets ~30-50% thread utilization to leave headroom for system processes.
- * On hyperthreaded CPUs, 12 threads = 6 physical cores.
+ * Budget-based CPU allocation: worst case (all video workers + clean preview
+ * encoding at once) stays at or under half the host, on any host size.
+ * WORKER_CONCURRENCY and FFMPEG_THREADS_PER_JOB override the computed values.
  */
 export function getCpuAllocation(): CpuAllocation {
-  const totalThreads = os.cpus().length
+  const effectiveThreads = parseEnvInt('CPU_THREADS', 256) ?? os.cpus().length
 
-  const envThreads = process.env.CPU_THREADS ? parseInt(process.env.CPU_THREADS, 10) : null
-  const effectiveThreads = envThreads && envThreads > 0 ? envThreads : totalThreads
-
-  let workerConcurrency: number
-  let cleanPreviewConcurrency: number
-  let threadsPerJob: number
-
-  // Conservative allocation
-  if (effectiveThreads <= 2) {
-    workerConcurrency = 1
-    cleanPreviewConcurrency = 1
-    threadsPerJob = 1
-  } else if (effectiveThreads <= 4) {
-    workerConcurrency = 1
-    cleanPreviewConcurrency = 1
-    threadsPerJob = 1
-  } else if (effectiveThreads <= 8) {
-    workerConcurrency = 1
-    cleanPreviewConcurrency = 1
-    threadsPerJob = 2
-  } else if (effectiveThreads <= 16) {
-    workerConcurrency = 1
-    cleanPreviewConcurrency = 1
-    threadsPerJob = 2
-  } else {
-    workerConcurrency = 2
-    cleanPreviewConcurrency = 1
-    threadsPerJob = 2
-  }
+  const budget = Math.max(1, Math.floor(effectiveThreads / 2))
+  const cleanPreviewConcurrency = 1
+  const workerConcurrency = parseEnvInt('WORKER_CONCURRENCY', 16)
+    ?? (effectiveThreads >= 24 ? 2 : 1)
+  // Cap at 8: x264 thread scaling flattens beyond that
+  const threadsPerJob = parseEnvInt('FFMPEG_THREADS_PER_JOB', 64)
+    ?? Math.min(8, Math.max(1, Math.floor(budget / (workerConcurrency + cleanPreviewConcurrency))))
 
   const maxThreadsUsed = (workerConcurrency + cleanPreviewConcurrency) * threadsPerJob
 

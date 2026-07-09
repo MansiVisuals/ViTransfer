@@ -13,6 +13,8 @@ const MIN_PART_SIZE = 5 * 1024 * 1024
 // the whole upload. Backoff: 0.5s → 1.5s → 4.5s.
 const PART_MAX_ATTEMPTS = 3
 const PART_RETRY_BASE_MS = 500
+// No upload progress for this long = dead connection, abort and retry
+const PART_STALL_TIMEOUT_MS = 60 * 1000
 
 interface PresignResponse {
   uploadId: string
@@ -37,7 +39,7 @@ export interface S3UploadCallbacks {
 
 interface ActiveUpload {
   abortController: AbortController
-  uploadId: string
+  uploadId: string | null // null until presign completes
   target: S3UploadTarget
   bearerToken: string | null
 }
@@ -58,6 +60,27 @@ export function useS3MultipartUpload() {
   const activeUploadsRef = useRef<Map<string, ActiveUpload>>(new Map())
   const pauseGatesRef = useRef<Map<string, PauseGate>>(new Map())
 
+  // Best-effort abort on S3 to free incomplete multipart storage
+  const abortOnServer = useCallback(async (uploadId: string, target: S3UploadTarget, bearerToken: string | null): Promise<void> => {
+    try {
+      const token = bearerToken ?? getAccessToken()
+      const authHeader = token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+      await apiPost(
+        '/api/uploads/s3/abort',
+        {
+          uploadId,
+          videoId: target.videoId,
+          assetId: target.assetId,
+          projectUploadId: target.projectUploadId,
+          photoId: target.photoId,
+        },
+        authHeader
+      )
+    } catch (err) {
+      console.warn('[S3 MULTIPART] Failed to abort multipart upload:', err)
+    }
+  }, [])
+
   const abortUpload = useCallback(async (uploadKey: string): Promise<void> => {
     const active = activeUploadsRef.current.get(uploadKey)
     if (!active) return
@@ -72,28 +95,11 @@ export function useS3MultipartUpload() {
       pauseGatesRef.current.delete(uploadKey)
     }
 
-    // Best-effort abort on S3 to free incomplete multipart storage
-    try {
-      const authHeader = active.bearerToken
-        ? { headers: { Authorization: `Bearer ${active.bearerToken}` } }
-        : getAccessToken()
-        ? { headers: { Authorization: `Bearer ${getAccessToken()}` } }
-        : {}
-      await apiPost(
-        '/api/uploads/s3/abort',
-        {
-          uploadId: active.uploadId,
-          videoId: active.target.videoId,
-          assetId: active.target.assetId,
-          projectUploadId: active.target.projectUploadId,
-          photoId: active.target.photoId,
-        },
-        authHeader
-      )
-    } catch (err) {
-      console.warn('[S3 MULTIPART] Failed to abort multipart upload:', err)
-    }
-  }, [])
+    // Presign still in flight — startUpload aborts server-side once the uploadId is known
+    if (!active.uploadId) return
+
+    await abortOnServer(active.uploadId, active.target, active.bearerToken)
+  }, [abortOnServer])
 
   const startUpload = useCallback(
     async (
@@ -114,6 +120,15 @@ export function useS3MultipartUpload() {
           ? { headers: { Authorization: `Bearer ${bearerToken}` } }
           : {}
 
+        // Register before presign so a cancel during the round-trip aborts the signal
+        const active: ActiveUpload = {
+          abortController,
+          uploadId: null,
+          target,
+          bearerToken: bearerToken ?? null,
+        }
+        activeUploadsRef.current.set(uploadKey, active)
+
         const presignRes: PresignResponse = await apiPost(
           '/api/uploads/s3/presign',
           {
@@ -128,14 +143,13 @@ export function useS3MultipartUpload() {
           authInit
         )
 
-        if (signal.aborted) return
+        active.uploadId = presignRes.uploadId
 
-        activeUploadsRef.current.set(uploadKey, {
-          abortController,
-          uploadId: presignRes.uploadId,
-          target,
-          bearerToken: bearerToken ?? null,
-        })
+        // Cancelled during presign: the multipart upload now exists server-side, free it
+        if (signal.aborted) {
+          await abortOnServer(presignRes.uploadId, target, bearerToken ?? null)
+          return
+        }
 
         // ── 2. Upload parts directly to S3 ────────────────────────────────────
         const { uploadId, partSize: serverPartSize, parts } = presignRes
@@ -170,15 +184,31 @@ export function useS3MultipartUpload() {
             const onAbort = () => xhr.abort()
             signal.addEventListener('abort', onAbort, { once: true })
 
+            // Stall watchdog: abort the attempt when progress stops so it retries
+            let stalled = false
+            let stallTimer: ReturnType<typeof setTimeout>
+            const armStallTimer = () => {
+              clearTimeout(stallTimer)
+              stallTimer = setTimeout(() => {
+                stalled = true
+                xhr.abort()
+              }, PART_STALL_TIMEOUT_MS)
+            }
+            const cleanup = () => {
+              signal.removeEventListener('abort', onAbort)
+              clearTimeout(stallTimer)
+            }
+
             xhr.open('PUT', url, true)
             xhr.upload.onprogress = (ev) => {
+              armStallTimer()
               if (ev.lengthComputable) {
                 partProgress[partIndex] = ev.loaded
                 reportProgress()
               }
             }
             xhr.onload = () => {
-              signal.removeEventListener('abort', onAbort)
+              cleanup()
               if (xhr.status >= 200 && xhr.status < 300) {
                 const etag =
                   xhr.getResponseHeader('ETag') ?? xhr.getResponseHeader('etag')
@@ -186,8 +216,7 @@ export function useS3MultipartUpload() {
                   reject(new Error(`Part ${partIndex + 1} returned no ETag`))
                   return
                 }
-                // On success, lock the part's progress at its full size so
-                // partial-byte XHR reporting can't drift the total.
+                // Lock the part's progress at its full size so partial-byte XHR reporting can't drift the total
                 partProgress[partIndex] = chunk.size
                 reportProgress()
                 resolve(etag.replace(/"/g, ''))
@@ -196,17 +225,22 @@ export function useS3MultipartUpload() {
               }
             }
             xhr.onerror = () => {
-              signal.removeEventListener('abort', onAbort)
+              cleanup()
               reject(new Error(`Part ${partIndex + 1} network error`))
             }
             xhr.onabort = () => {
-              signal.removeEventListener('abort', onAbort)
-              reject(new Error('Upload cancelled'))
+              // Only a signal abort is a user cancel — Safari fires abort (not error)
+              // when it drops a connection itself, which must stay retryable
+              cleanup()
+              if (signal.aborted) {
+                reject(new Error('Upload cancelled'))
+              } else if (stalled) {
+                reject(new Error(`Part ${partIndex + 1} stalled`))
+              } else {
+                reject(new Error(`Part ${partIndex + 1} aborted by browser`))
+              }
             }
-            xhr.ontimeout = () => {
-              signal.removeEventListener('abort', onAbort)
-              reject(new Error(`Part ${partIndex + 1} timeout`))
-            }
+            armStallTimer()
             xhr.send(chunk)
           })
         }
@@ -235,7 +269,6 @@ export function useS3MultipartUpload() {
             } catch (err: any) {
               lastErr = err
               if (signal.aborted) throw err
-              if (err?.message === 'Upload cancelled') throw err
               if (attempt < PART_MAX_ATTEMPTS) {
                 const backoff = PART_RETRY_BASE_MS * Math.pow(3, attempt - 1)
                 await new Promise((r) => setTimeout(r, backoff))
@@ -285,7 +318,7 @@ export function useS3MultipartUpload() {
         onSuccess?.()
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err)
-        const isCancelled = (err as Error).message === 'Upload cancelled' || signal.aborted
+        const isCancelled = signal.aborted
 
         console.warn('[S3 MULTIPART] Upload failed:', isCancelled ? 'cancelled' : errorMessage)
 
@@ -299,7 +332,7 @@ export function useS3MultipartUpload() {
         onError?.(err instanceof Error ? err : new Error(String(err)))
       }
     },
-    [abortUpload]
+    [abortUpload, abortOnServer]
   )
 
   /** Pause an in-progress upload. Takes effect between part batches. */

@@ -14,6 +14,10 @@ const DEBUG = process.env.DEBUG_WORKER === 'true'
 const ffmpegPath = 'ffmpeg'
 const ffprobePath = 'ffprobe'
 
+// 'faster' is the speed/size sweet spot for CRF-based review proxies; FFMPEG_PRESET overrides
+const VALID_PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow']
+const FFMPEG_PRESET = VALID_PRESETS.includes(process.env.FFMPEG_PRESET ?? '') ? process.env.FFMPEG_PRESET! : 'faster'
+
 export interface VideoMetadata {
   duration: number
   width: number
@@ -211,17 +215,7 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   // This coordinates with worker concurrency to prevent CPU overload
   const cpuAllocation = getCpuAllocation()
   const threads = cpuAllocation.threadsPerJob
-
-  // Optimize preset based on available threads
-  // Fewer threads = faster preset to compensate
-  let preset = 'fast'
-  if (threads <= 2) {
-    preset = 'faster'
-  } else if (threads <= 4) {
-    preset = 'fast'
-  } else {
-    preset = 'medium'
-  }
+  const preset = FFMPEG_PRESET
 
   if (DEBUG) {
     logMessage('[FFMPEG DEBUG] CPU optimization:', {

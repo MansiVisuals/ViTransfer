@@ -8,6 +8,7 @@ Configure in the admin panel under Settings.
 
 ## Branding & Appearance
 - Logo upload: SVG format, max 300KB. Displayed in email headers and admin panel.
+- Favicon upload: SVG/PNG/ICO, max 100KB. Used as the browser tab icon on login, admin, and share pages.
 - Accent colors: 10 preset color options.
 - Default theme: select the default theme for new visitors.
 - Email header style: NONE, LOGO_ONLY, NAME_ONLY, or LOGO_AND_NAME.
@@ -182,6 +183,7 @@ Subscribe to project deadlines from any calendar app (Google Calendar, Apple Cal
 - Comment attachments toggle.
 - Max comment attachments override.
 - Allow downloads.
+- Allow photo downloads: clients can download photos (selection, album, or all project photos as a ZIP).
 - Allow client asset uploads.
 - Allow client file submissions (reverse share): clients can upload files directly to the project from the share page without attaching them to a comment. Uploaded files are visible in a "Client Uploads" block on the admin project page.
 - Client can approve (disable for admin-only approval).

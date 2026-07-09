@@ -108,6 +108,34 @@ Reverse share lets clients upload files directly to a project from the share pag
 3. Each entry shows the file name, size, uploader name/email (if authenticated), and upload date.
 4. Click the download icon to download a single file, or the trash icon to delete it.
 
+## Photo albums
+
+Projects can hold photo albums alongside videos — useful for stills, BTS shots, or photo deliverables.
+
+**Creating and filling albums (admin):**
+1. Open the project page; the **Photos** section sits below the videos.
+2. Create an album and drag photos onto it, or drop entire folders onto the Photos section — each folder becomes its own album.
+3. The worker generates webp thumbnails automatically; uploads work on both local (TUS) and S3 storage.
+4. Hover an album to pick its cover photo; a sort toggle switches between name and date order.
+
+**Client side:** albums appear on the share page below the videos, with a full-page album view, lightbox, and multi-select. To let clients download photos (selection, album, or all project photos as a ZIP), enable **Allow photo downloads** in the project settings.
+
+## Recipient portal
+
+Recipients added to projects can use the portal at `/portal` to see all their active projects in one place:
+
+1. The recipient enters their email at `/portal` and receives a magic link — no password needed.
+2. After signing in they see every active project they are assigned to, and can open each share page directly.
+3. Available in English, Dutch, and German.
+
+## Dashboard filters and saved views
+
+The projects dashboard supports search, multi-select filters (status, client, year, due date), and sorting:
+
+- Active filters show as removable chips above the list.
+- Save a filter combination as a named view for one-click reuse (views are per admin user).
+- Filter state is reflected in the URL, so a filtered dashboard link can be shared with other admins.
+
 ## Bulk selecting assets and client uploads
 
 Both the **video asset list** (per video) and the **Client Uploads** block support multi-select for bulk download or delete.

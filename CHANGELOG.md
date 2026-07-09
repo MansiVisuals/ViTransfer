@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.3] - 2026-07-09
+
+### Fixed
+- S3 multipart uploads failing in Safari: browser-initiated connection aborts are now retried instead of silently cancelling the whole upload, parts that stall for 60 seconds abort and retry, and cancelling during presign no longer lets the upload continue.
+
+### Changed
+- Worker CPU allocation now scales with host size instead of a fixed table: half the host threads split across concurrent jobs, capped at 8 threads per encode, 2 concurrent jobs on hosts with 24+ threads. Small hosts (≤8 threads) are unchanged.
+- New worker env overrides: `WORKER_CONCURRENCY`, `FFMPEG_THREADS_PER_JOB`, `FFMPEG_PRESET`.
+- Encoding preset is `faster` unless overridden (the previous thread-based preset selection never actually produced anything else).
+
 ## [1.2.2] - 2026-07-04
 
 ### Fixed

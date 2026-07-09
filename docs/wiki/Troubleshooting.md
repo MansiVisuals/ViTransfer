@@ -45,7 +45,7 @@ docker compose logs -f         # Follow all logs in real-time
 
 **Slow transcoding**
 - Check CPU usage: `docker stats`.
-- The `CPU_THREADS` environment variable can be set to control FFmpeg thread count.
+- The worker uses at most ~half the host's threads by default. `FFMPEG_THREADS_PER_JOB`, `WORKER_CONCURRENCY`, and `FFMPEG_PRESET` override this — see [Configuration](Configuration#cpu-threads--video-processing).
 - 720p transcoding is faster than 1080p — consider using 720p for preview resolution.
 
 ## Uploads

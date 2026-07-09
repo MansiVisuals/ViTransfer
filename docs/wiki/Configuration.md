@@ -22,6 +22,9 @@
 | `SHARE_TOKEN_SECRET` | Yes | Secret for signing share tokens **and recipient-portal session tokens** (both JWTs are HS256-signed; the `type` claim discriminates between them). | _none_ | |
 | `HTTPS_ENABLED` | No | Enable HTTPS enforcement (HSTS) | `true` | `false` for localhost |
 | `CPU_THREADS` | No | Override CPU thread count used by the worker/FFmpeg | auto-detect | `8` |
+| `WORKER_CONCURRENCY` | No | Override concurrent video jobs (bypasses computed allocation) | computed | `4` |
+| `FFMPEG_THREADS_PER_JOB` | No | Override FFmpeg threads per transcode (bypasses computed allocation) | computed | `16` |
+| `FFMPEG_PRESET` | No | Override FFmpeg encoding preset (`ultrafast`–`veryslow`) | `faster` | `medium` |
 | `DEBUG_WORKER` | No | Enable verbose worker logging | `false` | `true` |
 | `DEBUG_EXTERNAL_NOTIFICATIONS` | No | Enable verbose external notification logging | `false` | `true` |
 | `STORAGE_PROVIDER` | No | Storage backend: `local` or `s3` | `local` | `s3` |
@@ -122,40 +125,40 @@ Example JSON CORS policy:
 
 ### Overview
 
-`CPU_THREADS` controls how ViTransfer allocates CPU resources for video encoding. When set, it overrides the auto-detected CPU count and determines three things:
+The worker computes its CPU allocation from a budget of **half the available threads**, so the worst case (all video workers plus the clean preview worker encoding at once) never exceeds ~50% of the host and the server stays responsive during processing. `CPU_THREADS` overrides the auto-detected thread count that the budget is based on.
 
-1. **Worker concurrency** — how many video jobs run simultaneously
-2. **Threads per job** — how many threads FFmpeg uses per transcode (the `-threads` flag)
-3. **Encoding preset** — the FFmpeg speed/compression tradeoff (`faster`, `fast`, or `medium`)
+1. **Worker concurrency** — 2 concurrent video jobs on hosts with 24+ threads, otherwise 1
+2. **Threads per job** — the budget split across video workers and the clean preview worker (the `-threads` flag), capped at 8
+3. **Encoding preset** — always `faster`, the speed/size sweet spot for CRF-based review previews
 
-The allocation is intentionally conservative, targeting 25-50% CPU utilization so the server remains responsive for uploads, playback, and general usage during processing.
+### Example allocations
 
-### Allocation table
+| Threads | Concurrent jobs | FFmpeg threads/job | Max threads used |
+|:-------:|:---------------:|:------------------:|:----------------:|
+| 2       | 1               | 1                  | 2 (~100%)        |
+| 4       | 1               | 1                  | 2 (~50%)         |
+| 8       | 1               | 2                  | 4 (~50%)         |
+| 16      | 1               | 4                  | 8 (~50%)         |
+| 24      | 2               | 4                  | 12 (~50%)        |
+| 32      | 2               | 5                  | 15 (~47%)        |
+| 64      | 2               | 8                  | 24 (~38%)        |
 
-| CPU_THREADS | Concurrent jobs | FFmpeg threads/job | Preset   | Max threads used |
-|:-----------:|:---------------:|:------------------:|:--------:|:----------------:|
-| 1-2         | 1               | 1                  | faster   | 2 (~100%)        |
-| 3-4         | 1               | 1                  | faster   | 2 (~50%)         |
-| 5-8         | 1               | 2                  | fast     | 4 (~50-67%)      |
-| 9-16        | 1               | 2                  | fast     | 4 (~25-33%)      |
-| 17+         | 2               | 2                  | medium   | 6 (~25%)         |
+"Max threads used" includes both the video processing worker and the clean preview worker (generates non-watermarked versions on approval). The resolved allocation is printed at worker startup (`[CPU CONFIG]` log lines).
 
-"Max threads used" includes both the video processing worker and the clean preview worker (generates non-watermarked versions on approval).
+### Manual overrides
 
-### Preset tradeoff
+For hosts where the 50% budget is not what you want (dedicated transcode machines, high-core servers), three variables bypass the computed values:
 
-| Preset   | Encode speed | Output size | Applied when    |
-|----------|:------------:|:-----------:|:---------------:|
-| `faster` | Fastest      | Larger      | 1-4 threads     |
-| `fast`   | Balanced     | Medium      | 5-16 threads    |
-| `medium` | Slower       | Smallest    | 17+ threads     |
+- `WORKER_CONCURRENCY` — concurrent video jobs (1-16)
+- `FFMPEG_THREADS_PER_JOB` — FFmpeg threads per transcode (1-64)
+- `FFMPEG_PRESET` — any x264 preset from `ultrafast` to `veryslow` (e.g. `medium` for smaller files at slower encode speed)
 
-With fewer threads available, a faster preset is selected so encoding completes in reasonable time. With more threads, the encoder can spend more effort on compression.
+Overrides are taken as-is: setting them high deliberately opts out of the 50% headroom guarantee.
 
 ### When to set this
 
 - **Docker**: Containers may report the host CPU count rather than the cgroup limit. Set `CPU_THREADS` to match your `--cpus` or `deploy.resources.limits.cpus` value for accurate allocation.
-- **Shared servers**: Lower the value to leave headroom for other services.
+- **Shared servers**: Lower `CPU_THREADS` to leave headroom for other services.
 - **Dedicated servers**: Leave unset — auto-detection works correctly.
 
 ### Example
@@ -166,7 +169,7 @@ An 8-thread server with `CPU_THREADS` unset (auto-detected as 8):
 Detected threads: 8
  → 1 concurrent video job
  → 2 FFmpeg threads per job
- → Preset: fast
+ → Preset: faster
  → Max 4/8 threads in use (~50%)
  → Remaining threads available for the web app, database, and uploads
 ```

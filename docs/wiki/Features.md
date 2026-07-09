@@ -13,6 +13,11 @@
 - Due dates with calendar view (day/week/month/year), Gantt chart, and iCal feed.
 - Automated due date reminders via push, external providers, and email (day before or week before).
 - Video version comparison: side-by-side and slider overlay modes with synced playback.
+- Photo galleries: per-project albums with automatic webp thumbnails, admin-selectable covers, and a full-page client album view with lightbox and multi-select. Dropping folders onto the Photos section creates an album per folder.
+- Photo zip downloads on the share page (selected photos, one album, or the whole project), gated by a per-project toggle.
+- Recipient portal at `/portal`: recipients sign in with a magic link and see all active projects they are assigned to in one place.
+- Loop playback toggle in the video player.
+- Grid/list view toggle for videos on the share page.
 - Client asset uploads: allow clients to upload files to projects (configurable per project).
 - Reverse share: allow clients to upload files directly to a project without attaching them to a comment. Toggled per project. Uploaded files appear in a dedicated admin block with download and delete.
 - Bulk select on admin project page: multi-select video assets and client uploads for bulk download or bulk delete.
@@ -36,7 +41,10 @@
 - Client directory (companies and contacts management with search).
 - Custom email templates (12 types with placeholder system and live preview).
 - Custom branding logo (SVG upload, shown in email headers).
+- Custom favicon upload (SVG/PNG/ICO, up to 100 KB) shown across login, admin, and share pages.
 - Appearance settings (10 accent colors, theme selection).
+- Projects dashboard search, multi-select filters (status, client, year, due date), saved views per user, and shareable filtered URLs.
+- Client upload previews: image thumbnails, video frame grabs, and audio waveforms in the Client Uploads list.
 - Email header style options (none, logo only, name only, logo and name).
 - Language selection (applies globally to all UI and emails).
 - Calendar & Gantt views with day/week/month/year scales.
@@ -63,7 +71,7 @@
 - Custom video player with comment markers, frame-accurate seeking, and version comparison.
 - Docker-first deployment with Compose, Unraid, TrueNAS, and Podman/Quadlet support.
 - Multi-architecture images (amd64 and arm64).
-- Next.js 16 + React 19 UI; worker uses CPU-aware FFmpeg presets.
+- Next.js 16 + React 19 UI; worker scales FFmpeg thread allocation with host size (env-overridable).
 - BullMQ + Redis background processing for transcoding and notifications.
 - PostgreSQL + Prisma ORM for data access.
 - S3-compatible object storage: optional S3 backend (AWS S3, Cloudflare R2, Backblaze B2, MinIO, etc.) with browser-direct multipart uploads and presigned download redirects. No rebuild needed — switch at runtime via `STORAGE_PROVIDER=s3`.

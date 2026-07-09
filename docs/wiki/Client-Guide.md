@@ -36,12 +36,13 @@ After authentication you see a thumbnail grid of all videos in the project:
 - Approved videos show a checkmark overlay.
 - Videos needing review appear first, followed by approved videos.
 - Click any thumbnail to open the video player.
+- A grid/list toggle switches between thumbnail cards and a compact list.
 
 Above the grid you can see the project title, your name, and an optional project description.
 
-In the top-left corner of the grid, depending on what the project admin has enabled, you may see:
+In the Videos section header, depending on what the project admin has enabled, you may see:
 
-- **Download All Videos** — downloads all approved videos as a single ZIP file.
+- **Download All Videos** — downloads each approved video file directly, one after another.
 - **Submit Files** — opens an upload panel to send files directly to the project (see [Submitting files](#submitting-files-to-the-project) below).
 
 If this is your first visit, an interactive tutorial overlay may guide you through the main features of the review page.
@@ -59,6 +60,7 @@ The player bar at the bottom of the video includes:
 | **Next frame** | Step forward one frame (pauses playback) |
 | **Timecode** | Current position and total duration |
 | **Volume** | Click to mute/unmute, hover for slider |
+| **Loop** | Toggle looped playback of the current video |
 | **Fullscreen** | Enter or exit fullscreen mode |
 
 ### Timeline
@@ -171,13 +173,22 @@ If the project admin has enabled file submissions, a **Submit Files** button app
 
 Files you submit are visible to the project admin but are not attached to any specific video or comment — they go directly to the project.
 
+## Photo albums
+
+If the project contains photos, albums appear below the videos. Click an album to open the full-page album view:
+
+- The top bar has a back button, a prev/next album selector, and the theme/language toggles.
+- Click any photo to open it in a lightbox; use the arrow keys or on-screen arrows to browse.
+- Select multiple photos (checkbox on each thumbnail) to download just those.
+- If the admin has enabled photo downloads, you can download your selection, the whole album, or all project photos as a ZIP.
+
 ## Downloading
 
 Download options appear after a video has been approved (not available in guest mode):
 
 - Click the **Download** button to download the original file.
 - If the project has additional assets (images, audio, project files), a download dialog lets you select which files to download.
-- If the project has multiple approved videos and downloads are enabled, a **Download All Videos** button appears in the top-left corner of the grid to download everything as a single ZIP.
+- If the project has multiple approved videos and downloads are enabled, a **Download All Videos** button in the Videos section header downloads each approved video directly.
 
 Unapproved videos cannot be downloaded — only the watermarked preview is shown for review.
 

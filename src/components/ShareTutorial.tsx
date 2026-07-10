@@ -65,11 +65,12 @@ export function ShareTutorial({
     const steps: DriveStep[] = []
 
     if (!inPlayerView) {
-      // Grid view steps
+      // Grid view steps — welcome text mentions photo albums only when the project shows them
+      const hasAlbums = !!document.querySelector('[data-tutorial="photo-albums"]')
       steps.push({
         popover: {
           title: t('welcomeTitle'),
-          description: t('welcomeDescription'),
+          description: hasAlbums ? t('welcomeDescriptionWithPhotos') : t('welcomeDescription'),
         },
       })
 

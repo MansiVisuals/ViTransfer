@@ -985,6 +985,7 @@
   "tutorial": {
     "welcomeTitle": "Welcome",
     "welcomeDescription": "This page lets you watch videos, leave feedback, approve final versions, and download approved files. Let us show you around.",
+    "welcomeDescriptionWithPhotos": "This page lets you watch videos, browse photo albums, leave feedback, approve final versions, and download approved files. Let us show you around.",
     "gridTitle": "Video Selection",
     "gridDescription": "Click any video thumbnail to start reviewing. Videos needing review appear first.",
     "gridActionsTitle": "Submit Files",

@@ -985,6 +985,7 @@
   "tutorial": {
     "welcomeTitle": "Willkommen",
     "welcomeDescription": "Auf dieser Seite kannst du Videos ansehen, Feedback geben, endgültige Versionen freigeben und freigegebene Dateien herunterladen. Wir zeigen dir, wie alles funktioniert.",
+    "welcomeDescriptionWithPhotos": "Auf dieser Seite kannst du Videos ansehen, Fotoalben durchstöbern, Feedback geben, endgültige Versionen freigeben und freigegebene Dateien herunterladen. Wir zeigen dir, wie alles funktioniert.",
     "gridTitle": "Videoauswahl",
     "gridDescription": "Klicke auf ein Video-Vorschaubild, um mit der Prüfung zu beginnen. Videos, die noch geprüft werden müssen, erscheinen zuerst.",
     "gridActionsTitle": "Dateien Einreichen",

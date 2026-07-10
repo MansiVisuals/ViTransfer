@@ -975,7 +975,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8" data-tutorial="video-grid">
+          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
             {(() => {
               const approvedCount = project.videosByName
                 ? Object.values(project.videosByName as Record<string, any[]>)

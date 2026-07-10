@@ -390,7 +390,7 @@ export default function ProjectUploadsBlock({ projectId, onCountChange }: Projec
                     type="button"
                     onClick={() => handleDelete(upload)}
                     disabled={deletingId === upload.id}
-                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                    className="p-1.5 rounded hover:bg-destructive-visible text-destructive transition-colors disabled:opacity-50"
                     title={tc('delete')}
                   >
                     {deletingId === upload.id

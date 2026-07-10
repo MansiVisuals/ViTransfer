@@ -84,6 +84,30 @@ export function ShareTutorial({
         })
       }
 
+      // Photo albums section (only rendered when the project has albums)
+      const albumsEl = document.querySelector('[data-tutorial="photo-albums"]')
+      if (albumsEl) {
+        steps.push({
+          element: '[data-tutorial="photo-albums"]',
+          popover: {
+            title: t('photoAlbumsTitle'),
+            description: t('photoAlbumsDescription'),
+          },
+        })
+      }
+
+      // Page-level grid/list view toggle
+      const viewToggleEl = document.querySelector('[data-tutorial="view-toggle"]')
+      if (viewToggleEl) {
+        steps.push({
+          element: '[data-tutorial="view-toggle"]',
+          popover: {
+            title: t('viewToggleTitle'),
+            description: t('viewToggleDescription'),
+          },
+        })
+      }
+
       if (!isGuest && (allowAssetDownload || allowReverseShare)) {
         const actionsEl = document.querySelector('[data-tutorial="grid-actions"]')
         if (actionsEl) {

@@ -453,7 +453,7 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive-visible flex-shrink-0"
+                              className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive-visible flex-shrink-0"
                               onClick={(e) => { e.stopPropagation(); handleDeleteAlbum() }}
                               title={t('deleteAlbum')}
                             >
@@ -541,7 +541,7 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive-visible"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive-visible"
                                   onClick={() => handleDeletePhoto(photo)}
                                   disabled={deletingId === photo.id}
                                   title={t('deletePhoto')}

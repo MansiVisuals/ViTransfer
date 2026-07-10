@@ -3,14 +3,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { ChevronDown, ChevronUp, Video, CheckCircle2, Pencil, Upload } from 'lucide-react'
+import { ChevronDown, ChevronUp, Video, CheckCircle2, Loader2, Pencil, Trash2, Upload } from 'lucide-react'
 import VideoUpload from './VideoUpload'
 import VideoList from './VideoList'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { InlineEdit } from './InlineEdit'
 import { VideoUploadModal } from './VideoUploadModal'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { apiPatch, apiFetch } from '@/lib/api-client'
+import { apiPatch, apiFetch, apiDelete } from '@/lib/api-client'
 import { FILE_LIMITS } from '@/lib/file-validation'
 import { entryToFiles } from '@/lib/drop-entries'
 import { useTranslations } from 'next-intl'
@@ -66,6 +67,8 @@ export default function AdminVideoManager({
   const [editingGroupName, setEditingGroupName] = useState<string | null>(null)
   const [editGroupValue, setEditGroupValue] = useState('')
   const [savingGroupName, setSavingGroupName] = useState<string | null>(null)
+  const [deletingGroup, setDeletingGroup] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{ name: string; label: string; token: string } | null>(null)
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({})
   const [sessionId] = useState<string>(() => `admin:${Date.now()}`)
 
@@ -112,6 +115,47 @@ export default function AdminVideoManager({
   // Handle upload completion from modal - refresh to show processing inline
   const handleUploadComplete = () => {
     onRefresh?.()
+  }
+
+  // Preview the latest READY version's transcoded preview (never the original file)
+  const handlePreview = async (groupName: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const latest = [...videoGroups[groupName]]
+      .sort((a, b) => b.version - a.version)
+      .find(v => v.status === 'READY')
+    if (!latest) return
+
+    try {
+      const res = await apiFetch(
+        `/api/admin/video-token?videoId=${latest.id}&projectId=${projectId}&quality=720p&sessionId=${sessionId}`,
+        { cache: 'no-store' }
+      )
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.token) {
+        setPreview({ name: groupName, label: latest.versionLabel || `v${latest.version}`, token: data.token })
+      }
+    } catch {}
+  }
+
+  // Delete a video group: removes every version of the video
+  const handleDeleteGroup = async (groupName: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (deletingGroup) return
+    if (!confirm(t('deleteGroupConfirm'))) return
+
+    setDeletingGroup(groupName)
+    try {
+      for (const video of videoGroups[groupName]) {
+        await apiDelete(`/api/videos/${video.id}`)
+      }
+      router.refresh()
+      onRefresh?.()
+    } catch {
+      alert(t('deleteGroupFailed'))
+    } finally {
+      setDeletingGroup(null)
+    }
   }
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -284,13 +328,21 @@ export default function AdminVideoManager({
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {thumbnails[groupName] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={thumbnails[groupName]}
-                    alt={groupName}
-                    loading="lazy"
-                    className="w-20 h-12 rounded-md object-cover border border-border bg-muted flex-shrink-0"
-                  />
+                  <button
+                    type="button"
+                    onClick={(e) => handlePreview(groupName, e)}
+                    className="flex-shrink-0 cursor-zoom-in"
+                    title={t('previewVideo')}
+                    aria-label={t('previewVideo')}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={thumbnails[groupName]}
+                      alt={groupName}
+                      loading="lazy"
+                      className="w-20 h-12 rounded-md object-cover border border-border bg-muted"
+                    />
+                  </button>
                 ) : (
                   <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
                     <Video className="w-5 h-5 text-muted-foreground" />
@@ -312,15 +364,29 @@ export default function AdminVideoManager({
                       <>
                         <CardTitle className="text-lg">{groupName}</CardTitle>
                         {projectStatus !== 'APPROVED' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
-                            onClick={(e) => handleStartEditGroupName(groupName, e)}
-                            title={t('editVideoName')}
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
+                              onClick={(e) => handleStartEditGroupName(groupName, e)}
+                              title={t('editVideoName')}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive-visible flex-shrink-0"
+                              onClick={(e) => handleDeleteGroup(groupName, e)}
+                              disabled={deletingGroup === groupName}
+                              title={t('deleteVideo')}
+                            >
+                              {deletingGroup === groupName
+                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                : <Trash2 className="w-3 h-3" />}
+                            </Button>
+                          </>
                         )}
                         {hasProcessingVideos && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-primary-visible text-primary border border-primary-visible flex-shrink-0">
@@ -399,6 +465,22 @@ export default function AdminVideoManager({
           </Card>
         )
       })}
+
+      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="truncate">{preview?.name} — {preview?.label}</DialogTitle>
+          </DialogHeader>
+          {preview && (
+            <video
+              src={`/api/content/${preview.token}`}
+              controls
+              autoPlay
+              className="w-full max-h-[70vh] bg-black rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {sortedGroupNames.length > 0 && projectStatus !== 'APPROVED' && (
         <button

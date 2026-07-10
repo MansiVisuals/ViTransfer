@@ -162,7 +162,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
   return (
     <>
       {/* Albums overview — rendered inside the share grid page */}
-      <div className="mt-8">
+      <div className="mt-8" data-tutorial="photo-albums">
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2 min-w-0">
             <span className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">

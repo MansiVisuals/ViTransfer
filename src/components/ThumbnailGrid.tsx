@@ -199,8 +199,16 @@ export default function ThumbnailGrid({
                     {versionCount} {versionCount === 1 ? tv('versionSingular') : tv('versions')}
                   </p>
                 </div>
-                {hasAssets && <Files className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
-                {hasApprovedVideo && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
+                {hasAssets && (
+                  <span title={t('includesAssets')} aria-label={t('includesAssets')} className="flex-shrink-0">
+                    <Files className="w-4 h-4 text-muted-foreground" />
+                  </span>
+                )}
+                {hasApprovedVideo && (
+                  <span title={tv('approved')} aria-label={tv('approved')} className="flex-shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  </span>
+                )}
                 <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               </button>
             )
@@ -269,7 +277,11 @@ export default function ThumbnailGrid({
 
                 {/* Approved badge */}
                 {hasApprovedVideo && (
-                  <div className="absolute top-2 right-2 bg-success text-success-foreground rounded-full p-1">
+                  <div
+                    className="absolute top-2 right-2 bg-success text-success-foreground rounded-full p-1"
+                    title={tv('approved')}
+                    aria-label={tv('approved')}
+                  >
                     <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4" />
                   </div>
                 )}

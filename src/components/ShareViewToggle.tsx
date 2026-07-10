@@ -32,7 +32,7 @@ export default function ShareViewToggle({
   }
 
   return (
-    <div className="flex items-center h-9 rounded-lg border border-border overflow-hidden">
+    <div className="flex items-center h-9 rounded-lg border border-border overflow-hidden" data-tutorial="view-toggle">
       <button
         type="button"
         onClick={() => change('grid')}

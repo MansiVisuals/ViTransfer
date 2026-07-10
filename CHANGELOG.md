@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Share overview redesign: new project header with accent-colored client name, divider, and a summary line (videos, albums, approvals); video and album cards share the same design; section headers show icon badges and counts; download buttons read "Download All Videos/Albums (n)".
 - Videos and Photo Albums sections on the admin project page are visually consistent: matching empty states, dashed Upload Video(s) / Upload Photo(s) / Create Album rows, card styling, and delete icons that are red at rest everywhere.
-- Sections listing albums are now labeled "Photo Albums"; the share tutorial covers photo albums and the view toggle; asset/approved indicators show tooltips in both view modes.
+- Sections listing albums are now labeled "Photo Albums"; asset/approved indicators show tooltips in both view modes.
+- Share tutorial reworked for the new overview: steps for photo albums, the view toggle, and Download All in its correct location; Submit Files described accurately; the video step highlights only the videos section; the welcome text mentions photo albums when the project shows them.
 - German singular fix: video cards no longer show "1 Versione".
 
 ## [1.2.3] - 2026-07-09

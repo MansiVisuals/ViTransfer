@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { CheckCircle2, Film, Layers, Files, Download, Loader2, ChevronRight, Images } from 'lucide-react'
 import { Button } from './ui/button'
@@ -46,6 +46,9 @@ export default function ThumbnailGrid({
   const t = useTranslations('share')
   const tv = useTranslations('videos')
 
+  const [showApproveHint, setShowApproveHint] = useState(false)
+  const approveHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Sort videos: For review (not approved) first, then approved, both alphabetically
   const videoNames = useMemo(() => {
     const names = Object.keys(videosByName)
@@ -76,6 +79,17 @@ export default function ThumbnailGrid({
   const approvedCount = videoNames.filter(name =>
     videosByName[name].some((v: any) => v.approved === true)
   ).length
+
+  // With nothing approved yet, the button explains the workflow instead of downloading
+  const handleDownloadAllClick = () => {
+    if (approvedCount === 0) {
+      setShowApproveHint(true)
+      if (approveHintTimer.current) clearTimeout(approveHintTimer.current)
+      approveHintTimer.current = setTimeout(() => setShowApproveHint(false), 5000)
+      return
+    }
+    onDownloadAll?.()
+  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -146,10 +160,13 @@ export default function ThumbnailGrid({
           </h2>
           <div className="flex-1" />
           {onDownloadAll && (
-            <Button variant="outline" size="sm" onClick={onDownloadAll} disabled={downloadingAll} data-tutorial="download-all">
+            <Button variant="outline" size="sm" onClick={handleDownloadAllClick} disabled={downloadingAll} data-tutorial="download-all">
               {downloadingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               <span>{downloadAllLabel || t('videos')}</span>
             </Button>
+          )}
+          {showApproveHint && (
+            <p className="w-full text-xs text-muted-foreground text-right">{t('approveToDownloadHint')}</p>
           )}
         </div>
 

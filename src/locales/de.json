@@ -1135,6 +1135,7 @@
     "downloadNotAvailable": "Download ist nur für freigegebene Projekte verfügbar",
     "info": "Info",
     "downloadAllVideos": "Alle Videos herunterladen ({count})",
+    "approveToDownloadHint": "Gib mindestens ein Video frei, um Downloads zu aktivieren.",
     "noApprovedVideos": "Keine freigegebenen Videos zum Herunterladen verfügbar",
     "submitFiles": "Dateien einreichen",
     "submitFilesTitle": "Dateien an Projekt einreichen",

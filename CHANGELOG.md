@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.4] - 2026-07-10
+
+### Added
+- Inline video preview on the admin project page: click a video thumbnail to play the transcoded preview in a modal (the original file is never streamed).
+- Delete a video with all of its versions via a trash button next to the rename pencil (both appear when the video is expanded).
+- Drag & drop video files or entire folders onto the Videos section to upload; folders are flattened and non-video files skipped.
+- Photo albums fold out inline on the admin project page (like videos) with photo pagination, instead of switching to a separate view.
+- Per-project "Show Photo Albums to Guests" toggle (default off). Guests can view albums and the lightbox; photo downloads stay blocked for guests at the API level.
+- Share page: the grid/list toggle moved to the top bar and now applies to the whole overview — photo albums get a list view too.
+
+### Changed
+- Share overview redesign: new project header with accent-colored client name, divider, and a summary line (videos, albums, approvals); video and album cards share the same design; section headers show icon badges and counts; download buttons read "Download All Videos/Albums (n)".
+- Videos and Photo Albums sections on the admin project page are visually consistent: matching empty states, dashed Upload Video(s) / Upload Photo(s) / Create Album rows, card styling, and delete icons that are red at rest everywhere.
+- Sections listing albums are now labeled "Photo Albums"; asset/approved indicators show tooltips in both view modes.
+- Approved videos on the admin project page show the share-page style checkmark badge on the thumbnail corner instead of a text label (hover shows the approved version count).
+- Share tutorial reworked for the new overview: steps for photo albums, the view toggle, and Download All in its correct location; Submit Files described accurately; the video step highlights only the videos section; the welcome text mentions photo albums when the project shows them.
+- German singular fix: video cards no longer show "1 Versione".
+
 ## [1.2.3] - 2026-07-09
 
 ### Fixed

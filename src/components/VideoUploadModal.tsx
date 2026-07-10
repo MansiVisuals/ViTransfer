@@ -41,9 +41,11 @@ interface VideoUploadModalProps {
   onClose: () => void
   projectId: string
   onUploadComplete: (videoName: string, videoId: string) => void
+  /** Files dropped onto the section before the modal opened — queued once per open */
+  initialFiles?: File[]
 }
 
-export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete }: VideoUploadModalProps) {
+export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete, initialFiles }: VideoUploadModalProps) {
   const t = useTranslations('videos')
   const tc = useTranslations('common')
   const storageProvider = useStorageProvider()
@@ -166,6 +168,15 @@ export function VideoUploadModal({ isOpen, onClose, projectId, onUploadComplete 
       setPendingUploads(prev => [...prev, ...newUploads])
     }
   }
+
+  // Queue files dropped onto the section; the ref guard consumes each drop batch once
+  const consumedInitialFiles = useRef<File[] | null>(null)
+  useEffect(() => {
+    if (isOpen && initialFiles && initialFiles.length > 0 && consumedInitialFiles.current !== initialFiles) {
+      consumedInitialFiles.current = initialFiles
+      addFiles(initialFiles)
+    }
+  })
 
   const handleRemove = (id: string) => {
     const tusUpload = uploadRefs.current.get(id)

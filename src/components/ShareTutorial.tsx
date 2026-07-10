@@ -65,11 +65,12 @@ export function ShareTutorial({
     const steps: DriveStep[] = []
 
     if (!inPlayerView) {
-      // Grid view steps
+      // Grid view steps — welcome text mentions photo albums only when the project shows them
+      const hasAlbums = !!document.querySelector('[data-tutorial="photo-albums"]')
       steps.push({
         popover: {
           title: t('welcomeTitle'),
-          description: t('welcomeDescription'),
+          description: hasAlbums ? t('welcomeDescriptionWithPhotos') : t('welcomeDescription'),
         },
       })
 
@@ -84,7 +85,46 @@ export function ShareTutorial({
         })
       }
 
-      if (!isGuest && (allowAssetDownload || allowReverseShare)) {
+      // Photo albums section (only rendered when the project has albums)
+      const albumsEl = document.querySelector('[data-tutorial="photo-albums"]')
+      if (albumsEl) {
+        steps.push({
+          element: '[data-tutorial="photo-albums"]',
+          popover: {
+            title: t('photoAlbumsTitle'),
+            description: t('photoAlbumsDescription'),
+          },
+        })
+      }
+
+      // Page-level grid/list view toggle
+      const viewToggleEl = document.querySelector('[data-tutorial="view-toggle"]')
+      if (viewToggleEl) {
+        steps.push({
+          element: '[data-tutorial="view-toggle"]',
+          popover: {
+            title: t('viewToggleTitle'),
+            description: t('viewToggleDescription'),
+          },
+        })
+      }
+
+      // Download All — lives in the Videos section header, only when approved videos exist
+      if (!isGuest && allowAssetDownload) {
+        const downloadAllEl = document.querySelector('[data-tutorial="download-all"]')
+        if (downloadAllEl) {
+          steps.push({
+            element: '[data-tutorial="download-all"]',
+            popover: {
+              title: t('downloadAllTitle'),
+              description: t('downloadAllDescription'),
+            },
+          })
+        }
+      }
+
+      // Submit Files — top bar, only when reverse share is enabled
+      if (!isGuest && allowReverseShare) {
         const actionsEl = document.querySelector('[data-tutorial="grid-actions"]')
         if (actionsEl) {
           steps.push({

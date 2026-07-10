@@ -22,6 +22,7 @@ import { ShareTutorial } from '@/components/ShareTutorial'
 import PrivacyBanner, { PRIVACY_STORAGE_KEY } from '@/components/PrivacyBanner'
 import ReverseShareUploadPanel from '@/components/ReverseShareUploadPanel'
 import SharePhotoSection from '@/components/SharePhotoSection'
+import ShareViewToggle, { loadShareViewMode, type ShareViewMode } from '@/components/ShareViewToggle'
 
 interface SharePageClientProps {
   token: string
@@ -71,6 +72,10 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const [downloadingAll, setDownloadingAll] = useState(false)
+  const [viewMode, setViewMode] = useState<ShareViewMode>('grid')
+  const [albumCount, setAlbumCount] = useState(0)
+
+  useEffect(() => { setViewMode(loadShareViewMode()) }, [])
   const storageKey = token || ''
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
   const inFlightTokenRequestsRef = useRef<Map<string, Promise<string>>>(new Map())
@@ -950,6 +955,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
+            <ShareViewToggle viewMode={viewMode} onChange={setViewMode} />
             <LanguageToggle />
             <ThemeToggle />
             {project.showClientTutorial && (
@@ -969,7 +975,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8" data-tutorial="video-grid">
+          <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
             {(() => {
               const approvedCount = project.videosByName
                 ? Object.values(project.videosByName as Record<string, any[]>)
@@ -990,14 +996,18 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                   onDownloadAll={showDownloadAll ? handleDownloadAll : undefined}
                   downloadingAll={downloadingAll}
                   downloadAllLabel={t('downloadAllVideos', { count: approvedCount })}
+                  viewMode={viewMode}
+                  albumCount={albumCount}
                 />
               )
             })()}
-            {!isGuest && project.hasPhotos && project.id && shareToken && (
+            {project.hasPhotos && project.id && shareToken && (
               <SharePhotoSection
                 projectId={project.id}
                 shareToken={shareToken}
-                allowPhotoDownload={project.allowPhotoDownload}
+                allowPhotoDownload={project.allowPhotoDownload && !isGuest}
+                viewMode={viewMode}
+                onAlbumCount={setAlbumCount}
               />
             )}
           </div>

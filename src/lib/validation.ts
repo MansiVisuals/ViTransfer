@@ -323,6 +323,7 @@ export const updateProjectSchema = z.object({
   // Guest mode settings
   guestMode: z.boolean().optional(),
   guestLatestOnly: z.boolean().optional(),
+  guestShowPhotos: z.boolean().optional(),
 
   // Due date
   dueDate: z.string().datetime().nullable().optional(),

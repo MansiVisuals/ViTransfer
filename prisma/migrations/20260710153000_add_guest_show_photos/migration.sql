@@ -1,0 +1,1 @@
+ALTER TABLE "Project" ADD COLUMN "guestShowPhotos" BOOLEAN NOT NULL DEFAULT false;

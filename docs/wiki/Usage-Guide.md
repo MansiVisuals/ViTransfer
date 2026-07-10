@@ -3,10 +3,12 @@
 ## Creating your first project
 1. Login to the admin panel.
 2. Create a project with title, description, client name/email, and password (recommended).
-3. Upload videos.
+3. Upload videos — use the Upload Video(s) card, or drag video files or entire folders straight onto the Videos section.
 4. Share the client link.
 5. Collect timestamped feedback.
 6. Approve when the client accepts the final version.
+
+On the project page, click a video thumbnail to play its transcoded preview in place (the original file is never streamed). Expanding a video shows the rename and delete buttons next to its name — delete removes the video with all of its versions, while individual versions can be deleted inside the expanded list.
 
 ## Client workflow
 1. Open the share link.
@@ -113,10 +115,11 @@ Reverse share lets clients upload files directly to a project from the share pag
 Projects can hold photo albums alongside videos — useful for stills, BTS shots, or photo deliverables.
 
 **Creating and filling albums (admin):**
-1. Open the project page; the **Photos** section sits below the videos.
-2. Create an album and drag photos onto it, or drop entire folders onto the Photos section — each folder becomes its own album.
-3. The worker generates webp thumbnails automatically; uploads work on both local (TUS) and S3 storage.
-4. Hover an album to pick its cover photo; a sort toggle switches between name and date order.
+1. Open the project page; the **Photo Albums** section sits below the videos.
+2. Create an album and drag photos onto it, or drop entire folders onto the section — each folder becomes its own album.
+3. Click an album to fold it open in place: photos are listed with pagination, and the rename/delete buttons appear next to the album name.
+4. The worker generates webp thumbnails automatically; uploads work on both local (TUS) and S3 storage.
+5. Use the star on a photo row to set it as the album cover; a sort toggle in the section header switches between name and date order.
 
 **Client side:** albums appear on the share page below the videos, with a full-page album view, lightbox, and multi-select. To let clients download photos (selection, album, or all project photos as a ZIP), enable **Allow photo downloads** in the project settings.
 

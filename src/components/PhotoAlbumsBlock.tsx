@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  ArrowLeft, FolderPlus, ImageIcon, Loader2, Pencil, Plus, Star, Trash2, Upload, X,
+  ChevronDown, ChevronLeft, ChevronRight, ChevronUp, FolderPlus, ImageIcon, Loader2, Pencil, Plus, Star, Trash2, Upload, X,
 } from 'lucide-react'
 import { formatFileSize } from '@/lib/utils'
 import { Button } from './ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
 import type { GalleryPhoto } from './PhotoGrid'
@@ -14,6 +15,7 @@ import PhotoLightbox from './PhotoLightbox'
 import { usePhotoUploadQueue } from '@/hooks/usePhotoUploadQueue'
 import { apiFetch } from '@/lib/api-client'
 import { ALLOWED_PHOTO_TYPES } from '@/lib/file-validation'
+import { entryToFiles } from '@/lib/drop-entries'
 import { logError } from '@/lib/logging'
 
 interface Album {
@@ -32,31 +34,11 @@ interface PhotoAlbumsBlockProps {
 }
 
 const PHOTO_ACCEPT = ALLOWED_PHOTO_TYPES.extensions.join(',')
+const PHOTO_PAGE_SIZE = 10
 
 function isPhotoFile(file: File): boolean {
   const name = file.name.toLowerCase()
   return ALLOWED_PHOTO_TYPES.extensions.includes(name.slice(name.lastIndexOf('.')))
-}
-
-// Recursively collect files from a drag-and-drop FileSystemEntry (file or directory)
-async function entryToFiles(entry: any): Promise<File[]> {
-  if (entry.isFile) {
-    return new Promise(resolve => entry.file((f: File) => resolve([f]), () => resolve([])))
-  }
-  if (entry.isDirectory) {
-    const reader = entry.createReader()
-    const readBatch = (): Promise<any[]> =>
-      new Promise(resolve => reader.readEntries(resolve, () => resolve([])))
-    const entries: any[] = []
-    let batch = await readBatch()
-    while (batch.length > 0) {
-      entries.push(...batch)
-      batch = await readBatch()
-    }
-    const nested = await Promise.all(entries.map(entryToFiles))
-    return nested.flat()
-  }
-  return []
 }
 
 export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCountsChange }: PhotoAlbumsBlockProps) {
@@ -68,6 +50,7 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null)
 
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
+  const [photoPage, setPhotoPage] = useState(0)
   const [contentToken, setContentToken] = useState<string | null>(null)
   const [photosLoading, setPhotosLoading] = useState(false)
 
@@ -371,14 +354,15 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
               <div className="h-full bg-primary transition-all" style={{ width: `${upload.progress}%` }} />
             </div>
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground flex-shrink-0"
             onClick={() => uploadQueue.cancelUpload(upload.id)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
             aria-label={tc('cancel')}
           >
             <X className="w-3.5 h-3.5" />
-          </button>
+          </Button>
         </div>
       ))}
     </div>
@@ -386,228 +370,265 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
 
   const dropZoneClassName = `rounded-lg transition-shadow ${isDragOver ? 'ring-2 ring-primary/60' : ''}`
 
-  // ── Album detail view ─────────────────────────────────────────────────────
-  if (selectedAlbum) {
-    return (
-      <div
-        className={`space-y-3 ${dropZoneClassName}`}
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleAlbumDrop}
-      >
-        {isDragOver && (
-          <div className="px-3 py-2 rounded-lg border border-dashed border-primary/60 bg-primary/5 text-sm text-primary">
-            {t('dropPhotosHint')}
-          </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setSelectedAlbum(null)} className="px-2">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            {t('backToAlbums')}
-          </Button>
-          <p className="font-medium truncate min-w-0">{selectedAlbum.name}</p>
-          <button
-            type="button"
-            onClick={() => { setAlbumName(selectedAlbum.name); setRenameOpen(true) }}
-            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            title={t('renameAlbum')}
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleDeleteAlbum}
-            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
-            title={t('deleteAlbum')}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-          <div className="flex-1" />
-          <Button variant="default" size="sm" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="w-3.5 h-3.5 sm:mr-1" />
-            <span className="hidden sm:inline">{t('uploadPhotos')}</span>
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={PHOTO_ACCEPT}
-            multiple
-            className="hidden"
-            onChange={(e) => handleFilesSelected(e.target.files)}
-          />
-        </div>
-
-        {uploadRows}
-
-        {photosLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : photos.length === 0 && activeUploads.length === 0 ? (
-          <div className="text-center py-8 text-sm text-muted-foreground">
-            {t('noPhotosYet')}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {photos.map((photo, index) => {
-              const isCover = selectedAlbum.coverPhotoId === photo.id
-              return (
-                <div
-                  key={photo.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setLightboxIndex(index)}
-                    className="flex-shrink-0 cursor-zoom-in"
-                    aria-label={photo.fileName}
-                  >
-                    {photo.hasThumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={buildPhotoUrl(photo.id, 'thumb')}
-                        alt={photo.fileName}
-                        loading="lazy"
-                        className="w-20 h-12 rounded-md object-cover border border-border bg-muted"
-                      />
-                    ) : (
-                      <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center">
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      </div>
-                    )}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{photo.fileName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(Number(photo.fileSize))}
-                      {photo.width && photo.height ? ` • ${photo.width}×${photo.height}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {photo.hasThumbnail && (
-                      <button
-                        type="button"
-                        onClick={() => handleSetCover(photo)}
-                        className={`p-1.5 rounded hover:bg-muted transition-colors ${isCover ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        title={t('setAsCover')}
-                        aria-label={t('setAsCover')}
-                      >
-                        <Star className={`w-4 h-4 ${isCover ? 'fill-current' : ''}`} />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePhoto(photo)}
-                      disabled={deletingId === photo.id}
-                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
-                      title={t('deletePhoto')}
-                      aria-label={t('deletePhoto')}
-                    >
-                      {deletingId === photo.id
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <Trash2 className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {lightboxIndex !== null && (
-          <PhotoLightbox
-            photos={photos}
-            index={lightboxIndex}
-            buildPhotoUrl={buildPhotoUrl}
-            onClose={() => setLightboxIndex(null)}
-            onNavigate={setLightboxIndex}
-            canDownload={false}
-          />
-        )}
-
-        <RenameDialog
-          open={renameOpen}
-          onOpenChange={setRenameOpen}
-          title={t('renameAlbum')}
-          value={albumName}
-          onValueChange={setAlbumName}
-          onSave={handleRenameAlbum}
-          saving={savingAlbum}
-          saveLabel={tc('save')}
-        />
-      </div>
-    )
-  }
-
-  // ── Albums overview ───────────────────────────────────────────────────────
+  // ── Albums (accordion) ─────────────────────────────────────────────────────
   const sortedAlbums = sortMode === 'alphabetical'
     ? [...albums].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
     : albums // API returns createdAt ascending
 
+  const pageCount = Math.ceil(photos.length / PHOTO_PAGE_SIZE)
+  const currentPage = Math.min(photoPage, Math.max(0, pageCount - 1))
+  const pagePhotos = photos.slice(currentPage * PHOTO_PAGE_SIZE, (currentPage + 1) * PHOTO_PAGE_SIZE)
+
   return (
     <div
-      className={`space-y-3 ${dropZoneClassName}`}
+      className={`space-y-4 ${dropZoneClassName}`}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      onDrop={handleOverviewDrop}
+      onDrop={selectedAlbum ? handleAlbumDrop : handleOverviewDrop}
     >
       {isDragOver && (
         <div className="px-3 py-2 rounded-lg border border-dashed border-primary/60 bg-primary/5 text-sm text-primary">
-          {t('dropFoldersHint')}
+          {selectedAlbum ? t('dropPhotosHint') : t('dropFoldersHint')}
         </div>
       )}
-      {uploadRows}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={PHOTO_ACCEPT}
+        multiple
+        className="hidden"
+        onChange={(e) => handleFilesSelected(e.target.files)}
+      />
+      {!selectedAlbum && uploadRows}
       {albums.length === 0 ? (
-        <div className="text-center py-8 space-y-3">
-          <p className="text-sm text-muted-foreground">{t('noAlbumsYet')}</p>
-          <Button variant="outline" size="sm" onClick={() => { setAlbumName(''); setCreateOpen(true) }}>
-            <FolderPlus className="w-3.5 h-3.5 mr-1" />
-            {t('createAlbum')}
-          </Button>
-        </div>
+        <Card>
+          <CardContent className="py-10 text-center space-y-3">
+            <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">{t('noAlbumsYet')}</p>
+            <Button variant="outline" size="sm" onClick={() => { setAlbumName(''); setCreateOpen(true) }}>
+              <FolderPlus className="w-3.5 h-3.5 mr-1" />
+              {t('createAlbum')}
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-2">
-          {sortedAlbums.map(album => (
-            <button
-              key={album.id}
-              type="button"
-              onClick={() => setSelectedAlbum(album)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-left"
-            >
-              {album.coverPhotoId && album.contentToken ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`/api/content/photo/${album.contentToken}?photoId=${album.coverPhotoId}&variant=thumb`}
-                  alt={album.name}
-                  loading="lazy"
-                  className="w-20 h-12 rounded-md object-cover border border-border bg-muted flex-shrink-0"
-                />
-              ) : (
-                <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
-                  <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{album.name}</p>
-                <p className="text-xs text-muted-foreground">{t('photoCount', { count: album.photoCount })}</p>
-              </div>
-            </button>
-          ))}
+        <>
+          {sortedAlbums.map(album => {
+            const isExpanded = selectedAlbum?.id === album.id
+            return (
+              <Card key={album.id} className="overflow-hidden">
+                <CardHeader
+                  className="cursor-pointer hover:bg-accent/50 transition-colors flex flex-row items-center justify-between space-y-0 py-3 px-3 sm:px-6"
+                  onClick={() => { setSelectedAlbum(isExpanded ? null : album); setPhotoPage(0) }}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {album.coverPhotoId && album.contentToken ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/api/content/photo/${album.contentToken}?photoId=${album.coverPhotoId}&variant=thumb`}
+                        alt={album.name}
+                        loading="lazy"
+                        className="w-20 h-12 rounded-md object-cover border border-border bg-muted flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                        <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CardTitle className="text-lg">{album.name}</CardTitle>
+                        {isExpanded && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-primary-visible flex-shrink-0"
+                              onClick={(e) => { e.stopPropagation(); setAlbumName(album.name); setRenameOpen(true) }}
+                              title={t('renameAlbum')}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive-visible flex-shrink-0"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteAlbum() }}
+                              title={t('deleteAlbum')}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{t('photoCount', { count: album.photoCount })}</p>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                  </div>
+                </CardHeader>
+
+                {isExpanded && (
+                  <CardContent className="border-t border-border pt-4 px-3 sm:px-6 space-y-3">
+                    {uploadRows}
+
+                    {photosLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : photos.length === 0 && activeUploads.length === 0 ? (
+                      <div className="text-center py-8 space-y-3">
+                        <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">{t('noPhotosYet')}</p>
+                        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                          <Upload className="w-3.5 h-3.5 mr-1" />
+                          {t('uploadPhotos')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {pagePhotos.map((photo, index) => {
+                          const isCover = selectedAlbum?.coverPhotoId === photo.id
+                          return (
+                            <div
+                              key={photo.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setLightboxIndex(currentPage * PHOTO_PAGE_SIZE + index)}
+                                className="flex-shrink-0 cursor-zoom-in"
+                                aria-label={photo.fileName}
+                              >
+                                {photo.hasThumbnail ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={buildPhotoUrl(photo.id, 'thumb')}
+                                    alt={photo.fileName}
+                                    loading="lazy"
+                                    className="w-20 h-12 rounded-md object-cover border border-border bg-muted"
+                                  />
+                                ) : (
+                                  <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center">
+                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                  </div>
+                                )}
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{photo.fileName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatFileSize(Number(photo.fileSize))}
+                                  {photo.width && photo.height ? ` • ${photo.width}×${photo.height}` : ''}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {photo.hasThumbnail && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`h-7 w-7 ${isCover ? 'text-primary hover:text-primary hover:bg-primary-visible' : 'text-muted-foreground hover:text-foreground'}`}
+                                    onClick={() => handleSetCover(photo)}
+                                    title={t('setAsCover')}
+                                    aria-label={t('setAsCover')}
+                                  >
+                                    <Star className={`w-4 h-4 ${isCover ? 'fill-current' : ''}`} />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive-visible"
+                                  onClick={() => handleDeletePhoto(photo)}
+                                  disabled={deletingId === photo.id}
+                                  title={t('deletePhoto')}
+                                  aria-label={t('deletePhoto')}
+                                >
+                                  {deletingId === photo.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <Trash2 className="w-4 h-4" />}
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {pageCount > 1 && (
+                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={currentPage === 0}
+                              onClick={() => setPhotoPage(currentPage - 1)}
+                              aria-label={t('previousPage')}
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                            <span>{currentPage + 1} / {pageCount}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={currentPage >= pageCount - 1}
+                              onClick={() => setPhotoPage(currentPage + 1)}
+                              aria-label={t('nextPage')}
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed bg-card hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                          <div className="w-20 h-12 rounded-md border border-dashed border-border flex items-center justify-center flex-shrink-0">
+                            <Upload className="w-5 h-5" />
+                          </div>
+                          <span className="text-sm font-medium">{t('uploadPhotos')}</span>
+                        </button>
+                      </div>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            )
+          })}
           <button
             type="button"
             onClick={() => { setAlbumName(''); setCreateOpen(true) }}
-            className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed bg-card hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
+            className="w-full flex items-center gap-3 py-3 px-3 sm:px-6 rounded-lg border border-dashed bg-card hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
           >
             <div className="w-20 h-12 rounded-md border border-dashed border-border flex items-center justify-center flex-shrink-0">
               <Plus className="w-5 h-5" />
             </div>
             <span className="text-sm font-medium">{t('createAlbum')}</span>
           </button>
-        </div>
+        </>
       )}
 
+      {lightboxIndex !== null && (
+        <PhotoLightbox
+          photos={photos}
+          index={lightboxIndex}
+          buildPhotoUrl={buildPhotoUrl}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+          canDownload={false}
+        />
+      )}
+
+      <RenameDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        title={t('renameAlbum')}
+        value={albumName}
+        onValueChange={setAlbumName}
+        onSave={handleRenameAlbum}
+        saving={savingAlbum}
+        saveLabel={tc('save')}
+      />
       <RenameDialog
         open={createOpen}
         onOpenChange={setCreateOpen}

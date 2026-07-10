@@ -56,6 +56,7 @@ model Project {
   authMode        String  @default("PASSWORD") // Authentication mode: PASSWORD, OTP, BOTH, or NONE
   guestMode       Boolean @default(false) // Allow guest access with limited view (videos only, no comments/approval)
   guestLatestOnly Boolean @default(true) // Guests can only view latest version of each video
+  guestShowPhotos Boolean @default(false) // Show photo albums to guests (view-only, downloads stay blocked)
 
   // Revision tracking (optional)
   enableRevisions Boolean @default(false)

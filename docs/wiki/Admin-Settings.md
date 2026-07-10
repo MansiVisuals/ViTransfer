@@ -176,6 +176,7 @@ Subscribe to project deadlines from any calendar app (Google Calendar, Apple Cal
 - Custom URL slug.
 - Guest mode: view-only access without credentials.
 - Guest latest only: restrict guests to the latest version of each video (default: true).
+- Show photo albums to guests: guests can view photo albums; downloads stay disabled for guests (default: false).
 
 **Workflow**
 - Revision limit (enable/disable with max revisions count).

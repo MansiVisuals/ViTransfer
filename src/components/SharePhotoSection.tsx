@@ -177,7 +177,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
           {allowPhotoDownload && albums.length > 1 && (
             <Button variant="outline" size="sm" onClick={() => handleZipDownload('project')} disabled={downloading}>
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              <span className="hidden sm:inline">{t('downloadAllAlbums', { count: albums.length })}</span>
+              <span>{t('downloadAllAlbums', { count: albums.length })}</span>
             </Button>
           )}
         </div>

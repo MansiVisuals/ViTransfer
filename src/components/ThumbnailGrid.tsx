@@ -148,7 +148,7 @@ export default function ThumbnailGrid({
           {onDownloadAll && (
             <Button variant="outline" size="sm" onClick={onDownloadAll} disabled={downloadingAll} data-tutorial="download-all">
               {downloadingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              <span className="hidden sm:inline">{downloadAllLabel || t('videos')}</span>
+              <span>{downloadAllLabel || t('videos')}</span>
             </Button>
           )}
         </div>

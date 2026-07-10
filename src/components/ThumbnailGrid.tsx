@@ -1,10 +1,12 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { CheckCircle2, Film, Layers, Files, Download, Loader2, LayoutGrid, List, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Film, Layers, Files, Download, Loader2, ChevronRight, Images } from 'lucide-react'
 import { Button } from './ui/button'
+import { Card, CardContent } from './ui/card'
+import type { ShareViewMode } from './ShareViewToggle'
 import { cn } from '@/lib/utils'
 
 interface ThumbnailGridProps {
@@ -20,9 +22,11 @@ interface ThumbnailGridProps {
   onDownloadAll?: () => void
   downloadingAll?: boolean
   downloadAllLabel?: string
+  /** Page-level view mode, owned by the page top bar */
+  viewMode?: ShareViewMode
+  /** Album count for the hero meta line (0 hides the entry) */
+  albumCount?: number
 }
-
-const VIDEO_VIEW_STORAGE_KEY = 'vitransfer-share-video-view'
 
 export default function ThumbnailGrid({
   videosByName,
@@ -36,23 +40,11 @@ export default function ThumbnailGrid({
   onDownloadAll,
   downloadingAll = false,
   downloadAllLabel,
+  viewMode = 'grid',
+  albumCount = 0,
 }: ThumbnailGridProps) {
   const t = useTranslations('share')
   const tv = useTranslations('videos')
-
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(VIDEO_VIEW_STORAGE_KEY)
-      if (stored === 'list' || stored === 'grid') setViewMode(stored)
-    } catch {}
-  }, [])
-
-  const changeViewMode = (mode: 'grid' | 'list') => {
-    setViewMode(mode)
-    try { localStorage.setItem(VIDEO_VIEW_STORAGE_KEY, mode) } catch {}
-  }
 
   // Sort videos: For review (not approved) first, then approved, both alphabetically
   const videoNames = useMemo(() => {
@@ -80,35 +72,76 @@ export default function ThumbnailGrid({
     return [...forReview, ...approved]
   }, [videosByName])
 
+  const videoCount = videoNames.length
+  const approvedCount = videoNames.filter(name =>
+    videosByName[name].some((v: any) => v.approved === true)
+  ).length
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Project Info Header */}
-      <div className="text-center mb-8 sm:mb-12 pt-4">
+      {/* Hero — cinematic title block with a faint accent glow */}
+      <div className="relative text-center mb-10 sm:mb-14 pt-10 px-4">
+        <div
+          className="absolute -top-10 inset-x-0 bottom-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 55% 70% at 50% 0%, hsl(var(--primary) / 0.08), transparent 70%)' }}
+        />
         {clientName && (
-          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+          <p className="relative text-xs font-semibold text-primary uppercase tracking-[0.22em] mb-3">
             {clientName}
           </p>
         )}
         {projectTitle && (
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground mb-4">
+          <h1 className="relative text-3xl sm:text-4xl font-semibold tracking-tight text-foreground max-w-3xl mx-auto mb-4">
             {projectTitle}
           </h1>
         )}
+        <div
+          className="relative w-14 h-0.5 mx-auto mb-4 rounded-full"
+          style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)' }}
+        />
         {projectDescription && (
-          <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto mb-6">
+          <p className="relative text-sm sm:text-base text-muted-foreground max-w-xl mx-auto mb-5 leading-relaxed">
             {projectDescription}
           </p>
         )}
-        <p className="text-xs text-muted-foreground">
-          {t('selectVideoToBegin')}
-        </p>
+        <div className="relative flex items-center justify-center gap-3.5 flex-wrap text-[13px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <Film className="w-3.5 h-3.5 opacity-70" />
+            {t('metaVideos', { count: videoCount })}
+          </span>
+          {albumCount > 0 && (
+            <>
+              <span className="w-[3px] h-[3px] rounded-full bg-muted-foreground/50" />
+              <span className="inline-flex items-center gap-1.5">
+                <Images className="w-3.5 h-3.5 opacity-70" />
+                {t('metaAlbums', { count: albumCount })}
+              </span>
+            </>
+          )}
+          {approvedCount > 0 && (
+            <>
+              <span className="w-[3px] h-[3px] rounded-full bg-muted-foreground/50" />
+              <span className="inline-flex items-center gap-1.5 text-success">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {t('metaApproved', { approved: approvedCount, total: videoCount })}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Section header — mirrors the photos section (title left, actions right) */}
+      {/* Section header — icon badge + title + count, actions right (same anatomy as admin) */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2 min-w-0">
-          <Film className="w-5 h-5 text-primary flex-shrink-0" />
+        <h2 className="text-xl font-semibold flex items-center gap-2 min-w-0">
+          <span className="rounded-md p-1.5 flex-shrink-0 bg-foreground/5 dark:bg-foreground/10">
+            <Film className="w-4 h-4 text-primary" />
+          </span>
           {t('videos')}
+          {videoCount > 0 && (
+            <span className="text-xs font-medium text-muted-foreground bg-foreground/5 dark:bg-foreground/10 rounded-full px-2.5 py-0.5">
+              {videoCount}
+            </span>
+          )}
         </h2>
         <div className="flex-1" />
         {onDownloadAll && (
@@ -117,27 +150,16 @@ export default function ThumbnailGrid({
             <span className="hidden sm:inline">{downloadAllLabel || t('videos')}</span>
           </Button>
         )}
-        <div className="flex items-center h-9 rounded-lg border border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => changeViewMode('grid')}
-            className={cn('h-full px-2.5 flex items-center transition-colors', viewMode === 'grid' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
-            title={t('gridView')}
-            aria-label={t('gridView')}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => changeViewMode('list')}
-            className={cn('h-full px-2.5 flex items-center transition-colors', viewMode === 'list' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
-            title={t('listView')}
-            aria-label={t('listView')}
-          >
-            <List className="h-4 w-4" />
-          </button>
-        </div>
       </div>
+
+      {videoCount === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center space-y-3">
+            <Film className="w-8 h-8 mx-auto text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">{tv('noVideosYet')}</p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {viewMode === 'list' ? (
         <div className="space-y-2">
@@ -152,7 +174,7 @@ export default function ThumbnailGrid({
               <button
                 key={name}
                 onClick={() => onVideoSelect(name)}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card shadow-elevation-md hover:border-primary/50 hover:shadow-elevation-lg transition-all duration-200 text-left"
               >
                 <div className="relative w-20 h-12 rounded-md overflow-hidden bg-black border border-border flex-shrink-0">
                   {thumbnailUrl ? (
@@ -199,7 +221,7 @@ export default function ThumbnailGrid({
               onClick={() => onVideoSelect(name)}
               className={cn(
                 'group relative rounded-lg overflow-hidden',
-                'bg-card border border-border',
+                'bg-card border border-border/50 shadow-elevation-md',
                 'hover:border-primary/50 hover:shadow-elevation-lg',
                 'transition-all duration-200',
                 'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background'

@@ -270,7 +270,7 @@ export default function ProjectPage() {
                     <span className={iconBadgeClassName}>
                       <Images className={iconBadgeIconClassName} />
                     </span>
-                    {t('photos')}
+                    {t('photoAlbums')}
                     {photoCounts !== null && photoCounts.albums > 0 && (
                       <span className={countBadgeClassName}>{photoCounts.albums}</span>
                     )}

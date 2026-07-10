@@ -13,6 +13,7 @@ import { ArrowLeft } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ThemeToggle from '@/components/ThemeToggle'
 import SharePhotoSection from '@/components/SharePhotoSection'
+import ShareViewToggle, { loadShareViewMode, type ShareViewMode } from '@/components/ShareViewToggle'
 import { useTranslations } from 'next-intl'
 
 const MAX_TOKEN_FETCH_ATTEMPTS = 2
@@ -42,6 +43,10 @@ export default function AdminSharePage() {
   const [_commentsLoading, setCommentsLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [_companyName, setCompanyName] = useState('Studio')
+  const [viewMode, setViewMode] = useState<ShareViewMode>('grid')
+  const [albumCount, setAlbumCount] = useState(0)
+
+  useEffect(() => { setViewMode(loadShareViewMode()) }, [])
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p' | '2160p'>('720p')
   const [activeVideoName, setActiveVideoName] = useState<string>('')
   const [activeVideos, setActiveVideos] = useState<any[]>([])
@@ -562,8 +567,11 @@ export default function AdminSharePage() {
             <span className="hidden sm:inline">{t('backToProject')}</span>
           </Button>
 
-          {/* Right: theme toggle */}
-          <ThemeToggle />
+          {/* Right: view toggle + theme */}
+          <div className="flex items-center gap-2 ml-auto">
+            <ShareViewToggle viewMode={viewMode} onChange={setViewMode} />
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -576,10 +584,14 @@ export default function AdminSharePage() {
               projectTitle={project.title}
               projectDescription={project.description}
               clientName={clientDisplayName}
+              viewMode={viewMode}
+              albumCount={albumCount}
             />
             <SharePhotoSection
               projectId={id}
               allowPhotoDownload={project.allowPhotoDownload ?? true}
+              viewMode={viewMode}
+              onAlbumCount={setAlbumCount}
             />
           </div>
         </div>

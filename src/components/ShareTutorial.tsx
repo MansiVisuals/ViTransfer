@@ -108,7 +108,22 @@ export function ShareTutorial({
         })
       }
 
-      if (!isGuest && (allowAssetDownload || allowReverseShare)) {
+      // Download All — lives in the Videos section header, only when approved videos exist
+      if (!isGuest && allowAssetDownload) {
+        const downloadAllEl = document.querySelector('[data-tutorial="download-all"]')
+        if (downloadAllEl) {
+          steps.push({
+            element: '[data-tutorial="download-all"]',
+            popover: {
+              title: t('downloadAllTitle'),
+              description: t('downloadAllDescription'),
+            },
+          })
+        }
+      }
+
+      // Submit Files — top bar, only when reverse share is enabled
+      if (!isGuest && allowReverseShare) {
         const actionsEl = document.querySelector('[data-tutorial="grid-actions"]')
         if (actionsEl) {
           steps.push({

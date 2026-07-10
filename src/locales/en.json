@@ -1135,6 +1135,7 @@
     "downloadNotAvailable": "Download is only available for approved projects",
     "info": "Info",
     "downloadAllVideos": "Download All Videos ({count})",
+    "approveToDownloadHint": "Approve at least one video to enable downloads.",
     "noApprovedVideos": "No approved videos available for download",
     "submitFiles": "Submit Files",
     "submitFilesTitle": "Submit Files to Project",

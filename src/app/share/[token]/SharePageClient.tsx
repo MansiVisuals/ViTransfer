@@ -982,7 +982,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                     .filter((versions) => versions.some((v: any) => v.approved))
                     .length
                 : 0
-              const showDownloadAll = !isGuest && project.allowAssetDownload && approvedCount >= 2
+              const showDownloadAll = !isGuest && project.allowAssetDownload
               return (
                 <ThumbnailGrid
                   videosByName={project.videosByName}

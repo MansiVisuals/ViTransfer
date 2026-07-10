@@ -273,7 +273,9 @@ export async function GET(
     const authenticatedRecipientId = shareContext?.recipientId || null
 
     const projectData = {
-      ...(isGuest ? {} : { id: project.id }),
+      // Guests need the project id only when photo albums are visible to them
+      // (the albums API is keyed by project id); otherwise keep it omitted.
+      ...(isGuest && photoAlbumCount === 0 ? {} : { id: project.id }),
 
       title: project.title,
       description: project.description,

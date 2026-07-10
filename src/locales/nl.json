@@ -1092,6 +1092,7 @@
     "downloadNotAvailable": "Downloaden is alleen beschikbaar voor goedgekeurde projecten",
     "info": "Info",
     "downloadAllVideos": "Alle video's downloaden ({count})",
+    "approveToDownloadHint": "Keur minstens één video goed om te kunnen downloaden.",
     "noApprovedVideos": "Geen goedgekeurde video's beschikbaar om te downloaden",
     "submitFiles": "Bestanden Indienen",
     "submitFilesTitle": "Bestanden Indienen bij Project",

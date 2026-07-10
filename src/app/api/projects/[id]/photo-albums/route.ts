@@ -35,7 +35,7 @@ export async function GET(
   try {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { id: true, sharePassword: true, authMode: true },
+      select: { id: true, sharePassword: true, authMode: true, guestShowPhotos: true },
     })
 
     if (!project) {
@@ -43,7 +43,7 @@ export async function GET(
     }
 
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode, {
-      allowGuest: false,
+      allowGuest: project.guestShowPhotos,
       requiredPermission: 'view',
     })
     if (!accessCheck.authorized) {
@@ -79,7 +79,7 @@ export async function GET(
         photoCount: album._count.photos,
         coverPhotoId: coverId,
         contentToken: coverId
-          ? await generateAlbumAccessToken(album.id, projectId, request, sessionId)
+          ? await generateAlbumAccessToken(album.id, projectId, request, sessionId, accessCheck.isGuest === true)
           : null,
         createdAt: album.createdAt,
       }

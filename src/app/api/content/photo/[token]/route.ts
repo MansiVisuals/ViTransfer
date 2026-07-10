@@ -75,7 +75,7 @@ export async function GET(
       return NextResponse.json({ error: photoMessages.photoNotFound || 'Photo not found' }, { status: 404 })
     }
 
-    if (isDownload && !verifiedToken.isAdmin && !photo.album.project.allowPhotoDownload) {
+    if (isDownload && !verifiedToken.isAdmin && (verifiedToken.isGuest || !photo.album.project.allowPhotoDownload)) {
       return NextResponse.json(
         { error: photoMessages.downloadsNotAllowed || 'Photo downloads are not allowed for this project' },
         { status: 403 }

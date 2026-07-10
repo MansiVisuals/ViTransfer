@@ -17,7 +17,7 @@
 - Photo zip downloads on the share page (selected photos, one album, or the whole project), gated by a per-project toggle.
 - Recipient portal at `/portal`: recipients sign in with a magic link and see all active projects they are assigned to in one place.
 - Loop playback toggle in the video player.
-- Grid/list view toggle for videos on the share page.
+- Grid/list view toggle on the share page, applying to both videos and photo albums.
 - Client asset uploads: allow clients to upload files to projects (configurable per project).
 - Reverse share: allow clients to upload files directly to a project without attaching them to a comment. Toggled per project. Uploaded files appear in a dedicated admin block with download and delete.
 - Bulk select on admin project page: multi-select video assets and client uploads for bulk download or bulk delete.
@@ -55,13 +55,15 @@
 - IP and domain blocking.
 - Browser push notification management.
 - Version control: multiple video versions with revision tracking and optional limits.
-- Guest controls (view-only, latest-version restriction).
+- Guest controls (view-only, latest-version restriction, optional photo album visibility).
 - Asset management: images, audio, subtitles, project files, and documents with content validation.
 - Per-version thumbnails from uploaded image assets.
 - Client uploads block: view, download, and delete files submitted by clients via reverse share, with multi-select bulk actions.
 - Configurable global defaults for new projects (resolution, watermark, downloads, comments, approval).
 - Per-project overrides for global settings.
 - Video reprocessing: re-transcode videos when settings change (resolution, watermark).
+- Inline video previews on the project page (plays the transcoded preview, never the original).
+- One-click video deletion including all versions; drag & drop video files or folders onto the Videos section to upload.
 - Configurable max upload size and max comment attachments.
 - Option to use preview quality for approved playback (instead of original).
 - Privacy disclosure with custom text and GDPR consent tracking.

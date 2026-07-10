@@ -363,7 +363,7 @@ export default function AdminVideoManager({
                     ) : (
                       <>
                         <CardTitle className="text-lg">{groupName}</CardTitle>
-                        {projectStatus !== 'APPROVED' && (
+                        {isExpanded && projectStatus !== 'APPROVED' && (
                           <>
                             <Button
                               variant="ghost"

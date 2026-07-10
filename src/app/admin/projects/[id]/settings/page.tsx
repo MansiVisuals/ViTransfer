@@ -41,6 +41,7 @@ interface Project {
   authMode: string
   guestMode: boolean
   guestLatestOnly: boolean
+  guestShowPhotos: boolean
   previewResolution: string
   watermarkEnabled: boolean
   watermarkText: string | null
@@ -90,6 +91,7 @@ export default function ProjectSettingsPage() {
   const [authMode, setAuthMode] = useState('PASSWORD')
   const [guestMode, setGuestMode] = useState(false)
   const [guestLatestOnly, setGuestLatestOnly] = useState(true)
+  const [guestShowPhotos, setGuestShowPhotos] = useState(false)
   const [useCustomSlug, setUseCustomSlug] = useState(false)
   const [customSlugValue, setCustomSlugValue] = useState('')
   const [previewResolution, setPreviewResolution] = useState('720p')
@@ -197,6 +199,7 @@ export default function ProjectSettingsPage() {
         setAuthMode(data.authMode || 'PASSWORD')
         setGuestMode(data.guestMode || false)
         setGuestLatestOnly(data.guestLatestOnly ?? true)
+        setGuestShowPhotos(data.guestShowPhotos ?? false)
         setSharePassword(data.sharePassword || '')
 
         setOriginalSettings({
@@ -311,6 +314,7 @@ export default function ProjectSettingsPage() {
         authMode,
         guestMode,
         guestLatestOnly,
+        guestShowPhotos,
         clientNotificationSchedule,
         clientNotificationTime: (clientNotificationSchedule === 'DAILY' || clientNotificationSchedule === 'WEEKLY') ? clientNotificationTime : null,
         clientNotificationDay: clientNotificationSchedule === 'WEEKLY' ? clientNotificationDay : null,
@@ -1143,6 +1147,22 @@ export default function ProjectSettingsPage() {
                       id="guestLatestOnly"
                       checked={guestLatestOnly}
                       onCheckedChange={setGuestLatestOnly}
+                    />
+                  </div>
+                )}
+
+                {guestMode && (
+                  <div className="flex items-center justify-between gap-4 pt-2 mt-2 border-t border-border">
+                    <div className="space-y-0.5 flex-1">
+                      <Label htmlFor="guestShowPhotos">{t('showPhotosToGuests')}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t('showPhotosToGuestsDescription')}
+                      </p>
+                    </div>
+                    <Switch
+                      id="guestShowPhotos"
+                      checked={guestShowPhotos}
+                      onCheckedChange={setGuestShowPhotos}
                     />
                   </div>
                 )}

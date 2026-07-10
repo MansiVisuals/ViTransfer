@@ -582,6 +582,8 @@
     "guestModeRecommendedWarning": "Guest mode is recommended with no authentication to prevent unauthorized comments and approvals.",
     "restrictToLatestVersion": "Restrict to Latest Version",
     "restrictToLatestVersionDescription": "Guests can only view the latest version of each video",
+    "showPhotosToGuests": "Show Photo Albums to Guests",
+    "showPhotosToGuestsDescription": "Guests can view photo albums (downloads stay disabled for guests)",
     "sharePagePassword": "Share Page Password",
     "sharePagePasswordHint": "Clients will need this password to access the share page",
     "failedToLoadSettings": "Failed to load project settings",

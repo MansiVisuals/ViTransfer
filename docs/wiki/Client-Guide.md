@@ -36,7 +36,7 @@ After authentication you see a thumbnail grid of all videos in the project:
 - Approved videos show a checkmark overlay.
 - Videos needing review appear first, followed by approved videos.
 - Click any thumbnail to open the video player.
-- A grid/list toggle switches between thumbnail cards and a compact list.
+- A grid/list toggle in the top bar switches both videos and photo albums between thumbnail cards and a compact list; your choice is remembered.
 
 Above the grid you can see the project title, your name, and an optional project description.
 
@@ -175,12 +175,12 @@ Files you submit are visible to the project admin but are not attached to any sp
 
 ## Photo albums
 
-If the project contains photos, albums appear below the videos. Click an album to open the full-page album view:
+If the project contains photos, albums appear below the videos (for guests only when the project admin has enabled it). Click an album to open the full-page album view:
 
 - The top bar has a back button, a prev/next album selector, and the theme/language toggles.
 - Click any photo to open it in a lightbox; use the arrow keys or on-screen arrows to browse.
 - Select multiple photos (checkbox on each thumbnail) to download just those.
-- If the admin has enabled photo downloads, you can download your selection, the whole album, or all project photos as a ZIP.
+- If the admin has enabled photo downloads, you can download your selection, the whole album, or all project photos as a ZIP. Photo downloads are never available in guest mode.
 
 ## Downloading
 

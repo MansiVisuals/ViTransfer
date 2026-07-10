@@ -41,6 +41,7 @@ export async function GET(
         id: true,
         guestMode: true,
         guestLatestOnly: true,
+        guestShowPhotos: true,
         sharePassword: true,
         authMode: true,
       },
@@ -210,7 +211,7 @@ export async function GET(
         },
       }),
       getPrimaryRecipient(project.id),
-      isGuest ? Promise.resolve(0) : prisma.photoAlbum.count({
+      isGuest && !project.guestShowPhotos ? Promise.resolve(0) : prisma.photoAlbum.count({
         where: {
           projectId: project.id,
           photos: { some: { uploadCompletedAt: { not: null } } },

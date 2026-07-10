@@ -14,6 +14,7 @@ export interface AlbumAccessToken {
   ipAddress: string
   createdAt: number
   isAdmin: boolean
+  isGuest?: boolean
 }
 
 /**
@@ -25,11 +26,12 @@ export async function generateAlbumAccessToken(
   albumId: string,
   projectId: string,
   request: NextRequest,
-  sessionId: string
+  sessionId: string,
+  isGuest = false
 ): Promise<string> {
   const redis = getRedis()
 
-  const cacheKey = `album_token_cache:${sessionId}:${albumId}`
+  const cacheKey = `album_token_cache:${sessionId}:${isGuest ? 'guest' : 'full'}:${albumId}`
   const cachedToken = await redis.get(cacheKey)
 
   if (cachedToken) {
@@ -49,6 +51,7 @@ export async function generateAlbumAccessToken(
     ipAddress,
     createdAt: Date.now(),
     isAdmin: sessionId.startsWith('admin:'),
+    isGuest,
   }
 
   const ttlSeconds = await getClientSessionTimeoutSeconds()

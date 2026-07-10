@@ -1001,11 +1001,11 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 />
               )
             })()}
-            {!isGuest && project.hasPhotos && project.id && shareToken && (
+            {project.hasPhotos && project.id && shareToken && (
               <SharePhotoSection
                 projectId={project.id}
                 shareToken={shareToken}
-                allowPhotoDownload={project.allowPhotoDownload}
+                allowPhotoDownload={project.allowPhotoDownload && !isGuest}
                 viewMode={viewMode}
                 onAlbumCount={setAlbumCount}
               />

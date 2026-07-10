@@ -555,6 +555,8 @@
     "guestModeRecommendedWarning": "Gastmodus wordt aanbevolen zonder authenticatie om ongeautoriseerde reacties en goedkeuringen te voorkomen.",
     "restrictToLatestVersion": "Beperken tot Laatste Versie",
     "restrictToLatestVersionDescription": "Gasten kunnen alleen de laatste versie van elke video bekijken",
+    "showPhotosToGuests": "Fotoalbums tonen aan gasten",
+    "showPhotosToGuestsDescription": "Gasten kunnen fotoalbums bekijken (downloads blijven uitgeschakeld voor gasten)",
     "sharePagePassword": "Wachtwoord voor Klantpagina",
     "sharePagePasswordHint": "Klanten hebben dit wachtwoord nodig om de deelpagina te openen",
     "failedToLoadSettings": "Projectinstellingen laden mislukt",

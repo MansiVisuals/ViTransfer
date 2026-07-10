@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import AdminVideoManager from '@/components/AdminVideoManager'
 import ProjectActions from '@/components/ProjectActions'
 import ProjectUploadsBlock from '@/components/ProjectUploadsBlock'
 import PhotoAlbumsBlock from '@/components/PhotoAlbumsBlock'
-import { ArrowLeft, Settings, ArrowUpDown, Video, Upload, FolderUp, Images, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Settings, ArrowUpDown, Video, FolderUp, Images, ChevronDown, ChevronUp } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import { useTranslations } from 'next-intl'
 import { logError } from '@/lib/logging'
@@ -34,7 +34,6 @@ export default function ProjectPage() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
   const [photoCounts, setPhotoCounts] = useState<{ albums: number; photos: number } | null>(null)
   const [uploadsCount, setUploadsCount] = useState<number | null>(null)
-  const videoManagerRef = useRef<{ triggerUpload: () => void } | null>(null)
 
   const handlePhotoCounts = useCallback((albumCount: number, photoCount: number) => {
     setPhotoCounts({ albums: albumCount, photos: photoCount })
@@ -232,35 +231,20 @@ export default function ProjectPage() {
                   </button>
                 </h2>
                 {!collapsedSections.videos && (
-                  <div className="flex items-center gap-2">
-                    {project.videos.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
-                        className="text-muted-foreground hover:text-foreground"
-                        title={sortMode === 'status' ? t('sortAlphabetically') : t('sortByStatus')}
-                      >
-                        <ArrowUpDown className="w-4 h-4" />
-                      </Button>
-                    )}
-                    {project.status !== 'APPROVED' && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => videoManagerRef.current?.triggerUpload()}
-                      >
-                        <Upload className="w-3.5 h-3.5 sm:mr-1" />
-                        <span className="hidden sm:inline">{t('uploadVideos')}</span>
-                      </Button>
-                    )}
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortMode(current => current === 'status' ? 'alphabetical' : 'status')}
+                    className="text-muted-foreground hover:text-foreground"
+                    title={sortMode === 'status' ? t('sortAlphabetically') : t('sortByStatus')}
+                  >
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
                 )}
               </div>
-              {/* Hidden, not unmounted — keeps upload queue state and the triggerUpload ref alive while collapsed */}
+              {/* Hidden, not unmounted — keeps upload queue state alive while collapsed */}
               <div className={collapsedSections.videos ? 'hidden' : undefined}>
                 <AdminVideoManager
-                  ref={videoManagerRef}
                   projectId={project.id}
                   videos={project.videos}
                   projectStatus={project.status}

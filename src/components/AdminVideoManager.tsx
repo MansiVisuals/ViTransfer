@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { ChevronDown, ChevronUp, Video, CheckCircle2, Pencil, Upload } from 'lucide-react'
@@ -11,7 +11,14 @@ import { VideoUploadModal } from './VideoUploadModal'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { apiPatch, apiFetch } from '@/lib/api-client'
+import { FILE_LIMITS } from '@/lib/file-validation'
+import { entryToFiles } from '@/lib/drop-entries'
 import { useTranslations } from 'next-intl'
+
+function isVideoFile(file: File): boolean {
+  const name = file.name.toLowerCase()
+  return FILE_LIMITS.ALLOWED_EXTENSIONS.includes(name.slice(name.lastIndexOf('.')))
+}
 
 interface AdminVideoManagerProps {
   projectId: string
@@ -25,11 +32,7 @@ interface AdminVideoManagerProps {
   enableRevisions?: boolean
 }
 
-interface AdminVideoManagerHandle {
-  triggerUpload: () => void
-}
-
-const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerProps>(({
+export default function AdminVideoManager({
   projectId,
   videos,
   projectStatus,
@@ -39,7 +42,7 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
   sortMode = 'alphabetical',
   maxRevisions,
   enableRevisions
-}, ref) => {
+}: AdminVideoManagerProps) {
   const t = useTranslations('videos')
   const tc = useTranslations('common')
   const router = useRouter()
@@ -57,6 +60,9 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
   // Only allow one video expanded at a time - default collapsed
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const dragCounterRef = useRef(0)
   const [editingGroupName, setEditingGroupName] = useState<string | null>(null)
   const [editGroupValue, setEditGroupValue] = useState('')
   const [savingGroupName, setSavingGroupName] = useState<string | null>(null)
@@ -103,16 +109,51 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
     return () => { cancelled = true }
   }, [videos, projectId, sessionId])
 
-  // Expose triggerUpload method to parent via ref
-  useImperativeHandle(ref, () => ({
-    triggerUpload: () => {
-      setIsUploadModalOpen(true)
-    }
-  }))
-
   // Handle upload completion from modal - refresh to show processing inline
   const handleUploadComplete = () => {
     onRefresh?.()
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current += 1
+    setIsDragOver(true)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current -= 1
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0
+      setIsDragOver(false)
+    }
+  }
+
+  // Drop video files or folders (flattened) onto the section: open the upload modal pre-filled
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    dragCounterRef.current = 0
+    setIsDragOver(false)
+    if (projectStatus === 'APPROVED') return
+
+    // webkitGetAsEntry must be read synchronously before any await
+    const entries = Array.from(e.dataTransfer.items || [])
+      .map(item => (item as any).webkitGetAsEntry?.())
+      .filter(Boolean)
+
+    const files = entries.length > 0
+      ? (await Promise.all(entries.map(entryToFiles))).flat()
+      : Array.from(e.dataTransfer.files || [])
+
+    const videoFiles = files.filter(isVideoFile)
+    if (videoFiles.length === 0) return
+
+    setDroppedFiles(videoFiles)
+    setIsUploadModalOpen(true)
   }
 
   const toggleGroup = (name: string) => {
@@ -185,13 +226,25 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
   })
 
   return (
-    <div className="space-y-4">
+    <div
+      className={`space-y-4 rounded-lg transition-shadow ${isDragOver ? 'ring-2 ring-primary/60' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragOver && projectStatus !== 'APPROVED' && (
+        <div className="px-3 py-2 rounded-lg border border-dashed border-primary/60 bg-primary/5 text-sm text-primary">
+          {t('dropVideosHint')}
+        </div>
+      )}
       {/* Upload Modal - handles full upload with TUS, processing shows inline after */}
       <VideoUploadModal
         isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
+        onClose={() => { setIsUploadModalOpen(false); setDroppedFiles([]) }}
         projectId={projectId}
         onUploadComplete={handleUploadComplete}
+        initialFiles={droppedFiles}
       />
 
       {sortedGroupNames.length === 0 && (
@@ -346,10 +399,19 @@ const AdminVideoManager = forwardRef<AdminVideoManagerHandle, AdminVideoManagerP
           </Card>
         )
       })}
+
+      {sortedGroupNames.length > 0 && projectStatus !== 'APPROVED' && (
+        <button
+          type="button"
+          onClick={() => setIsUploadModalOpen(true)}
+          className="w-full flex items-center gap-3 py-3 px-3 sm:px-6 rounded-lg border border-dashed bg-card hover:bg-accent/50 transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <div className="w-20 h-12 rounded-md border border-dashed border-border flex items-center justify-center flex-shrink-0">
+            <Upload className="w-5 h-5" />
+          </div>
+          <span className="text-sm font-medium">{t('uploadFirstVideo')}</span>
+        </button>
+      )}
     </div>
   )
-})
-
-AdminVideoManager.displayName = 'AdminVideoManager'
-
-export default AdminVideoManager
+}

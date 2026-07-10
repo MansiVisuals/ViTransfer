@@ -153,8 +153,6 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
 
   if (loading || albums.length === 0) return null
 
-  const downloadButtonClass = 'p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-50 text-sm font-medium text-foreground'
-
   return (
     <>
       {/* Albums overview — rendered inside the share grid page */}
@@ -166,37 +164,50 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
           </h2>
           <div className="flex-1" />
           {allowPhotoDownload && albums.length > 1 && (
-            <button type="button" onClick={() => handleZipDownload('project')} disabled={downloading} className={downloadButtonClass}>
+            <Button variant="outline" size="sm" onClick={() => handleZipDownload('project')} disabled={downloading}>
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               <span className="hidden sm:inline">{t('downloadAllAlbums')}</span>
-            </button>
+            </Button>
           )}
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {albums.map(album => (
             <button
               key={album.id}
               type="button"
               onClick={() => setSelectedAlbum(album)}
-              className="group text-left rounded-lg border bg-card overflow-hidden hover:bg-muted/30 transition-colors"
+              className={cn(
+                'group relative rounded-lg overflow-hidden',
+                'bg-card border border-border',
+                'hover:border-primary/50 hover:shadow-elevation-lg',
+                'transition-all duration-200',
+                'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background'
+              )}
             >
-              <div className="aspect-square bg-muted/40 flex items-center justify-center overflow-hidden">
+              <div className="aspect-video relative bg-muted">
                 {album.coverPhotoId && album.contentToken ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`/api/content/photo/${album.contentToken}?photoId=${album.coverPhotoId}&variant=thumb`}
                     alt={album.name}
                     loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
-                  <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <ImageIcon className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/50" />
+                  </div>
                 )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <Images className="w-3 h-3" />
+                  <span>{album.photoCount}</span>
+                </div>
               </div>
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium truncate">{album.name}</p>
-                <p className="text-xs text-muted-foreground">{t('photoCount', { count: album.photoCount })}</p>
+              <div className="p-3 sm:p-4">
+                <p className="text-sm font-medium text-foreground truncate text-left">{album.name}</p>
+                <p className="text-xs text-muted-foreground mt-1 text-left">{t('photoCount', { count: album.photoCount })}</p>
               </div>
             </button>
           ))}

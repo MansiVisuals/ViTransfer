@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useMemo, useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { CheckCircle2, Film, Layers, Files, Download, Loader2, LayoutGrid, List, ChevronRight } from 'lucide-react'
+import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
 
 interface ThumbnailGridProps {
@@ -111,21 +112,16 @@ export default function ThumbnailGrid({
         </h2>
         <div className="flex-1" />
         {onDownloadAll && (
-          <button
-            type="button"
-            onClick={onDownloadAll}
-            disabled={downloadingAll}
-            className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors flex items-center gap-1.5 disabled:opacity-50 text-sm font-medium text-foreground"
-          >
+          <Button variant="outline" size="sm" onClick={onDownloadAll} disabled={downloadingAll}>
             {downloadingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             <span className="hidden sm:inline">{downloadAllLabel || t('videos')}</span>
-          </button>
+          </Button>
         )}
-        <div className="flex items-center rounded-lg border border-border overflow-hidden">
+        <div className="flex items-center h-9 rounded-lg border border-border overflow-hidden">
           <button
             type="button"
             onClick={() => changeViewMode('grid')}
-            className={cn('p-2 transition-colors', viewMode === 'grid' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
+            className={cn('h-full px-2.5 flex items-center transition-colors', viewMode === 'grid' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
             title={t('gridView')}
             aria-label={t('gridView')}
           >
@@ -134,7 +130,7 @@ export default function ThumbnailGrid({
           <button
             type="button"
             onClick={() => changeViewMode('list')}
-            className={cn('p-2 transition-colors', viewMode === 'list' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
+            className={cn('h-full px-2.5 flex items-center transition-colors', viewMode === 'list' ? 'bg-accent text-foreground' : 'bg-background text-muted-foreground hover:text-foreground')}
             title={t('listView')}
             aria-label={t('listView')}
           >
@@ -178,7 +174,7 @@ export default function ThumbnailGrid({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {versionCount} {versionCount === 1 ? tv('versions').slice(0, -1) : tv('versions')}
+                    {versionCount} {versionCount === 1 ? tv('versionSingular') : tv('versions')}
                   </p>
                 </div>
                 {hasAssets && <Files className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
@@ -271,7 +267,7 @@ export default function ThumbnailGrid({
                   {name}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 text-left">
-                  {versionCount} {versionCount === 1 ? tv('versions').slice(0, -1) : tv('versions')}
+                  {versionCount} {versionCount === 1 ? tv('versionSingular') : tv('versions')}
                 </p>
               </div>
             </button>

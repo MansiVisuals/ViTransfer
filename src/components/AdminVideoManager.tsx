@@ -331,7 +331,7 @@ export default function AdminVideoManager({
                   <button
                     type="button"
                     onClick={(e) => handlePreview(groupName, e)}
-                    className="flex-shrink-0 cursor-zoom-in"
+                    className="relative flex-shrink-0 cursor-zoom-in"
                     title={t('previewVideo')}
                     aria-label={t('previewVideo')}
                   >
@@ -342,10 +342,28 @@ export default function AdminVideoManager({
                       loading="lazy"
                       className="w-20 h-12 rounded-md object-cover border border-border bg-muted"
                     />
+                    {hasApprovedVideos && (
+                      <span
+                        className="absolute -top-1.5 -right-1.5 bg-success text-success-foreground rounded-full p-0.5 shadow-elevation-sm"
+                        title={`${approvedCount} ${t('approved')}`}
+                        aria-label={`${approvedCount} ${t('approved')}`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </span>
+                    )}
                   </button>
                 ) : (
-                  <div className="w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                  <div className="relative w-20 h-12 rounded-md border border-border bg-muted flex items-center justify-center flex-shrink-0">
                     <Video className="w-5 h-5 text-muted-foreground" />
+                    {hasApprovedVideos && (
+                      <span
+                        className="absolute -top-1.5 -right-1.5 bg-success text-success-foreground rounded-full p-0.5 shadow-elevation-sm"
+                        title={`${approvedCount} ${t('approved')}`}
+                        aria-label={`${approvedCount} ${t('approved')}`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -397,12 +415,6 @@ export default function AdminVideoManager({
                         {hasErrorVideos && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-destructive-visible text-destructive border border-destructive-visible flex-shrink-0">
                             {errorCount} {t('error')}
-                          </span>
-                        )}
-                        {hasApprovedVideos && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success-visible text-success border border-success-visible flex-shrink-0">
-                            <CheckCircle2 className="w-3 h-3" />
-                            {approvedCount} {t('approved')}
                           </span>
                         )}
                       </>

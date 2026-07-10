@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.5] - 2026-07-10
+
+Hotfix release for 1.2.4.
+
+### Fixed
+- Guest photo albums: the share response omitted the project id for guests, so the albums section never rendered even with "Show Photo Albums to Guests" enabled.
+- Share overview: the Download All Videos button was hidden until two videos were approved. It now always shows when downloads are enabled, works from one approved video, and with none approved it explains that at least one video must be approved first.
+
 ## [1.2.4] - 2026-07-10
 
 ### Added

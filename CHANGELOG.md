@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.6] - 2026-07-28
+
+Security release: dependency updates and one storage hardening fix.
+
+### Security
+- Storage path validation now resolves symlinks before checking against STORAGE_ROOT. `path.resolve` is lexical, so a symlink inside the storage root pointing outside it passed the traversal check; the deepest existing ancestor is now resolved with `realpathSync` first.
+- next 16.2.10 -> 16.2.12 (SSRF in rewrites and Server Actions, middleware/proxy bypass, DoS in Server Actions and image optimization, response cache confusion, Server Function endpoint disclosure)
+- sharp 0.34.5 -> 0.35.3 (libvips CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591)
+- isomorphic-dompurify 3.18.0 -> 3.19.0, pulling dompurify 3.4.12 (CUSTOM_ELEMENT_HANDLING sanitizer bypass)
+- postcss 8.5.16 -> 8.5.24 (path traversal via sourceMappingURL)
+- brace-expansion pinned to 5.0.8 and minimatch 3 to 10 in overrides (expansion DoS)
+- Next's bundled sharp pinned to the top-level version so the image optimizer no longer resolves its own vulnerable copy
+
 ## [1.2.5] - 2026-07-10
 
 Hotfix release for 1.2.4.

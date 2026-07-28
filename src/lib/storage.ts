@@ -14,8 +14,30 @@ export function isS3Mode(): boolean {
 }
 
 /**
+ * Resolve symlinks on the deepest existing ancestor of a path, then re-append
+ * the not-yet-created segments. Paths for new uploads do not exist yet, so
+ * realpathSync cannot be called on them directly.
+ */
+function resolveRealPath(target: string): string {
+  let current = path.resolve(target)
+  const pending: string[] = []
+
+  for (;;) {
+    try {
+      return path.join(fs.realpathSync(current), ...pending.reverse())
+    } catch {
+      const parent = path.dirname(current)
+      if (parent === current) return path.resolve(target)
+      pending.push(path.basename(current))
+      current = parent
+    }
+  }
+}
+
+/**
  * Validate a relative storage path against STORAGE_ROOT.
- * Guards against null bytes, URL-encoded traversal, backslashes, and .. sequences.
+ * Guards against null bytes, URL-encoded traversal, backslashes, .. sequences,
+ * and symlinks that point outside the storage root.
  */
 function validatePath(filePath: string): string {
   if (filePath.includes('\0')) throw new Error('Invalid file path - null byte detected')
@@ -32,8 +54,8 @@ function validatePath(filePath: string): string {
   while (decoded.includes('..')) decoded = decoded.replace(/\.\./g, '')
 
   const fullPath = path.join(STORAGE_ROOT, path.normalize(decoded))
-  const realPath = path.resolve(fullPath)
-  const realRoot = path.resolve(STORAGE_ROOT)
+  const realPath = resolveRealPath(fullPath)
+  const realRoot = resolveRealPath(STORAGE_ROOT)
 
   if (!realPath.startsWith(realRoot + path.sep) && realPath !== realRoot) {
     throw new Error('Invalid file path - path traversal detected')

@@ -1,6 +1,6 @@
 {
   "name": "vitransfer",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -32,15 +32,15 @@
     "file-type": "^22.0.1",
     "html-to-text": "^10.0.0",
     "ioredis": "5.10.1",
-    "isomorphic-dompurify": "^3.15.0",
+    "isomorphic-dompurify": "^3.19.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.21.0",
-    "next": "^16.2.7",
+    "next": "^16.2.12",
     "next-intl": "^4.13.0",
     "nodemailer": "^9.0.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "tailwind-merge": "^2.6.1",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.22.4",
@@ -58,16 +58,19 @@
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.7",
-    "postcss": "^8.5.15",
+    "eslint-config-next": "^16.2.12",
+    "postcss": "^8.5.24",
     "prisma": "^6.19.3",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3"
   },
   "overrides": {
     "glob": "11.1.0",
+    "brace-expansion@5": "^5.0.8",
+    "minimatch@3": "^10.2.6",
     "next": {
-      "postcss": "$postcss"
+      "postcss": "$postcss",
+      "sharp": "$sharp"
     }
   }
 }

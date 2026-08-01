@@ -10,11 +10,16 @@ on:
 
 jobs:
   analyze:
-    name: Analyze (javascript-typescript)
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       security-events: write
       contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python, actions]
 
     steps:
       - name: Checkout repository
@@ -23,10 +28,10 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: javascript-typescript
+          languages: ${{ matrix.language }}
           queries: security-extended
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:javascript-typescript"
+          category: "/language:${{ matrix.language }}"

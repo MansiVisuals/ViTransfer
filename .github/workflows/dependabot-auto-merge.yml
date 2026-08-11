@@ -1,0 +1,80 @@
+name: Dependabot Auto-merge
+
+# Queues Dependabot PRs for merge once the dev integration tests pass.
+# `gh pr merge --auto` only merges after the required checks on dev succeed,
+# so this never bypasses the 19 clean-install and 22 upgrade tests.
+
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Queue for auto-merge
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide whether this update may merge unattended
+        id: decide
+        env:
+          ECOSYSTEM: ${{ steps.meta.outputs.package-ecosystem }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          ALERT_STATE: ${{ steps.meta.outputs.alert-state }}
+        run: |
+          allow=false
+          reason="major version bumps are never merged unattended"
+
+          if [ "$UPDATE_TYPE" != "version-update:semver-major" ]; then
+            case "$ECOSYSTEM" in
+              npm)
+                # Routine npm churn is limited to patches. Minors ride along
+                # only when they close an advisory.
+                if [ "$UPDATE_TYPE" = "version-update:semver-patch" ]; then
+                  allow=true; reason="npm patch"
+                elif [ -n "$ALERT_STATE" ]; then
+                  allow=true; reason="npm security update ($ALERT_STATE)"
+                else
+                  reason="npm minor without an advisory"
+                fi
+                ;;
+              github_actions|docker)
+                allow=true; reason="$ECOSYSTEM patch/minor"
+                ;;
+              *)
+                reason="unrecognised ecosystem: $ECOSYSTEM"
+                ;;
+            esac
+          fi
+
+          echo "allow=$allow" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "Decision: allow=$allow ($reason)"
+
+      - name: Enable auto-merge
+        if: steps.decide.outputs.allow == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
+
+      - name: Flag for manual review
+        if: steps.decide.outputs.allow != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          REASON: ${{ steps.decide.outputs.reason }}
+        run: |
+          gh pr edit "$PR_URL" --add-label "needs-manual-review"
+          gh pr comment "$PR_URL" --body \
+            "Left open for a human: $REASON. Merge by hand once you have checked the upstream release notes."

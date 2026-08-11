@@ -7,6 +7,7 @@ import LogoMark from './LogoMark'
 type BrandLogoProps = {
   size?: number // legacy square size
   height?: number // preferred height; width auto for custom SVGs
+  maxWidth?: number | string // caps wide logos; defaults to 3x the height
   className?: string
   ariaHidden?: boolean
 }
@@ -15,9 +16,10 @@ type BrandLogoProps = {
  * Displays custom uploaded SVG logo when configured, otherwise falls back to LogoMark.
  * Fetches brandingLogoPath from /api/settings/theme (cached in localStorage).
  */
-function BrandLogo({ size = 64, height, className, ariaHidden = false }: BrandLogoProps) {
+function BrandLogo({ size = 64, height, maxWidth, className, ariaHidden = false }: BrandLogoProps) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const resolvedHeight = height || size
+  const resolvedMaxWidth = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth || `${resolvedHeight * 3}px`
 
   useEffect(() => {
     const cached = typeof window !== 'undefined' ? localStorage.getItem('brandingLogoUrl') : null
@@ -49,7 +51,8 @@ function BrandLogo({ size = 64, height, className, ariaHidden = false }: BrandLo
         src={logoUrl}
         alt="Company logo"
         height={resolvedHeight}
-        style={{ height: `${resolvedHeight}px`, width: 'auto', maxWidth: `${resolvedHeight * 3}px` }}
+        // object-contain keeps the aspect ratio when maxWidth clamps a wide logo.
+        style={{ height: `${resolvedHeight}px`, width: 'auto', maxWidth: resolvedMaxWidth, objectFit: 'contain' }}
         className={cn('shrink-0', className)}
         aria-hidden={ariaHidden}
       />

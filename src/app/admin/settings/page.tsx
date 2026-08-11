@@ -698,7 +698,7 @@ export default function GlobalSettingsPage() {
         applySecuritySettingsToForm(refreshedSecurityData)
       }
 
-      // Refresh the page to update server components (like AdminHeader menu)
+      // Refresh the page to update server components (like AdminSidebar menu)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failedToSave'))

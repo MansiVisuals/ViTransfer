@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.7] - 2026-08-11
+
+Admin navigation moved to a sidebar, plus transitive dependency updates.
+
+### Changed
+- The admin top menu bar is now a left sidebar, collapsible between a 240px labelled panel and a 64px icon rail with the choice remembered per browser. Below the md breakpoint it becomes an off-canvas drawer behind a hamburger, so narrow screens keep their full width for content.
+- The sidebar shows the brand logo at the top; theme, about and the user menu moved to its footer.
+- Wide custom logos no longer overflow their container: `BrandLogo` takes a `maxWidth` and scales with `object-contain` instead of stretching.
+
+### Security
+- dompurify 3.4.12 -> 3.4.13 via isomorphic-dompurify (IN_PLACE hook XSS)
+- undici 7.28.0 -> 7.29.0 via jsdom (cache directive disclosure, CRLF injection, cookie attribute injection, response desync)
+- brace-expansion pinned to 5.0.9 in overrides (expansion DoS)
+- js-yaml 4.3.1 and nanoid 3.3.18 from npm audit
+
 ## [1.2.6] - 2026-07-28
 
 Security release: dependency updates and one storage hardening fix.

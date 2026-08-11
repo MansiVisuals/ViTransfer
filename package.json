@@ -1,6 +1,6 @@
 {
   "name": "vitransfer",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -66,7 +66,7 @@
   },
   "overrides": {
     "glob": "11.1.0",
-    "brace-expansion@5": "^5.0.8",
+    "brace-expansion@5": "^5.0.9",
     "minimatch@3": "^10.2.6",
     "next": {
       "postcss": "$postcss",

@@ -8,8 +8,7 @@ runs itself end to end. There is no recurring human action.
 | When | What | Where |
 | --- | --- | --- |
 | Mon 05:00 UTC | Dependabot opens PRs against `dev` | `.github/dependabot.yml` |
-| on each PR | 19 clean-install + 22 upgrade tests build from source and run against real compose stacks | `docker-integration-tests.yml` |
-| | *(PR only — running on push to dev as well ran the same suite twice per merge)* | |
+| on each PR, and on direct pushes to `dev` | 19 clean-install + 22 upgrade tests build from source and run against real compose stacks | `docker-integration-tests.yml` |
 | tests green | eligible PRs squash-merge into `dev` | `dependabot-auto-merge.yml` |
 | Mon 08:00 UTC | clean install re-run against `dev`, then version bump, changelog, `dev` → `main`, multi-arch build, tag, release | `weekly-security-release.yml` |
 | after publish | clean install runs against the **published** Docker Hub image | `test-clean-install.yml` |
@@ -46,9 +45,10 @@ merged tree; this tests the exact tree about to ship. If it fails, nothing is
 published and an issue is opened.
 
 Coverage is deliberately one layer deep at each stage rather than three. The
-full clean-install and upgrade suites still run on every PR, which is where a
-schema or code change actually arrives. Re-running all of it twice more per
-release bought little and cost roughly 25 minutes a week.
+full clean-install and upgrade suites run on every PR and on every direct push
+to `dev`, which is where a schema or code change actually arrives. Pushes
+authored by dependabot are skipped, since those are squash-merged PRs that just
+ran the same suite.
 
 Once it passes, the job runs in order:
 

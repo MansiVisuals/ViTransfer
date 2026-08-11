@@ -1,12 +1,22 @@
 name: Docker Integration Tests
 
-# PR only. Running on push to dev as well meant every merged PR ran the full
-# suite twice over identical code. Changes reach dev through PRs; a direct
-# push is covered by the release run's pre-publish check.
+# Direct pushes to dev are normal here, so they still get tested. The jobs skip
+# pushes authored by dependabot, which are squash-merged PRs that already ran
+# this suite — that was the same 41 tests twice over identical code.
 #
-# No paths filter: "Test Summary" is a required check on dev, and a required
-# check that never runs leaves auto-merge pending forever.
+# No paths filter on PRs: "Test Summary" is a required check on dev, and a
+# required check that never runs leaves auto-merge pending forever.
 on:
+  push:
+    branches: [dev]
+    paths:
+      - 'docker-compose*.yml'
+      - 'Dockerfile'
+      - 'prisma/**'
+      - 'src/**'
+      - 'package*.json'
+      - '.github/workflows/docker-*.yml'
+      - '.github/workflows/test-dev-*.yml'
   pull_request:
     branches: [dev]
   workflow_dispatch:
@@ -17,18 +27,22 @@ permissions:
 jobs:
   clean-install:
     name: Dev Clean Install Test
+    # A push authored by dependabot is a squash-merged PR that just ran this.
+    if: github.event_name != 'push' || github.event.head_commit.author.name != 'dependabot[bot]'
     uses: ./.github/workflows/test-dev-clean-install.yml
 
   upgrade-test:
     name: Dev Upgrade Test
     needs: clean-install
+    if: github.event_name != 'push' || github.event.head_commit.author.name != 'dependabot[bot]'
     uses: ./.github/workflows/test-dev-upgrade.yml
 
   summary:
     name: Test Summary
     needs: [clean-install, upgrade-test]
     runs-on: ubuntu-latest
-    if: always()
+    # always() so a failure still reports, but not when the suite was skipped.
+    if: always() && (github.event_name != 'push' || github.event.head_commit.author.name != 'dependabot[bot]')
 
     steps:
       - name: Check test results

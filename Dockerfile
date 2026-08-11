@@ -1,7 +1,7 @@
 # ViTransfer - Multi-Architecture Docker Image
 # Supports: amd64, arm64 | Security: non-root user via PUID/PGID
 
-FROM node:24-alpine3.23 AS base
+FROM node:26-alpine3.23 AS base
 
 ARG TARGETPLATFORM
 ARG TARGETARCH

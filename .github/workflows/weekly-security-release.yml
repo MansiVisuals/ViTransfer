@@ -1,0 +1,198 @@
+name: Weekly Security Release
+
+# Maintenance-mode release train. Dependabot lands security patches on dev
+# through the week; this promotes them to main, publishes multi-arch images
+# and cuts a release. Quiet weeks are skipped, so versions stay meaningful.
+#
+# Publishing waits on the `release` environment, so the whole run pauses for a
+# human approval before anything reaches Docker Hub.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Monday 08:00 UTC, after Dependabot's 05:00 run
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Release even if dev has no new commits"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: mansivisuals/vitransfer
+
+jobs:
+  check:
+    name: Check for pending patches
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.diff.outputs.should_release }}
+      next_version: ${{ steps.version.outputs.next }}
+      notes: ${{ steps.diff.outputs.notes }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Compare dev against main
+        id: diff
+        run: |
+          git fetch origin main dev --quiet
+          count=$(git rev-list --count origin/main..origin/dev)
+          echo "dev is $count commit(s) ahead of main"
+
+          if [ "$count" -eq 0 ] && [ "${{ inputs.force }}" != "true" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to release this week."
+            exit 0
+          fi
+
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+
+          # Squash-merged Dependabot PRs land as single commits; their subjects
+          # are the release notes.
+          {
+            echo "notes<<__NOTES__"
+            git log --no-merges --format='- %s' origin/main..origin/dev
+            echo "__NOTES__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version
+        id: version
+        if: steps.diff.outputs.should_release == 'true'
+        run: |
+          current=$(tr -d '\n\r' < VERSION)
+          next=$(echo "$current" | awk -F. '{printf "%d.%d.%d", $1, $2, $3 + 1}')
+          echo "current=$current  next=$next"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Audit for anything Dependabot missed
+        if: steps.diff.outputs.should_release == 'true'
+        run: |
+          npm ci --legacy-peer-deps --ignore-scripts
+          # Majors and unfixable advisories never reach auto-merge, so this is
+          # the backstop that makes them visible rather than silently skipped.
+          npm audit --audit-level=high || echo "::warning::npm audit reports unresolved advisories — review before approving"
+
+  publish:
+    name: Publish release
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    environment: release # approval gate lives here
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v5
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and changelog
+        env:
+          VERSION: ${{ needs.check.outputs.next_version }}
+          NOTES: ${{ needs.check.outputs.notes }}
+        run: |
+          echo "$VERSION" > VERSION
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+          node -e '
+            const fs = require("fs");
+            const version = process.env.VERSION;
+            const date = new Date().toISOString().slice(0, 10);
+            const entry = `## [${version}] - ${date}\n\nSecurity release: dependency updates.\n\n### Security\n${process.env.NOTES.trim()}\n\n`;
+            const path = "CHANGELOG.md";
+            const body = fs.readFileSync(path, "utf8");
+            const marker = "\n## [";
+            const at = body.indexOf(marker);
+            if (at === -1) throw new Error("no existing release heading in CHANGELOG.md");
+            fs.writeFileSync(path, body.slice(0, at + 1) + entry + body.slice(at + 1));
+          '
+
+          git add VERSION package.json package-lock.json CHANGELOG.md
+          git commit -m "$VERSION: weekly security patches"
+          git push origin dev
+
+      - name: Promote dev to main
+        env:
+          VERSION: ${{ needs.check.outputs.next_version }}
+        run: |
+          git checkout main
+          git merge --no-ff dev -m "Merge dev into main for v$VERSION release"
+          git push origin main
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build and push multi-arch images
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          no-cache: true # release builds never carry stale layers
+          build-args: |
+            APP_VERSION=${{ needs.check.outputs.next_version }}
+          tags: |
+            ${{ env.IMAGE }}:${{ needs.check.outputs.next_version }}
+            ${{ env.IMAGE }}:latest
+
+      - name: Publish GitHub release
+        # Last, so the release-triggered install and upgrade tests run against
+        # images that are already on Docker Hub.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.check.outputs.next_version }}
+          NOTES: ${{ needs.check.outputs.notes }}
+        run: |
+          printf '%s\n\n%s\n\n%s\n' \
+            "Weekly security patch release. ViTransfer is in maintenance mode: security updates only." \
+            "$NOTES" \
+            "Upgrade with \`docker compose pull && docker compose up -d\`." > notes.md
+
+          gh release create "v$VERSION" \
+            --target main \
+            --title "v$VERSION" \
+            --notes-file notes.md
+
+  report-failure:
+    name: Report failure
+    needs: [check, publish]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Open an issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Weekly security release failed ($(date -u +%Y-%m-%d))" \
+            --label "ci" \
+            --body "The weekly security release run did not complete: $RUN_URL"

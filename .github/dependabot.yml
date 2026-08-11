@@ -1,0 +1,56 @@
+version: 2
+
+# Maintenance mode: ViTransfer takes security patches weekly and little else.
+# Everything targets dev; the weekly-security-release workflow promotes dev to
+# main. Majors are left to open as PRs rather than ignored, so a security fix
+# that needs one is never silently withheld — auto-merge just won't take them.
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev
+    groups:
+      # One PR per week for routine patches keeps the queue small; security
+      # updates stay ungrouped so each advisory is auditable on its own.
+      npm-patches:
+        applies-to: version-updates
+        update-types:
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        applies-to: version-updates
+        update-types:
+          - patch
+          - minor
+
+  - package-ecosystem: docker
+    directory: "/"
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: docker

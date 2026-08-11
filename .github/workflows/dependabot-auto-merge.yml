@@ -36,8 +36,10 @@ jobs:
           reason="major version bumps are never merged unattended"
 
           if [ "$UPDATE_TYPE" != "version-update:semver-major" ]; then
+            # fetch-metadata reports the advisory-database name, so npm
+            # arrives as npm_and_yarn rather than npm.
             case "$ECOSYSTEM" in
-              npm)
+              npm|npm_and_yarn)
                 # Routine npm churn is limited to patches. Minors ride along
                 # only when they close an advisory.
                 if [ "$UPDATE_TYPE" = "version-update:semver-patch" ]; then

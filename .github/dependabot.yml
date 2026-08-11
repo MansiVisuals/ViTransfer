@@ -2,8 +2,13 @@ version: 2
 
 # Maintenance mode: ViTransfer takes security patches weekly and little else.
 # Everything targets dev; the weekly-security-release workflow promotes dev to
-# main. Majors are left to open as PRs rather than ignored, so a security fix
-# that needs one is never silently withheld — auto-merge just won't take them.
+# main.
+#
+# Major version updates are ignored everywhere. In maintenance mode a runtime
+# or framework major is never worth the churn, and the first Monday produced
+# nine of them. The ignore applies to version updates; the release run's
+# `npm audit --audit-level=high` is the backstop that surfaces an advisory
+# whose only fix is a major.
 updates:
   - package-ecosystem: npm
     directory: "/"
@@ -24,6 +29,10 @@ updates:
         applies-to: version-updates
         update-types:
           - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: "/"
@@ -42,6 +51,10 @@ updates:
         update-types:
           - patch
           - minor
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: docker
     directory: "/"
@@ -54,3 +67,7 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: docker
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major

@@ -28,7 +28,7 @@
     "bullmq": "^5.76.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "driver.js": "^1.4.0",
+    "driver.js": "^1.8.0",
     "file-type": "^22.0.1",
     "html-to-text": "^10.0.0",
     "ioredis": "5.10.1",

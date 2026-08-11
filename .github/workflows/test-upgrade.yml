@@ -3,6 +3,15 @@ name: Test Version Upgrade
 on:
   release:
     types: [published]
+  # Releases published by CI use GITHUB_TOKEN, which by design does not trigger
+  # further workflows. The release job calls this directly instead.
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to take the compose files from'
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       from_version:
@@ -25,6 +34,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Determine versions for upgrade test
         id: versions

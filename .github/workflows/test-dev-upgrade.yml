@@ -2,6 +2,12 @@ name: Test Dev Build Upgrade
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to test (defaults to the triggering ref)'
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       from_version:
@@ -20,6 +26,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Determine versions
         id: versions

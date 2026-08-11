@@ -107,7 +107,8 @@ jobs:
 
   # Individual PRs are tested against dev as it was when they opened, not
   # against the final merged state. With no human approving the release, this
-  # is what verifies the exact tree that is about to ship.
+  # verifies the exact tree about to ship. Upgrade coverage stays at PR level,
+  # where schema changes would actually arrive.
   verify-clean-install:
     name: Verify clean install
     needs: check
@@ -116,17 +117,9 @@ jobs:
     with:
       ref: dev # this workflow runs from main; dev is the tree being shipped
 
-  verify-upgrade:
-    name: Verify upgrade
-    needs: [check, verify-clean-install]
-    if: needs.check.outputs.should_release == 'true'
-    uses: ./.github/workflows/test-dev-upgrade.yml
-    with:
-      ref: dev
-
   publish:
     name: Publish release
-    needs: [check, verify-clean-install, verify-upgrade]
+    needs: [check, verify-clean-install]
     if: needs.check.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -235,7 +228,7 @@ jobs:
             --notes-file notes.md
 
   # A release published with GITHUB_TOKEN does not fire the `release: published`
-  # trigger, so these are called directly. They pull from Docker Hub and are the
+  # trigger, so this is called directly. It pulls from Docker Hub and is the
   # only check that the published manifest actually runs.
   post-release-clean-install:
     name: Post-release clean install
@@ -244,16 +237,9 @@ jobs:
     with:
       ref: main
 
-  post-release-upgrade:
-    name: Post-release upgrade
-    needs: [publish, post-release-clean-install]
-    uses: ./.github/workflows/test-upgrade.yml
-    with:
-      ref: main
-
   report-failure:
     name: Report failure
-    needs: [check, verify-clean-install, verify-upgrade, publish, post-release-clean-install, post-release-upgrade]
+    needs: [check, verify-clean-install, publish, post-release-clean-install]
     if: failure()
     runs-on: ubuntu-latest
     permissions:

@@ -1,8 +1,9 @@
 name: "CodeQL Analysis"
 
+# PR plus the weekly sweep. Scanning on push as well meant three scans of the
+# same commit: once on the PR, once when it merged to dev, once when dev
+# reached main — all identical code.
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
   schedule:

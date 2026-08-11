@@ -1,18 +1,12 @@
 name: Docker Integration Tests
 
+# PR only. Running on push to dev as well meant every merged PR ran the full
+# suite twice over identical code. Changes reach dev through PRs; a direct
+# push is covered by the release run's pre-publish check.
+#
+# No paths filter: "Test Summary" is a required check on dev, and a required
+# check that never runs leaves auto-merge pending forever.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - 'docker-compose*.yml'
-      - 'Dockerfile'
-      - 'prisma/**'
-      - 'src/**'
-      - 'package*.json'
-      - '.github/workflows/docker-*.yml'
-      - '.github/workflows/test-dev-*.yml'
-  # No paths filter on PRs: "Test Summary" is a required check on dev, and a
-  # required check that never runs leaves auto-merge pending forever.
   pull_request:
     branches: [dev]
   workflow_dispatch:

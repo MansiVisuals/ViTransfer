@@ -22,16 +22,19 @@ only after `Test Summary` passes. Majors are never merged unattended.
 
 | Ecosystem | Auto-merges | Left for a human |
 | --- | --- | --- |
-| npm | patch, plus any non-major closing an advisory | non-security minor, all majors |
+| npm | patch, minor | major |
 | github-actions | patch, minor | major |
 | docker | patch, minor | major |
 
-Anything held back gets the `needs-manual-review` label and a comment saying why.
+Majors never merge unattended, security ones included — a major can change
+behaviour in ways the suite would not catch. Anything held back gets the
+`needs-manual-review` label and a comment saying why.
 
-Majors are deliberately *not* ignored in `dependabot.yml`, so a security fix that
-needs one still opens a PR. As a backstop, the release run executes
-`npm audit --audit-level=high` and emits a warning annotation if advisories
-remain unresolved — check that annotation before approving.
+`dependabot.yml` also ignores major version updates outright, so they no longer
+open as PRs. The first Monday produced nine (typescript 7, tailwind 4, eslint 10,
+node 26 and five actions majors), none of them wanted. The backstop for an
+advisory whose only fix is a major is `npm audit --audit-level=high` in the
+release run, which emits a warning annotation — check it before approving.
 
 ## Approving a release
 

@@ -35,25 +35,21 @@ jobs:
           allow=false
           reason="major version bumps are never merged unattended"
 
+          # Every configured ecosystem takes patch and minor unattended; the
+          # 19 clean-install and 22 upgrade tests are the real gate. Majors
+          # are blocked regardless, including security ones, because a major
+          # can change behaviour in ways the suite would not catch.
           if [ "$UPDATE_TYPE" != "version-update:semver-major" ]; then
             # fetch-metadata reports the advisory-database name, so npm
             # arrives as npm_and_yarn rather than npm.
             case "$ECOSYSTEM" in
-              npm|npm_and_yarn)
-                # Routine npm churn is limited to patches. Minors ride along
-                # only when they close an advisory.
-                if [ "$UPDATE_TYPE" = "version-update:semver-patch" ]; then
-                  allow=true; reason="npm patch"
-                elif [ -n "$ALERT_STATE" ]; then
-                  allow=true; reason="npm security update ($ALERT_STATE)"
-                else
-                  reason="npm minor without an advisory"
-                fi
-                ;;
-              github_actions|docker)
-                allow=true; reason="$ECOSYSTEM patch/minor"
+              npm|npm_and_yarn|github_actions|docker)
+                allow=true
+                reason="$ECOSYSTEM ${UPDATE_TYPE#version-update:semver-}"
+                [ -n "$ALERT_STATE" ] && reason="$reason, closes an advisory ($ALERT_STATE)"
                 ;;
               *)
+                # An ecosystem not in dependabot.yml should never merge itself.
                 reason="unrecognised ecosystem: $ECOSYSTEM"
                 ;;
             esac

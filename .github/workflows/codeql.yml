@@ -1,9 +1,11 @@
 name: "CodeQL Analysis"
 
-# PR plus the weekly sweep. Scanning on push as well meant three scans of the
-# same commit: once on the PR, once when it merged to dev, once when dev
-# reached main — all identical code.
+# Direct pushes to dev are scanned; dependabot pushes are skipped below because
+# the PR already scanned that commit. main is not scanned on push — it only
+# receives dev through a release merge, which was scanned on the way in.
 on:
+  push:
+    branches: [dev]
   pull_request:
     branches: [main, dev]
   schedule:
@@ -12,6 +14,7 @@ on:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    if: github.event_name != 'push' || github.event.head_commit.author.name != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       security-events: write

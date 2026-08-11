@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.7] - 2026-08-11
 
-Security release: transitive dependency updates.
+Admin navigation moved to a sidebar, plus transitive dependency updates.
+
+### Changed
+- The admin top menu bar is now a left sidebar, collapsible between a 240px labelled panel and a 64px icon rail with the choice remembered per browser. Below the md breakpoint it becomes an off-canvas drawer behind a hamburger, so narrow screens keep their full width for content.
+- The sidebar shows the brand logo at the top; theme, about and the user menu moved to its footer.
+- Wide custom logos no longer overflow their container: `BrandLogo` takes a `maxWidth` and scales with `object-contain` instead of stretching.
 
 ### Security
 - dompurify 3.4.12 -> 3.4.13 via isomorphic-dompurify (IN_PLACE hook XSS)

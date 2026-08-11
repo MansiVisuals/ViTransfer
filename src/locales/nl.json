@@ -209,7 +209,11 @@
     "githubRepo": "GitHub Repository",
     "dockerHub": "Docker Hub",
     "reportIssue": "Issue Melden",
-    "supportViTransfer": "Ondersteun ViTransfer"
+    "supportViTransfer": "Ondersteun ViTransfer",
+    "collapseSidebar": "Menu inklappen",
+    "expandSidebar": "Menu uitklappen",
+    "openMenu": "Menu openen",
+    "closeMenu": "Menu sluiten"
   },
   "projects": {
     "dashboard": "Projectenoverzicht",

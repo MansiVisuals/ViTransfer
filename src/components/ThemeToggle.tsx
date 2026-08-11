@@ -4,7 +4,12 @@ import { Moon, Sun } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 
-export default function ThemeToggle() {
+type ThemeToggleProps = {
+  variant?: 'button' | 'sidebar'
+  collapsed?: boolean
+}
+
+export default function ThemeToggle({ variant = 'button', collapsed = false }: ThemeToggleProps) {
   const t = useTranslations('controls')
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [mounted, setMounted] = useState(false)
@@ -113,6 +118,39 @@ export default function ThemeToggle() {
     }
   }
 
+  const label = theme === 'light' ? t('switchToDark') : t('switchToLight')
+
+  if (variant === 'sidebar') {
+    const sidebarClass = `flex items-center gap-3 rounded-lg py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground ${
+      collapsed ? 'justify-center px-2' : 'w-full px-3'
+    }`
+
+    // Avoid hydration mismatch
+    if (!mounted) {
+      return (
+        <button className={sidebarClass} aria-label={t('toggleTheme')}>
+          <div className="h-5 w-5 shrink-0" />
+        </button>
+      )
+    }
+
+    return (
+      <button
+        onClick={toggleTheme}
+        className={sidebarClass}
+        aria-label={t('toggleTheme')}
+        title={collapsed ? label : undefined}
+      >
+        {theme === 'light' ? (
+          <Moon className="h-5 w-5 shrink-0" />
+        ) : (
+          <Sun className="h-5 w-5 shrink-0" />
+        )}
+        {!collapsed && <span className="truncate">{label}</span>}
+      </button>
+    )
+  }
+
   // Avoid hydration mismatch
   if (!mounted) {
     return (
@@ -130,7 +168,7 @@ export default function ThemeToggle() {
       onClick={toggleTheme}
       className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
       aria-label={t('toggleTheme')}
-      title={theme === 'light' ? t('switchToDark') : t('switchToLight')}
+      title={label}
     >
       {theme === 'light' ? (
         <Moon className="h-5 w-5 text-foreground" />

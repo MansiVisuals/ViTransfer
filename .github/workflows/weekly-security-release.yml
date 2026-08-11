@@ -67,7 +67,17 @@ jobs:
         if: steps.diff.outputs.should_release == 'true'
         run: |
           current=$(tr -d '\n\r' < VERSION)
-          next=$(echo "$current" | awk -F. '{printf "%d.%d.%d", $1, $2, $3 + 1}')
+
+          # A prepared-but-never-tagged version ships as itself. Bumping past
+          # it would skip a version and orphan its changelog entry.
+          if git rev-parse -q --verify "refs/tags/v$current" >/dev/null; then
+            next=$(echo "$current" | awk -F. '{printf "%d.%d.%d", $1, $2, $3 + 1}')
+            echo "v$current is already released, bumping"
+          else
+            next="$current"
+            echo "v$current was never tagged, releasing it as-is"
+          fi
+
           echo "current=$current  next=$next"
           echo "next=$next" >> "$GITHUB_OUTPUT"
 
@@ -130,10 +140,18 @@ jobs:
           node -e '
             const fs = require("fs");
             const version = process.env.VERSION;
-            const date = new Date().toISOString().slice(0, 10);
-            const entry = `## [${version}] - ${date}\n\nSecurity release: dependency updates.\n\n### Security\n${process.env.NOTES.trim()}\n\n`;
             const path = "CHANGELOG.md";
             const body = fs.readFileSync(path, "utf8");
+
+            // A version prepared by hand already has its entry written; adding
+            // a second heading for the same version would be wrong.
+            if (body.includes(`## [${version}]`)) {
+              console.log(`::notice::CHANGELOG already has an entry for ${version}, leaving it alone`);
+              process.exit(0);
+            }
+
+            const date = new Date().toISOString().slice(0, 10);
+            const entry = `## [${version}] - ${date}\n\nSecurity release: dependency updates.\n\n### Security\n${process.env.NOTES.trim()}\n\n`;
             const marker = "\n## [";
             const at = body.indexOf(marker);
             if (at === -1) throw new Error("no existing release heading in CHANGELOG.md");
@@ -141,8 +159,13 @@ jobs:
           '
 
           git add VERSION package.json package-lock.json CHANGELOG.md
-          git commit -m "$VERSION: weekly security patches"
-          git push origin dev
+          # Releasing an already-prepared version leaves nothing to commit.
+          if git diff --cached --quiet; then
+            echo "Version and changelog already correct for $VERSION"
+          else
+            git commit -m "$VERSION: weekly security patches"
+            git push origin dev
+          fi
 
       - name: Promote dev to main
         env:

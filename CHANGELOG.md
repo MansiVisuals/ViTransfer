@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.7] - 2026-08-11
+
+Security release: transitive dependency updates.
+
+### Security
+- dompurify 3.4.12 -> 3.4.13 via isomorphic-dompurify (IN_PLACE hook XSS)
+- undici 7.28.0 -> 7.29.0 via jsdom (cache directive disclosure, CRLF injection, cookie attribute injection, response desync)
+- brace-expansion pinned to 5.0.9 in overrides (expansion DoS)
+- js-yaml 4.3.1 and nanoid 3.3.18 from npm audit
+
 ## [1.2.6] - 2026-07-28
 
 Security release: dependency updates and one storage hardening fix.

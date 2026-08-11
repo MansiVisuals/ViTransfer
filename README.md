@@ -16,7 +16,9 @@ ViTransfer is a self-hosted web app for video teams to share work with clients, 
 
 ---
 
-> **v1.0** — ViTransfer is production-ready and used in production by many users. Development continues with occasional improvements and fixes as the platform is near feature-complete. Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating. Contributions and feedback are welcome.
+> **Maintenance mode** — ViTransfer is feature-complete and production-ready. It now receives **weekly security patches only**: no new features, and bug fixes only when something breaks a normal install. Updates are automated, tested on every release (19 clean-install and 22 upgrade tests), and published for amd64 and arm64. Pull requests are still welcome and reviewed. See the [announcement](https://github.com/MansiVisuals/ViTransfer/discussions/100) for details.
+>
+> Always maintain backups following the 3-2-1 principle (3 copies, 2 different media, 1 offsite) and check release notes before updating.
 
 **Support Development:** If you find ViTransfer useful, consider [supporting on Ko-fi](https://ko-fi.com/E1E215DBM4) to help fund continued development.
 

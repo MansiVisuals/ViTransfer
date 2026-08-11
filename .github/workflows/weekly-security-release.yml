@@ -39,12 +39,28 @@ jobs:
           ref: dev
           fetch-depth: 0
 
-      - name: Compare dev against main
+      - name: Find what is unreleased
         id: diff
         run: |
-          git fetch origin main dev --quiet
-          count=$(git rev-list --count origin/main..origin/dev)
-          echo "dev is $count commit(s) ahead of main"
+          git fetch origin main dev --tags --quiet
+
+          # Measure against the last release tag, not main. main is only equal
+          # to the last release when nothing has reached it outside this
+          # workflow, and anything already on main is invisible in a main..dev
+          # range — that is how the 1.2.7 notes lost the sidebar.
+          #
+          # Sort by version rather than using git describe: release tags sit on
+          # main's merge commit, which is not an ancestor of dev, so describe
+          # walks past them and finds a much older tag.
+          base=$(git tag --sort=-v:refname | head -1)
+          if [ -z "$base" ]; then
+            base=$(git rev-list --max-parents=0 origin/dev | tail -1)
+            echo "No tags yet, using the root commit as the base"
+          fi
+          echo "Comparing against $base"
+
+          count=$(git rev-list --count "$base"..origin/dev)
+          echo "dev has $count unreleased commit(s)"
 
           if [ "$count" -eq 0 ] && [ "${{ inputs.force }}" != "true" ]; then
             echo "should_release=false" >> "$GITHUB_OUTPUT"
@@ -58,7 +74,7 @@ jobs:
           # are the release notes.
           {
             echo "notes<<__NOTES__"
-            git log --no-merges --format='- %s' origin/main..origin/dev
+            git log --no-merges --format='- %s' "$base"..origin/dev
             echo "__NOTES__"
           } >> "$GITHUB_OUTPUT"
 
@@ -201,8 +217,8 @@ jobs:
             ${{ env.IMAGE }}:latest
 
       - name: Publish GitHub release
-        # Last, so the release-triggered install and upgrade tests run against
-        # images that are already on Docker Hub.
+        # Last, so the post-release jobs below test images that are already on
+        # Docker Hub.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.check.outputs.next_version }}
@@ -218,9 +234,26 @@ jobs:
             --title "v$VERSION" \
             --notes-file notes.md
 
+  # A release published with GITHUB_TOKEN does not fire the `release: published`
+  # trigger, so these are called directly. They pull from Docker Hub and are the
+  # only check that the published manifest actually runs.
+  post-release-clean-install:
+    name: Post-release clean install
+    needs: publish
+    uses: ./.github/workflows/test-clean-install.yml
+    with:
+      ref: main
+
+  post-release-upgrade:
+    name: Post-release upgrade
+    needs: [publish, post-release-clean-install]
+    uses: ./.github/workflows/test-upgrade.yml
+    with:
+      ref: main
+
   report-failure:
     name: Report failure
-    needs: [check, publish]
+    needs: [check, verify-clean-install, verify-upgrade, publish, post-release-clean-install, post-release-upgrade]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
@@ -231,9 +264,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERSION: ${{ needs.check.outputs.next_version }}
+          PUBLISHED: ${{ needs.publish.result }}
         run: |
+          # Whether the images are already live changes what needs doing, so
+          # say which side of publish this failed on.
+          if [ "$PUBLISHED" = "success" ]; then
+            severity="Images for v$VERSION are already on Docker Hub, including \`:latest\`. A post-release check failed, so the published image may be broken — consider retagging \`:latest\` to the previous version."
+          else
+            severity="Nothing was published. Docker Hub and the release are untouched, so a re-run is safe once the cause is fixed."
+          fi
+
           gh issue create \
             --repo "$GITHUB_REPOSITORY" \
             --title "Weekly security release failed ($(date -u +%Y-%m-%d))" \
             --label "ci" \
-            --body "The weekly security release run did not complete: $RUN_URL"
+            --body "$(printf '%s\n\n%s\n\nRun: %s' "The weekly security release run did not complete." "$severity" "$RUN_URL")"

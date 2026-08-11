@@ -21,6 +21,19 @@ Admin navigation moved to a sidebar, plus transitive dependency updates.
 - undici 7.28.0 -> 7.29.0 via jsdom (cache directive disclosure, CRLF injection, cookie attribute injection, response desync)
 - brace-expansion pinned to 5.0.9 in overrides (expansion DoS)
 - js-yaml 4.3.1 and nanoid 3.3.18 from npm audit
+- GitHub Actions pinned to commit SHAs
+- CodeQL scans python and actions alongside javascript-typescript
+
+### Dependencies
+- `@aws-sdk/s3-request-presigner` 3.1079.0 -> 3.1106.0
+- `driver.js` 1.6.0 -> 1.8.0
+- `tsx` 4.22.5 -> 4.23.11
+- `eslint-config-next` 16.2.12 -> 16.3.0
+- npm patch group (15 updates)
+
+### Maintenance
+- ViTransfer is in maintenance mode: weekly security patches, no new features. See the [announcement](https://github.com/MansiVisuals/ViTransfer/discussions/100).
+- Releases are built and published by CI. Dependency updates auto-merge only after 19 clean-install and 22 upgrade tests pass, the full suite runs again against the tree being shipped, and major version bumps are never taken automatically.
 
 ## [1.2.6] - 2026-07-28
 

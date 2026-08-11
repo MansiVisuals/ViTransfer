@@ -18,7 +18,7 @@ A week with no commits on `dev` is skipped silently — no bump, no tag, no rele
 ## What auto-merges
 
 `dependabot-auto-merge.yml` queues a PR with `gh pr merge --auto`, which merges
-only after `Test Summary` passes. Majors are never merged unattended.
+only after `Test Summary` passes.
 
 | Ecosystem | Auto-merges | Left for a human |
 | --- | --- | --- |
@@ -26,15 +26,13 @@ only after `Test Summary` passes. Majors are never merged unattended.
 | github-actions | patch, minor | major |
 | docker | patch, minor | major |
 
-Majors never merge unattended, security ones included — a major can change
-behaviour in ways the suite would not catch. Anything held back gets the
+Majors never merge unattended, security ones included. `dependabot.yml` ignores
+them outright, so they do not open as PRs. Anything else held back gets the
 `needs-manual-review` label and a comment saying why.
 
-`dependabot.yml` also ignores major version updates outright, so they no longer
-open as PRs. The first Monday produced nine (typescript 7, tailwind 4, eslint 10,
-node 26 and five actions majors), none of them wanted. The backstop for an
-advisory whose only fix is a major is `npm audit --audit-level=high` in the
-release run, which emits a warning annotation — check it before approving.
+The release run executes `npm audit --audit-level=high` and emits a warning
+annotation if advisories remain unresolved. Check it before approving — that is
+what surfaces an advisory whose only fix is a major.
 
 ## Approving a release
 

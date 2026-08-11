@@ -2,6 +2,12 @@ name: Test Dev Build Clean Install
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to test (defaults to the triggering ref)'
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
 
 permissions:
@@ -15,6 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Detect version and database versions
         id: versions

@@ -79,12 +79,30 @@ jobs:
           # the backstop that makes them visible rather than silently skipped.
           npm audit --audit-level=high || echo "::warning::npm audit reports unresolved advisories — review before approving"
 
-  publish:
-    name: Publish release
+  # Individual PRs are tested against dev as it was when they opened, not
+  # against the final merged state. With no human approving the release, this
+  # is what verifies the exact tree that is about to ship.
+  verify-clean-install:
+    name: Verify clean install
     needs: check
     if: needs.check.outputs.should_release == 'true'
+    uses: ./.github/workflows/test-dev-clean-install.yml
+    with:
+      ref: dev # this workflow runs from main; dev is the tree being shipped
+
+  verify-upgrade:
+    name: Verify upgrade
+    needs: [check, verify-clean-install]
+    if: needs.check.outputs.should_release == 'true'
+    uses: ./.github/workflows/test-dev-upgrade.yml
+    with:
+      ref: dev
+
+  publish:
+    name: Publish release
+    needs: [check, verify-clean-install, verify-upgrade]
+    if: needs.check.outputs.should_release == 'true'
     runs-on: ubuntu-latest
-    environment: release # approval gate lives here
     permissions:
       contents: write
 

@@ -1,7 +1,7 @@
 # Release automation (maintenance mode)
 
 ViTransfer ships security patches weekly and little else. The pipeline below
-runs itself; the only recurring human action is approving the publish.
+runs itself end to end. There is no recurring human action.
 
 ## The weekly cycle
 
@@ -10,7 +10,7 @@ runs itself; the only recurring human action is approving the publish.
 | Mon 05:00 UTC | Dependabot opens PRs against `dev` | `.github/dependabot.yml` |
 | on each PR | 19 clean-install + 22 upgrade tests build from source and run against real compose stacks | `docker-integration-tests.yml` |
 | tests green | eligible PRs squash-merge into `dev` | `dependabot-auto-merge.yml` |
-| Mon 08:00 UTC | version bump, changelog, `dev` → `main`, multi-arch build, tag, release | `weekly-security-release.yml` |
+| Mon 08:00 UTC | full suite re-run against `dev`, then version bump, changelog, `dev` → `main`, multi-arch build, tag, release | `weekly-security-release.yml` |
 | release published | clean-install and upgrade tests re-run against the **published** Docker Hub images | `test-clean-install.yml`, `test-upgrade.yml` |
 
 A week with no commits on `dev` is skipped silently — no bump, no tag, no release.
@@ -31,20 +31,20 @@ them outright, so they do not open as PRs. Anything else held back gets the
 `needs-manual-review` label and a comment saying why.
 
 The release run executes `npm audit --audit-level=high` and emits a warning
-annotation if advisories remain unresolved. Check it before approving — that is
-what surfaces an advisory whose only fix is a major.
+annotation if advisories remain unresolved. That is what surfaces an advisory
+whose only fix is a major, so it is worth reading the run summary.
 
-## Approving a release
+## How a release gets published
 
-The `publish` job targets the `release` environment, which requires a review.
-GitHub notifies you; open the run and click **Review deployments → Approve**.
-Nothing reaches Docker Hub before that click.
+Nothing waits on a human. Publishing is gated on tests instead:
 
-Approval happens *before* the image build rather than after. The build is
-already proven at that point: every PR that landed on `dev` built the image from
-source and ran the full suite against it.
+`verify-clean-install` and `verify-upgrade` re-run the full suite against `dev`
+before anything is published. This matters because required checks on `dev` are
+not strict — each PR was tested against `dev` as it stood when the PR opened,
+not against the final merged tree. These two jobs test the exact tree that is
+about to ship. If either fails, nothing is published and an issue is opened.
 
-After approval the job, in order:
+Once they pass, the job runs in order:
 
 1. bumps `VERSION`, `package.json`, `package-lock.json` (patch, e.g. 1.2.7 → 1.2.8)
 2. prepends a `### Security` entry to `CHANGELOG.md` from the merged commit subjects
@@ -56,30 +56,17 @@ After approval the job, in order:
 Images are pushed before the release is published so the release-triggered tests
 have something to pull.
 
+To put a human back in the loop, add `environment: release` to the `publish`
+job. The environment still exists with a required reviewer.
+
 ## One-off setup
 
-Repo settings already applied: auto-merge enabled, `release` environment with
-required reviewer and a `main` branch policy, `dev` protected on the
+Repo settings already applied: auto-merge enabled, `dev` protected on the
 `Test Summary` check (`enforce_admins: false`, so admin pushes to `dev` still
 work), `ci` and `needs-manual-review` labels created.
 
-Still required:
-
-1. **Docker Hub secrets.** Create an access token with Read/Write on Docker Hub, then:
-   ```bash
-   gh secret set DOCKERHUB_USERNAME --body 'mansivisuals'
-   gh secret set DOCKERHUB_TOKEN    # paste the token when prompted
-   ```
-   Without these the publish job fails at login.
-
-2. **Resume Dependabot.** Security updates are currently `paused` — GitHub pauses
-   them after a long stretch of ignored PRs, which is why 7 open alerts produced
-   zero PRs. The API cannot clear it. Go to **Security → Dependabot** and use the
-   resume prompt, or merge/close one Dependabot PR by hand.
-
-3. **Merge these workflows to `main`.** Scheduled workflows run from the default
-   branch, so the Monday cron does not exist until `weekly-security-release.yml`
-   is on `main`.
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set as repository secrets; the
+publish job fails at login without them.
 
 ## Operating it
 

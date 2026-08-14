@@ -202,30 +202,110 @@ jobs:
 
           git push origin main
 
+  # One native runner per architecture. Building arm64 under QEMU on an amd64
+  # runner took over three hours and had to be cancelled; native arm64 runners
+  # are free for public repos and remove the emulation entirely. Each job pushes
+  # an untagged image by digest, and the manifest job joins them under the tags.
+  build:
+    name: Build ${{ matrix.platform }}
+    needs: [check, publish]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
       - name: Log in to Docker Hub
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          no-cache: true # release builds never carry stale layers
+          build-args: |
+            APP_VERSION=${{ needs.check.outputs.next_version }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          # Strip the algorithm prefix; the manifest step puts it back when it
+          # rebuilds the reference, and leaving it here would double it up.
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          retention-days: 1
+          if-no-files-found: error
+
+  manifest:
+    name: Publish manifest and release
+    needs: [check, publish, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      - name: Build and push multi-arch images
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          no-cache: true # release builds never carry stale layers
-          build-args: |
-            APP_VERSION=${{ needs.check.outputs.next_version }}
-          tags: |
-            ${{ env.IMAGE }}:${{ needs.check.outputs.next_version }}
-            ${{ env.IMAGE }}:latest
+      - name: Create and push the manifest
+        env:
+          VERSION: ${{ needs.check.outputs.next_version }}
+        run: |
+          cd /tmp/digests
+          docker buildx imagetools create \
+            --tag "$IMAGE:$VERSION" \
+            --tag "$IMAGE:latest" \
+            $(printf "$IMAGE@sha256:%s " *)
+
+      - name: Verify both architectures are present
+        env:
+          VERSION: ${{ needs.check.outputs.next_version }}
+        run: |
+          for arch in amd64 arm64; do
+            docker buildx imagetools inspect "$IMAGE:$VERSION" --raw \
+              | grep -q "\"architecture\":\"$arch\"" \
+              || { echo "::error::$arch missing from the published manifest"; exit 1; }
+            echo "  $arch present"
+          done
 
       - name: Publish GitHub release
         # Last, so the post-release jobs below test images that are already on
@@ -250,14 +330,14 @@ jobs:
   # only check that the published manifest actually runs.
   post-release-clean-install:
     name: Post-release clean install
-    needs: publish
+    needs: manifest
     uses: ./.github/workflows/test-clean-install.yml
     with:
       ref: main
 
   report-failure:
     name: Report failure
-    needs: [check, verify-clean-install, publish, post-release-clean-install]
+    needs: [check, verify-clean-install, publish, build, manifest, post-release-clean-install]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
@@ -269,7 +349,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           VERSION: ${{ needs.check.outputs.next_version }}
-          PUBLISHED: ${{ needs.publish.result }}
+          PUBLISHED: ${{ needs.manifest.result }}
         run: |
           # Whether the images are already live changes what needs doing, so
           # say which side of publish this failed on.

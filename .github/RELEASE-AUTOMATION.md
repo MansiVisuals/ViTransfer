@@ -52,9 +52,10 @@ ran the same suite.
 
 Once it passes, the job runs in order:
 
-1. bumps `VERSION`, `package.json`, `package-lock.json` (patch, e.g. 1.2.7 → 1.2.8)
-2. prepends a `### Security` entry to `CHANGELOG.md` from the merged commit subjects
-3. pushes `dev`, merges `dev` → `main`, pushes `main`
+1. merges `dev` into `main`
+2. bumps `VERSION`, `package.json`, `package-lock.json` (patch, e.g. 1.2.7 → 1.2.8)
+   and prepends a `### Security` entry to `CHANGELOG.md`, committed on `main`
+3. pushes `main`
 4. builds `linux/amd64` + `linux/arm64` with `--no-cache` and pushes both
    `mansivisuals/vitransfer:<version>` and `:latest`
 5. creates tag `v<version>` and publishes the GitHub release
@@ -74,6 +75,12 @@ work), `ci` and `needs-manual-review` labels created.
 
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set as repository secrets; the
 publish job fails at login without them.
+
+The release commits only ever land on `main`. `dev` is protected by the
+required `Test Summary` check, which `github-actions[bot]` cannot satisfy on a
+direct push, so a bump committed there is rejected outright. `dev` never
+touches `VERSION`, so its value simply lags the released one and merges into
+`main` without conflict.
 
 ## Operating it
 

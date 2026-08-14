@@ -67,7 +67,7 @@ We will respond to your report within 48 hours and provide a timeline for a fix.
 ## Security Hardening
 
 ### Container Security
-- Base image: node:24.13.0-alpine3.23 with latest security patches
+- Base image: node:24-alpine, rebuilt without cache on every release so it tracks the newest Alpine 3.x and its security patches
 - Non-root user execution (PUID/PGID support)
 - no-new-privileges security option enabled
 - Regular image rebuilds with security updates

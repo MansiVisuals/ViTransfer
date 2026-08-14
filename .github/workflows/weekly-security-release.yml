@@ -31,6 +31,7 @@ jobs:
       should_release: ${{ steps.diff.outputs.should_release }}
       next_version: ${{ steps.version.outputs.next }}
       notes: ${{ steps.diff.outputs.notes }}
+      dev_sha: ${{ steps.diff.outputs.dev_sha }}
 
     steps:
       - name: Checkout
@@ -58,6 +59,13 @@ jobs:
             echo "No tags yet, using the root commit as the base"
           fi
           echo "Comparing against $base"
+
+          # Pin the rest of the run to this exact commit. Dependabot can
+          # auto-merge into dev while the tests are running, and re-reading
+          # origin/dev later would ship a commit that no notes describe.
+          dev_sha=$(git rev-parse origin/dev)
+          echo "dev_sha=$dev_sha" >> "$GITHUB_OUTPUT"
+          echo "Pinned to dev at $dev_sha"
 
           count=$(git rev-list --count "$base"..origin/dev)
           echo "dev has $count unreleased commit(s)"
@@ -117,7 +125,9 @@ jobs:
     if: needs.check.outputs.should_release == 'true'
     uses: ./.github/workflows/test-dev-clean-install.yml
     with:
-      ref: dev # this workflow runs from main; dev is the tree being shipped
+      # The pinned SHA, not the dev branch: tests must cover the tree that
+      # publish will merge, not whatever dev has drifted to since.
+      ref: ${{ needs.check.outputs.dev_sha }}
 
   publish:
     name: Publish release
@@ -147,9 +157,11 @@ jobs:
       - name: Merge dev into main
         env:
           VERSION: ${{ needs.check.outputs.next_version }}
+          DEV_SHA: ${{ needs.check.outputs.dev_sha }}
         run: |
           git fetch origin dev --quiet
-          git merge --no-ff origin/dev -m "Merge dev into main for v$VERSION release"
+          echo "Merging the commit that check evaluated and verify tested: $DEV_SHA"
+          git merge --no-ff "$DEV_SHA" -m "Merge dev into main for v$VERSION release"
 
       - name: Bump version and changelog
         env:

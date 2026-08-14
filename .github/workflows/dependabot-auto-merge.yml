@@ -43,7 +43,7 @@ jobs:
             # fetch-metadata reports the advisory-database name, so npm
             # arrives as npm_and_yarn rather than npm.
             case "$ECOSYSTEM" in
-              npm|npm_and_yarn|github_actions|docker)
+              npm|npm_and_yarn|github_actions|docker|pip)
                 allow=true
                 reason="$ECOSYSTEM ${UPDATE_TYPE#version-update:semver-}"
                 [ -n "$ALERT_STATE" ] && reason="$reason, closes an advisory ($ALERT_STATE)"

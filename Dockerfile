@@ -66,12 +66,13 @@ LABEL org.opencontainers.image.licenses="MIT"
 ENV NODE_ENV=production
 
 
-# Python for Apprise notifications
+# Python for Apprise notifications. Versions live in requirements.txt so
+# Dependabot can update them; a version inline here would be invisible to it.
+COPY requirements.txt ./
 RUN apk add --no-cache python3 py3-pip \
     && python3 -m venv /opt/apprise-venv \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip setuptools \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 apprise==1.11.0 \
-    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade 'msgpack>=1.2.1' \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip \
+    && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 -r requirements.txt \
     && apk del --no-cache py3-pip
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3

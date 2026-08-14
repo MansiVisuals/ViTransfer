@@ -1,0 +1,8 @@
+# Python dependencies for the Apprise notification venv in the Docker image.
+# Kept in a manifest rather than inline in the Dockerfile so Dependabot can
+# read and update them like every other ecosystem.
+apprise==1.12.0
+
+# Pulled in by apprise; pinned forward past known advisories.
+msgpack>=1.2.1
+setuptools>=78.1.1

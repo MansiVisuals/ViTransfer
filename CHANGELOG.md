@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.8] - 2026-08-14
+
+Security release: dependency updates.
+
+### Security
+- Commit the release bump on main, never on dev
+- Unpin postgres patch in quadlet, correct stale stack versions
+- Bring Apprise under Dependabot
+- Track newest Alpine and patch the Apprise venv
+- Keep testing direct pushes to dev, skip dependabot re-runs
+- Cut redundant CI runs
+- Close the gaps the 1.2.7 release exposed
+- deps: bump the npm group with 7 updates (#102)
+
 ## [1.2.7] - 2026-08-11
 
 Admin navigation moved to a sidebar, plus transitive dependency updates.

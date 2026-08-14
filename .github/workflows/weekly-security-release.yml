@@ -82,7 +82,9 @@ jobs:
         id: version
         if: steps.diff.outputs.should_release == 'true'
         run: |
-          current=$(tr -d '\n\r' < VERSION)
+          # Read from main, not the dev checkout: the bump is committed on main
+          # only, so dev's VERSION deliberately lags behind the released one.
+          current=$(git show origin/main:VERSION | tr -d '\n\r')
 
           # A prepared-but-never-tagged version ships as itself. Bumping past
           # it would skip a version and orphan its changelog entry.
@@ -126,10 +128,14 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout dev
+      # Everything happens on main. dev is protected by a required check that
+      # github-actions[bot] cannot satisfy on a direct push, so committing the
+      # bump there would be rejected. dev never modifies VERSION, so the next
+      # merge into main keeps main's value without conflict.
+      - name: Checkout main
         uses: actions/checkout@v5
         with:
-          ref: dev
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -137,6 +143,13 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge dev into main
+        env:
+          VERSION: ${{ needs.check.outputs.next_version }}
+        run: |
+          git fetch origin dev --quiet
+          git merge --no-ff origin/dev -m "Merge dev into main for v$VERSION release"
 
       - name: Bump version and changelog
         env:
@@ -173,15 +186,8 @@ jobs:
             echo "Version and changelog already correct for $VERSION"
           else
             git commit -m "$VERSION: weekly security patches"
-            git push origin dev
           fi
 
-      - name: Promote dev to main
-        env:
-          VERSION: ${{ needs.check.outputs.next_version }}
-        run: |
-          git checkout main
-          git merge --no-ff dev -m "Merge dev into main for v$VERSION release"
           git push origin main
 
       - name: Log in to Docker Hub

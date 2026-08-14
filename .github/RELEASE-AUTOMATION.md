@@ -56,9 +56,15 @@ Once it passes, the job runs in order:
 2. bumps `VERSION`, `package.json`, `package-lock.json` (patch, e.g. 1.2.7 → 1.2.8)
    and prepends a `### Security` entry to `CHANGELOG.md`, committed on `main`
 3. pushes `main`
-4. builds `linux/amd64` + `linux/arm64` with `--no-cache` and pushes both
-   `mansivisuals/vitransfer:<version>` and `:latest`
-5. creates tag `v<version>` and publishes the GitHub release
+4. builds each architecture on its own native runner — amd64 on `ubuntu-latest`,
+   arm64 on `ubuntu-24.04-arm` — and pushes each by digest
+5. joins the digests into one manifest tagged `<version>` and `latest`, then
+   asserts both architectures are present before continuing
+6. creates tag `v<version>` and publishes the GitHub release
+
+Architectures are built natively rather than emulated. A single job building
+arm64 through QEMU ran for over three hours before being cancelled; native
+arm64 runners are free for public repositories.
 
 Images are pushed before the release is published. Afterwards
 `post-release-clean-install` pulls the published image from Docker Hub — the

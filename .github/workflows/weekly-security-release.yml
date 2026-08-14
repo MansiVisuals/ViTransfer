@@ -268,6 +268,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      # Lets the failure report distinguish "images are live" from "nothing
+      # shipped" — the job result alone cannot, since it fails either way.
+      pushed: ${{ steps.create.outputs.pushed }}
 
     steps:
       - name: Download digests
@@ -287,6 +291,7 @@ jobs:
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Create and push the manifest
+        id: create
         env:
           VERSION: ${{ needs.check.outputs.next_version }}
         run: |
@@ -295,17 +300,24 @@ jobs:
             --tag "$IMAGE:$VERSION" \
             --tag "$IMAGE:latest" \
             $(printf "$IMAGE@sha256:%s " *)
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
 
       - name: Verify both architectures are present
         env:
           VERSION: ${{ needs.check.outputs.next_version }}
         run: |
-          for arch in amd64 arm64; do
-            docker buildx imagetools inspect "$IMAGE:$VERSION" --raw \
-              | grep -q "\"architecture\":\"$arch\"" \
-              || { echo "::error::$arch missing from the published manifest"; exit 1; }
-            echo "  $arch present"
-          done
+          docker buildx imagetools inspect "$IMAGE:$VERSION" --raw > /tmp/manifest.json
+          # Parsed, not grepped: the raw JSON is pretty-printed, so a pattern
+          # like "architecture":"amd64" never matches and fails a good build.
+          python3 - <<'PY'
+          import json
+          d = json.load(open("/tmp/manifest.json"))
+          arches = {m["platform"]["architecture"] for m in d.get("manifests", [])}
+          missing = [a for a in ("amd64", "arm64") if a not in arches]
+          if missing:
+              raise SystemExit(f"::error::missing from published manifest: {missing} (found {sorted(arches)})")
+          print("both architectures present:", sorted(arches))
+          PY
 
       - name: Publish GitHub release
         # Last, so the post-release jobs below test images that are already on
@@ -349,11 +361,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           VERSION: ${{ needs.check.outputs.next_version }}
-          PUBLISHED: ${{ needs.manifest.result }}
+          PUBLISHED: ${{ needs.manifest.outputs.pushed }}
         run: |
           # Whether the images are already live changes what needs doing, so
           # say which side of publish this failed on.
-          if [ "$PUBLISHED" = "success" ]; then
+          if [ "$PUBLISHED" = "true" ]; then
             severity="Images for v$VERSION are already on Docker Hub, including \`:latest\`. A post-release check failed, so the published image may be broken — consider retagging \`:latest\` to the previous version."
           else
             severity="Nothing was published. Docker Hub and the release are untouched, so a re-run is safe once the cause is fixed."

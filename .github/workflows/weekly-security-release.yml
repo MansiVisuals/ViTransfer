@@ -332,7 +332,10 @@ jobs:
             "$NOTES" \
             "Upgrade with \`docker compose pull && docker compose up -d\`." > notes.md
 
+          # --repo is required: this job never checks the repository out, so gh
+          # has no git directory to infer it from.
           gh release create "v$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
             --target main \
             --title "v$VERSION" \
             --notes-file notes.md

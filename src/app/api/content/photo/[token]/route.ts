@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyAlbumAccessToken, trackPhotoDownload } from '@/lib/photo-access'
+import { isRawPhotoMime } from '@/lib/file-validation'
 import { getSecuritySettings } from '@/lib/video-access'
 import { Readable } from 'stream'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -84,14 +85,16 @@ export async function GET(
 
     // Viewing serves worker-generated webp renditions (thumb or preview) —
     // originals can be 25-90 MB and are only streamed for explicit downloads.
-    // previewPath falls back to the original for photos processed before previews existed.
+    // previewPath falls back to the original for photos processed before previews existed;
+    // a raw has no such fallback, since no browser can render one.
     const useThumb = variant === 'thumb' && !isDownload
     const useWebpRendition = !isDownload
+    const viewFallback = isRawPhotoMime(photo.fileType) ? null : photo.storagePath
     const filePath = isDownload
       ? photo.storagePath
       : useThumb
         ? photo.thumbnailPath
-        : photo.previewPath || photo.storagePath
+        : photo.previewPath || viewFallback
 
     if (!filePath) {
       return NextResponse.json({ error: photoMessages.photoNotFound || 'Photo not found' }, { status: 404 })

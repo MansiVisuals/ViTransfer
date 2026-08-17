@@ -21,7 +21,8 @@ export async function cleanupOldTempFiles() {
         const age = now - stats.mtimeMs
 
         if (age > TWO_HOURS_MS) {
-          await fs.promises.unlink(filePath)
+          // Recursive: photo jobs decode raws inside a directory of their own
+          await fs.promises.rm(filePath, { recursive: true, force: true })
           logMessage(`Cleaned up old temp file: ${file} (${(age / 1000 / 60).toFixed(0)} minutes old)`)
         }
       } catch (err) {

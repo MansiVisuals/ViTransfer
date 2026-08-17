@@ -16,11 +16,13 @@ RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache \
         openssl openssl-dev \
         ffmpeg ffmpeg-libs fontconfig ttf-dejavu \
+        libraw-tools \
         bash curl ca-certificates shadow su-exec \
     && apk add --no-cache --upgrade cjson libsndfile giflib orc zlib expat \
     && npm install -g npm@latest \
     && npm cache clean --force \
-    && ffmpeg -version
+    && ffmpeg -version \
+    && command -v simple_dcraw dcraw_emu
 
 # === Dependencies ===
 FROM base AS deps

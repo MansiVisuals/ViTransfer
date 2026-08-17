@@ -119,7 +119,8 @@ Projects can hold photo albums alongside videos — useful for stills, BTS shots
 2. Create an album and drag photos onto it, or drop entire folders onto the section — each folder becomes its own album.
 3. Click an album to fold it open in place: photos are listed with pagination, and the rename/delete buttons appear next to the album name.
 4. The worker generates webp thumbnails automatically; uploads work on both local (TUS) and S3 storage.
-5. Use the star on a photo row to set it as the album cover; a sort toggle in the section header switches between name and date order.
+5. Formats: JPG, PNG, GIF, WebP, AVIF, plus camera raw (RW2, DNG, CR2, CR3, NEF, ARW, ORF, RAF). Raws are stored and downloaded exactly as the camera wrote them; the grid and lightbox show a webp preview the worker renders from the raw, since browsers cannot display one.
+6. Use the star on a photo row to set it as the album cover; a sort toggle in the section header switches between name and date order.
 
 **Client side:** albums appear on the share page below the videos, with a full-page album view, lightbox, and multi-select. To let clients download photos (selection, album, or all project photos as a ZIP), enable **Allow photo downloads** in the project settings.
 

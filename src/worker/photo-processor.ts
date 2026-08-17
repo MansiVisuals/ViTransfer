@@ -2,7 +2,8 @@ import { Job } from 'bullmq'
 import sharp from 'sharp'
 import { prisma } from '../lib/db'
 import { downloadFile, uploadFile } from '../lib/storage'
-import { ALLOWED_PHOTO_TYPES } from '../lib/file-validation'
+import { ALLOWED_PHOTO_TYPES, rawPhotoMimeForFile } from '../lib/file-validation'
+import { decodeRawPhoto } from './raw-preview'
 import { PhotoProcessingJob } from '../lib/queue'
 import fs from 'fs'
 import path from 'path'
@@ -24,7 +25,7 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
 
   logMessage(`[WORKER] Processing photo ${photoId}`)
 
-  let tempFilePath: string | undefined
+  let tempDir: string | undefined
 
   try {
     const photo = await prisma.photo.findUnique({
@@ -36,7 +37,12 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
       throw new Error(`Photo record not found: ${photoId}`)
     }
 
-    tempFilePath = path.join(TEMP_DIR, `${photoId}-photo`)
+    // A directory per photo: LibRaw writes its output next to the input, and
+    // the decoded file is found by looking for what appeared beside the raw.
+    tempDir = path.join(TEMP_DIR, `photo-${photoId}`)
+    fs.mkdirSync(tempDir, { recursive: true })
+
+    const tempFilePath = path.join(tempDir, 'original')
     const downloadStream = await downloadFile(storagePath)
     await pipeline(downloadStream, fs.createWriteStream(tempFilePath))
 
@@ -48,17 +54,31 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
     // Validate magic bytes - photos must be a real image of an allowed type
     const { fileTypeFromFile } = await import('file-type')
     const fileType = await fileTypeFromFile(tempFilePath)
+    const detectedMime = fileType?.mime
 
-    if (!fileType || !ALLOWED_PHOTO_TYPES.mimeTypes.includes(fileType.mime)) {
+    // Most raws identify themselves precisely, but DNG and ARW are TIFF
+    // containers that read back as plain TIFF whenever the marker tags sit
+    // beyond the header, so the extension settles those.
+    const claimedRawMime = rawPhotoMimeForFile(photo.fileName)
+    const isRaw = !!claimedRawMime && (detectedMime === claimedRawMime || detectedMime === 'image/tiff')
+
+    if (!detectedMime || (!isRaw && !ALLOWED_PHOTO_TYPES.mimeTypes.includes(detectedMime))) {
       await prisma.photo.update({
         where: { id: photoId },
-        data: { fileType: 'INVALID - ' + (fileType?.mime || 'unknown') },
+        data: { fileType: 'INVALID - ' + (detectedMime || 'unknown') },
       })
-      throw new Error(`File content is not an allowed photo type. Detected: ${fileType?.mime || 'unknown'}`)
+      throw new Error(`File content is not an allowed photo type. Detected: ${detectedMime || 'unknown'}`)
     }
 
+    // Raws carry no browser-renderable image, so renditions come off a decoded
+    // copy while the stored original stays exactly as the camera wrote it.
+    const photoMime = isRaw ? claimedRawMime! : detectedMime
+    const sourcePath = isRaw
+      ? await decodeRawPhoto(tempFilePath, PREVIEW_SIZE)
+      : tempFilePath
+
     // Extract dimensions and generate renditions (animated GIFs keep first frame)
-    const image = sharp(tempFilePath)
+    const image = sharp(sourcePath)
     const metadata = await image.metadata()
 
     const thumbnailBuffer = await image
@@ -86,7 +106,7 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
     await prisma.photo.update({
       where: { id: photoId },
       data: {
-        fileType: fileType.mime,
+        fileType: photoMime,
         thumbnailPath,
         previewPath,
         width: (orientationSwaps ? metadata.height : metadata.width) ?? null,
@@ -94,16 +114,16 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
       },
     })
 
-    logMessage(`[WORKER] Photo ${photoId} processed successfully (${fileType.mime}, ${metadata.width}x${metadata.height})`)
+    logMessage(`[WORKER] Photo ${photoId} processed successfully (${photoMime}, ${metadata.width}x${metadata.height})`)
   } catch (error) {
     logError(`[WORKER ERROR] Photo processing failed for ${photoId}`, error)
     throw error
   } finally {
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
+    if (tempDir && fs.existsSync(tempDir)) {
       try {
-        fs.unlinkSync(tempFilePath)
+        fs.rmSync(tempDir, { recursive: true, force: true })
       } catch (cleanupError) {
-        logError('[WORKER ERROR] Failed to cleanup temp file', cleanupError)
+        logError('[WORKER ERROR] Failed to cleanup temp files', cleanupError)
       }
     }
   }

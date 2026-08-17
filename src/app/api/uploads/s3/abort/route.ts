@@ -4,6 +4,7 @@ import { s3AbortMultipartUpload } from '@/lib/s3-storage'
 import { verifyS3UploadAccess } from '@/lib/s3-upload-auth'
 import { logError, logMessage } from '@/lib/logging'
 import { rateLimit } from '@/lib/rate-limit'
+import { getRateLimitSettings } from '@/lib/settings'
 
 export const runtime = 'nodejs'
 
@@ -33,10 +34,11 @@ export async function POST(request: NextRequest) {
     const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId })
     if (authResult.errorResponse) return authResult.errorResponse
 
-    // Rate limit: 30 abort requests per minute per client
+    // Rate limit: configurable abort requests per minute per client
+    const { uploadRateLimit } = await getRateLimitSettings()
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
-      maxRequests: 30,
+      maxRequests: uploadRateLimit,
       message: 'Too many requests. Please slow down.',
     }, 's3-abort')
     if (rateLimitResult) return rateLimitResult

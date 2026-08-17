@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validatePhotoFile } from '@/lib/file-validation'
 import { generateAlbumAccessToken } from '@/lib/photo-access'
+import { getRateLimitSettings } from '@/lib/settings'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
@@ -103,9 +104,10 @@ export async function POST(
     return authResult
   }
 
+  const { uploadRateLimit } = await getRateLimitSettings()
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
-    maxRequests: 120,
+    maxRequests: uploadRateLimit,
     message: photoMessages.tooManyUploadRequests || 'Too many upload requests. Please slow down.',
   }, 'photos-create')
   if (rateLimitResult) return rateLimitResult

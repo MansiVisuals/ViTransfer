@@ -66,6 +66,8 @@ interface SecuritySettings {
   ipRateLimit: number
   sessionRateLimit: number
   shareSessionRateLimit?: number
+  uploadRateLimit?: number
+  videoUploadRateLimit?: number
   shareTokenTtlSeconds?: number | null
   passwordAttempts: number
   sessionTimeoutValue: number
@@ -169,6 +171,8 @@ export default function GlobalSettingsPage() {
   const [ipRateLimit, setIpRateLimit] = useState('1000')
   const [sessionRateLimit, setSessionRateLimit] = useState('600')
   const [shareSessionRateLimit, setShareSessionRateLimit] = useState('300')
+  const [uploadRateLimit, setUploadRateLimit] = useState('600')
+  const [videoUploadRateLimit, setVideoUploadRateLimit] = useState('50')
   const [shareTokenTtlSeconds, setShareTokenTtlSeconds] = useState('')
   const [passwordAttempts, setPasswordAttempts] = useState('5')
   const [sessionTimeoutValue, setSessionTimeoutValue] = useState('15')
@@ -251,6 +255,8 @@ export default function GlobalSettingsPage() {
     setIpRateLimit(data.ipRateLimit?.toString() || '1000')
     setSessionRateLimit(data.sessionRateLimit?.toString() || '600')
     setShareSessionRateLimit(data.shareSessionRateLimit?.toString() || '300')
+    setUploadRateLimit(data.uploadRateLimit?.toString() || '600')
+    setVideoUploadRateLimit(data.videoUploadRateLimit?.toString() || '50')
     setShareTokenTtlSeconds(data.shareTokenTtlSeconds ? data.shareTokenTtlSeconds.toString() : '')
     setPasswordAttempts(data.passwordAttempts?.toString() || '5')
     setSessionTimeoutValue(data.sessionTimeoutValue?.toString() || '15')
@@ -666,6 +672,8 @@ export default function GlobalSettingsPage() {
         ipRateLimit: parseInt(ipRateLimit, 10) || 1000,
         sessionRateLimit: parseInt(sessionRateLimit, 10) || 600,
         shareSessionRateLimit: parseInt(shareSessionRateLimit, 10) || 300,
+        uploadRateLimit: parseInt(uploadRateLimit, 10) || 600,
+        videoUploadRateLimit: parseInt(videoUploadRateLimit, 10) || 50,
         shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
         passwordAttempts: parseInt(passwordAttempts, 10) || 5,
         sessionTimeoutValue: parseInt(sessionTimeoutValue, 10) || 15,
@@ -829,6 +837,8 @@ export default function GlobalSettingsPage() {
     hotlinkProtection, setHotlinkProtection,
     ipRateLimit, setIpRateLimit, sessionRateLimit, setSessionRateLimit,
     shareSessionRateLimit, setShareSessionRateLimit,
+    uploadRateLimit, setUploadRateLimit,
+    videoUploadRateLimit, setVideoUploadRateLimit,
     shareTokenTtlSeconds, setShareTokenTtlSeconds,
     passwordAttempts, setPasswordAttempts,
     maxUploadSizeGB, setMaxUploadSizeGB, maxCommentAttachments, setMaxCommentAttachments,

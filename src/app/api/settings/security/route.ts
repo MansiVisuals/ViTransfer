@@ -125,6 +125,8 @@ export async function PATCH(request: NextRequest) {
       ipRateLimit,
       sessionRateLimit,
       shareSessionRateLimit,
+      uploadRateLimit,
+      videoUploadRateLimit,
       shareTokenTtlSeconds,
       passwordAttempts,
       sessionTimeoutValue,
@@ -220,6 +222,26 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (uploadRateLimit !== undefined && uploadRateLimit !== null) {
+      const val = parsePositiveInteger(uploadRateLimit)
+      if (!val || val > 10000) {
+        return NextResponse.json(
+          { error: settingsSecurityMessages.uploadRateLimitMustBeBetween1And10000 || 'Upload rate limit must be between 1 and 10000 requests per minute' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (videoUploadRateLimit !== undefined && videoUploadRateLimit !== null) {
+      const val = parsePositiveInteger(videoUploadRateLimit)
+      if (!val || val > 10000) {
+        return NextResponse.json(
+          { error: settingsSecurityMessages.videoUploadRateLimitMustBeBetween1And10000 || 'Video upload limit must be between 1 and 10000 uploads per hour' },
+          { status: 400 }
+        )
+      }
+    }
+
     if (shareTokenTtlSeconds !== undefined && shareTokenTtlSeconds !== null) {
       const val = parseInt(shareTokenTtlSeconds, 10)
       if (isNaN(val) || val <= 60 || val > 24 * 60 * 60) {
@@ -276,6 +298,8 @@ export async function PATCH(request: NextRequest) {
         ipRateLimit: ipRateLimit ? parseInt(ipRateLimit, 10) : 1000,
         sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit, 10) : 600,
         shareSessionRateLimit: shareSessionRateLimit ? parseInt(shareSessionRateLimit, 10) : 300,
+        uploadRateLimit: uploadRateLimit ? parseInt(uploadRateLimit, 10) : 600,
+        videoUploadRateLimit: videoUploadRateLimit ? parseInt(videoUploadRateLimit, 10) : 50,
         shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
         passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
         sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,
@@ -293,6 +317,8 @@ export async function PATCH(request: NextRequest) {
         ipRateLimit: ipRateLimit ? parseInt(ipRateLimit, 10) : 1000,
         sessionRateLimit: sessionRateLimit ? parseInt(sessionRateLimit, 10) : 600,
         shareSessionRateLimit: shareSessionRateLimit ? parseInt(shareSessionRateLimit, 10) : 300,
+        uploadRateLimit: uploadRateLimit ? parseInt(uploadRateLimit, 10) : 600,
+        videoUploadRateLimit: videoUploadRateLimit ? parseInt(videoUploadRateLimit, 10) : 50,
         shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
         passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
         sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,

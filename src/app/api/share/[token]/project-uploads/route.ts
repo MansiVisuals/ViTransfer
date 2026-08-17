@@ -5,6 +5,7 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { getShareContext } from '@/lib/auth'
 import { validateAssetFile, sanitizeFilename, isSuspiciousFilename } from '@/lib/file-validation'
 import { deleteFile } from '@/lib/storage'
+import { getRateLimitSettings } from '@/lib/settings'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
@@ -20,9 +21,10 @@ export async function POST(
   const messages = await loadLocaleMessages(locale).catch(() => null)
   const shareMessages = messages?.share || {}
 
+  const { uploadRateLimit } = await getRateLimitSettings()
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 1000,
-    maxRequests: 30,
+    maxRequests: uploadRateLimit,
     message: shareMessages.tooManyRequestsGeneric || 'Too many requests. Please try again later.',
   }, 'project-upload-create')
   if (rateLimitResult) return rateLimitResult

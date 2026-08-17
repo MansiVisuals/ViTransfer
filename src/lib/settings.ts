@@ -9,8 +9,10 @@ const cachedRateLimits: CachedValue<{
   ipRateLimit: number
   sessionRateLimit: number
   shareSessionRateLimit?: number
+  uploadRateLimit: number
+  videoUploadRateLimit: number
   shareTokenTtlSeconds?: number
-}> = { value: { ipRateLimit: 1000, sessionRateLimit: 600 }, expiresAt: 0 }
+}> = { value: { ipRateLimit: 1000, sessionRateLimit: 600, uploadRateLimit: 600, videoUploadRateLimit: 50 }, expiresAt: 0 }
 const cachedSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
 const cachedAdminSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
 const cachedSmtpConfigured: CachedValue<boolean> = { value: false, expiresAt: 0 }
@@ -263,6 +265,8 @@ export async function getRateLimitSettings(): Promise<{
   ipRateLimit: number
   sessionRateLimit: number
   shareSessionRateLimit?: number
+  uploadRateLimit: number
+  videoUploadRateLimit: number
   shareTokenTtlSeconds?: number
 }> {
   const now = Date.now()
@@ -277,6 +281,8 @@ export async function getRateLimitSettings(): Promise<{
         ipRateLimit: true,
         sessionRateLimit: true,
         shareSessionRateLimit: true,
+        uploadRateLimit: true,
+        videoUploadRateLimit: true,
         shareTokenTtlSeconds: true,
       },
     })
@@ -285,6 +291,8 @@ export async function getRateLimitSettings(): Promise<{
       ipRateLimit: settings?.ipRateLimit ?? 1000,
       sessionRateLimit: settings?.sessionRateLimit ?? 600,
       shareSessionRateLimit: settings?.shareSessionRateLimit ?? 300,
+      uploadRateLimit: settings?.uploadRateLimit ?? 600,
+      videoUploadRateLimit: settings?.videoUploadRateLimit ?? 50,
       shareTokenTtlSeconds: settings?.shareTokenTtlSeconds ?? undefined,
     }
     cachedRateLimits.expiresAt = now + SETTINGS_CACHE_TTL_MS

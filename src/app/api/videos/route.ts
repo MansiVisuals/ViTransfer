@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeFilename, validateUploadedFile } from '@/lib/file-validation'
+import { getRateLimitSettings } from '@/lib/settings'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
@@ -25,10 +26,11 @@ export async function POST(request: NextRequest) {
     return authResult
   }
 
-  // Rate limiting: Max 50 video uploads per hour
+  // Rate limiting: configurable video uploads per hour
+  const { videoUploadRateLimit } = await getRateLimitSettings()
   const rateLimitResult = await rateLimit(request, {
     windowMs: 60 * 60 * 1000, // 1 hour
-    maxRequests: 50,
+    maxRequests: videoUploadRateLimit,
     message: videoMessages.tooManyVideoUploads || 'Too many video uploads. Please try again later.'
   }, 'upload-video')
   if (rateLimitResult) return rateLimitResult

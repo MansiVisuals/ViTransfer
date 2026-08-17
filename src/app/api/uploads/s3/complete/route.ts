@@ -7,6 +7,7 @@ import { verifyS3UploadAccess } from '@/lib/s3-upload-auth'
 import { videoQueue, getAssetQueue, getProjectUploadQueue, getPhotoQueue } from '@/lib/queue'
 import { logError, logMessage } from '@/lib/logging'
 import { rateLimit } from '@/lib/rate-limit'
+import { getRateLimitSettings } from '@/lib/settings'
 import { handleReverseShareUploadNotification } from '@/lib/upload-notifications'
 import type { CompletedPart } from '@aws-sdk/client-s3'
 
@@ -50,10 +51,11 @@ export async function POST(request: NextRequest) {
     const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId }, { requireUploadPermission: true })
     if (authResult.errorResponse) return authResult.errorResponse
 
-    // ── Rate limit: 30 complete requests per minute per client ──────────���─────
+    // ── Rate limit: configurable complete requests per minute per client ──────
+    const { uploadRateLimit } = await getRateLimitSettings()
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
-      maxRequests: 30,
+      maxRequests: uploadRateLimit,
       message: 'Too many upload requests. Please slow down.',
     }, 's3-complete')
     if (rateLimitResult) return rateLimitResult

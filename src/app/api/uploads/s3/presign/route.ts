@@ -11,6 +11,7 @@ import { FILE_LIMITS, ALLOWED_PHOTO_TYPES, sanitizeContentType } from '@/lib/fil
 import { verifyS3UploadAccess } from '@/lib/s3-upload-auth'
 import { logError } from '@/lib/logging'
 import { rateLimit } from '@/lib/rate-limit'
+import { getRateLimitSettings } from '@/lib/settings'
 
 export const runtime = 'nodejs'
 
@@ -63,10 +64,11 @@ export async function POST(request: NextRequest) {
     const authResult = await verifyS3UploadAccess(request, { videoId, assetId, projectUploadId, photoId }, { requireUploadPermission: true })
     if (authResult.errorResponse) return authResult.errorResponse
 
-    // ── Rate limit: 30 presign requests per minute per client ─────────────────
+    // ── Rate limit: configurable presign requests per minute per client ───────
+    const { uploadRateLimit } = await getRateLimitSettings()
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
-      maxRequests: 30,
+      maxRequests: uploadRateLimit,
       message: 'Too many upload requests. Please slow down.',
     }, 's3-presign')
     if (rateLimitResult) return rateLimitResult

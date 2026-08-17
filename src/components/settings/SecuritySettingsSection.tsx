@@ -30,6 +30,10 @@ interface SecuritySettingsSectionProps {
   setSessionRateLimit: (value: string) => void
   shareSessionRateLimit: string
   setShareSessionRateLimit: (value: string) => void
+  uploadRateLimit: string
+  setUploadRateLimit: (value: string) => void
+  videoUploadRateLimit: string
+  setVideoUploadRateLimit: (value: string) => void
   shareTokenTtlSeconds: string
   setShareTokenTtlSeconds: (value: string) => void
   passwordAttempts: string
@@ -71,6 +75,10 @@ export function SecuritySettingsSection({
   setSessionRateLimit,
   shareSessionRateLimit,
   setShareSessionRateLimit,
+  uploadRateLimit,
+  setUploadRateLimit,
+  videoUploadRateLimit,
+  setVideoUploadRateLimit,
   shareTokenTtlSeconds,
   setShareTokenTtlSeconds,
   passwordAttempts,
@@ -210,6 +218,38 @@ export function SecuritySettingsSection({
                 />
                 <p className="text-xs text-muted-foreground">
                   {t('security.shareSessionLimitHint')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="uploadRateLimit">{t('security.uploadRateLimit')}</Label>
+                <Input
+                  id="uploadRateLimit"
+                  type="number"
+                  min={1}
+                  max={10000}
+                  value={uploadRateLimit}
+                  onChange={(e) => setUploadRateLimit(e.target.value)}
+                  placeholder="600"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('security.uploadRateLimitHint')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="videoUploadRateLimit">{t('security.videoUploadRateLimit')}</Label>
+                <Input
+                  id="videoUploadRateLimit"
+                  type="number"
+                  min={1}
+                  max={10000}
+                  value={videoUploadRateLimit}
+                  onChange={(e) => setVideoUploadRateLimit(e.target.value)}
+                  placeholder="50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('security.videoUploadRateLimitHint')}
                 </p>
               </div>
 

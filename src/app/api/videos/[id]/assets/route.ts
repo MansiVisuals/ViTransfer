@@ -4,6 +4,7 @@ import { getCurrentUserFromRequest, requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validateAssetFile } from '@/lib/file-validation'
+import { getRateLimitSettings } from '@/lib/settings'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
@@ -151,11 +152,12 @@ export async function POST(
   }
 
   // Rate limiting
+  const { uploadRateLimit } = await getRateLimitSettings()
   const rateLimitResult = await rateLimit(
     request,
     {
       windowMs: 60 * 1000,
-      maxRequests: 50,
+      maxRequests: uploadRateLimit,
   message: videoMessages.tooManyAssetUploadRequests || 'Too many upload requests. Please slow down.',
     },
     'video-assets-create'

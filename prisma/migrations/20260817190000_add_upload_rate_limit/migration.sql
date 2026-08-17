@@ -1,0 +1,1 @@
+ALTER TABLE "SecuritySettings" ADD COLUMN "uploadRateLimit" INTEGER NOT NULL DEFAULT 600;

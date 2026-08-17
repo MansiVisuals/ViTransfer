@@ -102,6 +102,8 @@ Configure in the admin panel under Settings.
 **Rate limiting**
 - IP rate limit (requests/minute per IP).
 - Share session rate limit (requests/minute per share session).
+- Upload request limit (upload API requests/minute per client, default 600). Covers S3 presign/complete/abort, photo creation, video asset creation and client file submissions — roughly the number of files that can start uploading per minute. Raise it before uploading large batches (for example 1000 photos at once).
+- Video upload limit (new videos/hour per client, default 50). Raise it when adding many videos in one session.
 
 **HTTPS enforcement**
 - HTTPS Enabled controls HSTS header (default: true).

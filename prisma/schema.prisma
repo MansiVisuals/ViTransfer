@@ -529,6 +529,8 @@ model SecuritySettings {
   ipRateLimit           Int  @default(1000) // requests per minute per IP (video streaming requires high limit)
   sessionRateLimit      Int  @default(600) // requests per minute per admin session (10/sec for seeking/buffering)
   shareSessionRateLimit Int  @default(300) // requests per minute per share session (client access)
+  uploadRateLimit       Int  @default(600) // upload API requests per minute per client (batch uploads need a high limit)
+  videoUploadRateLimit  Int  @default(50) // new video uploads per hour per client
   passwordAttempts      Int  @default(5) // password attempts before lockout
   shareTokenTtlSeconds  Int? // optional override for share JWT expiry (60-86400 seconds, null = use session timeout)
 

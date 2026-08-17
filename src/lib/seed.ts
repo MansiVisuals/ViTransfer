@@ -14,6 +14,8 @@ async function ensureSecuritySettings() {
         hotlinkProtection: 'LOG_ONLY',
         ipRateLimit: 1000, // High limit for video streaming with HTTP Range requests
         sessionRateLimit: 600, // 10 req/sec average for video buffering/seeking
+        uploadRateLimit: 600, // ~600 files/min for batch uploads
+        videoUploadRateLimit: 50, // new videos per hour
         passwordAttempts: 5,
         trackAnalytics: true,
         trackSecurityLogs: true,

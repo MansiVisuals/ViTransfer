@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.2.10] - 2026-08-17
+
+Upload rate limits are configurable, so batch uploads no longer lock themselves out.
+
+### Added
+- Security settings: Upload request limit (upload API requests per minute per client, default 600). Covers S3 presign/complete/abort, photo creation, video asset creation and client file submissions.
+- Security settings: Video upload limit (new videos per hour per client, default 50).
+
+### Fixed
+- Uploading several hundred files in one batch no longer trips the fixed limiters (presign 30/min, photo creation 120/min) and locks the uploader out.
+
+### Security
+- `deepmerge-ts` pinned to 8.x via overrides (GHSA-ggr8-5vv4-36mx)
+
+## [1.2.9] - 2026-08-17
+
+Security release: dependency updates.
+
+### Security
+- deps: bump the npm group with 4 updates (#107)
+
+## [1.2.8] - 2026-08-14
+
+Security release: dependency updates.
+
+### Security
+- Commit the release bump on main, never on dev
+- Unpin postgres patch in quadlet, correct stale stack versions
+- Bring Apprise under Dependabot
+- Track newest Alpine and patch the Apprise venv
+- Keep testing direct pushes to dev, skip dependabot re-runs
+- Cut redundant CI runs
+- Close the gaps the 1.2.7 release exposed
+- deps: bump the npm group with 7 updates (#102)
+
 ## [1.2.7] - 2026-08-11
 
 Admin navigation moved to a sidebar, plus transitive dependency updates.

@@ -276,11 +276,39 @@ export function validateAssetFile(
   }
 }
 
+// Camera raw formats. Neither browsers nor sharp can read these, so the worker
+// renders their thumbnail and preview through LibRaw; the original is stored and
+// downloaded untouched.
+const RAW_PHOTO_MIME_BY_EXTENSION: Record<string, string> = {
+  '.rw2': 'image/x-panasonic-rw2',
+  '.dng': 'image/x-adobe-dng',
+  '.cr2': 'image/x-canon-cr2',
+  '.cr3': 'image/x-canon-cr3',
+  '.nef': 'image/x-nikon-nef',
+  '.arw': 'image/x-sony-arw',
+  '.orf': 'image/x-olympus-orf',
+  '.raf': 'image/x-fujifilm-raf',
+}
+
+export const RAW_PHOTO_TYPES = {
+  extensions: Object.keys(RAW_PHOTO_MIME_BY_EXTENSION),
+  mimeTypes: Object.values(RAW_PHOTO_MIME_BY_EXTENSION),
+}
+
+/** The raw MIME type a filename claims, or undefined if it is not a raw. */
+export function rawPhotoMimeForFile(fileName: string): string | undefined {
+  return RAW_PHOTO_MIME_BY_EXTENSION[fileName.toLowerCase().slice(fileName.lastIndexOf('.'))]
+}
+
 // Allowed photo types for photo albums (browser-displayable + sharp-supported)
 // SVG intentionally excluded - can contain embedded JavaScript/XSS payloads
 export const ALLOWED_PHOTO_TYPES = {
-  extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif'],
-  mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
+  extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', ...RAW_PHOTO_TYPES.extensions],
+  mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', ...RAW_PHOTO_TYPES.mimeTypes]
+}
+
+export function isRawPhotoMime(mimeType: string): boolean {
+  return RAW_PHOTO_TYPES.mimeTypes.includes(mimeType.toLowerCase())
 }
 
 /**

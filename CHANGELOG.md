@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.3.0] - 2026-08-17
+
+Camera raw files can be shared through photo albums.
+
+### Added
+- Photo albums accept RW2, DNG, CR2, CR3, NEF, ARW, ORF and RAF. Originals are stored and downloaded exactly as the camera wrote them; the grid and lightbox show a webp preview the worker renders from the raw.
+- LibRaw (`libraw-tools`) in the image, which does the raw decoding.
+
 ## [1.2.10] - 2026-08-17
 
 Upload rate limits are configurable, so batch uploads no longer lock themselves out.

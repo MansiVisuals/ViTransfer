@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.3.2] - 2026-08-18
+
+Download link settings moved out of the session timeout section.
+
+### Changed
+- Download link lifetime and uses now sit in their own Download Links section under Settings → Security, instead of under Client Session Timeout. Their whole purpose is that download links do not follow the client session, so the old grouping read against what they do.
+
 ## [1.3.1] - 2026-08-18
 
 Large photo albums display and download reliably, and download links are configurable.

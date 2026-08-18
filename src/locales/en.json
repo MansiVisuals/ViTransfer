@@ -1622,6 +1622,8 @@
       "clientSessionTimeoutHint": "Configure how long client share sessions stay active.",
       "leaveBlank": "Leave blank to use session timeout",
       "shareTokenOverride": "Override share JWT expiry (60-86400 seconds). Leave blank to use session timeout above. Default: session timeout.",
+      "downloadLinks": "Download Links",
+      "downloadLinksHint": "Lifetime and retry allowance for ZIP and file download links. Kept separate from the session timeout so a long transfer is not cut short. Links stay bound to the requester IP address and browser at any value.",
       "downloadLinkExpiry": "Download Link Lifetime (seconds)",
       "downloadLinkExpiryHint": "How long a download link stays valid (300-604800 seconds). Bulk downloads of large files run far longer than a share session, so this is set independently. Default: 14400 (4 hours).",
       "downloadLinkMaxUses": "Download Link Uses",

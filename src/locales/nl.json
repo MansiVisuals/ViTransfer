@@ -1570,6 +1570,8 @@
       "clientSessionTimeoutHint": "Configureer hoe lang klantsessies actief blijven.",
       "leaveBlank": "Laat leeg om sessie-time-out te gebruiken",
       "shareTokenOverride": "Overschrijf deel-JWT-verloop (60-86400 seconden). Laat leeg om sessie-time-out hierboven te gebruiken. Standaard: sessie-time-out.",
+      "downloadLinks": "Downloadlinks",
+      "downloadLinksHint": "Geldigheid en aantal nieuwe pogingen voor ZIP- en bestandsdownloadlinks. Staat los van de sessie-time-out zodat een lange overdracht niet wordt afgebroken. Links blijven bij elke waarde gebonden aan het IP-adres en de browser van de aanvrager.",
       "downloadLinkExpiry": "Geldigheid Downloadlink (seconden)",
       "downloadLinkExpiryHint": "Hoe lang een downloadlink geldig blijft (300-604800 seconden). Bulkdownloads van grote bestanden duren veel langer dan een deelsessie, daarom staat dit los ingesteld. Standaard: 14400 (4 uur).",
       "downloadLinkMaxUses": "Gebruik Downloadlink",

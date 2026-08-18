@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CollapsibleSection } from '@/components/ui/collapsible-section'
-import { Clock, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Clock, AlertTriangle, CheckCircle, Download } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 function formatDurationSetting(value: string, unit: string, fallbackValue = 15): string {
@@ -452,6 +452,48 @@ export function SecuritySettingsSection({
               </p>
             </div>
 
+            <div className="p-3 bg-muted rounded-md">
+              <p className="text-sm font-medium">
+                {t('security.currentSetting')} {formatDurationSetting(sessionTimeoutValue, sessionTimeoutUnit)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
+                {(() => {
+                  const val = parseInt(sessionTimeoutValue, 10) || 15
+                  const unit = sessionTimeoutUnit
+                  if (unit === 'MINUTES') {
+                    if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.veryShort')}</>
+                    if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> {t('security.shortSecurity')}</>
+                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.longSessions')}</>
+                  }
+                  if (unit === 'HOURS') {
+                    if (val <= 2) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.balanced')}</>
+                    if (val <= 8) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.longConvenient')}</>
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.veryLong')}</>
+                  }
+                  if (unit === 'DAYS') {
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.extended')}</>
+                  }
+                  if (unit === 'WEEKS') {
+                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.maximum')}</>
+                  }
+                  return ''
+                })()}
+              </p>
+            </div>
+          </div>
+
+          {/* Download Links */}
+          <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+            <div>
+              <Label className="text-base flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                {t('security.downloadLinks')}
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('security.downloadLinksHint')}
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="downloadTokenTtlSeconds">{t('security.downloadLinkExpiry')}</Label>
@@ -484,34 +526,6 @@ export function SecuritySettingsSection({
               </div>
             </div>
 
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm font-medium">
-                {t('security.currentSetting')} {formatDurationSetting(sessionTimeoutValue, sessionTimeoutUnit)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 flex items-start gap-2">
-                {(() => {
-                  const val = parseInt(sessionTimeoutValue, 10) || 15
-                  const unit = sessionTimeoutUnit
-                  if (unit === 'MINUTES') {
-                    if (val < 5) return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.veryShort')}</>
-                    if (val <= 30) return <><CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-success" /> {t('security.shortSecurity')}</>
-                    return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.longSessions')}</>
-                  }
-                  if (unit === 'HOURS') {
-                    if (val <= 2) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.balanced')}</>
-                    if (val <= 8) return <><Clock className="w-3 h-3 mt-0.5 flex-shrink-0" /> {t('security.longConvenient')}</>
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.veryLong')}</>
-                  }
-                  if (unit === 'DAYS') {
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.extended')}</>
-                  }
-                  if (unit === 'WEEKS') {
-                    return <><AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-warning" /> {t('security.maximum')}</>
-                  }
-                  return ''
-                })()}
-              </p>
-            </div>
           </div>
 
           <div className="space-y-4 border p-4 rounded-lg bg-muted/30">

@@ -91,13 +91,23 @@ export function getRedisForQueue(): IORedis {
 const getRedisConnection = getRedis
 
 /**
- * Atomically consume a single-use Redis token via Lua script.
- * Returns true if the token was present, matched, and deleted; false otherwise.
+ * Atomically claim one use of a Redis token via Lua script.
+ * Returns true if the token was present, matched, and had a use left.
+ *
+ * `maxUses` defaults to 1, which is a strict single-use consume — keep that for
+ * anything that authenticates (magic links). Download tokens allow a few uses
+ * so a transfer that dies part-way can be retried: they are already bound to
+ * the requester IP + User-Agent and expire on their own, and single-use only
+ * ever blocked the legitimate retry.
+ *
+ * The use counter lives in a sibling key that inherits the token's remaining
+ * TTL, so the token payload stays byte-identical for the value comparison.
  */
 export async function consumeTokenAtomically(
   redis: IORedis,
   tokenKey: string,
-  expectedValue: string
+  expectedValue: string,
+  maxUses: number = 1
 ): Promise<boolean> {
   const result = await redis.eval(
     `
@@ -108,12 +118,24 @@ export async function consumeTokenAtomically(
       if current ~= ARGV[1] then
         return -1
       end
-      redis.call('DEL', KEYS[1])
+      local uses = redis.call('INCR', KEYS[2])
+      if uses == 1 then
+        local ttl = redis.call('TTL', KEYS[1])
+        if ttl > 0 then
+          redis.call('EXPIRE', KEYS[2], ttl)
+        end
+      end
+      if uses >= tonumber(ARGV[2]) then
+        redis.call('DEL', KEYS[1])
+        redis.call('DEL', KEYS[2])
+      end
       return 1
     `,
-    1,
+    2,
     tokenKey,
-    expectedValue
+    `${tokenKey}:uses`,
+    expectedValue,
+    String(Math.max(1, Math.floor(maxUses)))
   )
 
   return Number(result) === 1

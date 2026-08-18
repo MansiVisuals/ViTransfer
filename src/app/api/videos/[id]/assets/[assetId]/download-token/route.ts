@@ -83,7 +83,8 @@ export async function POST(
       project.id,
       'original',
       request,
-      sessionId
+      sessionId,
+      'download'
     )
 
     // Return download URL with asset ID parameter

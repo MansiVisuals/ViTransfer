@@ -7,6 +7,7 @@ import { Readable } from 'stream'
 import { s3GetPresignedDownloadUrl, s3FileExists } from '@/lib/s3-storage'
 import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
+import { getDownloadLinkSettings } from '@/lib/settings'
 import { createReadStream, existsSync } from 'fs'
 import { logError } from '@/lib/logging'
 import crypto from 'crypto'
@@ -66,7 +67,8 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const consumed = await consumeTokenAtomically(redis, tokenKey, raw)
+    const { maxUses } = await getDownloadLinkSettings()
+    const consumed = await consumeTokenAtomically(redis, tokenKey, raw, maxUses)
     if (!consumed) {
       return NextResponse.json({ error: 'Invalid or expired download link' }, { status: 403 })
     }

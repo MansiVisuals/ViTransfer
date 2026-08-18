@@ -5,6 +5,7 @@ import { ReadStream } from 'fs'
 import { pipeline } from 'stream/promises'
 import { mkdir } from 'fs/promises'
 import { s3UploadFile, s3DownloadFile, s3DeleteFile, s3DeleteDirectory } from './s3-storage'
+import { logError } from './logging'
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/app/uploads'
 
@@ -157,6 +158,31 @@ export async function downloadFile(filePath: string): Promise<Readable> {
   }
   const fullPath = validatePath(filePath)
   return fs.createReadStream(fullPath)
+}
+
+/**
+ * Download stream that opens the file only on first read.
+ *
+ * ZIP builders append every entry up front but archiver consumes them one at a
+ * time. Opening each stream eagerly holds one S3 socket per file, and the SDK
+ * pool caps at 50 — album zips with more photos than that stall before the
+ * first byte reaches the client.
+ *
+ * A file that cannot be opened yields an empty entry: the response headers are
+ * already sent by then, so failing hard would truncate the whole archive.
+ */
+export function lazyDownloadFile(filePath: string): Readable {
+  async function* read() {
+    let source: Readable
+    try {
+      source = await downloadFile(filePath)
+    } catch (error) {
+      logError(`Error opening ${filePath} for archive:`, error)
+      return
+    }
+    yield* source
+  }
+  return Readable.from(read(), { objectMode: false })
 }
 
 export async function deleteFile(filePath: string): Promise<void> {

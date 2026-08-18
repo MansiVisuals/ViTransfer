@@ -5,7 +5,12 @@ import { getClientIpAddress } from './utils'
 import { getClientSessionTimeoutSeconds } from './settings'
 import { getRedis } from './redis'
 import { getSecuritySettings } from './video-access'
+import { isS3Mode } from './storage'
+import { s3GetPresignedStreamUrl } from './s3-storage'
 import { logError, logMessage } from './logging'
+
+/** SigV4 caps presigned URL lifetime at 7 days. */
+const MAX_PRESIGN_SECONDS = 604800
 
 export interface AlbumAccessToken {
   albumId: string
@@ -60,6 +65,30 @@ export async function generateAlbumAccessToken(
   await redis.setex(cacheKey, ttlSeconds, token)
 
   return token
+}
+
+/**
+ * Direct URL for a worker-generated rendition (thumb or preview).
+ *
+ * In S3 mode this presigns the object so the browser fetches it straight from
+ * the bucket — painting a 2000-tile grid then costs zero app requests instead
+ * of 2000 round trips, each of which would otherwise re-verify the token and
+ * re-query the photo row. FS mode keeps the token route because the app owns
+ * the disk and there is nothing to hand off to.
+ *
+ * Renditions are always webp; originals are never linked this way.
+ */
+export async function buildRenditionUrl(
+  renditionPath: string,
+  contentToken: string,
+  photoId: string,
+  variant: 'thumb' | 'full',
+  ttlSeconds: number
+): Promise<string> {
+  if (isS3Mode()) {
+    return s3GetPresignedStreamUrl(renditionPath, Math.min(ttlSeconds, MAX_PRESIGN_SECONDS), 'image/webp')
+  }
+  return `/api/content/photo/${contentToken}?photoId=${photoId}&variant=${variant}`
 }
 
 /**

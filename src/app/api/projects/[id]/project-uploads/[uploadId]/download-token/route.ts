@@ -4,6 +4,7 @@ import { requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
+import { getDownloadLinkSettings } from '@/lib/settings'
 import { logError } from '@/lib/logging'
 import crypto from 'crypto'
 
@@ -53,9 +54,8 @@ export async function POST(
 
     const redis = getRedis()
     const payload = JSON.stringify({ projectId, uploadId, ipAddress, userAgentHash })
-    // 5-minute TTL: long enough to click the download, short enough that a
-    // leaked URL can't be replayed later.
-    await redis.set(`project_upload_dl:${token}`, payload, 'EX', 300)
+    const { ttlSeconds } = await getDownloadLinkSettings()
+    await redis.setex(`project_upload_dl:${token}`, ttlSeconds, payload)
 
     return NextResponse.json({
       url: `/api/projects/${projectId}/project-uploads/${uploadId}/download?dlt=${token}`,

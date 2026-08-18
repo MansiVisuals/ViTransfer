@@ -4,13 +4,16 @@ import { getCurrentUserFromRequest, requireApiAdmin } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyProjectAccess } from '@/lib/project-access'
 import { validatePhotoFile } from '@/lib/file-validation'
-import { generateAlbumAccessToken } from '@/lib/photo-access'
-import { getRateLimitSettings } from '@/lib/settings'
+import { generateAlbumAccessToken, buildRenditionUrl } from '@/lib/photo-access'
+import { getRateLimitSettings, getClientSessionTimeoutSeconds } from '@/lib/settings'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
 import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
+
+/** Max photos returned per grid page. */
+const PHOTO_PAGE_SIZE = 200
 
 const createPhotoSchema = z.object({
   fileName: z.string().min(1).max(255),
@@ -58,17 +61,44 @@ export async function GET(
       return NextResponse.json({ error: photoMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
-    const photos = await prisma.photo.findMany({
-      where: { albumId, uploadCompletedAt: { not: null } },
-      orderBy: { createdAt: 'asc' },
-    })
+    // Albums run to thousands of photos — page the grid so payload, presign
+    // cost, and DOM size stay flat no matter how large the album is.
+    const { searchParams } = new URL(request.url)
+    const offset = Math.max(0, Number(searchParams.get('offset')) || 0)
+    const limit = Math.min(Math.max(1, Number(searchParams.get('limit')) || PHOTO_PAGE_SIZE), PHOTO_PAGE_SIZE)
+
+    const where = { albumId, uploadCompletedAt: { not: null } }
+
+    const [total, photos] = await Promise.all([
+      prisma.photo.count({ where }),
+      prisma.photo.findMany({
+        where,
+        orderBy: { createdAt: 'asc' },
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          fileName: true,
+          fileSize: true,
+          fileType: true,
+          width: true,
+          height: true,
+          thumbnailPath: true,
+          createdAt: true,
+        },
+      }),
+    ])
 
     const sessionId = accessCheck.shareTokenSessionId || `guest:${Date.now()}`
     const contentToken = await generateAlbumAccessToken(albumId, projectId, request, sessionId, accessCheck.isGuest === true)
+    const ttlSeconds = await getClientSessionTimeoutSeconds()
 
     return NextResponse.json({
       contentToken,
-      photos: photos.map(photo => ({
+      total,
+      offset,
+      limit,
+      photos: await Promise.all(photos.map(async photo => ({
         id: photo.id,
         fileName: photo.fileName,
         fileSize: photo.fileSize.toString(),
@@ -76,8 +106,11 @@ export async function GET(
         width: photo.width,
         height: photo.height,
         hasThumbnail: !!photo.thumbnailPath,
+        thumbUrl: photo.thumbnailPath
+          ? await buildRenditionUrl(photo.thumbnailPath, contentToken, photo.id, 'thumb', ttlSeconds)
+          : null,
         createdAt: photo.createdAt,
-      })),
+      }))),
     })
   } catch (error) {
     logError('Error fetching photos:', error)

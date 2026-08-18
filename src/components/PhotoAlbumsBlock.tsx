@@ -51,6 +51,7 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
 
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [photoPage, setPhotoPage] = useState(0)
+  const [totalPhotos, setTotalPhotos] = useState(0)
   const [contentToken, setContentToken] = useState<string | null>(null)
   const [photosLoading, setPhotosLoading] = useState(false)
 
@@ -84,12 +85,15 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
     }
   }, [projectId])
 
-  const fetchPhotos = useCallback(async (albumId: string) => {
+  const fetchPhotos = useCallback(async (albumId: string, page: number) => {
     try {
-      const res = await apiFetch(`/api/projects/${projectId}/photo-albums/${albumId}/photos`)
+      const res = await apiFetch(
+        `/api/projects/${projectId}/photo-albums/${albumId}/photos?offset=${page * PHOTO_PAGE_SIZE}&limit=${PHOTO_PAGE_SIZE}`
+      )
       if (res.ok) {
         const data = await res.json()
         setPhotos(data.photos || [])
+        setTotalPhotos(data.total || 0)
         setContentToken(data.contentToken || null)
       }
     } catch (error) {
@@ -129,24 +133,33 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
   useEffect(() => {
     if (selectedAlbum) {
       setPhotosLoading(true)
-      fetchPhotos(selectedAlbum.id)
+      fetchPhotos(selectedAlbum.id, photoPage)
     } else {
       setPhotos([])
+      setTotalPhotos(0)
       setContentToken(null)
     }
-  }, [selectedAlbum, fetchPhotos])
+  }, [selectedAlbum, photoPage, fetchPhotos])
 
-  // Poll while thumbnails are still being generated
+  const pageCount = Math.ceil(totalPhotos / PHOTO_PAGE_SIZE)
+  const currentPage = Math.min(photoPage, Math.max(0, pageCount - 1))
+
+  // A delete can drop the last page out from under the pager
+  useEffect(() => {
+    if (pageCount > 0 && photoPage >= pageCount) setPhotoPage(pageCount - 1)
+  }, [photoPage, pageCount])
+
+  // Poll while thumbnails on this page are still being generated
   useEffect(() => {
     if (!selectedAlbum || !photos.some(p => !p.hasThumbnail)) return
-    const interval = setInterval(() => fetchPhotos(selectedAlbum.id), 4000)
+    const interval = setInterval(() => fetchPhotos(selectedAlbum.id, photoPage), 4000)
     return () => clearInterval(interval)
-  }, [selectedAlbum, photos, fetchPhotos])
+  }, [selectedAlbum, photos, photoPage, fetchPhotos])
 
   const handleUploadComplete = useCallback(() => {
-    if (selectedAlbum) fetchPhotos(selectedAlbum.id)
+    if (selectedAlbum) fetchPhotos(selectedAlbum.id, photoPage)
     fetchAlbums()
-  }, [selectedAlbum, fetchPhotos, fetchAlbums])
+  }, [selectedAlbum, photoPage, fetchPhotos, fetchAlbums])
 
   const uploadQueue = usePhotoUploadQueue({
     projectId,
@@ -251,6 +264,7 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
       )
       if (res.ok) {
         setPhotos(prev => prev.filter(p => p.id !== photo.id))
+        setTotalPhotos(prev => Math.max(0, prev - 1))
         fetchAlbums()
       }
     } catch (error) {
@@ -375,9 +389,6 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
     ? [...albums].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
     : albums // API returns createdAt ascending
 
-  const pageCount = Math.ceil(photos.length / PHOTO_PAGE_SIZE)
-  const currentPage = Math.min(photoPage, Math.max(0, pageCount - 1))
-  const pagePhotos = photos.slice(currentPage * PHOTO_PAGE_SIZE, (currentPage + 1) * PHOTO_PAGE_SIZE)
 
   return (
     <div
@@ -491,7 +502,7 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {pagePhotos.map((photo, index) => {
+                        {photos.map((photo, index) => {
                           const isCover = selectedAlbum?.coverPhotoId === photo.id
                           return (
                             <div
@@ -500,14 +511,14 @@ export default function PhotoAlbumsBlock({ projectId, sortMode = 'date', onCount
                             >
                               <button
                                 type="button"
-                                onClick={() => setLightboxIndex(currentPage * PHOTO_PAGE_SIZE + index)}
+                                onClick={() => setLightboxIndex(index)}
                                 className="flex-shrink-0 cursor-zoom-in"
                                 aria-label={photo.fileName}
                               >
-                                {photo.hasThumbnail ? (
+                                {photo.thumbUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
-                                    src={buildPhotoUrl(photo.id, 'thumb')}
+                                    src={photo.thumbUrl}
                                     alt={photo.fileName}
                                     loading="lazy"
                                     className="w-20 h-12 rounded-md object-cover border border-border bg-muted"

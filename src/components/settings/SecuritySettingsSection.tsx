@@ -36,6 +36,10 @@ interface SecuritySettingsSectionProps {
   setVideoUploadRateLimit: (value: string) => void
   shareTokenTtlSeconds: string
   setShareTokenTtlSeconds: (value: string) => void
+  downloadTokenTtlSeconds: string
+  setDownloadTokenTtlSeconds: (value: string) => void
+  downloadTokenMaxUses: string
+  setDownloadTokenMaxUses: (value: string) => void
   passwordAttempts: string
   setPasswordAttempts: (value: string) => void
   maxUploadSizeGB: string
@@ -81,6 +85,10 @@ export function SecuritySettingsSection({
   setVideoUploadRateLimit,
   shareTokenTtlSeconds,
   setShareTokenTtlSeconds,
+  downloadTokenTtlSeconds,
+  setDownloadTokenTtlSeconds,
+  downloadTokenMaxUses,
+  setDownloadTokenMaxUses,
   passwordAttempts,
   setPasswordAttempts,
   maxUploadSizeGB,
@@ -442,6 +450,38 @@ export function SecuritySettingsSection({
               <p className="text-xs text-muted-foreground">
                 {t('security.shareTokenOverride')}
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="downloadTokenTtlSeconds">{t('security.downloadLinkExpiry')}</Label>
+                <Input
+                  id="downloadTokenTtlSeconds"
+                  type="number"
+                  min="300"
+                  max="604800"
+                  value={downloadTokenTtlSeconds}
+                  onChange={(e) => setDownloadTokenTtlSeconds(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('security.downloadLinkExpiryHint')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="downloadTokenMaxUses">{t('security.downloadLinkMaxUses')}</Label>
+                <Input
+                  id="downloadTokenMaxUses"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={downloadTokenMaxUses}
+                  onChange={(e) => setDownloadTokenMaxUses(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('security.downloadLinkMaxUsesHint')}
+                </p>
+              </div>
             </div>
 
             <div className="p-3 bg-muted rounded-md">

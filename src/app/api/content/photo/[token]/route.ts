@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
+import { downloadFile, sanitizeFilenameForHeader, isS3Mode } from '@/lib/storage'
+import { s3GetPresignedDownloadUrl, s3GetPresignedStreamUrl } from '@/lib/s3-storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { verifyAlbumAccessToken, trackPhotoDownload } from '@/lib/photo-access'
 import { isRawPhotoMime } from '@/lib/file-validation'
@@ -38,9 +39,12 @@ export async function GET(
 
     const securitySettings = await getSecuritySettings()
 
+    // FS mode serves every grid tile from here, one request per photo, so the
+    // ceiling has to clear a scroll through several 200-photo pages. S3 mode
+    // barely touches this route — the grid links presigned objects directly.
     const rateLimitResult = await rateLimit(request, {
       windowMs: 60 * 1000,
-      maxRequests: securitySettings.ipRateLimit,
+      maxRequests: Math.max(securitySettings.ipRateLimit, 1200),
       message: photoMessages.tooManyRequests || 'Too many requests. Please slow down.',
     }, 'photo-content-ip')
     if (rateLimitResult) return rateLimitResult
@@ -110,12 +114,27 @@ export async function GET(
       }).catch(() => {})
     }
 
+    const servingWebp = useThumb || (useWebpRendition && !!photo.previewPath)
+    const contentType = servingWebp ? 'image/webp' : photo.fileType
+
+    // S3 mode: redirect the browser straight to the object, same as videos.
+    // Proxying every tile through the app holds one SDK socket per in-flight
+    // request against a pool of 50, so a grid of thumbnails starves itself.
+    if (isS3Mode()) {
+      const presignedUrl = isDownload
+        ? await s3GetPresignedDownloadUrl(filePath, 3600, sanitizeFilenameForHeader(photo.fileName), photo.fileType)
+        : await s3GetPresignedStreamUrl(filePath, 300, contentType)
+      return NextResponse.redirect(presignedUrl, {
+        status: 302,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
     const fileStream = await downloadFile(filePath)
     const webStream = Readable.toWeb(fileStream as any) as ReadableStream
 
-    const servingWebp = useThumb || (useWebpRendition && !!photo.previewPath)
     const headers: Record<string, string> = {
-      'Content-Type': servingWebp ? 'image/webp' : photo.fileType,
+      'Content-Type': contentType,
       'Cache-Control': 'private, max-age=3600',
       'X-Content-Type-Options': 'nosniff',
     }

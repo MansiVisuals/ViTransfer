@@ -128,6 +128,8 @@ export async function PATCH(request: NextRequest) {
       uploadRateLimit,
       videoUploadRateLimit,
       shareTokenTtlSeconds,
+      downloadTokenTtlSeconds,
+      downloadTokenMaxUses,
       passwordAttempts,
       sessionTimeoutValue,
       sessionTimeoutUnit,
@@ -252,6 +254,26 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    if (downloadTokenTtlSeconds !== undefined && downloadTokenTtlSeconds !== null) {
+      const val = parseInt(downloadTokenTtlSeconds, 10)
+      if (isNaN(val) || val < 300 || val > 7 * 24 * 60 * 60) {
+        return NextResponse.json(
+          { error: settingsSecurityMessages.downloadTokenTtlMustBeBetween300And604800 || 'Download link lifetime must be between 300 seconds and 604800 seconds' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (downloadTokenMaxUses !== undefined && downloadTokenMaxUses !== null) {
+      const val = parseInt(downloadTokenMaxUses, 10)
+      if (isNaN(val) || val < 1 || val > 20) {
+        return NextResponse.json(
+          { error: settingsSecurityMessages.downloadTokenMaxUsesMustBeBetween1And20 || 'Download link uses must be between 1 and 20' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Get current settings to detect changes and validate merged values
     const currentSettings = await prisma.securitySettings.findUnique({
       where: { id: 'default' },
@@ -301,6 +323,8 @@ export async function PATCH(request: NextRequest) {
         uploadRateLimit: uploadRateLimit ? parseInt(uploadRateLimit, 10) : 600,
         videoUploadRateLimit: videoUploadRateLimit ? parseInt(videoUploadRateLimit, 10) : 50,
         shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
+        downloadTokenTtlSeconds: downloadTokenTtlSeconds ? parseInt(downloadTokenTtlSeconds, 10) : 14400,
+        downloadTokenMaxUses: downloadTokenMaxUses ? parseInt(downloadTokenMaxUses, 10) : 3,
         passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
         sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
@@ -320,6 +344,8 @@ export async function PATCH(request: NextRequest) {
         uploadRateLimit: uploadRateLimit ? parseInt(uploadRateLimit, 10) : 600,
         videoUploadRateLimit: videoUploadRateLimit ? parseInt(videoUploadRateLimit, 10) : 50,
         shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
+        downloadTokenTtlSeconds: downloadTokenTtlSeconds ? parseInt(downloadTokenTtlSeconds, 10) : 14400,
+        downloadTokenMaxUses: downloadTokenMaxUses ? parseInt(downloadTokenMaxUses, 10) : 3,
         passwordAttempts: passwordAttempts ? parseInt(passwordAttempts, 10) : 5,
         sessionTimeoutValue: sessionTimeoutValue ? parseInt(sessionTimeoutValue, 10) : 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',

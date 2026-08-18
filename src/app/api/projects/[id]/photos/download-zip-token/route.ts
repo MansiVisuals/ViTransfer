@@ -4,6 +4,7 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
+import { getDownloadLinkSettings } from '@/lib/settings'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -11,11 +12,22 @@ import { logError } from '@/lib/logging'
 
 export const runtime = 'nodejs'
 
+/**
+ * Structural ceiling on the id array, not a selection limit: it only exists to
+ * keep an oversized body from reaching the query below, where one bind
+ * parameter per id would run into the Postgres statement limit.
+ *
+ * The real bound is the album itself — the membership check rejects any id that
+ * is not a completed photo in this album, so a selection can never exceed the
+ * album's own photo count.
+ */
+const MAX_SELECTION_IDS = 10000
+
 const downloadZipTokenSchema = z.discriminatedUnion('scope', [
   z.object({
     scope: z.literal('selection'),
     albumId: z.string().min(1),
-    photoIds: z.array(z.string().min(1)).min(1, 'No photos selected').max(200, 'Too many photos requested'),
+    photoIds: z.array(z.string().min(1)).min(1, 'No photos selected').max(MAX_SELECTION_IDS, 'Too many photos requested'),
   }),
   z.object({
     scope: z.literal('album'),
@@ -139,11 +151,8 @@ export async function POST(
       isAdmin: accessCheck.isAdmin || false,
     }
 
-    await redis.setex(
-      `photo_zip:${token}`,
-      15 * 60, // 15 minutes
-      JSON.stringify(tokenData)
-    )
+    const { ttlSeconds } = await getDownloadLinkSettings()
+    await redis.setex(`photo_zip:${token}`, ttlSeconds, JSON.stringify(tokenData))
 
     return NextResponse.json({
       url: `/api/content/photos-zip/${token}`,

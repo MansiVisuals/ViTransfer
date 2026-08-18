@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { ChevronLeft, ChevronRight, Download, Grid3X3, ImageIcon, Images, Loader2 } from 'lucide-react'
 import PhotoGrid, { GalleryPhoto } from './PhotoGrid'
@@ -12,6 +12,9 @@ import LanguageToggle from './LanguageToggle'
 import { cn } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
 import { logError } from '@/lib/logging'
+
+/** Matches the server page size — one request per grid page. */
+const PHOTO_PAGE_SIZE = 200
 
 interface Album {
   id: string
@@ -48,6 +51,10 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
   const [photos, setPhotos] = useState<GalleryPhoto[]>([])
   const [contentToken, setContentToken] = useState<string | null>(null)
   const [photosLoading, setPhotosLoading] = useState(false)
+  const [totalPhotos, setTotalPhotos] = useState(0)
+  const loadingPageRef = useRef(false)
+  const activeAlbumRef = useRef<string | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
@@ -81,19 +88,26 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
     }
   }, [projectId, doFetch, onAlbumCount])
 
-  const fetchPhotos = useCallback(async (albumId: string) => {
-    setPhotosLoading(true)
+  const fetchPhotoPage = useCallback(async (albumId: string, offset: number) => {
+    if (loadingPageRef.current) return
+    loadingPageRef.current = true
+    if (offset === 0) setPhotosLoading(true)
     try {
-      const res = await doFetch(`/api/projects/${projectId}/photo-albums/${albumId}/photos`)
-      if (res.ok) {
-        const data = await res.json()
-        setPhotos(data.photos || [])
-        setContentToken(data.contentToken || null)
-      }
+      const res = await doFetch(
+        `/api/projects/${projectId}/photo-albums/${albumId}/photos?offset=${offset}&limit=${PHOTO_PAGE_SIZE}`
+      )
+      if (!res.ok) return
+      const data = await res.json()
+      // Drop a page that landed after the viewer moved to another album
+      if (activeAlbumRef.current !== albumId) return
+      setContentToken(data.contentToken || null)
+      setTotalPhotos(data.total || 0)
+      setPhotos(prev => (offset === 0 ? data.photos || [] : [...prev, ...(data.photos || [])]))
     } catch (error) {
       logError('Error fetching photos:', error)
     } finally {
-      setPhotosLoading(false)
+      loadingPageRef.current = false
+      if (offset === 0) setPhotosLoading(false)
     }
   }, [projectId, doFetch])
 
@@ -104,13 +118,31 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
   useEffect(() => {
     setSelectedIds(new Set())
     setReelExpanded(false)
+    setPhotos([])
+    setTotalPhotos(0)
+    activeAlbumRef.current = selectedAlbum?.id ?? null
     if (selectedAlbum) {
-      fetchPhotos(selectedAlbum.id)
+      fetchPhotoPage(selectedAlbum.id, 0)
     } else {
-      setPhotos([])
       setContentToken(null)
     }
-  }, [selectedAlbum, fetchPhotos])
+  }, [selectedAlbum, fetchPhotoPage])
+
+  // Pull the next page as the sentinel nears the viewport. Re-running on
+  // photos.length re-observes an already-visible sentinel, so a page that was
+  // skipped while another was in flight is picked straight back up.
+  useEffect(() => {
+    const node = sentinelRef.current
+    if (!node || !selectedAlbum || photos.length >= totalPhotos) return
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) fetchPhotoPage(selectedAlbum.id, photos.length)
+      },
+      { rootMargin: '600px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [selectedAlbum, photos.length, totalPhotos, fetchPhotoPage])
 
   const buildPhotoUrl = useCallback((photoId: string, variant: 'thumb' | 'full') => {
     return `/api/content/photo/${contentToken}?photoId=${photoId}&variant=${variant}`
@@ -430,14 +462,20 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
                   {t('noPhotosYet')}
                 </div>
               ) : (
-                <PhotoGrid
-                  photos={photos}
-                  buildPhotoUrl={buildPhotoUrl}
-                  selectedIds={selectedIds}
-                  onToggleSelect={toggleSelect}
-                  onPhotoClick={setLightboxIndex}
-                  dense
-                />
+                <>
+                  <PhotoGrid
+                    photos={photos}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onPhotoClick={setLightboxIndex}
+                    dense
+                  />
+                  {photos.length < totalPhotos && (
+                    <div ref={sentinelRef} className="flex justify-center py-6">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

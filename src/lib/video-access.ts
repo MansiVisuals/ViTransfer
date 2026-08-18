@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from './db'
 import { logError, logMessage } from './logging'
 import { getClientIpAddress } from './utils'
-import { getClientSessionTimeoutSeconds } from './settings'
+import { getClientSessionTimeoutSeconds, getDownloadLinkSettings } from './settings'
 import { getRedis } from './redis'
 
 type CachedValue<T> = { value: T; expiresAt: number; version?: string }
@@ -55,11 +55,13 @@ export async function generateVideoAccessToken(
   projectId: string,
   quality: string,
   request: NextRequest,
-  sessionId: string
+  sessionId: string,
+  /** Download links need to outlive the client session — see getDownloadLinkSettings */
+  purpose: 'stream' | 'download' = 'stream'
 ): Promise<string> {
   const redis = getRedis()
 
-  const cacheKey = `video_token_cache:${sessionId}:${videoId}:${quality}`
+  const cacheKey = `video_token_cache:${sessionId}:${videoId}:${quality}:${purpose}`
   const cachedToken = await redis.get(cacheKey)
 
   if (cachedToken) {
@@ -82,7 +84,9 @@ export async function generateVideoAccessToken(
     isAdmin: sessionId.startsWith('admin:'),
   }
 
-  const ttlSeconds = await getClientSessionTimeoutSeconds()
+  const ttlSeconds = purpose === 'download'
+    ? (await getDownloadLinkSettings()).ttlSeconds
+    : await getClientSessionTimeoutSeconds()
 
   await redis.setex(
     `video_access:${token}`,

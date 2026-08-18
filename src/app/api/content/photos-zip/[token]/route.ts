@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
+import { lazyDownloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
 import { logSecurityEvent } from '@/lib/video-access'
 import { trackPhotoDownload } from '@/lib/photo-access'
+import { getDownloadLinkSettings } from '@/lib/settings'
 import { ZipArchive } from 'archiver'
 import { Readable } from 'stream'
 import crypto from 'crypto'
@@ -97,7 +98,12 @@ export async function GET(
         uploadCompletedAt: { not: null },
       },
       orderBy: { createdAt: 'asc' },
-      include: { album: { select: { id: true, name: true } } },
+      select: {
+        id: true,
+        fileName: true,
+        storagePath: true,
+        album: { select: { id: true, name: true } },
+      },
     })
 
     if (photos.length === 0) {
@@ -105,7 +111,8 @@ export async function GET(
     }
 
     // Atomically consume token after all authorization checks pass
-    const consumed = await consumeTokenAtomically(redis, tokenKey, rawTokenData)
+    const { maxUses } = await getDownloadLinkSettings()
+    const consumed = await consumeTokenAtomically(redis, tokenKey, rawTokenData, maxUses)
     if (!consumed) {
       return NextResponse.json({ error: photoMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
@@ -147,24 +154,12 @@ export async function GET(
       return candidate
     }
 
-    let appendedCount = 0
     for (const photo of photos) {
-      try {
-        const folder = scope === 'project'
-          ? `${photo.album.name.replace(/[/\\:]/g, '_')}/`
-          : ''
-        const entryName = uniqueEntryName(`${folder}${photo.fileName}`)
-        const fileStream = await downloadFile(photo.storagePath)
-        archive.append(fileStream, { name: entryName })
-        appendedCount += 1
-      } catch (error) {
-        logError(`Error adding photo ${photo.fileName} to archive:`, error)
-        // Continue with other files instead of failing completely
-      }
-    }
-
-    if (appendedCount === 0) {
-      return NextResponse.json({ error: photoMessages.noPhotosFound || 'No photos found' }, { status: 404 })
+      const folder = scope === 'project'
+        ? `${photo.album.name.replace(/[/\\:]/g, '_')}/`
+        : ''
+      const entryName = uniqueEntryName(`${folder}${photo.fileName}`)
+      archive.append(lazyDownloadFile(photo.storagePath), { name: entryName })
     }
 
     void archive.finalize()

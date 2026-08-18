@@ -1622,6 +1622,8 @@
       "clientSessionTimeoutHint": "Konfigurieren, wie lange Kunden-Share-Sitzungen aktiv bleiben.",
       "leaveBlank": "Leer lassen, um Sitzungs-Timeout zu verwenden",
       "shareTokenOverride": "Share-JWT-Ablaufzeit überschreiben (60–86400 Sekunden). Leer lassen, um obigen Sitzungs-Timeout zu verwenden. Standard: Sitzungs-Timeout.",
+      "downloadLinks": "Download-Links",
+      "downloadLinksHint": "Gültigkeit und Wiederholungsversuche für ZIP- und Datei-Download-Links. Bewusst getrennt vom Sitzungs-Timeout, damit eine lange Übertragung nicht abgebrochen wird. Links bleiben bei jedem Wert an IP-Adresse und Browser des Anfragenden gebunden.",
       "downloadLinkExpiry": "Gültigkeit Download-Link (Sekunden)",
       "downloadLinkExpiryHint": "Wie lange ein Download-Link gültig bleibt (300-604800 Sekunden). Massen-Downloads großer Dateien dauern deutlich länger als eine Share-Sitzung, daher wird dies separat eingestellt. Standard: 14400 (4 Stunden).",
       "downloadLinkMaxUses": "Verwendungen Download-Link",

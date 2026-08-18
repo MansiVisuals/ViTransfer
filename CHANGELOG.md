@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.3.1] - 2026-08-18
+
+Large photo albums display and download reliably, and download links are configurable.
+
+### Added
+- Security settings: Download link lifetime (300-604800 seconds, default 14400) and Download link uses (1-20, default 3).
+
+### Changed
+- Photo grids load in pages of 200 instead of the whole album at once. The share gallery pulls the next page as you scroll; the admin album pager fetches one page per request.
+- S3: grid thumbnails are served as presigned URLs straight from the bucket instead of being proxied through the app.
+- Download links no longer inherit the client session timeout, so a bulk download that outlasts the session no longer expires part-way through.
+- A photo selection is bounded by the album's own size instead of a fixed 200.
+
+### Fixed
+- Photo ZIP downloads failed on albums over roughly 50 photos on S3 storage. Files are now opened one at a time as the archive streams, so album size no longer matters.
+- Photo thumbnails intermittently failed to load on S3 and needed a page refresh.
+- Video and asset ZIP downloads shared the same failure mode as photo ZIPs on large asset counts.
+- A ZIP download that fails part-way can be retried on the same link instead of needing a new one.
+
 ## [1.3.0] - 2026-08-17
 
 Camera raw files can be shared through photo albums.

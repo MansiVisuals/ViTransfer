@@ -4,6 +4,7 @@ import { verifyProjectAccess } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { getRedis } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
+import { getDownloadLinkSettings } from '@/lib/settings'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { getConfiguredLocale, loadLocaleMessages } from '@/i18n/locale'
@@ -134,11 +135,8 @@ export async function POST(
       isAdmin: accessCheck.isAdmin || false,
     }
 
-    await redis.setex(
-      `zip_download:${token}`,
-      15 * 60, // 15 minutes
-      JSON.stringify(tokenData)
-    )
+    const { ttlSeconds } = await getDownloadLinkSettings()
+    await redis.setex(`zip_download:${token}`, ttlSeconds, JSON.stringify(tokenData))
 
     // Return download URL
     return NextResponse.json({

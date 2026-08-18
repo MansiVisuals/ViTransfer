@@ -69,6 +69,8 @@ interface SecuritySettings {
   uploadRateLimit?: number
   videoUploadRateLimit?: number
   shareTokenTtlSeconds?: number | null
+  downloadTokenTtlSeconds?: number
+  downloadTokenMaxUses?: number
   passwordAttempts: number
   sessionTimeoutValue: number
   sessionTimeoutUnit: string
@@ -174,6 +176,8 @@ export default function GlobalSettingsPage() {
   const [uploadRateLimit, setUploadRateLimit] = useState('600')
   const [videoUploadRateLimit, setVideoUploadRateLimit] = useState('50')
   const [shareTokenTtlSeconds, setShareTokenTtlSeconds] = useState('')
+  const [downloadTokenTtlSeconds, setDownloadTokenTtlSeconds] = useState('14400')
+  const [downloadTokenMaxUses, setDownloadTokenMaxUses] = useState('3')
   const [passwordAttempts, setPasswordAttempts] = useState('5')
   const [sessionTimeoutValue, setSessionTimeoutValue] = useState('15')
   const [sessionTimeoutUnit, setSessionTimeoutUnit] = useState('MINUTES')
@@ -258,6 +262,8 @@ export default function GlobalSettingsPage() {
     setUploadRateLimit(data.uploadRateLimit?.toString() || '600')
     setVideoUploadRateLimit(data.videoUploadRateLimit?.toString() || '50')
     setShareTokenTtlSeconds(data.shareTokenTtlSeconds ? data.shareTokenTtlSeconds.toString() : '')
+    setDownloadTokenTtlSeconds((data.downloadTokenTtlSeconds ?? 14400).toString())
+    setDownloadTokenMaxUses((data.downloadTokenMaxUses ?? 3).toString())
     setPasswordAttempts(data.passwordAttempts?.toString() || '5')
     setSessionTimeoutValue(data.sessionTimeoutValue?.toString() || '15')
     setSessionTimeoutUnit(data.sessionTimeoutUnit || 'MINUTES')
@@ -675,6 +681,8 @@ export default function GlobalSettingsPage() {
         uploadRateLimit: parseInt(uploadRateLimit, 10) || 600,
         videoUploadRateLimit: parseInt(videoUploadRateLimit, 10) || 50,
         shareTokenTtlSeconds: shareTokenTtlSeconds ? parseInt(shareTokenTtlSeconds, 10) : null,
+        downloadTokenTtlSeconds: downloadTokenTtlSeconds ? parseInt(downloadTokenTtlSeconds, 10) : 14400,
+        downloadTokenMaxUses: downloadTokenMaxUses ? parseInt(downloadTokenMaxUses, 10) : 3,
         passwordAttempts: parseInt(passwordAttempts, 10) || 5,
         sessionTimeoutValue: parseInt(sessionTimeoutValue, 10) || 15,
         sessionTimeoutUnit: sessionTimeoutUnit || 'MINUTES',
@@ -840,6 +848,8 @@ export default function GlobalSettingsPage() {
     uploadRateLimit, setUploadRateLimit,
     videoUploadRateLimit, setVideoUploadRateLimit,
     shareTokenTtlSeconds, setShareTokenTtlSeconds,
+    downloadTokenTtlSeconds, setDownloadTokenTtlSeconds,
+    downloadTokenMaxUses, setDownloadTokenMaxUses,
     passwordAttempts, setPasswordAttempts,
     maxUploadSizeGB, setMaxUploadSizeGB, maxCommentAttachments, setMaxCommentAttachments,
     maxReverseShareFiles, setMaxReverseShareFiles,

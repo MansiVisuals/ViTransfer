@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { downloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
+import { lazyDownloadFile, sanitizeFilenameForHeader } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
 import { getRedis, consumeTokenAtomically } from '@/lib/redis'
 import { getClientIpAddress } from '@/lib/utils'
+import { getDownloadLinkSettings } from '@/lib/settings'
 import { logSecurityEvent, trackVideoAccess } from '@/lib/video-access'
 import { ZipArchive } from 'archiver'
 import { Readable } from 'stream'
@@ -102,7 +103,8 @@ export async function GET(
 
     // Atomically consume token after all authorization checks pass.
     // This prevents invalid requesters from burning the token and avoids replay races.
-    const consumed = await consumeTokenAtomically(redis, tokenKey, rawTokenData)
+    const { maxUses } = await getDownloadLinkSettings()
+    const consumed = await consumeTokenAtomically(redis, tokenKey, rawTokenData, maxUses)
     if (!consumed) {
       return NextResponse.json({ error: shareMessages.invalidOrExpiredDownloadLink || 'Invalid or expired download link' }, { status: 403 })
     }
@@ -136,26 +138,15 @@ export async function GET(
 
     let appendedCount = 0
     if (includeVideo && video.originalStoragePath) {
-      try {
-        const ext = video.originalFileName?.match(/\.[^.]+$/)?.[0] || '.mp4'
-        const videoFileName = `${video.name}_${video.versionLabel}${ext}`
-        const videoStream = await downloadFile(video.originalStoragePath)
-        archive.append(videoStream, { name: videoFileName })
-        appendedCount += 1
-      } catch (error) {
-        logError(`Error adding video ${video.name} to archive:`, error)
-      }
+      const ext = video.originalFileName?.match(/\.[^.]+$/)?.[0] || '.mp4'
+      const videoFileName = `${video.name}_${video.versionLabel}${ext}`
+      archive.append(lazyDownloadFile(video.originalStoragePath), { name: videoFileName })
+      appendedCount += 1
     }
 
     for (const asset of assets) {
-      try {
-        const fileStream = await downloadFile(asset.storagePath)
-        archive.append(fileStream, { name: asset.fileName })
-        appendedCount += 1
-      } catch (error) {
-        logError(`Error adding file ${asset.fileName} to archive:`, error)
-        // Continue with other files instead of failing completely
-      }
+      archive.append(lazyDownloadFile(asset.storagePath), { name: asset.fileName })
+      appendedCount += 1
     }
 
     if (appendedCount === 0) {

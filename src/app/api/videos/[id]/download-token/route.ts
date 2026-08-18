@@ -71,7 +71,8 @@ export async function POST(
       video.project.id,
       'original',
       request,
-      sessionId
+      sessionId,
+      'download'
     )
 
     // Return download URL (uses /api/content endpoint with download flag)

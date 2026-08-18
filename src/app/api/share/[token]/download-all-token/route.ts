@@ -104,7 +104,8 @@ export async function POST(
           project.id,
           'original',
           request,
-          sessionId
+          sessionId,
+          'download'
         )
         return `/api/content/${accessToken}?download=true`
       })

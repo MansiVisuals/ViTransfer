@@ -13,6 +13,8 @@ const cachedRateLimits: CachedValue<{
   videoUploadRateLimit: number
   shareTokenTtlSeconds?: number
 }> = { value: { ipRateLimit: 1000, sessionRateLimit: 600, uploadRateLimit: 600, videoUploadRateLimit: 50 }, expiresAt: 0 }
+const cachedDownloadLinks: CachedValue<{ ttlSeconds: number; maxUses: number }> =
+  { value: { ttlSeconds: 14400, maxUses: 3 }, expiresAt: 0 }
 const cachedSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
 const cachedAdminSessionTimeout: CachedValue<number> = { value: 15 * 60, expiresAt: 0 }
 const cachedSmtpConfigured: CachedValue<boolean> = { value: false, expiresAt: 0 }
@@ -27,6 +29,7 @@ export async function invalidateSecuritySettingsCache(): Promise<void> {
   cachedRateLimits.expiresAt = 0
   cachedSessionTimeout.expiresAt = 0
   cachedAdminSessionTimeout.expiresAt = 0
+  cachedDownloadLinks.expiresAt = 0
 
   const redis = getRedis()
   await redis.del('app:security_settings')
@@ -301,6 +304,39 @@ export async function getRateLimitSettings(): Promise<{
   } catch (error) {
     return cachedRateLimits.value
   }
+}
+
+/**
+ * Download link settings.
+ *
+ * Download tokens deliberately outlive the client session: a bulk download of
+ * large originals runs far longer than the 15-minute default, and every token
+ * minted up front would otherwise expire before the browser reaches it.
+ * Tokens stay bound to the requester IP + User-Agent, so the lifetime is what
+ * gets relaxed here, not the binding.
+ */
+export async function getDownloadLinkSettings(): Promise<{ ttlSeconds: number; maxUses: number }> {
+  const now = Date.now()
+  if (cachedDownloadLinks.expiresAt > now) {
+    return cachedDownloadLinks.value
+  }
+
+  try {
+    const settings = await prisma.securitySettings.findUnique({
+      where: { id: 'default' },
+      select: { downloadTokenTtlSeconds: true, downloadTokenMaxUses: true },
+    })
+
+    cachedDownloadLinks.value = {
+      ttlSeconds: settings?.downloadTokenTtlSeconds ?? 14400,
+      maxUses: settings?.downloadTokenMaxUses ?? 3,
+    }
+    cachedDownloadLinks.expiresAt = now + SETTINGS_CACHE_TTL_MS
+  } catch {
+    // Keep serving the last known value rather than failing a download
+  }
+
+  return cachedDownloadLinks.value
 }
 
 export function isHttpsManagedByEnvironment(): boolean {

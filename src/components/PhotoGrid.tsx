@@ -10,11 +10,12 @@ export interface GalleryPhoto {
   width: number | null
   height: number | null
   hasThumbnail: boolean
+  /** Direct rendition URL — presigned S3 object, or the token route in FS mode */
+  thumbUrl: string | null
 }
 
 interface PhotoGridProps {
   photos: GalleryPhoto[]
-  buildPhotoUrl: (photoId: string, variant: 'thumb' | 'full') => string
   selectedIds: Set<string>
   onToggleSelect: (photoId: string) => void
   onPhotoClick: (index: number) => void
@@ -26,7 +27,6 @@ interface PhotoGridProps {
 
 export default function PhotoGrid({
   photos,
-  buildPhotoUrl,
   selectedIds,
   onToggleSelect,
   onPhotoClick,
@@ -48,7 +48,7 @@ export default function PhotoGrid({
             key={photo.id}
             className={`group relative aspect-square rounded-lg border bg-card overflow-hidden ${isSelected ? 'ring-2 ring-primary' : ''}`}
           >
-            {photo.hasThumbnail ? (
+            {photo.thumbUrl ? (
               <button
                 type="button"
                 onClick={() => onPhotoClick(index)}
@@ -57,7 +57,7 @@ export default function PhotoGrid({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={buildPhotoUrl(photo.id, 'thumb')}
+                  src={photo.thumbUrl}
                   alt={photo.fileName}
                   loading="lazy"
                   className="w-full h-full object-cover"

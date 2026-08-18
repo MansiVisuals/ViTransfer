@@ -534,6 +534,10 @@ model SecuritySettings {
   passwordAttempts      Int  @default(5) // password attempts before lockout
   shareTokenTtlSeconds  Int? // optional override for share JWT expiry (60-86400 seconds, null = use session timeout)
 
+  // Download links (zip archives + per-file download tokens)
+  downloadTokenTtlSeconds Int @default(14400) // 4h — bulk downloads outlive the 15-min share session
+  downloadTokenMaxUses    Int @default(3) // retries after a failed transfer; tokens stay IP+UA bound
+
   // Session Timeout (for client share sessions, not admin JWT)
   sessionTimeoutValue Int    @default(15) // Numeric value (15, 30, 1, 2, etc.)
   sessionTimeoutUnit  String @default("MINUTES") // MINUTES, HOURS, DAYS, WEEKS

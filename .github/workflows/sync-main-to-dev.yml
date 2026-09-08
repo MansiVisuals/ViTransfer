@@ -1,16 +1,21 @@
 name: Sync main to dev
 
-# main moves without dev twice: when the release train pushes the version bump
-# and changelog, and when a Dependabot security PR lands (those target the
-# default branch — see dependabot.yml). Both are carried back by hand, and a
-# missed one means dev — the branch every release is cut from — keeps a
-# lockfile the advisory already covers while main looks patched. That is how
-# v1.3.5 built a vulnerable tree after the fix was already sitting on main.
+# main moves without dev twice, and only one of them matters. The release train
+# pushing the version bump and changelog is by design — dev never carries
+# VERSION, so it lags every week and that is fine. A Dependabot security PR
+# landing is not: those target the default branch (see dependabot.yml), so dev —
+# the branch every release is cut from — keeps a lockfile the advisory already
+# covers while main looks patched. That is how v1.3.5 built a vulnerable tree
+# after the fix was already sitting on main, and how the release then hit a
+# lockfile conflict waiting to happen the next time dev touched the same file.
 #
-# This opens an issue rather than a PR. dev requires the "Test Summary" check,
-# and a PR opened with GITHUB_TOKEN does not trigger `pull_request` workflows,
-# so the required check would never run and the PR would block forever. The
-# repo has no PAT to raise it as a human would.
+# So this reports on what is stranded, not on how far behind dev is. Counting
+# commits would file an issue after every release, weekly, for the state that is
+# supposed to be true.
+#
+# It opens an issue rather than a PR: dev requires the "Test Summary" check, and
+# a PR opened with GITHUB_TOKEN does not trigger `pull_request` workflows, so
+# the check would never run and the PR would block forever. There is no PAT.
 
 on:
   push:
@@ -32,36 +37,48 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Report drift
+      - name: Report anything stranded on main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git fetch origin main dev --quiet
 
-          behind=$(git rev-list --count origin/dev..origin/main)
-          if [ "$behind" -eq 0 ]; then
-            echo "dev already contains main, nothing to carry back."
+          # Release commits are authored by github-actions[bot] and dev is meant
+          # to lag them. Everything else on main is a patch that never reached
+          # the branch the next release builds from.
+          stranded=$(git log --format='%an %h %s' origin/dev..origin/main \
+            | grep -v '^github-actions\[bot\] ' || true)
+
+          # One open issue at a time, closed again once dev catches up, so a
+          # stale one can never mask the next strand.
+          open_issue=$(gh issue list --label sync --state open --json number -q '.[0].number')
+
+          if [ -z "$stranded" ]; then
+            echo "Nothing stranded: dev has every patch main does."
+            if [ -n "$open_issue" ]; then
+              gh issue close "$open_issue" --comment "dev has caught up with main."
+            fi
             exit 0
           fi
-          echo "main is $behind commit(s) ahead of dev."
+
+          echo "Stranded on main:"
+          echo "$stranded"
+
+          if [ -n "$open_issue" ]; then
+            echo "Issue #$open_issue is already tracking this."
+            exit 0
+          fi
 
           # Its own label, not `ci`: that one is the release-failure report's,
           # and sharing it would make either issue suppress the other.
           gh label create sync \
-            --description "dev has fallen behind main" \
+            --description "A patch on main has not reached dev" \
             --color 1d76db --force
 
-          # One open issue at a time: main moves several times per release run,
-          # and each push would otherwise file its own.
-          if [ -n "$(gh issue list --label sync --state open --json number -q '.[0].number')" ]; then
-            echo "A sync issue is already open."
-            exit 0
-          fi
-
           gh issue create \
-            --title "dev is behind main by $behind commit(s)" \
+            --title "Patches on main have not reached dev" \
             --label sync \
             --body "$(printf '%s\n\n```\n%s\n```\n\n%s\n' \
-              "main has commits dev does not. Until they are merged back, the weekly release builds from a tree that is missing them." \
-              "$(git log --oneline origin/dev..origin/main)" \
+              "These commits are on main but not on dev. The weekly release is cut from dev, so until they are carried back it keeps building without them — and the release's own merge will conflict as soon as dev touches the same files." \
+              "$stranded" \
               "Carry them over with \`git checkout dev && git merge origin/main && git push origin dev\`.")"

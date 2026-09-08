@@ -1,0 +1,67 @@
+name: Sync main to dev
+
+# main moves without dev twice: when the release train pushes the version bump
+# and changelog, and when a Dependabot security PR lands (those target the
+# default branch — see dependabot.yml). Both are carried back by hand, and a
+# missed one means dev — the branch every release is cut from — keeps a
+# lockfile the advisory already covers while main looks patched. That is how
+# v1.3.5 built a vulnerable tree after the fix was already sitting on main.
+#
+# This opens an issue rather than a PR. dev requires the "Test Summary" check,
+# and a PR opened with GITHUB_TOKEN does not trigger `pull_request` workflows,
+# so the required check would never run and the PR would block forever. The
+# repo has no PAT to raise it as a human would.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    name: Check dev is in step
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Report drift
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin main dev --quiet
+
+          behind=$(git rev-list --count origin/dev..origin/main)
+          if [ "$behind" -eq 0 ]; then
+            echo "dev already contains main, nothing to carry back."
+            exit 0
+          fi
+          echo "main is $behind commit(s) ahead of dev."
+
+          # Its own label, not `ci`: that one is the release-failure report's,
+          # and sharing it would make either issue suppress the other.
+          gh label create sync \
+            --description "dev has fallen behind main" \
+            --color 1d76db --force
+
+          # One open issue at a time: main moves several times per release run,
+          # and each push would otherwise file its own.
+          if [ -n "$(gh issue list --label sync --state open --json number -q '.[0].number')" ]; then
+            echo "A sync issue is already open."
+            exit 0
+          fi
+
+          gh issue create \
+            --title "dev is behind main by $behind commit(s)" \
+            --label sync \
+            --body "$(printf '%s\n\n```\n%s\n```\n\n%s\n' \
+              "main has commits dev does not. Until they are merged back, the weekly release builds from a tree that is missing them." \
+              "$(git log --oneline origin/dev..origin/main)" \
+              "Carry them over with \`git checkout dev && git merge origin/main && git push origin dev\`.")"

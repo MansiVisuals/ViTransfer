@@ -47,6 +47,13 @@ docker compose logs -f         # Follow all logs in real-time
 - Check CPU usage: `docker stats`.
 - The worker uses at most ~half the host's threads by default. `FFMPEG_THREADS_PER_JOB`, `WORKER_CONCURRENCY`, and `FFMPEG_PRESET` override this — see [Configuration](Configuration#cpu-threads--video-processing).
 - 720p transcoding is faster than 1080p — consider using 720p for preview resolution.
+- On an x86_64 host with an Intel or AMD GPU, hardware encoding is usually the largest win — see [Configuration](Configuration#hardware-encoding-x86_64-intelamd).
+
+**Worker exits at startup with an FFMPEG_HWACCEL error**
+- `requires x86_64` — the host is ARM; no supported ARM board has a usable H.264 encoder. Unset `FFMPEG_HWACCEL`.
+- `does not exist` — the GPU was not passed in. Add `devices: - /dev/dri:/dev/dri` to the worker service.
+- `is not supported` — the only accepted value is `vaapi`; NVIDIA/NVENC is not available in this image.
+- Check the GPU is usable with `docker compose exec worker vainfo`. If it prints nothing, the host has no render node at `/dev/dri/renderD128` or the container could not open it.
 
 ## Uploads
 

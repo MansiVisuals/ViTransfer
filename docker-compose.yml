@@ -116,6 +116,7 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       # DEBUG_WORKER: "true"  # Uncomment for verbose FFmpeg and worker debug logs
+      # FFMPEG_HWACCEL: vaapi  # x86_64 Intel/AMD GPU encoding; also uncomment devices: below
       DATABASE_URL: postgresql://${POSTGRES_USER:-vitransfer}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vitransfer}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -133,6 +134,10 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
     volumes:
       - uploads:/app/uploads
+    # Hardware video encoding, x86_64 Intel/AMD only. Uncomment together with
+    # FFMPEG_HWACCEL above; setting that without this makes the worker refuse to start.
+    # devices:
+    #   - /dev/dri:/dev/dri
     networks:
       - vitransfer-internal
     security_opt:

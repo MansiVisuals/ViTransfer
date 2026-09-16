@@ -25,6 +25,9 @@
 | `WORKER_CONCURRENCY` | No | Override concurrent video jobs (bypasses computed allocation) | computed | `4` |
 | `FFMPEG_THREADS_PER_JOB` | No | Override FFmpeg threads per transcode (bypasses computed allocation) | computed | `16` |
 | `FFMPEG_PRESET` | No | Override FFmpeg encoding preset (`ultrafast`–`veryslow`) | `faster` | `medium` |
+| `FFMPEG_HWACCEL` | No | GPU encoding backend. Only `vaapi` (x86_64 Intel/AMD) | _unset (CPU)_ | `vaapi` |
+| `FFMPEG_VAAPI_DEVICE` | No | Render node used when `FFMPEG_HWACCEL=vaapi` | `/dev/dri/renderD128` | `/dev/dri/renderD129` |
+| `FFMPEG_HW_QP` | No | Quality for GPU encoding (1-51, lower = better). The CQP equivalent of CRF | `23` | `20` |
 | `DEBUG_WORKER` | No | Enable verbose worker logging | `false` | `true` |
 | `DEBUG_EXTERNAL_NOTIFICATIONS` | No | Enable verbose external notification logging | `false` | `true` |
 | `STORAGE_PROVIDER` | No | Storage backend: `local` or `s3` | `local` | `s3` |
@@ -154,6 +157,34 @@ For hosts where the 50% budget is not what you want (dedicated transcode machine
 - `FFMPEG_PRESET` — any x264 preset from `ultrafast` to `veryslow` (e.g. `medium` for smaller files at slower encode speed)
 
 Overrides are taken as-is: setting them high deliberately opts out of the 50% headroom guarantee.
+
+### Hardware encoding (x86_64 Intel/AMD)
+
+Transcoding runs on the CPU by default. On x86_64 hosts with an Intel (Gen8+/Arc) or AMD GPU, the encode step can move to the GPU, which is typically several times faster and frees the CPU for other jobs.
+
+Two things are needed — the worker refuses to start if only one is present:
+
+```yaml
+worker:
+  environment:
+    FFMPEG_HWACCEL: vaapi
+  devices:
+    - /dev/dri:/dev/dri
+```
+
+Scaling, watermarking and the preview LUT still run on the CPU (FFmpeg has no GPU text renderer), so previews look the same with hardware encoding on or off, watermarked or not. Only the H.264 encode moves.
+
+Quality is set with `FFMPEG_HW_QP` instead of CRF, because `h264_vaapi` has no CRF mode. The default of `23` matches the CPU default; files may come out slightly larger than x264 at the same number. `FFMPEG_PRESET` and `FFMPEG_THREADS_PER_JOB` do not apply to the GPU encoder.
+
+**Not supported:** NVIDIA (NVENC is not in Alpine's FFmpeg build) and all ARM hosts. On ARM64, Raspberry Pi 5 has no H.264 encoder at all, Rockchip needs a vendor FFmpeg fork, and Apple Silicon under Docker has no GPU passthrough — so `FFMPEG_HWACCEL` is rejected outright there rather than failing later.
+
+Verify the GPU is visible inside the container:
+
+```bash
+docker compose exec worker vainfo
+```
+
+It should list `VAEntrypointEncSlice` for `VAProfileH264*`. Worker startup also logs `[FFMPEG] Hardware encoding enabled: h264_vaapi on /dev/dri/renderD128 (qp 23)`.
 
 ### When to set this
 

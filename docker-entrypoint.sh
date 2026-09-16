@@ -113,6 +113,21 @@ else
         chown app:app /app/uploads 2>/dev/null || true
     fi
 
+    # GPU render node for hardware encoding. The owning gid comes from the host
+    # and usually has no matching group in the image, so create one to add app to.
+    if [ -e /dev/dri/renderD128 ]; then
+        DRI_GID=$(stat -c '%g' /dev/dri/renderD128 2>/dev/null || echo "")
+        if [ -n "$DRI_GID" ]; then
+            DRI_GROUP=$(getent group "$DRI_GID" 2>/dev/null | cut -d: -f1)
+            if [ -z "$DRI_GROUP" ]; then
+                DRI_GROUP=render
+                addgroup -g "$DRI_GID" "$DRI_GROUP" 2>/dev/null || true
+            fi
+            addgroup app "$DRI_GROUP" 2>/dev/null || true
+            echo "[OK] GPU render node access granted (group $DRI_GROUP, gid $DRI_GID)"
+        fi
+    fi
+
     echo ""
 
     SKIP_SU_EXEC=false

@@ -15,6 +15,7 @@ import { createCleanPreviewWorker } from './clean-preview-processor'
 import { processDueDateReminders } from './due-date-reminders'
 import { cleanupOldTempFiles, ensureTempDir } from './cleanup'
 import { runPreviewThumbnailBackfill } from './backfill'
+import { validateHardwareAccel } from '../lib/ffmpeg'
 import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
@@ -34,6 +35,10 @@ async function main() {
     logMessage(`[WORKER DEBUG] Platform: ${process.platform}`)
     logMessage(`[WORKER DEBUG] Architecture: ${process.arch}`)
   }
+
+  // Refuse to start on a broken hardware-encode setup rather than
+  // discovering it mid-transcode
+  validateHardwareAccel()
 
   // Ensure temp directory exists
   ensureTempDir()

@@ -18,6 +18,50 @@ const ffprobePath = 'ffprobe'
 const VALID_PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow']
 const FFMPEG_PRESET = VALID_PRESETS.includes(process.env.FFMPEG_PRESET ?? '') ? process.env.FFMPEG_PRESET! : 'faster'
 
+// Hardware encoding via VAAPI (x86_64 Intel/AMD). Unset means libx264 on CPU.
+// Only the encode leg moves to the GPU: there is no GPU drawtext, so the
+// watermark and LUT stay on the CPU and reach the encoder unchanged.
+const HW_ACCEL = process.env.FFMPEG_HWACCEL?.trim().toLowerCase() || ''
+const HW_ENABLED = HW_ACCEL === 'vaapi'
+const VAAPI_DEVICE = process.env.FFMPEG_VAAPI_DEVICE?.trim() || '/dev/dri/renderD128'
+
+// h264_vaapi has no CRF; CQP is the equivalent quality knob
+const HW_QP = (() => {
+  const parsed = parseInt(process.env.FFMPEG_HW_QP ?? '', 10)
+  return Number.isFinite(parsed) && parsed >= 1 && parsed <= 51 ? parsed : 23
+})()
+
+/**
+ * Reject an unusable hardware-encode setup at worker startup.
+ * Falling back to CPU silently would only surface hours into a transcode,
+ * long after the operator could connect it to the setting they changed.
+ */
+export function validateHardwareAccel(): void {
+  if (!HW_ACCEL) return
+
+  if (!HW_ENABLED) {
+    throw new Error(
+      `FFMPEG_HWACCEL="${HW_ACCEL}" is not supported. The only accepted value is "vaapi" (x86_64 Intel/AMD).`
+    )
+  }
+
+  if (process.arch !== 'x64') {
+    throw new Error(
+      `FFMPEG_HWACCEL=vaapi requires x86_64, but this container is ${process.arch}. ` +
+      'No supported ARM platform exposes a usable H.264 encoder here — unset FFMPEG_HWACCEL to encode on the CPU.'
+    )
+  }
+
+  if (!fs.existsSync(VAAPI_DEVICE)) {
+    throw new Error(
+      `FFMPEG_HWACCEL=vaapi is set but ${VAAPI_DEVICE} does not exist. ` +
+      'Pass the GPU into the container (devices: - /dev/dri:/dev/dri) or unset FFMPEG_HWACCEL.'
+    )
+  }
+
+  logMessage(`[FFMPEG] Hardware encoding enabled: h264_vaapi on ${VAAPI_DEVICE} (qp ${HW_QP})`)
+}
+
 export interface VideoMetadata {
   duration: number
   width: number
@@ -221,7 +265,8 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     logMessage('[FFMPEG DEBUG] CPU optimization:', {
       totalThreads: cpuAllocation.totalThreads,
       threadsPerJob: threads,
-      selectedPreset: preset
+      selectedPreset: preset,
+      hardwareEncode: HW_ENABLED ? `h264_vaapi (qp ${HW_QP})` : 'disabled (libx264)'
     })
   }
 
@@ -301,23 +346,38 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     filters.push('lut3d=/usr/share/ffmpeg/previewlut.cube')
   }
 
+  // Hand the finished CPU-side frames to the GPU as the last filter step
+  if (HW_ENABLED) {
+    filters.push('format=nv12')
+    filters.push('hwupload')
+  }
+
   const filterComplex = filters.join(',')
 
   if (DEBUG) {
     logMessage('[FFMPEG DEBUG] Built filter complex:', filterComplex)
   }
 
+  // On the GPU path hwupload decides the output format, so -pix_fmt is omitted;
+  // nv12 in still yields yuv420p H.264, which is what Safari/iOS need.
+  const encoderArgs = HW_ENABLED
+    ? ['-c:v', 'h264_vaapi', '-rc_mode', 'CQP', '-qp', HW_QP.toString()]
+    : [
+        '-c:v', 'libx264',
+        '-preset', preset,
+        '-crf', '23', // Constant Rate Factor: 18-28 range (lower = better quality, 23 is default)
+        '-pix_fmt', 'yuv420p', // Ensure compatibility with all players (especially Safari/iOS)
+      ]
+
   const args = [
     '-v', 'verbose', // Enable verbose logging for debug
+    ...(HW_ENABLED ? ['-vaapi_device', VAAPI_DEVICE] : []),
     '-i', inputPath,
     '-vf', filterComplex,
-    '-c:v', 'libx264',
-    '-preset', preset,
-    '-crf', '23', // Constant Rate Factor: 18-28 range (lower = better quality, 23 is default)
+    ...encoderArgs,
     '-threads', threads.toString(),
     '-profile:v', 'high',
     '-level', '4.1',
-    '-pix_fmt', 'yuv420p', // Ensure compatibility with all players (especially Safari/iOS)
     '-c:a', 'aac',
     '-b:a', '128k', // Reduced from 192k to 128k (sufficient for most use cases, saves bandwidth)
     '-ar', '48000', // Standard audio sample rate

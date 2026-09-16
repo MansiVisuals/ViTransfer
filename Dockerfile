@@ -19,6 +19,9 @@ RUN apk update && apk upgrade --no-cache && \
         libraw-tools \
         bash curl ca-certificates shadow su-exec \
     && apk add --no-cache --upgrade cjson libsndfile giflib orc zlib expat \
+    && if [ "$TARGETARCH" = "amd64" ]; then \
+           apk add --no-cache mesa-va-gallium intel-media-driver libva-utils; \
+       fi \
     && npm install -g npm@latest \
     && npm cache clean --force \
     && ffmpeg -version \

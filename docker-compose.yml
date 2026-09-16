@@ -117,6 +117,7 @@ services:
       PGID: ${PGID:-1000}
       # DEBUG_WORKER: "true"  # Uncomment for verbose FFmpeg and worker debug logs
       # FFMPEG_HWACCEL: vaapi  # x86_64 Intel/AMD GPU encoding; also uncomment devices: below
+      # FFMPEG_HWACCEL_DECODE: "true"  # Also decode on GPU (H.264/HEVC/VP9/AV1 sources only)
       DATABASE_URL: postgresql://${POSTGRES_USER:-vitransfer}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vitransfer}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379

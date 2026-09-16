@@ -31,6 +31,12 @@ const HW_QP = (() => {
   return Number.isFinite(parsed) && parsed >= 1 && parsed <= 51 ? parsed : 23
 })()
 
+// Decode on the GPU too. Separate from the encoder switch because the win
+// depends on the source: VA-API has no profile for ProRes, DNxHD or camera
+// raw, and filtering on the CPU means an extra download/upload per frame.
+const HW_DECODE = process.env.FFMPEG_HWACCEL_DECODE === 'true'
+const VAAPI_DECODABLE = ['h264', 'hevc', 'vp9', 'av1', 'mpeg2video', 'vc1']
+
 /**
  * Reject an unusable hardware-encode setup at worker startup.
  * Falling back to CPU silently would only surface hours into a transcode,
@@ -60,6 +66,9 @@ export function validateHardwareAccel(): void {
   }
 
   logMessage(`[FFMPEG] Hardware encoding enabled: h264_vaapi on ${VAAPI_DEVICE} (qp ${HW_QP})`)
+  if (HW_DECODE) {
+    logMessage(`[FFMPEG] Hardware decoding enabled for: ${VAAPI_DECODABLE.join(', ')}`)
+  }
 }
 
 export interface VideoMetadata {
@@ -278,6 +287,14 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
     logMessage('[FFMPEG DEBUG] Input video metadata:', metadata)
   }
 
+  // Decode on the GPU only for codecs VA-API actually has a profile for.
+  // Gating on the probed codec keeps this deterministic rather than depending
+  // on how FFmpeg handles an unsupported one.
+  const hwDecode = HW_ENABLED && HW_DECODE && VAAPI_DECODABLE.includes(metadata.codec ?? '')
+  if (HW_ENABLED && HW_DECODE && !hwDecode) {
+    logMessage(`[FFMPEG] Software decode: ${metadata.codec ?? 'unknown'} has no VA-API profile (encode still on GPU)`)
+  }
+
   // Build video filters
   const filters: string[] = []
 
@@ -372,6 +389,8 @@ export async function transcodeVideo(options: TranscodeOptions): Promise<void> {
   const args = [
     '-v', 'verbose', // Enable verbose logging for debug
     ...(HW_ENABLED ? ['-vaapi_device', VAAPI_DEVICE] : []),
+    // nv12 output downloads frames to system memory for the CPU filters
+    ...(hwDecode ? ['-hwaccel', 'vaapi', '-hwaccel_output_format', 'nv12'] : []),
     '-i', inputPath,
     '-vf', filterComplex,
     ...encoderArgs,

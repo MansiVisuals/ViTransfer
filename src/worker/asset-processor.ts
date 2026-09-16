@@ -5,7 +5,7 @@ import { ALLOWED_ASSET_TYPES } from '../lib/file-validation'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
-import { TEMP_DIR } from './cleanup'
+import { TEMP_DIR, trackJob, untrackJob } from './cleanup'
 import { logError, logMessage } from '../lib/logging'
 
 const DEBUG = process.env.DEBUG_WORKER === 'true'
@@ -31,6 +31,7 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
 
   let tempFilePath: string | undefined
 
+  trackJob(assetId)
   try {
     // Download asset to temp location
     tempFilePath = path.join(TEMP_DIR, `${assetId}-asset`)
@@ -143,6 +144,7 @@ export async function processAsset(job: Job<AssetProcessingJob>) {
     logError(`[WORKER ERROR] Asset processing failed for ${assetId}`, error)
     throw error
   } finally {
+    untrackJob(assetId)
     // Cleanup temp file
     if (tempFilePath && fs.existsSync(tempFilePath)) {
       try {

@@ -112,8 +112,13 @@ jobs:
         run: |
           npm ci --legacy-peer-deps --ignore-scripts
           # Majors and unfixable advisories never reach auto-merge, so this is
-          # the backstop that makes them visible rather than silently skipped.
-          npm audit --audit-level=high || echo "::warning::npm audit reports unresolved advisories — review before approving"
+          # the backstop that catches them rather than silently skipping them.
+          #
+          # It fails rather than warns: the Dockerfile runs the same gate during
+          # `build`, which is after `publish` has merged dev and pushed the
+          # version bump. A warning here bought nothing and left main carrying
+          # release commits for a version that never tagged or shipped.
+          npm audit --audit-level=high
 
   # Individual PRs are tested against dev as it was when they opened, not
   # against the final merged state. With no human approving the release, this

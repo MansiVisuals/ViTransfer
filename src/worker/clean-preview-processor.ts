@@ -6,7 +6,7 @@ import { transcodeVideo, getVideoMetadata } from '../lib/ffmpeg'
 import { downloadFile, uploadFile } from '../lib/storage'
 import { CleanPreviewJob } from '../lib/queue'
 import { calculateOutputDimensions, RESOLUTION_PRESETS } from './video-processor-helpers'
-import { TEMP_DIR } from './cleanup'
+import { TEMP_DIR, trackJob, untrackJob } from './cleanup'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
@@ -35,6 +35,7 @@ async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<void> {
   const tempFiles: { input?: string; output?: string } = {}
   const processingStart = Date.now()
 
+  trackJob(videoId)
   try {
     // Fetch the video to verify it exists and is approved
     const video = await prisma.video.findUnique({
@@ -124,6 +125,7 @@ async function processCleanPreview(job: Job<CleanPreviewJob>): Promise<void> {
     throw error
 
   } finally {
+    untrackJob(videoId)
     // Cleanup temp files
     for (const file of Object.values(tempFiles).filter((f): f is string => !!f)) {
       try {

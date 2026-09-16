@@ -6,6 +6,12 @@ name: Docker Integration Tests
 #
 # No paths filter on PRs: "Test Summary" is a required check on dev, and a
 # required check that never runs leaves auto-merge pending forever.
+#
+# PRs to main are tested too. Setting `target-branch` in dependabot.yml turns
+# off security updates from that config, so GitHub opens them against the
+# default branch instead — main. Those PRs used to get CodeQL and nothing else,
+# which is how a browserslist advisory sat on main untested while the release
+# train kept building the vulnerable lockfile from dev.
 on:
   push:
     branches: [dev]
@@ -18,7 +24,7 @@ on:
       - '.github/workflows/docker-*.yml'
       - '.github/workflows/test-dev-*.yml'
   pull_request:
-    branches: [dev]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:

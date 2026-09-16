@@ -6,7 +6,7 @@ import { generateThumbnail, generateWaveformImage } from '../lib/ffmpeg'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
-import { TEMP_DIR } from './cleanup'
+import { TEMP_DIR, trackJob, untrackJob } from './cleanup'
 import { logError, logMessage } from '../lib/logging'
 import type { ProjectUploadProcessingJob } from '../lib/queue'
 
@@ -84,6 +84,7 @@ export async function processProjectUpload(job: Job<ProjectUploadProcessingJob>)
 
   let tempFilePath: string | undefined
 
+  trackJob(uploadId)
   try {
     // Download file to temp location
     tempFilePath = path.join(TEMP_DIR, `${uploadId}-upload`)
@@ -153,6 +154,7 @@ export async function processProjectUpload(job: Job<ProjectUploadProcessingJob>)
 
     throw error
   } finally {
+    untrackJob(uploadId)
     // Cleanup temp file
     if (tempFilePath && fs.existsSync(tempFilePath)) {
       try {

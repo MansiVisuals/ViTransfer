@@ -8,7 +8,7 @@ import { PhotoProcessingJob } from '../lib/queue'
 import fs from 'fs'
 import path from 'path'
 import { pipeline } from 'stream/promises'
-import { TEMP_DIR } from './cleanup'
+import { TEMP_DIR, trackJob, untrackJob } from './cleanup'
 import { logError, logMessage } from '../lib/logging'
 
 const THUMBNAIL_SIZE = 512 // longest edge in pixels
@@ -27,6 +27,7 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
 
   let tempDir: string | undefined
 
+  trackJob(photoId)
   try {
     const photo = await prisma.photo.findUnique({
       where: { id: photoId },
@@ -119,6 +120,7 @@ export async function processPhoto(job: Job<PhotoProcessingJob>) {
     logError(`[WORKER ERROR] Photo processing failed for ${photoId}`, error)
     throw error
   } finally {
+    untrackJob(photoId)
     if (tempDir && fs.existsSync(tempDir)) {
       try {
         fs.rmSync(tempDir, { recursive: true, force: true })

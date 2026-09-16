@@ -14,6 +14,7 @@ import {
   handleProcessingError,
   debugLog
 } from './video-processor-helpers'
+import { trackJob, untrackJob } from './cleanup'
 
 export async function processVideo(job: Job<VideoProcessingJob>) {
   const { videoId, originalStoragePath, projectId } = job.data
@@ -27,6 +28,7 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
   const tempFiles: TempFiles = {}
   const processingStart = Date.now()
 
+  trackJob(videoId)
   try {
     // May already be PROCESSING from TUS handler
     logMessage(`[WORKER] Setting video ${videoId} to PROCESSING status (if not already)`)
@@ -94,6 +96,7 @@ export async function processVideo(job: Job<VideoProcessingJob>) {
     throw error
 
   } finally {
+    untrackJob(videoId)
     // Always cleanup temp files (success or failure)
     await cleanupTempFiles(tempFiles)
   }

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.3.8] - 2026-09-28
+
+Security release: dependency updates.
+
+### Security
+- deps: bump the npm group with 8 updates (#126)
+
 ## [1.3.7] - 2026-09-21
 
 Security release: dependency updates.

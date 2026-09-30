@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { id: projectId } = await params
     const body = await request.json()
-    const { videoId, notifyEntireProject, sendPasswordSeparately } = body
+    const { videoId, notifyEntireProject: requestedEntireProject, sendPasswordSeparately } = body
 
     // Get project details including password
     const project = await prisma.project.findUnique({
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         description: true,
         slug: true,
         sharePassword: true,
+        photoOnlyShare: true,
         videos: {
           where: { status: 'READY' },
           select: {
@@ -74,6 +75,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!project) {
   return NextResponse.json({ error: projectMessages.projectNotFound || 'Project not found' }, { status: 404 })
     }
+
+    // Photo-only links deliver the gallery as a whole: never announce a single video
+    const notifyEntireProject = requestedEntireProject || project.photoOnlyShare
+
+    // Photo-only links list their albums as deliverables
+    const photoAlbums = project.photoOnlyShare
+      ? (await prisma.photoAlbum.findMany({
+          where: { projectId, photos: { some: { uploadCompletedAt: { not: null } } } },
+          orderBy: { createdAt: 'asc' },
+          select: { name: true },
+        })).map(album => album.name)
+      : []
 
     // Get recipients
     const recipients = await getProjectRecipients(projectId)
@@ -139,7 +152,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             projectTitle: project.title,
             projectDescription: project.description || '',
             shareUrl,
-            readyVideos: project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
+            readyVideos: project.photoOnlyShare ? [] : project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
+            photoAlbums,
             isPasswordProtected,
             unsubscribeUrl,
             locale: recipientLocale,

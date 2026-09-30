@@ -300,6 +300,9 @@ export const updateProjectSchema = z.object({
   // Reverse share
   allowReverseShare: z.boolean().optional(),
 
+  // Photo-only delivery
+  photoOnlyShare: z.boolean().optional(),
+
   // Approval settings
   clientCanApprove: z.boolean().optional(),
 

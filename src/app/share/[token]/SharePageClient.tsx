@@ -22,6 +22,7 @@ import { ShareTutorial } from '@/components/ShareTutorial'
 import PrivacyBanner, { PRIVACY_STORAGE_KEY } from '@/components/PrivacyBanner'
 import ReverseShareUploadPanel from '@/components/ReverseShareUploadPanel'
 import SharePhotoSection from '@/components/SharePhotoSection'
+import PhotoDeliveryGallery from '@/components/PhotoDeliveryGallery'
 import ShareViewToggle, { loadShareViewMode, type ShareViewMode } from '@/components/ShareViewToggle'
 
 interface SharePageClientProps {
@@ -188,7 +189,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         tokenCacheRef.current.clear()
 
-        if (!projectData.hideFeedback) {
+        if (!projectData.hideFeedback && !projectData.photoOnlyShare) {
           fetchComments()
         }
       }
@@ -302,7 +303,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               setDefaultQuality(projectData.previewResolution || projectData.settings.defaultPreviewResolution || '720p')
             }
 
-            if (!projectData.hideFeedback) {
+            if (!projectData.hideFeedback && !projectData.photoOnlyShare) {
               fetchComments()
             }
           }
@@ -938,6 +939,44 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const filteredComments = comments.filter((comment: any) => {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
+
+  // Photo deliveries (photo-only links, or photos without any video) open as a
+  // gallery; the first album shows right away instead of an overview to click through
+  const hasVideos = Object.keys(project.videosByName || {}).length > 0
+  if (project.photoOnlyShare || (project.hasPhotos && !hasVideos)) {
+    // Album requests need the share token; never fall back to the admin fetch
+    if (project.id && !shareToken) {
+      return (
+        <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
+          <p className="text-muted-foreground">{tc('loading')}</p>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <PhotoDeliveryGallery
+          // The share API leaves the id out for guests who may not see albums
+          projectId={project.id}
+          shareToken={shareToken ?? undefined}
+          title={project.title}
+          description={isGuest ? null : project.description}
+          allowPhotoDownload={project.allowPhotoDownload && !isGuest}
+          trailingActions={!isGuest && project.allowReverseShare && shareToken ? (
+            <ReverseShareUploadPanel
+              shareToken={shareToken}
+              shareSlug={token}
+              maxFiles={project.settings?.maxReverseShareFiles ?? 10}
+            />
+          ) : undefined}
+        />
+
+        {project.settings?.privacyDisclosureEnabled && (
+          <PrivacyBanner customText={project.settings.privacyDisclosureText} slug={token} shareToken={shareToken} />
+        )}
+      </>
+    )
+  }
 
   if (viewState === 'grid') {
     return (

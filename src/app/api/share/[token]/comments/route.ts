@@ -51,6 +51,7 @@ export async function GET(
         authMode: true,
         companyName: true,
         hideFeedback: true,
+        photoOnlyShare: true,
         guestMode: true,
       }
     })
@@ -59,8 +60,9 @@ export async function GET(
       return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
     }
 
-    // SECURITY: If feedback is hidden, return empty array (don't expose comments)
-    if (project.hideFeedback) {
+    // SECURITY: If feedback is hidden or the link is photo-only, return empty array
+    // (comments are video feedback and must not leak through a photo delivery)
+    if (project.hideFeedback || project.photoOnlyShare) {
       return NextResponse.json([])
     }
 

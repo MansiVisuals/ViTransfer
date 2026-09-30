@@ -175,6 +175,7 @@ export async function handleCommentNotifications(params: {
         title: true,
         slug: true,
         clientNotificationSchedule: true,
+        photoOnlyShare: true,
       }
     })
 
@@ -296,7 +297,11 @@ export async function handleCommentNotifications(params: {
     // A single queue entry has both sentToAdmins/sentToClients flags,
     // so we only queue once when either (or both) sides are non-IMMEDIATE.
 
-    const clientImmediate = clientSchedule === 'IMMEDIATE'
+    // Photo-only links never show videos, so recipients get no video feedback emails:
+    // the client side counts as handled from the start
+    const clientsMuted = project.photoOnlyShare
+    const clientImmediate = clientSchedule === 'IMMEDIATE' && !clientsMuted
+    const clientHandled = clientImmediate || clientsMuted
     const adminImmediate = adminSchedule === 'IMMEDIATE'
 
     if (clientImmediate) {
@@ -310,11 +315,11 @@ export async function handleCommentNotifications(params: {
 
     // Queue once if either side needs batched delivery.
     // Pre-mark sides that were already sent immediately so workers don't re-process them.
-    if (!clientImmediate || !adminImmediate) {
+    if (!clientHandled || !adminImmediate) {
       logMessage(`[COMMENT-NOTIFICATION] Queuing for batched delivery (admin: ${adminSchedule}, client: ${clientSchedule})...`)
       await queueNotification(context, {
         admins: adminImmediate,
-        clients: clientImmediate,
+        clients: clientHandled,
       })
     }
   } catch (emailError) {

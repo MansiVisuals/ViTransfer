@@ -19,7 +19,7 @@ interface NotificationContext {
 }
 
 interface ApprovalNotificationContext {
-  project: { id: string; title: string; slug: string; clientNotificationSchedule: string; watermarkEnabled?: boolean }
+  project: { id: string; title: string; slug: string; clientNotificationSchedule: string; watermarkEnabled?: boolean; photoOnlyShare?: boolean }
   video?: { id: string; name: string; versionLabel?: string | null }
   approvedVideos?: Array<{ id: string; name: string }>
   approved: boolean // true = approved, false = unapproved
@@ -260,8 +260,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
   })
 
   // Send to clients ONLY if complete project approval (all videos approved)
-  // Don't send for partial approvals - client knows they just clicked approve
-  if (recipients.length > 0 && isComplete && approved) {
+  // Don't send for partial approvals - client knows they just clicked approve.
+  // Photo-only links keep videos off the client side, approval emails included.
+  if (recipients.length > 0 && isComplete && approved && !project.photoOnlyShare) {
     logMessage(`[IMMEDIATE→CLIENT] Sending complete project approval to ${recipients.length} recipient(s)`)
 
     const emailPromises = recipients.map(async (recipient) => {
@@ -490,6 +491,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
         id: true,
         title: true,
         slug: true,
+        photoOnlyShare: true,
         notificationQueue: {
           where: {
             sentToClients: false,
@@ -502,6 +504,16 @@ export async function flushPendingClientNotifications(projectId: string): Promis
 
     if (!project || project.notificationQueue.length === 0) {
       logMessage(`[FLUSH-CLIENT] No pending notifications for project ${projectId}`)
+      return
+    }
+
+    // Photo-only links never show videos: drop queued video feedback instead of flushing it
+    if (project.photoOnlyShare) {
+      await prisma.notificationQueue.updateMany({
+        where: { id: { in: project.notificationQueue.map(n => n.id) } },
+        data: { sentToClients: true, clientSentAt: new Date() },
+      })
+      logMessage(`[FLUSH-CLIENT] Photo-only delivery, dropped ${project.notificationQueue.length} pending notification(s) for project ${projectId}`)
       return
     }
 

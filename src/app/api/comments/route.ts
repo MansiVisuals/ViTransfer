@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
         authMode: true,
         companyName: true,
         hideFeedback: true,
+        photoOnlyShare: true,
         guestMode: true,
       }
     })
@@ -74,7 +75,8 @@ export async function GET(request: NextRequest) {
 
     const { isAdmin, isAuthenticated, isGuest } = accessCheck
 
-    if (isGuest) {
+    // Guests and photo-only share links never see video feedback
+    if (isGuest || (!isAdmin && project.photoOnlyShare)) {
       return NextResponse.json([])
     }
 
@@ -224,6 +226,7 @@ export async function POST(request: NextRequest) {
         id: true,
         sharePassword: true,
         authMode: true,
+        photoOnlyShare: true,
       }
     })
 
@@ -256,6 +259,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { isAdmin, isAuthenticated } = accessCheck
+
+    // Photo-only delivery: share recipients cannot comment on videos they cannot see
+    if (!isAdmin && project.photoOnlyShare) {
+      return NextResponse.json(
+        { error: shareMessages.accessDenied || 'Access denied' },
+        { status: 403 }
+      )
+    }
 
     const { authorEmail: finalAuthorEmail, fallbackName } = await resolveCommentAuthor({
       projectId,

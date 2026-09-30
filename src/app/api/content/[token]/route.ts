@@ -181,6 +181,11 @@ export async function GET(
   return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
     }
 
+    // Photo-only delivery: tokens minted before the switch was turned on stop working too
+    if (!isAdminRequest && video.project.photoOnlyShare) {
+      return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 404 })
+    }
+
     const originalPath = video.originalStoragePath
     const requestedQuality = verifiedToken.quality
 

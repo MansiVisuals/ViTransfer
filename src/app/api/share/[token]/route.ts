@@ -42,6 +42,7 @@ export async function GET(
         guestMode: true,
         guestLatestOnly: true,
         guestShowPhotos: true,
+        photoOnlyShare: true,
         sharePassword: true,
         authMode: true,
       },
@@ -142,7 +143,10 @@ export async function GET(
       }, { status: 401 })
     }
 
-    const videosSanitizedBase = project.videos.map((video: any) => ({
+    // Photo-only delivery: the share link never carries videos, whoever opens it
+    const sharedVideos = projectMeta.photoOnlyShare ? [] : project.videos
+
+    const videosSanitizedBase = sharedVideos.map((video: any) => ({
       id: video.id,
       name: video.name,
       version: video.version,
@@ -309,6 +313,7 @@ export async function GET(
       allowAssetDownload: project.allowAssetDownload,
       allowPhotoDownload: project.allowPhotoDownload,
       hasPhotos: photoAlbumCount > 0,
+      photoOnlyShare: projectMeta.photoOnlyShare,
       allowClientAssetUpload: project.allowClientAssetUpload,
       allowReverseShare: project.allowReverseShare,
       clientCanApprove: project.clientCanApprove,

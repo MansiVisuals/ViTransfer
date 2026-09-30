@@ -415,8 +415,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             <h3 className="text-sm font-semibold mb-3">{t('projectActions')}</h3>
           </div>
 
-          {/* Send Notification Button - only show if there are ready videos */}
-          {readyVideos.length > 0 && (
+          {/* Send Notification Button - only show if there are ready videos (photo-only links announce the gallery) */}
+          {(readyVideos.length > 0 || project.photoOnlyShare) && (
             <div>
               <Button
                 variant="outline"
@@ -547,25 +547,27 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Notification Type Selection */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                {t('notificationType')}
-              </label>
-              <Select value={notificationType} onValueChange={handleNotificationTypeChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entire-project">
-                    {t('entireProject')}
-                  </SelectItem>
-                  <SelectItem value="specific-video">
-                    {t('specificVideo')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Notification Type Selection (photo-only links always announce the whole gallery) */}
+            {!project.photoOnlyShare && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {t('notificationType')}
+                </label>
+                <Select value={notificationType} onValueChange={handleNotificationTypeChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entire-project">
+                      {t('entireProject')}
+                    </SelectItem>
+                    <SelectItem value="specific-video">
+                      {t('specificVideo')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Show video/version selectors only for specific video notification */}
             {notificationType === 'specific-video' && (
@@ -666,9 +668,11 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             )}
 
             <p className="text-xs text-muted-foreground">
-              {notificationType === 'entire-project'
-                ? t('notifyAllVideos')
-                : t('notifySpecificVideo')}
+              {project.photoOnlyShare
+                ? t('notifyPhotoGallery')
+                : notificationType === 'entire-project'
+                  ? t('notifyAllVideos')
+                  : t('notifySpecificVideo')}
             </p>
           </div>
         </DialogContent>

@@ -5,7 +5,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 
 type ThemeToggleProps = {
-  variant?: 'button' | 'sidebar'
+  /** 'ghost' drops the border and fill, for minimal bars like the photo gallery */
+  variant?: 'button' | 'sidebar' | 'ghost'
   collapsed?: boolean
 }
 
@@ -151,14 +152,19 @@ export default function ThemeToggle({ variant = 'button', collapsed = false }: T
     )
   }
 
+  const buttonClass = variant === 'ghost'
+    ? 'p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors'
+    : 'p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm'
+  const iconClass = variant === 'ghost' ? 'h-4 w-4' : 'h-5 w-5 text-foreground'
+
   // Avoid hydration mismatch
   if (!mounted) {
     return (
       <button
-        className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
+        className={buttonClass}
         aria-label={t('toggleTheme')}
       >
-        <div className="h-5 w-5" />
+        <div className={variant === 'ghost' ? 'h-4 w-4' : 'h-5 w-5'} />
       </button>
     )
   }
@@ -166,14 +172,14 @@ export default function ThemeToggle({ variant = 'button', collapsed = false }: T
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
+      className={buttonClass}
       aria-label={t('toggleTheme')}
       title={label}
     >
       {theme === 'light' ? (
-        <Moon className="h-5 w-5 text-foreground" />
+        <Moon className={iconClass} />
       ) : (
-        <Sun className="h-5 w-5 text-foreground" />
+        <Sun className={iconClass} />
       )}
     </button>
   )

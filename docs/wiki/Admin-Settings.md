@@ -179,6 +179,7 @@ Subscribe to project deadlines from any calendar app (Google Calendar, Apple Cal
 - Guest mode: view-only access without credentials.
 - Guest latest only: restrict guests to the latest version of each video (default: true).
 - Show photo albums to guests: guests can view photo albums; downloads stay disabled for guests (default: false).
+- Photo-only delivery: the share link becomes a photo gallery and never exposes the project's videos. Recipients cannot see, stream, comment on, approve or download them, and video links handed out before the switch was turned on stop working. Admins keep full access (default: false).
 
 **Workflow**
 - Revision limit (enable/disable with max revisions count).

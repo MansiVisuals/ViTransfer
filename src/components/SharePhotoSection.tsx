@@ -1,28 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { ChevronLeft, ChevronRight, Download, Grid3X3, ImageIcon, Images, Loader2 } from 'lucide-react'
-import PhotoGrid, { GalleryPhoto } from './PhotoGrid'
+import PhotoGrid from './PhotoGrid'
 import type { ShareViewMode } from './ShareViewToggle'
 import PhotoLightbox from './PhotoLightbox'
 import { Button } from './ui/button'
 import ThemeToggle from './ThemeToggle'
 import LanguageToggle from './LanguageToggle'
 import { cn } from '@/lib/utils'
-import { apiFetch } from '@/lib/api-client'
-import { logError } from '@/lib/logging'
-
-/** Matches the server page size — one request per grid page. */
-const PHOTO_PAGE_SIZE = 200
-
-interface Album {
-  id: string
-  name: string
-  photoCount: number
-  coverPhotoId: string | null
-  contentToken: string | null
-}
+import { useAlbumGallery, type PhotoZipScope } from '@/hooks/useAlbumGallery'
 
 interface SharePhotoSectionProps {
   projectId: string
@@ -43,141 +31,34 @@ interface SharePhotoSectionProps {
 export default function SharePhotoSection({ projectId, shareToken, allowPhotoDownload, viewMode = 'grid', onAlbumCount }: SharePhotoSectionProps) {
   const t = useTranslations('photos')
   const ts = useTranslations('share')
+  const albumScrollRef = useRef<HTMLDivElement | null>(null)
 
-  const [albums, setAlbums] = useState<Album[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null)
-
-  const [photos, setPhotos] = useState<GalleryPhoto[]>([])
-  const [contentToken, setContentToken] = useState<string | null>(null)
-  const [photosLoading, setPhotosLoading] = useState(false)
-  const [totalPhotos, setTotalPhotos] = useState(0)
-  const loadingPageRef = useRef(false)
-  const activeAlbumRef = useRef<string | null>(null)
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const {
+    albums,
+    albumsLoading: loading,
+    selectedAlbum,
+    setSelectedAlbum,
+    photos,
+    totalPhotos,
+    photosLoading,
+    sentinelRef,
+    loadMore,
+    buildPhotoUrl,
+    downloadZip,
+    downloading,
+  } = useAlbumGallery({ projectId, shareToken, onAlbumCount, scrollRootRef: albumScrollRef })
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-  const [downloading, setDownloading] = useState(false)
   const [reelExpanded, setReelExpanded] = useState(false)
-
-  // Share sessions authenticate with the share bearer token; admin preview
-  // sessions fall back to apiFetch (admin access token + refresh handling)
-  const doFetch = useCallback((url: string, init?: RequestInit): Promise<Response> => {
-    if (shareToken) {
-      return fetch(url, {
-        ...init,
-        headers: { ...(init?.headers as Record<string, string> | undefined), Authorization: `Bearer ${shareToken}` },
-      })
-    }
-    return apiFetch(url, init)
-  }, [shareToken])
-
-  const fetchAlbums = useCallback(async () => {
-    try {
-      const res = await doFetch(`/api/projects/${projectId}/photo-albums`)
-      if (res.ok) {
-        const data = await res.json()
-        setAlbums(data.albums || [])
-        onAlbumCount?.((data.albums || []).length)
-      }
-    } catch (error) {
-      logError('Error fetching photo albums:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [projectId, doFetch, onAlbumCount])
-
-  const fetchPhotoPage = useCallback(async (albumId: string, offset: number) => {
-    if (loadingPageRef.current) return
-    loadingPageRef.current = true
-    if (offset === 0) setPhotosLoading(true)
-    try {
-      const res = await doFetch(
-        `/api/projects/${projectId}/photo-albums/${albumId}/photos?offset=${offset}&limit=${PHOTO_PAGE_SIZE}`
-      )
-      if (!res.ok) return
-      const data = await res.json()
-      // Drop a page that landed after the viewer moved to another album
-      if (activeAlbumRef.current !== albumId) return
-      setContentToken(data.contentToken || null)
-      setTotalPhotos(data.total || 0)
-      setPhotos(prev => (offset === 0 ? data.photos || [] : [...prev, ...(data.photos || [])]))
-    } catch (error) {
-      logError('Error fetching photos:', error)
-    } finally {
-      loadingPageRef.current = false
-      if (offset === 0) setPhotosLoading(false)
-    }
-  }, [projectId, doFetch])
-
-  useEffect(() => {
-    fetchAlbums()
-  }, [fetchAlbums])
 
   useEffect(() => {
     setSelectedIds(new Set())
     setReelExpanded(false)
-    setPhotos([])
-    setTotalPhotos(0)
-    activeAlbumRef.current = selectedAlbum?.id ?? null
-    if (selectedAlbum) {
-      fetchPhotoPage(selectedAlbum.id, 0)
-    } else {
-      setContentToken(null)
-    }
-  }, [selectedAlbum, fetchPhotoPage])
+  }, [selectedAlbum])
 
-  // Pull the next page as the sentinel nears the viewport. Re-running on
-  // photos.length re-observes an already-visible sentinel, so a page that was
-  // skipped while another was in flight is picked straight back up.
-  useEffect(() => {
-    const node = sentinelRef.current
-    if (!node || !selectedAlbum || photos.length >= totalPhotos) return
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0]?.isIntersecting) fetchPhotoPage(selectedAlbum.id, photos.length)
-      },
-      { rootMargin: '600px' }
-    )
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [selectedAlbum, photos.length, totalPhotos, fetchPhotoPage])
-
-  const buildPhotoUrl = useCallback((photoId: string, variant: 'thumb' | 'full') => {
-    return `/api/content/photo/${contentToken}?photoId=${photoId}&variant=${variant}`
-  }, [contentToken])
-
-  const handleZipDownload = async (scope: 'selection' | 'album' | 'project') => {
-    setDownloading(true)
-    try {
-      const body =
-        scope === 'selection' && selectedAlbum
-          ? { scope, albumId: selectedAlbum.id, photoIds: Array.from(selectedIds) }
-          : scope === 'album' && selectedAlbum
-            ? { scope, albumId: selectedAlbum.id }
-            : { scope: 'project' as const }
-
-      const res = await doFetch(`/api/projects/${projectId}/photos/download-zip-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) return
-      const { url } = await res.json()
-      const a = document.createElement('a')
-      a.href = url
-      a.download = ''
-      a.rel = 'noopener'
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    } catch (error) {
-      logError('Error downloading photos:', error)
-    } finally {
-      setDownloading(false)
-    }
+  const handleZipDownload = (scope: PhotoZipScope) => {
+    downloadZip(scope, Array.from(selectedIds))
   }
 
   const toggleSelect = (photoId: string) => {
@@ -451,7 +332,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div ref={albumScrollRef} className="flex-1 overflow-y-auto">
             <div className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
               {photosLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -491,6 +372,8 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
           canDownload={allowPhotoDownload}
+          total={totalPhotos}
+          onNearEnd={loadMore}
         />
       )}
     </>

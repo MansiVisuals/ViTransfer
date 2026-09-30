@@ -15,6 +15,7 @@
 - Video version comparison: side-by-side and slider overlay modes with synced playback.
 - Photo galleries: per-project albums with automatic webp thumbnails, admin-selectable covers, and a full-page client album view with lightbox and multi-select. Dropping folders onto the Photos section creates an album per folder.
 - Photo zip downloads on the share page (selected photos, one album, or the whole project), gated by a per-project toggle.
+- Photo delivery gallery: share links with photos and no videos open on a full-screen cover with the albums as tabs and a masonry grid. A per-project photo-only switch keeps a project's videos off the share link entirely.
 - Recipient portal at `/portal`: recipients sign in with a magic link and see all active projects they are assigned to in one place.
 - Loop playback toggle in the video player.
 - Grid/list view toggle on the share page, applying to both videos and photo albums.

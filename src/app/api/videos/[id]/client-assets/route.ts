@@ -69,6 +69,11 @@ export async function POST(
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
+    // Photo-only delivery: share recipients have no access to project videos
+    if (!accessCheck.isAdmin && project.photoOnlyShare) {
+      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
+    }
+
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
@@ -205,6 +210,11 @@ export async function GET(
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
+    // Photo-only delivery: share recipients have no access to project videos
+    if (!accessCheck.isAdmin && project.photoOnlyShare) {
+      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
+    }
+
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
@@ -291,6 +301,11 @@ export async function DELETE(
 
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
+    }
+
+    // Photo-only delivery: share recipients have no access to project videos
+    if (!accessCheck.isAdmin && project.photoOnlyShare) {
+      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
     }
 
     const uploaderSessionId = accessCheck.shareTokenSessionId

@@ -56,6 +56,11 @@ export async function GET(
       return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
+    // Photo-only delivery: share recipients have no access to project videos
+    if (!accessCheck.isAdmin && video.project.photoOnlyShare) {
+      return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
+    }
+
     if (!accessCheck.isAdmin) {
       if (!video.project.allowAssetDownload) {
         return NextResponse.json({ error: videoMessages.downloadsDisabledForProject || 'Downloads are disabled for this project' }, { status: 403 })

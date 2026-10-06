@@ -211,95 +211,97 @@ export default function PhotoDeliveryGallery({
 
       <div ref={galleryStartRef} />
 
-      {/* Gallery bar */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-2 px-3 py-2 sm:px-6 lg:px-10">
-          <div className="flex items-center gap-2">
-            {leadingActions}
-            {actions}
-          </div>
+      {/* Gallery bar — the player's floating control bar, not a page header */}
+      <header className="sticky top-0 z-30 p-2 sm:p-3">
+        <div className="rounded-xl bg-card/95 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5">
+              {leadingActions}
+              {actions}
+            </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-            {canDownload && (
-              <div
-                ref={downloadMenuRef}
-                className="relative"
-                onBlur={(e) => {
-                  // Tabbing out closes the menu; clicks outside are handled by the mousedown listener
-                  if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) setDownloadMenuOpen(false)
-                }}
-              >
-                <Button
-                  ref={downloadButtonRef}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => (visibleAlbums.length > 1 ? setDownloadMenuOpen(open => !open) : runDownload('album'))}
-                  disabled={downloading}
-                  aria-expanded={visibleAlbums.length > 1 ? downloadMenuOpen : undefined}
-                  className="text-muted-foreground hover:text-foreground"
-                  title={visibleAlbums.length > 1 ? tc('download') : t('downloadAlbum')}
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              {canDownload && (
+                <div
+                  ref={downloadMenuRef}
+                  className="relative"
+                  onBlur={(e) => {
+                    // Tabbing out closes the menu; clicks outside are handled by the mousedown listener
+                    if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) setDownloadMenuOpen(false)
+                  }}
                 >
-                  {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  <span className="hidden sm:inline">{tc('download')}</span>
-                </Button>
-                {downloadMenuOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-elevation-lg">
-                    {selectedAlbum && (
+                  <Button
+                    ref={downloadButtonRef}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => (visibleAlbums.length > 1 ? setDownloadMenuOpen(open => !open) : runDownload('album'))}
+                    disabled={downloading}
+                    aria-expanded={visibleAlbums.length > 1 ? downloadMenuOpen : undefined}
+                    className="text-muted-foreground hover:text-foreground"
+                    title={visibleAlbums.length > 1 ? tc('download') : t('downloadAlbum')}
+                  >
+                    {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    <span className="hidden sm:inline">{tc('download')}</span>
+                  </Button>
+                  {downloadMenuOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-elevation-lg">
+                      {selectedAlbum && (
+                        <button
+                          type="button"
+                          onClick={() => runDownload('album')}
+                          className="flex w-full flex-col items-start px-4 py-2.5 text-left transition-colors hover:bg-accent focus:bg-accent focus:outline-none"
+                        >
+                          <span className="text-sm">{t('downloadAlbum')}</span>
+                          <span className="w-full truncate text-xs text-muted-foreground">{selectedAlbum.name}</span>
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => runDownload('album')}
-                        className="flex w-full flex-col items-start px-4 py-2.5 text-left transition-colors hover:bg-accent focus:bg-accent focus:outline-none"
+                        onClick={() => runDownload('project')}
+                        className="flex w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-accent focus:bg-accent focus:outline-none"
                       >
-                        <span className="text-sm">{t('downloadAlbum')}</span>
-                        <span className="w-full truncate text-xs text-muted-foreground">{selectedAlbum.name}</span>
+                        {t('downloadAllAlbums', { count: visibleAlbums.length })}
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => runDownload('project')}
-                      className="flex w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-accent focus:bg-accent focus:outline-none"
-                    >
-                      {t('downloadAllAlbums', { count: visibleAlbums.length })}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            {showLanguageToggle && <LanguageToggle />}
-            <ThemeToggle />
-          </div>
-        </div>
-
-        {visibleAlbums.length > 1 && (
-          <nav
-            ref={albumNavRef}
-            aria-label={t('photoAlbums')}
-            // Wrap with a mouse (no sideways wheel); touch screens swipe the strip and keep the bar short
-            className="flex gap-x-6 overflow-x-auto px-3 sm:gap-x-8 sm:px-6 lg:px-10 [@media(hover:hover)]:flex-wrap [@media(hover:hover)]:overflow-visible"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {visibleAlbums.map(album => {
-              const isActive = album.id === selectedAlbum?.id
-              return (
-                <button
-                  key={album.id}
-                  type="button"
-                  onClick={() => openAlbum(album.id)}
-                  aria-current={isActive ? 'true' : undefined}
-                  title={album.name}
-                  className={cn(
-                    '-mb-px max-w-[16rem] shrink-0 truncate border-b-2 pb-3 pt-1 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors sm:text-xs',
-                    isActive
-                      ? 'border-primary text-foreground'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                    </div>
                   )}
-                >
-                  {album.name}
-                </button>
-              )
-            })}
-          </nav>
-        )}
+                </div>
+              )}
+              {showLanguageToggle && <LanguageToggle />}
+              <ThemeToggle />
+            </div>
+          </div>
+
+          {visibleAlbums.length > 1 && (
+            <nav
+              ref={albumNavRef}
+              aria-label={t('photoAlbums')}
+              // Wrap with a mouse (no sideways wheel); touch screens swipe the strip and keep the bar short
+              className="mt-2 flex gap-x-6 overflow-x-auto border-t border-border pt-2 sm:gap-x-8 [@media(hover:hover)]:flex-wrap [@media(hover:hover)]:overflow-visible"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              {visibleAlbums.map(album => {
+                const isActive = album.id === selectedAlbum?.id
+                return (
+                  <button
+                    key={album.id}
+                    type="button"
+                    onClick={() => openAlbum(album.id)}
+                    aria-current={isActive ? 'true' : undefined}
+                    title={album.name}
+                    className={cn(
+                      'max-w-[16rem] shrink-0 truncate border-b-2 pb-1.5 pt-0.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors sm:text-xs',
+                      isActive
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {album.name}
+                  </button>
+                )
+              })}
+            </nav>
+          )}
+        </div>
       </header>
 
       {/* Grid: at least a viewport tall so switching to a shorter album never drags the cover back into view */}

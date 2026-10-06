@@ -29,9 +29,9 @@ interface PhotoDeliveryGalleryProps {
   onBack?: () => void
   backLabel?: string
   /**
-   * True when this gallery is the whole delivery: it opens on a cover and the
-   * albums are tabs, because no overview exists to pick them from. False when
-   * one album was opened from an overview, which is already the album switcher.
+   * True when this gallery is the whole delivery, so the albums appear as tabs
+   * because no overview exists to pick them from. False when one album was
+   * opened from an overview, which is already the album switcher.
    */
   standalone?: boolean
   showLanguageToggle?: boolean
@@ -181,9 +181,8 @@ export default function PhotoDeliveryGallery({
   const canDownload = allowPhotoDownload && photoTotal > 0
 
   return (
-    <div ref={scrollRef} className="fixed inset-0 overflow-y-auto overflow-x-hidden bg-background text-foreground">
+    <div ref={scrollRef} className="fixed inset-0 overflow-y-auto overflow-x-hidden overscroll-contain bg-background text-foreground">
       {/* Cover */}
-      {standalone && (
       <section className="relative isolate flex h-svh min-h-[420px] w-full items-center justify-center overflow-hidden bg-neutral-950 text-white">
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -217,7 +216,6 @@ export default function PhotoDeliveryGallery({
           </Button>
         </div>
       </section>
-      )}
 
       <div ref={galleryStartRef} />
 

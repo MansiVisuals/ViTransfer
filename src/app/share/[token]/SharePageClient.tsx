@@ -38,6 +38,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
   const urlTimestamp = searchParams?.get('t') ? parseFloat(searchParams.get('t')!) : null
   const urlVideoName = searchParams?.get('video') || null
+  const urlAlbumId = searchParams?.get('album') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
   const urlFocusCommentId = searchParams?.get('comment') || null
 
@@ -550,8 +551,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       return
     }
 
-    setViewState('grid')
-  }, [project?.videosByName, urlVideoName])
+    setViewState(urlAlbumId ? 'gallery' : 'grid')
+  }, [project?.videosByName, urlVideoName, urlAlbumId])
 
   const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)

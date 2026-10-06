@@ -37,6 +37,9 @@ interface PhotoDeliveryGalleryProps {
   showLanguageToggle?: boolean
 }
 
+/** The bar's buttons share the toggles' treatment, so the row reads as one set. */
+const BAR_BUTTON = 'h-auto gap-1.5 bg-background p-2 text-sm font-medium shadow-sm [&_svg]:size-5'
+
 function scrollBehavior(): ScrollBehavior {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
@@ -225,8 +228,8 @@ export default function PhotoDeliveryGallery({
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="flex items-center gap-1.5">
               {onBack && (
-                <Button variant="ghost" size="sm" onClick={onBack} title={backLabel ?? ts('backToOverview')} className="gap-1.5">
-                  <Grid3X3 className="h-4 w-4" />
+                <Button variant="outline" size="sm" onClick={onBack} title={backLabel ?? ts('backToOverview')} className={BAR_BUTTON}>
+                  <Grid3X3 />
                   <span className="hidden sm:inline">{backLabel ?? ts('backToOverview')}</span>
                 </Button>
               )}
@@ -274,15 +277,15 @@ export default function PhotoDeliveryGallery({
                 >
                   <Button
                     ref={downloadButtonRef}
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => (visibleAlbums.length > 1 ? setDownloadMenuOpen(open => !open) : runDownload('album'))}
                     disabled={downloading}
                     aria-expanded={visibleAlbums.length > 1 ? downloadMenuOpen : undefined}
-                    className="text-muted-foreground hover:text-foreground"
+                    className={BAR_BUTTON}
                     title={visibleAlbums.length > 1 ? tc('download') : t('downloadAlbum')}
                   >
-                    {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {downloading ? <Loader2 className="animate-spin" /> : <Download />}
                     <span className="hidden sm:inline">{tc('download')}</span>
                   </Button>
                   {downloadMenuOpen && (

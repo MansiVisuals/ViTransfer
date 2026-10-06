@@ -23,7 +23,7 @@ interface PhotoDeliveryGalleryProps {
   title: string
   description?: string | null
   allowPhotoDownload: boolean
-  /** Page-level actions, beside the back control (e.g. reverse share upload) */
+  /** Page-level actions, beside the download control (e.g. reverse share upload) */
   actions?: ReactNode
   /** Renders one back control in the bar. Omit when there is nowhere to return to. */
   onBack?: () => void
@@ -230,7 +230,6 @@ export default function PhotoDeliveryGallery({
                   <span className="hidden sm:inline">{backLabel ?? ts('backToOverview')}</span>
                 </Button>
               )}
-              {actions}
             </div>
 
             {standalone && visibleAlbums.length > 1 && (
@@ -309,6 +308,7 @@ export default function PhotoDeliveryGallery({
                   )}
                 </div>
               )}
+              {actions}
               {showLanguageToggle && <LanguageToggle />}
               <ThemeToggle />
             </div>

@@ -238,7 +238,7 @@ export default function PhotoDeliveryGallery({
                 ref={albumNavRef}
                 aria-label={t('photoAlbums')}
                 // One row, so the strip scrolls rather than wrapping
-                className="flex min-w-0 flex-1 justify-center gap-x-4 overflow-x-auto sm:gap-x-6"
+                className="flex min-w-0 flex-1 gap-x-4 overflow-x-auto sm:gap-x-6"
                 style={{ scrollbarWidth: 'none' }}
               >
                 {visibleAlbums.map(album => {
@@ -251,10 +251,10 @@ export default function PhotoDeliveryGallery({
                       aria-current={isActive ? 'true' : undefined}
                       title={album.name}
                       className={cn(
-                        'max-w-[12rem] shrink-0 truncate text-[11px] font-medium uppercase tracking-[0.2em] transition-colors sm:text-xs',
+                        'max-w-[12rem] shrink-0 truncate border-b-2 pb-0.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors sm:text-xs',
                         isActive
-                          ? 'text-primary'
-                          : 'text-muted-foreground hover:text-foreground'
+                          ? 'border-primary text-primary'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
                       )}
                     >
                       {album.name}

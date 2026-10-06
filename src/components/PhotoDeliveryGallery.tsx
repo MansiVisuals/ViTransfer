@@ -162,7 +162,8 @@ export default function PhotoDeliveryGallery({
     const scroller = scrollRef.current
     const start = galleryStartRef.current
     if (scroller && start && scroller.scrollTop > start.offsetTop) {
-      scroller.scrollTo({ top: start.offsetTop, behavior: 'auto' })
+      // scrollIntoView honours the target's scroll-margin, so the grid clears the pinned bar
+      start.scrollIntoView({ block: 'start', behavior: 'auto' })
     }
     setSelectedAlbum(album)
     const url = new URL(window.location.href)
@@ -217,11 +218,11 @@ export default function PhotoDeliveryGallery({
         </div>
       </section>
 
-      <div ref={galleryStartRef} />
+      <div ref={galleryStartRef} className="scroll-mt-16" />
 
       {/* Gallery bar — the player's floating control bar, not a page header */}
-      <header className="sticky top-0 z-30 p-2 sm:p-3">
-        <div className="rounded-xl bg-card/95 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-30 p-2 sm:p-3">
+        <div className="pointer-events-auto rounded-xl bg-card/95 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="flex items-center gap-1.5">
               {onBack && (

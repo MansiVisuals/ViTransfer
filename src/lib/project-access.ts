@@ -13,6 +13,34 @@ async function isPhotoOnlyShare(projectId: string): Promise<boolean> {
 }
 
 /**
+ * What a share link actually carries. The share page and its admin preview both
+ * decide what to render from this, so they cannot disagree.
+ *
+ * `countPhotos` is false for a guest on a link that hides photos from them.
+ */
+export async function getShareContents(
+  projectId: string,
+  photoOnlyShare: boolean,
+  countPhotos = true
+): Promise<{ hasPhotos: boolean; hasVideos: boolean }> {
+  const [albums, videos] = await Promise.all([
+    countPhotos
+      ? prisma.photoAlbum.count({
+          where: { projectId, photos: { some: { uploadCompletedAt: { not: null } } } },
+        })
+      : Promise.resolve(0),
+    prisma.video.count({ where: { projectId } }),
+  ])
+
+  return {
+    hasPhotos: albums > 0,
+    // Every status counts: a video still transcoding keeps this a video project,
+    // so the share page does not change shape when it finishes.
+    hasVideos: !photoOnlyShare && videos > 0,
+  }
+}
+
+/**
  * Verify project access using dual authentication pattern
  *
  * Two authentication paths:

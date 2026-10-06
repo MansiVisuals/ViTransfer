@@ -551,8 +551,8 @@ export default function AdminSharePage() {
 
   const showCommentPanel = !project.hideFeedback && !hideComments
 
-  // Mirrors the public share page
-  if (project.photoOnlyShare) {
+  // Mirrors the public share page, from the same two facts the share API derives
+  if (project.hasPhotos && !project.hasVideos) {
     return (
       <PhotoDeliveryGallery
         projectId={id}

@@ -189,7 +189,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         tokenCacheRef.current.clear()
 
-        if (!projectData.hideFeedback && !projectData.photoOnlyShare) {
+        if (projectData.feedbackEnabled) {
           fetchComments()
         }
       }
@@ -303,7 +303,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               setDefaultQuality(projectData.previewResolution || projectData.settings.defaultPreviewResolution || '720p')
             }
 
-            if (!projectData.hideFeedback && !projectData.photoOnlyShare) {
+            if (projectData.feedbackEnabled) {
               fetchComments()
             }
           }
@@ -940,8 +940,10 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
-  // A photo-only link opens straight into the gallery instead of an overview
-  if (project.photoOnlyShare) {
+  // A link that delivers photos and no videos opens straight into the gallery.
+  // True for a photo-only project and for one whose videos the switch keeps off
+  // the link, so the display follows access control without a second setting.
+  if (project.hasPhotos && !project.hasVideos) {
     // Album requests need the share token; never fall back to the admin fetch
     if (project.id && !shareToken) {
       return (
@@ -1000,7 +1002,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 projectId={project.id || token}
                 showTutorial={project.showClientTutorial}
                 watermarkEnabled={project.watermarkEnabled}
-                hideFeedback={project.hideFeedback}
+                hideFeedback={!project.feedbackEnabled}
                 clientCanApprove={project.clientCanApprove}
                 allowAssetDownload={project.allowAssetDownload}
                 allowReverseShare={project.allowReverseShare}
@@ -1070,7 +1072,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   }
 
   // Whether to show comment panel
-  const showCommentPanel = !project.hideFeedback && !isGuest && !hideComments
+  const showCommentPanel = project.feedbackEnabled && !isGuest && !hideComments
 
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
@@ -1082,7 +1084,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           onVideoSelect={handleVideoSelect}
           onBackToGrid={handleBackToGrid}
           showBackButton={true}
-          showCommentToggle={!project.hideFeedback && !isGuest}
+          showCommentToggle={project.feedbackEnabled && !isGuest}
           isCommentPanelVisible={!hideComments}
           onToggleCommentPanel={() => setHideComments(!hideComments)}
           trailingAction={
@@ -1091,7 +1093,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 projectId={project.id || token}
                 showTutorial={project.showClientTutorial}
                 watermarkEnabled={project.watermarkEnabled}
-                hideFeedback={project.hideFeedback}
+                hideFeedback={!project.feedbackEnabled}
                 clientCanApprove={project.clientCanApprove}
                 allowAssetDownload={project.allowAssetDownload}
                 allowReverseShare={project.allowReverseShare}
@@ -1139,7 +1141,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 allowAssetDownload={project.allowAssetDownload}
                 clientCanApprove={project.clientCanApprove}
                 shareToken={shareToken}
-                comments={!project.hideFeedback && !isGuest ? filteredComments : []}
+                comments={project.feedbackEnabled && !isGuest ? filteredComments : []}
                 timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                 onCommentFocus={(commentId) => setFocusCommentId(commentId)}
                 usePreviewForApprovedPlayback={project.usePreviewForApprovedPlayback}

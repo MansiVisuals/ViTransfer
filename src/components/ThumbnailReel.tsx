@@ -170,7 +170,7 @@ export default function ThumbnailReel({
                 onClick={handleToggleExpanded}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all",
-                  "hover:bg-accent hover:text-accent-foreground active:scale-95",
+                  "hover:bg-muted/80 active:scale-95",
                   isExpanded && "bg-muted/50"
                 )}
                 title={isExpanded ? "Hide video thumbnails" : "Show video thumbnails"}

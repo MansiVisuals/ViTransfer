@@ -26,7 +26,8 @@ interface PhotoDeliveryGalleryProps {
   /** Shown before the title in the gallery bar and over the cover (e.g. back to project) */
   leadingActions?: ReactNode
   /** Shown next to the download button in the gallery bar (e.g. reverse share upload) */
-  trailingActions?: ReactNode
+  /** Page-level actions, beside the back control */
+  actions?: ReactNode
   showLanguageToggle?: boolean
 }
 
@@ -47,7 +48,7 @@ export default function PhotoDeliveryGallery({
   description,
   allowPhotoDownload,
   leadingActions,
-  trailingActions,
+  actions,
   showLanguageToggle = true,
 }: PhotoDeliveryGalleryProps) {
   const t = useTranslations('photos')
@@ -212,20 +213,13 @@ export default function PhotoDeliveryGallery({
 
       {/* Gallery bar */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="flex items-center gap-2 px-3 py-2 sm:px-6 lg:px-10">
-          {leadingActions}
-          <BrandLogo height={24} className="hidden sm:block" />
-          <div className="min-w-0 sm:border-l sm:border-border sm:pl-3">
-            <p className="truncate text-sm font-semibold">{title}</p>
-            {photoTotal > 0 && (
-              <p className="truncate text-xs text-muted-foreground">
-                {t('photoCount', { count: photoTotal })}
-              </p>
-            )}
+        <div className="flex items-center justify-between gap-2 px-3 py-2 sm:px-6 lg:px-10">
+          <div className="flex items-center gap-2">
+            {leadingActions}
+            {actions}
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {trailingActions}
+          <div className="flex shrink-0 items-center gap-2">
             {canDownload && (
               <div
                 ref={downloadMenuRef}
@@ -242,7 +236,7 @@ export default function PhotoDeliveryGallery({
                   onClick={() => (visibleAlbums.length > 1 ? setDownloadMenuOpen(open => !open) : runDownload('album'))}
                   disabled={downloading}
                   aria-expanded={visibleAlbums.length > 1 ? downloadMenuOpen : undefined}
-                  className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground"
                   title={visibleAlbums.length > 1 ? tc('download') : t('downloadAlbum')}
                 >
                   {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}

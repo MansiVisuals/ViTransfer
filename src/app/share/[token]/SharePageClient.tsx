@@ -983,7 +983,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               <span className="hidden sm:inline">{t('backToOverview')}</span>
             </Button>
           ) : undefined}
-          trailingActions={!isGuest && project.allowReverseShare && shareToken ? (
+          actions={!isGuest && project.allowReverseShare && shareToken ? (
             <ReverseShareUploadPanel
               shareToken={shareToken}
               shareSlug={token}

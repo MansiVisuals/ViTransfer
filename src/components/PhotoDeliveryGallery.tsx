@@ -222,9 +222,9 @@ export default function PhotoDeliveryGallery({
 
       <div ref={galleryStartRef} />
 
-      {/* Gallery bar — the player's floating control bar, not a page header */}
-      <header className="sticky top-0 z-30 p-2 sm:p-3">
-        <div className="rounded-xl bg-card/95 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5">
+      {/* Gallery bar — the player's control bar, on an opaque strip so the grid cannot scroll into it */}
+      <header className="sticky top-0 z-30 border-b border-border bg-background p-2 sm:p-3">
+        <div className="rounded-xl bg-card px-3 py-2 sm:px-4 sm:py-2.5">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="flex items-center gap-1.5">
               {onBack && (

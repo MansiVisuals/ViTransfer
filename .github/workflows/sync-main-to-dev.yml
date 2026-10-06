@@ -4,8 +4,9 @@ name: Sync main to dev
 # fix can land on main while dev — the branch every release is cut from — keeps
 # the vulnerable lockfile. This reports what is stranded there.
 #
-# Version bumps and changelog entries are expected on main alone: dev never
-# carries VERSION, so commit counts are not the signal.
+# Release commits are filtered out rather than counted: they land on main first
+# and are merged back to dev afterwards, so dev reads as behind until that
+# happens. Only a non-bot commit on main is actually stranded.
 #
 # It opens an issue rather than a PR: dev requires the "Test Summary" check, and
 # a PR opened with GITHUB_TOKEN does not trigger `pull_request` workflows, so

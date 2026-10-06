@@ -235,6 +235,36 @@ export default function PhotoDeliveryGallery({
               {actions}
             </div>
 
+            {standalone && visibleAlbums.length > 1 && (
+              <nav
+                ref={albumNavRef}
+                aria-label={t('photoAlbums')}
+                // One row, so the strip scrolls rather than wrapping
+                className="flex min-w-0 flex-1 justify-center gap-x-4 overflow-x-auto sm:gap-x-6"
+                style={{ scrollbarWidth: 'none' }}
+              >
+                {visibleAlbums.map(album => {
+                  const isActive = album.id === selectedAlbum?.id
+                  return (
+                    <button
+                      key={album.id}
+                      type="button"
+                      onClick={() => openAlbum(album.id)}
+                      aria-current={isActive ? 'true' : undefined}
+                      title={album.name}
+                      className={cn(
+                        'max-w-[12rem] shrink-0 truncate text-[11px] font-medium uppercase tracking-[0.2em] transition-colors sm:text-xs',
+                        isActive
+                          ? 'text-primary'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {album.name}
+                    </button>
+                  )
+                })}
+              </nav>
+            )}
             <div className="ml-auto flex shrink-0 items-center gap-1.5">
               {canDownload && (
                 <div
@@ -285,37 +315,6 @@ export default function PhotoDeliveryGallery({
               <ThemeToggle />
             </div>
           </div>
-
-          {standalone && visibleAlbums.length > 1 && (
-            <nav
-              ref={albumNavRef}
-              aria-label={t('photoAlbums')}
-              // Wrap with a mouse (no sideways wheel); touch screens swipe the strip and keep the bar short
-              className="mt-2 flex gap-x-6 overflow-x-auto border-t border-border pt-2 sm:gap-x-8 [@media(hover:hover)]:flex-wrap [@media(hover:hover)]:overflow-visible"
-              style={{ scrollbarWidth: 'none' }}
-            >
-              {visibleAlbums.map(album => {
-                const isActive = album.id === selectedAlbum?.id
-                return (
-                  <button
-                    key={album.id}
-                    type="button"
-                    onClick={() => openAlbum(album.id)}
-                    aria-current={isActive ? 'true' : undefined}
-                    title={album.name}
-                    className={cn(
-                      'max-w-[16rem] shrink-0 truncate border-b-2 pb-1.5 pt-0.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors sm:text-xs',
-                      isActive
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {album.name}
-                  </button>
-                )
-              })}
-            </nav>
-          )}
         </div>
       </header>
 

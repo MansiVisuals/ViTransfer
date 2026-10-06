@@ -30,9 +30,11 @@ Majors never merge unattended, security ones included. `dependabot.yml` ignores
 them outright, so they do not open as PRs. Anything else held back gets the
 `needs-manual-review` label and a comment saying why.
 
-The release run executes `npm audit --audit-level=high` and emits a warning
-annotation if advisories remain unresolved. That is what surfaces an advisory
-whose only fix is a major, so it is worth reading the run summary.
+The release run audits twice. `npm audit --audit-level=high --omit=dev` covers
+the dependencies the image ships and fails the run, matching the gate the
+Dockerfile applies during `build`. A second pass over the full tree emits a
+warning annotation instead, so build-only advisories are visible in the run
+summary without holding back a runtime patch.
 
 ## How a release gets published
 

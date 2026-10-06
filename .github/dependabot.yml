@@ -9,8 +9,9 @@ version: 2
 # release train does not keep shipping a lockfile the advisory already covers.
 #
 # Major version updates are ignored everywhere: in maintenance mode a runtime
-# or framework major is not worth the churn. The release run's
-# `npm audit --audit-level=high` surfaces an advisory whose only fix is a major.
+# or framework major is not worth the churn. The release run's `npm audit`
+# surfaces an advisory whose only fix is a major: a failure when the package
+# ships, a warning when it is build-only.
 updates:
   - package-ecosystem: npm
     directory: "/"

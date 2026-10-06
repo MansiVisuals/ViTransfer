@@ -118,7 +118,13 @@ jobs:
           # `build`, which is after `publish` has merged dev and pushed the
           # version bump. A warning here bought nothing and left main carrying
           # release commits for a version that never tagged or shipped.
-          npm audit --audit-level=high
+          #
+          # Scoped to what ships, matching the Dockerfile gate.
+          npm audit --audit-level=high --omit=dev
+
+          # Build-only advisories: reported, not fatal.
+          npm audit --audit-level=high || \
+            echo "::warning::Build-only dependencies have high/critical advisories. Not shipped, so the release continues."
 
   # Individual PRs are tested against dev as it was when they opened, not
   # against the final merged state. With no human approving the release, this

@@ -175,21 +175,20 @@ Files you submit are visible to the project admin but are not attached to any sp
 
 ## Photo albums
 
-If the project contains photos, albums appear below the videos (for guests only when the project admin has enabled it). Click an album to open the full-page album view:
-
-- The top bar has a back button, a prev/next album selector, and the theme/language toggles.
-- Click any photo to open it in a lightbox; use the arrow keys or on-screen arrows to browse.
-- Select multiple photos (checkbox on each thumbnail) to download just those.
-- If the admin has enabled photo downloads, you can download your selection, the whole album, or all project photos as a ZIP. Photo downloads are never available in guest mode.
-
-### Photo galleries
-
-When a share link delivers photos only (the project has no videos, or the admin turned on photo-only delivery), it opens straight into a gallery instead of the overview:
+If the project contains photos, albums appear below the videos (for guests only when the project admin has enabled it). Clicking an album opens the delivery gallery:
 
 - A full-screen cover with the project title; **View Gallery** scrolls down to the photos.
-- The first album is already open. With several albums, they appear as tabs under the title; click one to switch. The address bar keeps the open album, so a copied link opens the same one.
 - Photos sit in a masonry grid that keeps their original proportions. Click one to open the lightbox; use the arrow keys, or swipe on touch screens.
-- With photo downloads enabled, the **Download** button in the top bar saves the open album or every album as a ZIP. With a mouse, hovering a photo shows a single-photo download and a circle that adds it to a selection you can download from the bar at the bottom. On touch screens, download single photos from the lightbox.
+- The address bar keeps the open album, so a copied link opens the same one and a refresh stays put.
+- **Back to overview** in the top bar returns to the videos and albums.
+- With photo downloads enabled, the **Download** button saves the open album or every album as a ZIP. With a mouse, hovering a photo shows a single-photo download and a circle that adds it to a selection you can download from the bar at the bottom. On touch screens, download single photos from the lightbox. Photo downloads are never available in guest mode.
+
+### Photo-only links
+
+When a link delivers photos only — the project has no videos, or the admin turned on photo-only delivery — it opens straight into the same gallery, with no overview behind it:
+
+- The first album is already open. With several albums, their names sit in the top bar and the open one is underlined; click one to switch.
+- There is no back button, because there is no overview to return to.
 
 ## Downloading
 

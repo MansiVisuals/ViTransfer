@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.4.0] - 2026-10-06
+
+Photo deliveries open as a gallery, and a project's videos can be kept off its share link.
+
+### Added
+- Photo delivery gallery: a cover, a masonry grid that keeps each photo's proportions, album switching, lightbox and selection downloads. Every client album opens this way, whether the project also holds videos or the link delivers photos only (#128).
+- Photo-only delivery (per project, Client Share Page): the share link exposes no video at all — page, streams, downloads, comments and approval all refuse — while admins keep full access. Links minted before the switch was turned on stop working.
+
+### Changed
+- Photos look the same to every client: one grid in both the gallery and the share album view, replacing the cropped square grid used alongside videos.
+- Albums open as the gallery from the share overview, with **Back to overview** in the bar. The separate full-page album view is gone.
+- The share page decides what to show from what the link carries rather than from the photo-only setting, and the open album lives in `?album=` so a copied link and a refresh both land in it.
+- Share-page buttons share one treatment and one hover across the photo and video flows.
+- Photo-only projects get no video feedback or approval emails, and notifications announce the album names instead of video versions.
+- The runtime image ships production dependencies only, 363 packages instead of 718: no TypeScript, Tailwind or ESLint. The build's `npm audit` gate is scoped to what ships.
+- `prisma` moves to dependencies (`docker-entrypoint.sh` runs `migrate deploy` at boot); `tailwindcss-animate` moves to devDependencies.
+
+### Fixed
+- A multi-album delivery showed the first album's cover above every album.
+- Refreshing inside an album, or any project refetch, returned the viewer to the overview.
+- Switching albums while a page was loading could leave the new album empty.
+- Album infinite scroll never prefetched: the observer watched the viewport instead of the grid's own scroll container.
+- Photo lightbox: focus moves in and back out, Tab stays inside, touch swipes between photos without triggering the browser's back gesture, and the counter follows a paged album instead of wrapping to 1.
+- Notify on a photo project: the button was hidden, the dialog offered a per-video option with no videos to pick, and the email listed no albums.
+
+### Security
+- `nodemailer` 9.1.1 → 10.0.15.
+- `undici` 8.10.0 → 8.11.2.
+- `dompurify` 3.4.13 → 3.4.16.
+- `source-map-js` 1.2.1 → 1.2.2.
+- `brace-expansion` override 5.0.9 → 5.0.12.
+- deps: bump the npm group with 8 updates (#130)
+- deps: update msgpack requirement from >=1.2.2 to >=1.2.3 (#129)
+
 ## [1.3.8] - 2026-09-28
 
 Security release: dependency updates.

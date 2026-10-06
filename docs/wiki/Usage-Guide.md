@@ -122,9 +122,9 @@ Projects can hold photo albums alongside videos — useful for stills, BTS shots
 5. Formats: JPG, PNG, GIF, WebP, AVIF, plus camera raw (RW2, DNG, CR2, CR3, NEF, ARW, ORF, RAF). Raws are stored and downloaded exactly as the camera wrote them; the grid and lightbox show a webp preview the worker renders from the raw, since browsers cannot display one.
 6. Use the star on a photo row to set it as the album cover; a sort toggle in the section header switches between name and date order.
 
-**Client side:** albums appear on the share page below the videos, with a full-page album view, lightbox, and multi-select. To let clients download photos (selection, album, or all project photos as a ZIP), enable **Allow photo downloads** in the project settings.
+**Client side:** albums appear on the share page below the videos. Opening one shows the delivery gallery — a cover, a masonry grid, lightbox and multi-select — with **Back to overview** to return. To let clients download photos (selection, album, or all albums as a ZIP), enable **Allow photo downloads** in the project's Client Share Page settings.
 
-**Photo deliveries:** a share link that carries photos but no videos opens as a gallery: a full-screen cover, the albums as tabs, and a masonry grid with the first album already open. To deliver only photos from a project that also holds videos, enable **Photo-only delivery** in the project settings (Client Share Page). The link then exposes no video at all (page, streams, downloads, comments or approval), while you keep working on the videos in the admin area. Notifications sent for a photo-only project always announce the whole gallery.
+**Photo deliveries:** a link that carries photos but no videos opens straight into the gallery with no overview behind it, so the album names sit in the top bar and the open one is underlined. To deliver only photos from a project that also holds videos, enable **Photo-only delivery** in the project settings (Client Share Page). The link then exposes no video at all (page, streams, downloads, comments or approval), while you keep working on the videos in the admin area. Notifications sent for a photo-only project always announce the whole gallery.
 
 ## Recipient portal
 

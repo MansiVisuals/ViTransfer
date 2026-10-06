@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { sendNewVersionEmail, sendProjectGeneralNotificationEmail, sendPasswordEmail, getRecipientLocale } from '@/lib/email'
 import { generateShareUrl } from '@/lib/url'
 import { requireApiAdmin } from '@/lib/auth'
+import { getShareContents } from '@/lib/project-access'
 import { decrypt } from '@/lib/encryption'
 import { getProjectRecipients } from '@/lib/recipients'
 import { rateLimit } from '@/lib/rate-limit'
@@ -76,17 +77,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({ error: projectMessages.projectNotFound || 'Project not found' }, { status: 404 })
     }
 
-    // Photo-only links deliver the gallery as a whole: never announce a single video
-    const notifyEntireProject = requestedEntireProject || project.photoOnlyShare
+    // What the recipient's link actually carries decides what the email announces,
+    // the same derivation the share page renders from.
+    const { hasVideos } = await getShareContents(projectId, project.photoOnlyShare)
 
-    // Photo-only links list their albums as deliverables
-    const photoAlbums = project.photoOnlyShare
-      ? (await prisma.photoAlbum.findMany({
+    // With no videos on the link there is no single video to announce
+    const notifyEntireProject = requestedEntireProject || !hasVideos
+
+    // A photo delivery lists its albums where a video project lists versions
+    const photoAlbums = hasVideos
+      ? []
+      : (await prisma.photoAlbum.findMany({
           where: { projectId, photos: { some: { uploadCompletedAt: { not: null } } } },
           orderBy: { createdAt: 'asc' },
           select: { name: true },
         })).map(album => album.name)
-      : []
 
     // Get recipients
     const recipients = await getProjectRecipients(projectId)
@@ -152,7 +157,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             projectTitle: project.title,
             projectDescription: project.description || '',
             shareUrl,
-            readyVideos: project.photoOnlyShare ? [] : project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })),
+            readyVideos: hasVideos ? project.videos.map(v => ({ name: v.name, versionLabel: v.versionLabel })) : [],
             photoAlbums,
             isPasswordProtected,
             unsubscribeUrl,

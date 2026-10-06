@@ -10,7 +10,7 @@ import { Button } from './ui/button'
 import ThemeToggle from './ThemeToggle'
 import LanguageToggle from './LanguageToggle'
 import { cn } from '@/lib/utils'
-import { useAlbumGallery, type PhotoZipScope } from '@/hooks/useAlbumGallery'
+import { useAlbumGallery } from '@/hooks/useAlbumGallery'
 
 interface SharePhotoSectionProps {
   projectId: string

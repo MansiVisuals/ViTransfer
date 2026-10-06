@@ -32,7 +32,8 @@ interface Video {
 }
 
 interface ProjectActionsProps {
-  project: Project
+  /** `hasPhotos` / `hasVideos` come from /api/projects/[id] — what the share link carries */
+  project: Project & { hasPhotos?: boolean; hasVideos?: boolean }
   videos: Video[]
   onRefresh?: () => void
   shareUrl?: string
@@ -415,8 +416,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             <h3 className="text-sm font-semibold mb-3">{t('projectActions')}</h3>
           </div>
 
-          {/* Send Notification Button - only show if there are ready videos (photo-only links announce the gallery) */}
-          {(readyVideos.length > 0 || project.photoOnlyShare) && (
+          {/* Send Notification Button - shown when the link has something to announce */}
+          {(readyVideos.length > 0 || project.hasPhotos) && (
             <div>
               <Button
                 variant="outline"
@@ -547,8 +548,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Notification Type Selection (photo-only links always announce the whole gallery) */}
-            {!project.photoOnlyShare && (
+            {/* Notification Type Selection - only when the link carries videos */}
+            {project.hasVideos && (
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   {t('notificationType')}
@@ -668,7 +669,7 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             )}
 
             <p className="text-xs text-muted-foreground">
-              {project.photoOnlyShare
+              {!project.hasVideos
                 ? t('notifyPhotoGallery')
                 : notificationType === 'entire-project'
                   ? t('notifyAllVideos')

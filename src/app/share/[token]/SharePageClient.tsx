@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
-import { Lock, Check, Mail, KeyRound, Download, Loader2 } from 'lucide-react'
+import { Lock, Check, Mail, KeyRound, Download, Loader2, Grid3X3 } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import { loadPortalSession } from '@/app/portal/portalSession'
@@ -69,7 +69,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [hideComments, setHideComments] = useState(false)
-  const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
+  const [viewState, setViewState] = useState<'grid' | 'player' | 'gallery'>('grid')
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const [downloadingAll, setDownloadingAll] = useState(false)
@@ -940,10 +940,25 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
+  // The gallery owns the ?album= param, so entering and leaving keep the link honest
+  const openAlbum = (albumId: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('album', albumId)
+    window.history.replaceState(null, '', url)
+    setViewState('gallery')
+  }
+
+  const backToOverview = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('album')
+    window.history.replaceState(null, '', url)
+    setViewState('grid')
+  }
+
   // A link that delivers photos and no videos opens straight into the gallery.
   // True for a photo-only project and for one whose videos the switch keeps off
   // the link, so the display follows access control without a second setting.
-  if (project.hasPhotos && !project.hasVideos) {
+  if (viewState === 'gallery' || (project.hasPhotos && !project.hasVideos)) {
     // Album requests need the share token; never fall back to the admin fetch
     if (project.id && !shareToken) {
       return (
@@ -962,6 +977,12 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           title={project.title}
           description={isGuest ? null : project.description}
           allowPhotoDownload={project.allowPhotoDownload && !isGuest}
+          leadingActions={project.hasVideos ? (
+            <Button variant="ghost" size="sm" onClick={backToOverview} title={t('backToOverview')} className="gap-1.5">
+              <Grid3X3 className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('backToOverview')}</span>
+            </Button>
+          ) : undefined}
           trailingActions={!isGuest && project.allowReverseShare && shareToken ? (
             <ReverseShareUploadPanel
               shareToken={shareToken}
@@ -1047,6 +1068,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 allowPhotoDownload={project.allowPhotoDownload && !isGuest}
                 viewMode={viewMode}
                 onAlbumCount={setAlbumCount}
+                onOpenAlbum={openAlbum}
               />
             )}
           </div>

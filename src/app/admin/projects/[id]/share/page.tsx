@@ -26,6 +26,7 @@ type TokenFetchTelemetryEvent = 'first-attempt-failure' | 'retry-success' | 'ret
 export default function AdminSharePage() {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
+  const ts = useTranslations('share')
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -57,7 +58,7 @@ export default function AdminSharePage() {
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [adminUser, setAdminUser] = useState<any>(null)
   const [hideComments, setHideComments] = useState(false)
-  const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
+  const [viewState, setViewState] = useState<'grid' | 'player' | 'gallery'>('grid')
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
@@ -552,7 +553,7 @@ export default function AdminSharePage() {
   const showCommentPanel = !project.hideFeedback && !hideComments
 
   // Mirrors the public share page, from the same two facts the share API derives
-  if (project.hasPhotos && !project.hasVideos) {
+  if (viewState === 'gallery' || (project.hasPhotos && !project.hasVideos)) {
     return (
       <PhotoDeliveryGallery
         projectId={id}
@@ -564,11 +565,11 @@ export default function AdminSharePage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => router.push(projectUrl)}
-            title={t('backToProject')}
+            onClick={() => (viewState === 'gallery' ? setViewState('grid') : router.push(projectUrl))}
+            title={viewState === 'gallery' ? ts('backToOverview') : t('backToProject')}
           >
             <ArrowLeft className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('backToProject')}</span>
+            <span className="hidden sm:inline">{viewState === 'gallery' ? ts('backToOverview') : t('backToProject')}</span>
           </Button>
         }
       />
@@ -617,6 +618,7 @@ export default function AdminSharePage() {
               allowPhotoDownload={project.allowPhotoDownload ?? true}
               viewMode={viewMode}
               onAlbumCount={setAlbumCount}
+              onOpenAlbum={(albumId) => { const url = new URL(window.location.href); url.searchParams.set('album', albumId); window.history.replaceState(null, '', url); setViewState('gallery') }}
             />
           </div>
         </div>

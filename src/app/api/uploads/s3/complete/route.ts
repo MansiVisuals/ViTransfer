@@ -147,9 +147,8 @@ export async function POST(request: NextRequest) {
     //
     // CRITICAL: S3's CompleteMultipartUpload requires Parts in ascending
     // PartNumber order. The client uploads parts via a worker pool that
-    // finishes them in non-deterministic order, so we MUST sort here. The
-    // SDK does not sort for us — sending unsorted parts returns InvalidPartOrder
-    // and the upload appears as "Failed to complete upload" to the user.
+    // finishes them in non-deterministic order, so we MUST sort here. The SDK
+    // does not sort for us: unsorted parts return InvalidPartOrder.
     const completedParts: CompletedPart[] = parts
       .map((p) => ({
         PartNumber: p.partNumber,

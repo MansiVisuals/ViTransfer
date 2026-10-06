@@ -4,8 +4,7 @@ name: Weekly Security Release
 # through the week; this promotes them to main, publishes multi-arch images
 # and cuts a release. Quiet weeks are skipped, so versions stay meaningful.
 #
-# Publishing waits on the `release` environment, so the whole run pauses for a
-# human approval before anything reaches Docker Hub.
+# Nothing waits on a human: publishing is gated on `verify-clean-install`.
 
 on:
   schedule:
@@ -45,14 +44,12 @@ jobs:
         run: |
           git fetch origin main dev --tags --quiet
 
-          # Measure against the last release tag, not main. main is only equal
-          # to the last release when nothing has reached it outside this
-          # workflow, and anything already on main is invisible in a main..dev
-          # range — that is how the 1.2.7 notes lost the sidebar.
+          # Measure against the last release tag, not main: anything that
+          # reached main outside this workflow is invisible in a main..dev range.
           #
           # Sort by version rather than using git describe: release tags sit on
           # main's merge commit, which is not an ancestor of dev, so describe
-          # walks past them and finds a much older tag.
+          # walks past them to a much older tag.
           base=$(git tag --sort=-v:refname | head -1)
           if [ -z "$base" ]; then
             base=$(git rev-list --max-parents=0 origin/dev | tail -1)
@@ -112,12 +109,11 @@ jobs:
         run: |
           npm ci --legacy-peer-deps --ignore-scripts
           # Majors and unfixable advisories never reach auto-merge, so this is
-          # the backstop that catches them rather than silently skipping them.
+          # the backstop that catches them.
           #
-          # It fails rather than warns: the Dockerfile runs the same gate during
-          # `build`, which is after `publish` has merged dev and pushed the
-          # version bump. A warning here bought nothing and left main carrying
-          # release commits for a version that never tagged or shipped.
+          # It fails rather than warns: the Dockerfile applies the same gate
+          # during `build`, which runs after `publish` has merged dev and pushed
+          # the version bump.
           #
           # Scoped to what ships, matching the Dockerfile gate.
           npm audit --audit-level=high --omit=dev
@@ -213,10 +209,9 @@ jobs:
 
           git push origin main
 
-  # One native runner per architecture. Building arm64 under QEMU on an amd64
-  # runner took over three hours and had to be cancelled; native arm64 runners
-  # are free for public repos and remove the emulation entirely. Each job pushes
-  # an untagged image by digest, and the manifest job joins them under the tags.
+  # One native runner per architecture — arm64 under QEMU emulation is too slow
+  # to finish, and arm64 runners are free for public repos. Each job pushes an
+  # untagged image by digest; the manifest job joins them under the tags.
   build:
     name: Build ${{ matrix.platform }}
     needs: [check, publish]
@@ -319,7 +314,7 @@ jobs:
         run: |
           docker buildx imagetools inspect "$IMAGE:$VERSION" --raw > /tmp/manifest.json
           # Parsed, not grepped: the raw JSON is pretty-printed, so a pattern
-          # like "architecture":"amd64" never matches and fails a good build.
+          # like "architecture":"amd64" does not match.
           python3 - <<'PY'
           import json
           d = json.load(open("/tmp/manifest.json"))

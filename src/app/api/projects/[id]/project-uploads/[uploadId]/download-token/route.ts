@@ -13,9 +13,8 @@ export const runtime = 'nodejs'
 /**
  * Mint a one-time download token for a project-upload file. The admin UI
  * uses this so the browser can navigate directly to the download URL via
- * `<a href download>` and trigger the native save dialog immediately —
- * without first fetching the whole file into memory as a Blob (which made
- * large downloads feel like "the browser is downloading first").
+ * `<a href download>` and trigger the native save dialog immediately, rather
+ * than buffering the whole file into memory as a Blob first.
  *
  * The token is bound to the requester's IP + UA hash and consumed atomically
  * on the GET endpoint, so a leaked URL doesn't grant ongoing access.

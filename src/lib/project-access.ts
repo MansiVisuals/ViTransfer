@@ -10,8 +10,6 @@ import { getClientIpAddress } from '@/lib/utils'
  * 1. Admin Path: JWT authentication (bypasses password protection)
  * 2. Share Path: bearer share token scoped to project
  *
- * This replaces duplicate auth logic in 6+ API routes.
- *
  * @param request - Next.js request object
  * @param projectId - Project ID to verify access for
  * @param sharePassword - Project's share password (null if not password-protected)

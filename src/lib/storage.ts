@@ -110,9 +110,8 @@ export async function uploadFile(
  *   unlink.
  * - In S3 mode: streams the temp file into the bucket, then deletes the temp.
  *
- * Used by the TUS upload finish handlers — replaces the previous pattern of
- * re-streaming the temp file through `uploadFile()` (which always pipelined
- * a full copy even when a rename would do).
+ * Used by the TUS upload finish handlers. Prefer this over `uploadFile()`,
+ * which always copies even when a rename would do.
  */
 export async function moveFile(
   tempPath: string,
@@ -234,8 +233,8 @@ export function getVideoContentType(filename: string): string {
  *   - When the consumer pulls, resume Node so it emits the next chunk.
  *
  * Prefer this over `Readable.toWeb()` here: that adapter returns a byte
- * (BYOB) stream which adds per-chunk overhead in the Next.js response
- * pipeline and was measurably slower behind a Cloudflare tunnel.
+ * (BYOB) stream, which adds per-chunk overhead in the Next.js response
+ * pipeline.
  */
 export function createWebReadableStream(fileStream: ReadStream): ReadableStream {
   let closed = false

@@ -1,21 +1,15 @@
 name: Sync main to dev
 
-# main moves without dev twice, and only one of them matters. The release train
-# pushing the version bump and changelog is by design — dev never carries
-# VERSION, so it lags every week and that is fine. A Dependabot security PR
-# landing is not: those target the default branch (see dependabot.yml), so dev —
-# the branch every release is cut from — keeps a lockfile the advisory already
-# covers while main looks patched. That is how v1.3.5 built a vulnerable tree
-# after the fix was already sitting on main, and how the release then hit a
-# lockfile conflict waiting to happen the next time dev touched the same file.
+# Dependabot security PRs target the default branch (see dependabot.yml), so a
+# fix can land on main while dev — the branch every release is cut from — keeps
+# the vulnerable lockfile. This reports what is stranded there.
 #
-# So this reports on what is stranded, not on how far behind dev is. Counting
-# commits would file an issue after every release, weekly, for the state that is
-# supposed to be true.
+# Version bumps and changelog entries are expected on main alone: dev never
+# carries VERSION, so commit counts are not the signal.
 #
 # It opens an issue rather than a PR: dev requires the "Test Summary" check, and
 # a PR opened with GITHUB_TOKEN does not trigger `pull_request` workflows, so
-# the check would never run and the PR would block forever. There is no PAT.
+# the check would never run. There is no PAT.
 
 on:
   push:

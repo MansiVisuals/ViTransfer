@@ -1,17 +1,15 @@
 name: Docker Integration Tests
 
-# Direct pushes to dev are normal here, so they still get tested. The jobs skip
-# pushes authored by dependabot, which are squash-merged PRs that already ran
-# this suite — that was the same 41 tests twice over identical code.
+# Direct pushes to dev are normal here, so they still get tested. Pushes
+# authored by dependabot are skipped: they are squash-merged PRs that already
+# ran this suite.
 #
 # No paths filter on PRs: "Test Summary" is a required check on dev, and a
 # required check that never runs leaves auto-merge pending forever.
 #
-# PRs to main are tested too. Setting `target-branch` in dependabot.yml turns
-# off security updates from that config, so GitHub opens them against the
-# default branch instead — main. Those PRs used to get CodeQL and nothing else,
-# which is how a browserslist advisory sat on main untested while the release
-# train kept building the vulnerable lockfile from dev.
+# PRs to main are tested too. `target-branch` in dependabot.yml turns off
+# security updates from that config, so GitHub opens them against the default
+# branch instead.
 on:
   push:
     branches: [dev]

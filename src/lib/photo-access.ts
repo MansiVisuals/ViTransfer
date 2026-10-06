@@ -71,10 +71,9 @@ export async function generateAlbumAccessToken(
  * Direct URL for a worker-generated rendition (thumb or preview).
  *
  * In S3 mode this presigns the object so the browser fetches it straight from
- * the bucket — painting a 2000-tile grid then costs zero app requests instead
- * of 2000 round trips, each of which would otherwise re-verify the token and
- * re-query the photo row. FS mode keeps the token route because the app owns
- * the disk and there is nothing to hand off to.
+ * the bucket, keeping a large grid off the app entirely — the token route costs
+ * one token verification and one photo query per tile. FS mode keeps that route
+ * because the app owns the disk and there is nothing to hand off to.
  *
  * Renditions are always webp; originals are never linked this way.
  */

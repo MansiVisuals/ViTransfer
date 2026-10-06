@@ -94,11 +94,10 @@ const getRedisConnection = getRedis
  * Atomically claim one use of a Redis token via Lua script.
  * Returns true if the token was present, matched, and had a use left.
  *
- * `maxUses` defaults to 1, which is a strict single-use consume — keep that for
+ * `maxUses` defaults to 1, a strict single-use consume — keep that for
  * anything that authenticates (magic links). Download tokens allow a few uses
- * so a transfer that dies part-way can be retried: they are already bound to
- * the requester IP + User-Agent and expire on their own, and single-use only
- * ever blocked the legitimate retry.
+ * so a transfer that dies part-way can be retried; they are already bound to
+ * the requester IP + User-Agent and expire on their own.
  *
  * The use counter lives in a sibling key that inherits the token's remaining
  * TTL, so the token payload stays byte-identical for the value comparison.

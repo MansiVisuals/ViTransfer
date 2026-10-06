@@ -151,11 +151,14 @@ export default function ThemeToggle({ variant = 'button', collapsed = false }: T
     )
   }
 
+  const buttonClass = 'p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm'
+  const iconClass = 'h-5 w-5 text-foreground'
+
   // Avoid hydration mismatch
   if (!mounted) {
     return (
       <button
-        className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
+        className={buttonClass}
         aria-label={t('toggleTheme')}
       >
         <div className="h-5 w-5" />
@@ -166,14 +169,14 @@ export default function ThemeToggle({ variant = 'button', collapsed = false }: T
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm"
+      className={buttonClass}
       aria-label={t('toggleTheme')}
       title={label}
     >
       {theme === 'light' ? (
-        <Moon className="h-5 w-5 text-foreground" />
+        <Moon className={iconClass} />
       ) : (
-        <Sun className="h-5 w-5 text-foreground" />
+        <Sun className={iconClass} />
       )}
     </button>
   )

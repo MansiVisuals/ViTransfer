@@ -145,10 +145,9 @@ export default function ProjectUploadsBlock({ projectId, onCountChange }: Projec
   const handleDownload = async (upload: ProjectUpload) => {
     setDownloadingId(upload.id)
     try {
-      // Mint a single-use download token, then navigate the browser directly.
-      // This triggers the native save dialog instantly — the previous
-      // fetch-into-Blob approach buffered the entire file in the tab first
-      // and felt like "the browser is downloading first".
+      // Mint a single-use download token, then navigate the browser directly so
+      // the native save dialog opens at once. Fetching into a Blob instead
+      // buffers the whole file in the tab first.
       const res = await apiFetch(
         `/api/projects/${projectId}/project-uploads/${upload.id}/download-token`,
         { method: 'POST' }

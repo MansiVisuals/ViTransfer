@@ -49,6 +49,7 @@ export async function POST(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         allowGuest: false,
         requiredPermission: isClientAsset ? 'comment' : 'download',
       }
@@ -57,6 +58,7 @@ export async function POST(
     if (!accessCheck.authorized) {
   return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
+
 
     // Check download permissions for non-admins (non-client assets only)
     // Client-uploaded comment attachments bypass approval/download checks

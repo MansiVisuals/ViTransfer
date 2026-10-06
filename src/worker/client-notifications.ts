@@ -4,6 +4,7 @@ import { generateNotificationSummaryEmail } from '../lib/email-templates'
 import { getProjectRecipients } from '../lib/recipients'
 import { generateShareUrl } from '../lib/url'
 import { getRedis } from '../lib/redis'
+import { dropQueuedClientNotifications } from '../lib/notifications'
 import { buildUnsubscribeUrl, generateRecipientUnsubscribeToken } from '../lib/unsubscribe'
 import { getPeriodString, shouldSendNow, sendNotificationsWithRetry, normalizeNotificationDataTimecode } from './notification-helpers'
 import { logError, logMessage } from '../lib/logging'
@@ -40,6 +41,7 @@ export async function processClientNotifications() {
         clientNotificationTime: true,
         clientNotificationDay: true,
         lastClientNotificationSent: true,
+        photoOnlyShare: true,
         notificationQueue: {
           where: {
             sentToClients: false,
@@ -61,6 +63,12 @@ export async function processClientNotifications() {
     for (const project of projects) {
       const pending = project.notificationQueue.length
       logMessage(`[CLIENT] "${project.title}": ${project.clientNotificationSchedule} at ${project.clientNotificationTime || 'N/A'} (${pending} pending)`)
+
+      if (project.photoOnlyShare) {
+        await dropQueuedClientNotifications(project.notificationQueue)
+        logMessage('[CLIENT]   Skip - photo-only delivery, pending video notifications dropped')
+        continue
+      }
 
       if (project.clientNotificationSchedule === 'IMMEDIATE') {
         logMessage('[CLIENT]   Skip - IMMEDIATE notifications sent instantly')

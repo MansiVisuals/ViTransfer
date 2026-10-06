@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { deleteFile, deleteDirectory } from '@/lib/storage'
 import { requireApiAdmin } from '@/lib/auth'
+import { getShareContents } from '@/lib/project-access'
 import { encrypt, decrypt } from '@/lib/encryption'
 import { isSmtpConfigured } from '@/lib/settings'
 import { flushPendingClientNotifications } from '@/lib/notifications'
@@ -101,6 +102,10 @@ export async function GET(
     // Decrypt password for admin view
     const decryptedPassword = project.sharePassword ? decrypt(project.sharePassword) : null
 
+    // Same derivation the share page gets, so the admin preview renders the
+    // view the recipient will actually see
+    const shareContents = await getShareContents(project.id, project.photoOnlyShare)
+
     // Convert BigInt fields to strings for JSON serialization
     const projectData = {
       ...project,
@@ -111,6 +116,8 @@ export async function GET(
       comments: sanitizedComments,
       sharePassword: decryptedPassword,
       smtpConfigured,
+      hasPhotos: shareContents.hasPhotos,
+      hasVideos: shareContents.hasVideos,
     }
 
     return NextResponse.json(projectData)
@@ -298,6 +305,10 @@ export async function PATCH(
 
     if (validatedBody.allowReverseShare !== undefined) {
       updateData.allowReverseShare = validatedBody.allowReverseShare
+    }
+
+    if (validatedBody.photoOnlyShare !== undefined) {
+      updateData.photoOnlyShare = validatedBody.photoOnlyShare
     }
 
     if (validatedBody.clientCanApprove !== undefined) {

@@ -54,6 +54,7 @@ interface Project {
   allowPhotoDownload: boolean
   allowClientAssetUpload: boolean
   allowReverseShare: boolean
+  photoOnlyShare: boolean
   clientCanApprove: boolean
   usePreviewForApprovedPlayback: boolean
   showClientTutorial: boolean
@@ -107,6 +108,7 @@ export default function ProjectSettingsPage() {
   const [allowPhotoDownload, setAllowPhotoDownload] = useState(true)
   const [allowClientAssetUpload, setAllowClientAssetUpload] = useState(false)
   const [allowReverseShare, setAllowReverseShare] = useState(false)
+  const [photoOnlyShare, setPhotoOnlyShare] = useState(false)
   const [clientCanApprove, setClientCanApprove] = useState(true)
   const [usePreviewForApprovedPlayback, setUsePreviewForApprovedPlayback] = useState(false)
   const [showClientTutorial, setShowClientTutorial] = useState(true)
@@ -193,6 +195,7 @@ export default function ProjectSettingsPage() {
         setAllowPhotoDownload(data.allowPhotoDownload ?? true)
         setAllowClientAssetUpload(data.allowClientAssetUpload ?? false)
         setAllowReverseShare(data.allowReverseShare ?? false)
+        setPhotoOnlyShare(data.photoOnlyShare ?? false)
         setClientCanApprove(data.clientCanApprove ?? true)
         setUsePreviewForApprovedPlayback(data.usePreviewForApprovedPlayback ?? false)
         setShowClientTutorial(data.showClientTutorial ?? true)
@@ -307,6 +310,7 @@ export default function ProjectSettingsPage() {
         allowPhotoDownload,
         allowClientAssetUpload,
         allowReverseShare,
+        photoOnlyShare,
         clientCanApprove,
         usePreviewForApprovedPlayback,
         showClientTutorial,
@@ -727,6 +731,23 @@ export default function ProjectSettingsPage() {
           // Client Share Page content
           const clientShareContent = (
             <>
+              {/* ── Delivery ─────────────────────────────────────────────── */}
+              <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor="photoOnlyShare">{t('photoOnlyShare')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('photoOnlyShareDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="photoOnlyShare"
+                    checked={photoOnlyShare}
+                    onCheckedChange={setPhotoOnlyShare}
+                  />
+                </div>
+              </div>
+
               {/* ── Approval & Workflow ─────────────────────────────────── */}
               <div className="space-y-3 border p-4 rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between gap-4">

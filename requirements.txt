@@ -4,5 +4,5 @@
 apprise==1.13.1
 
 # Pulled in by apprise; pinned forward past known advisories.
-msgpack>=1.2.2
+msgpack>=1.2.3
 setuptools>=78.1.1

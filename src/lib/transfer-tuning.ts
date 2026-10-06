@@ -78,9 +78,8 @@ export function parseBoundedRangeHeader(
  *
  * Browser download managers and CLI tools (curl, wget, axel) typically send
  * `Range: bytes=0-` to start a resumable download. They expect the full file
- * back as one 206 stream, then issue range follow-ups only on disconnect.
- * Capping that to 16 MiB forced N sequential round-trips through Next.js +
- * Prisma per file, killing throughput.
+ * back as one 206 stream, then issue range follow-ups only on disconnect, so
+ * capping an open-ended range costs one round-trip per chunk.
  *
  * - If the client gave an explicit upper bound (`bytes=A-B`), honor it as-is.
  * - If the client gave an open-ended range (`bytes=A-`), return everything from A.

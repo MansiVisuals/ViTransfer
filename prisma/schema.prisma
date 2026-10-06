@@ -92,6 +92,7 @@ model Project {
   allowClientAssetUpload Boolean @default(false) // Allow clients to upload file attachments on comments
   clientCanApprove       Boolean @default(true) // Allow clients to approve videos (false = admin only)
   allowReverseShare      Boolean @default(false) // Allow clients to upload files directly to the project (reverse share)
+  photoOnlyShare         Boolean @default(false) // Photo-only delivery: the share link serves photo albums only; videos stay admin-side
 
   // Approved playback settings
   usePreviewForApprovedPlayback Boolean @default(false) // Use browser-compatible preview instead of original after approval

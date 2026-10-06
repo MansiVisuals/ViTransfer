@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { isSmtpConfigured, getRateLimitSettings, getShareTokenTtlSeconds } from '@/lib/settings'
 import { getCurrentUserFromRequest, getShareContext, signShareToken, parseBearerToken } from '@/lib/auth'
 import { getPrimaryRecipient, getProjectRecipients } from '@/lib/recipients'
-import { verifyProjectAccess, fetchProjectWithVideos } from '@/lib/project-access'
+import { verifyProjectAccess, fetchProjectWithVideos, getShareContents } from '@/lib/project-access'
 import { rateLimit } from '@/lib/rate-limit'
 import { trackSharePageAccess, readAnalyticsConsent } from '@/lib/share-access-tracking'
 import { getRedis } from '@/lib/redis'
@@ -42,6 +42,7 @@ export async function GET(
         guestMode: true,
         guestLatestOnly: true,
         guestShowPhotos: true,
+        photoOnlyShare: true,
         sharePassword: true,
         authMode: true,
       },
@@ -142,7 +143,10 @@ export async function GET(
       }, { status: 401 })
     }
 
-    const videosSanitizedBase = project.videos.map((video: any) => ({
+    // Photo-only delivery: the share link never carries videos, whoever opens it
+    const sharedVideos = projectMeta.photoOnlyShare ? [] : project.videos
+
+    const videosSanitizedBase = sharedVideos.map((video: any) => ({
       id: video.id,
       name: video.name,
       version: video.version,
@@ -197,7 +201,7 @@ export async function GET(
       sortedVideosByName[key] = videosByName[key]
     })
 
-    const [smtpConfigured, globalSettings, primaryRecipient, photoAlbumCount] = await Promise.all([
+    const [smtpConfigured, globalSettings, primaryRecipient, shareContents] = await Promise.all([
       isSmtpConfigured(),
       prisma.settings.findUnique({
         where: { id: 'default' },
@@ -211,12 +215,7 @@ export async function GET(
         },
       }),
       getPrimaryRecipient(project.id),
-      isGuest && !project.guestShowPhotos ? Promise.resolve(0) : prisma.photoAlbum.count({
-        where: {
-          projectId: project.id,
-          photos: { some: { uploadCompletedAt: { not: null } } },
-        },
-      })
+      getShareContents(project.id, projectMeta.photoOnlyShare, !isGuest || project.guestShowPhotos),
     ])
 
     let allRecipients: Array<{id: string, name: string | null, email: string | null}> = []
@@ -275,7 +274,7 @@ export async function GET(
     const projectData = {
       // Guests need the project id only when photo albums are visible to them
       // (the albums API is keyed by project id); otherwise keep it omitted.
-      ...(isGuest && photoAlbumCount === 0 ? {} : { id: project.id }),
+      ...(isGuest && !shareContents.hasPhotos ? {} : { id: project.id }),
 
       title: project.title,
       description: project.description,
@@ -308,7 +307,10 @@ export async function GET(
 
       allowAssetDownload: project.allowAssetDownload,
       allowPhotoDownload: project.allowPhotoDownload,
-      hasPhotos: photoAlbumCount > 0,
+      hasPhotos: shareContents.hasPhotos,
+      hasVideos: shareContents.hasVideos,
+      // Video feedback has nothing to attach to on a photo-only link
+      feedbackEnabled: !project.hideFeedback && !projectMeta.photoOnlyShare,
       allowClientAssetUpload: project.allowClientAssetUpload,
       allowReverseShare: project.allowReverseShare,
       clientCanApprove: project.clientCanApprove,

@@ -22,6 +22,7 @@ import { ShareTutorial } from '@/components/ShareTutorial'
 import PrivacyBanner, { PRIVACY_STORAGE_KEY } from '@/components/PrivacyBanner'
 import ReverseShareUploadPanel from '@/components/ReverseShareUploadPanel'
 import SharePhotoSection from '@/components/SharePhotoSection'
+import PhotoDeliveryGallery from '@/components/PhotoDeliveryGallery'
 import ShareViewToggle, { loadShareViewMode, type ShareViewMode } from '@/components/ShareViewToggle'
 
 interface SharePageClientProps {
@@ -37,6 +38,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
   const urlTimestamp = searchParams?.get('t') ? parseFloat(searchParams.get('t')!) : null
   const urlVideoName = searchParams?.get('video') || null
+  const urlAlbumId = searchParams?.get('album') || null
   const urlVersion = searchParams?.get('version') ? parseInt(searchParams.get('version')!, 10) : null
   const urlFocusCommentId = searchParams?.get('comment') || null
 
@@ -68,7 +70,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [hideComments, setHideComments] = useState(false)
-  const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
+  const [viewState, setViewState] = useState<'grid' | 'player' | 'gallery'>('grid')
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const [downloadingAll, setDownloadingAll] = useState(false)
@@ -188,7 +190,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
 
         tokenCacheRef.current.clear()
 
-        if (!projectData.hideFeedback) {
+        if (projectData.feedbackEnabled) {
           fetchComments()
         }
       }
@@ -302,7 +304,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
               setDefaultQuality(projectData.previewResolution || projectData.settings.defaultPreviewResolution || '720p')
             }
 
-            if (!projectData.hideFeedback) {
+            if (projectData.feedbackEnabled) {
               fetchComments()
             }
           }
@@ -549,8 +551,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
       return
     }
 
-    setViewState('grid')
-  }, [project?.videosByName, urlVideoName])
+    setViewState(urlAlbumId ? 'gallery' : 'grid')
+  }, [project?.videosByName, urlVideoName, urlAlbumId])
 
   const handleVideoSelect = useCallback((videoName: string) => {
     setActiveVideoName(videoName)
@@ -939,6 +941,61 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
+  // The gallery owns the ?album= param, so entering and leaving keep the link honest
+  const openAlbum = (albumId: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('album', albumId)
+    window.history.replaceState(null, '', url)
+    setViewState('gallery')
+  }
+
+  const backToOverview = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('album')
+    window.history.replaceState(null, '', url)
+    setViewState('grid')
+  }
+
+  // A link that delivers photos and no videos opens straight into the gallery.
+  // True for a photo-only project and for one whose videos the switch keeps off
+  // the link, so the display follows access control without a second setting.
+  if (viewState === 'gallery' || (project.hasPhotos && !project.hasVideos)) {
+    // Album requests need the share token; never fall back to the admin fetch
+    if (project.id && !shareToken) {
+      return (
+        <div className="flex-1 min-h-0 bg-background flex items-center justify-center">
+          <p className="text-muted-foreground">{tc('loading')}</p>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <PhotoDeliveryGallery
+          // The share API leaves the id out for guests who may not see albums
+          projectId={project.id}
+          shareToken={shareToken ?? undefined}
+          title={project.title}
+          description={isGuest ? null : project.description}
+          allowPhotoDownload={project.allowPhotoDownload && !isGuest}
+          onBack={project.hasVideos ? backToOverview : undefined}
+          standalone={!project.hasVideos}
+          actions={!isGuest && project.allowReverseShare && shareToken ? (
+            <ReverseShareUploadPanel
+              shareToken={shareToken}
+              shareSlug={token}
+              maxFiles={project.settings?.maxReverseShareFiles ?? 10}
+            />
+          ) : undefined}
+        />
+
+        {project.settings?.privacyDisclosureEnabled && (
+          <PrivacyBanner customText={project.settings.privacyDisclosureText} slug={token} shareToken={shareToken} />
+        )}
+      </>
+    )
+  }
+
   if (viewState === 'grid') {
     return (
       <>
@@ -963,7 +1020,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 projectId={project.id || token}
                 showTutorial={project.showClientTutorial}
                 watermarkEnabled={project.watermarkEnabled}
-                hideFeedback={project.hideFeedback}
+                hideFeedback={!project.feedbackEnabled}
                 clientCanApprove={project.clientCanApprove}
                 allowAssetDownload={project.allowAssetDownload}
                 allowReverseShare={project.allowReverseShare}
@@ -1008,6 +1065,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 allowPhotoDownload={project.allowPhotoDownload && !isGuest}
                 viewMode={viewMode}
                 onAlbumCount={setAlbumCount}
+                onOpenAlbum={openAlbum}
               />
             )}
           </div>
@@ -1033,7 +1091,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
   }
 
   // Whether to show comment panel
-  const showCommentPanel = !project.hideFeedback && !isGuest && !hideComments
+  const showCommentPanel = project.feedbackEnabled && !isGuest && !hideComments
 
   return (
     <div className="min-h-screen lg:fixed lg:inset-0 bg-background flex flex-col lg:overflow-hidden">
@@ -1045,7 +1103,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           onVideoSelect={handleVideoSelect}
           onBackToGrid={handleBackToGrid}
           showBackButton={true}
-          showCommentToggle={!project.hideFeedback && !isGuest}
+          showCommentToggle={project.feedbackEnabled && !isGuest}
           isCommentPanelVisible={!hideComments}
           onToggleCommentPanel={() => setHideComments(!hideComments)}
           trailingAction={
@@ -1054,7 +1112,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 projectId={project.id || token}
                 showTutorial={project.showClientTutorial}
                 watermarkEnabled={project.watermarkEnabled}
-                hideFeedback={project.hideFeedback}
+                hideFeedback={!project.feedbackEnabled}
                 clientCanApprove={project.clientCanApprove}
                 allowAssetDownload={project.allowAssetDownload}
                 allowReverseShare={project.allowReverseShare}
@@ -1102,7 +1160,7 @@ export default function SharePageClient({ token }: SharePageClientProps) {
                 allowAssetDownload={project.allowAssetDownload}
                 clientCanApprove={project.clientCanApprove}
                 shareToken={shareToken}
-                comments={!project.hideFeedback && !isGuest ? filteredComments : []}
+                comments={project.feedbackEnabled && !isGuest ? filteredComments : []}
                 timestampDisplayMode={project.timestampDisplay || 'TIMECODE'}
                 onCommentFocus={(commentId) => setFocusCommentId(commentId)}
                 usePreviewForApprovedPlayback={project.usePreviewForApprovedPlayback}

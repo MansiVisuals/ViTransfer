@@ -3,14 +3,49 @@ import { getCurrentUserFromRequest, getShareContext } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getClientIpAddress } from '@/lib/utils'
 
+/** Photo-only delivery: the share link serves photo albums only. */
+async function isPhotoOnlyShare(projectId: string): Promise<boolean> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { photoOnlyShare: true },
+  })
+  return !!project?.photoOnlyShare
+}
+
+/**
+ * What a share link actually carries. The share page and its admin preview both
+ * decide what to render from this, so they cannot disagree.
+ *
+ * `countPhotos` is false for a guest on a link that hides photos from them.
+ */
+export async function getShareContents(
+  projectId: string,
+  photoOnlyShare: boolean,
+  countPhotos = true
+): Promise<{ hasPhotos: boolean; hasVideos: boolean }> {
+  const [albums, videos] = await Promise.all([
+    countPhotos
+      ? prisma.photoAlbum.count({
+          where: { projectId, photos: { some: { uploadCompletedAt: { not: null } } } },
+        })
+      : Promise.resolve(0),
+    prisma.video.count({ where: { projectId } }),
+  ])
+
+  return {
+    hasPhotos: albums > 0,
+    // Every status counts: a video still transcoding keeps this a video project,
+    // so the share page does not change shape when it finishes.
+    hasVideos: !photoOnlyShare && videos > 0,
+  }
+}
+
 /**
  * Verify project access using dual authentication pattern
  *
  * Two authentication paths:
  * 1. Admin Path: JWT authentication (bypasses password protection)
  * 2. Share Path: bearer share token scoped to project
- *
- * This replaces duplicate auth logic in 6+ API routes.
  *
  * @param request - Next.js request object
  * @param projectId - Project ID to verify access for
@@ -26,6 +61,8 @@ export async function verifyProjectAccess(
     requiredPermission?: string
     requiredAnyPermission?: string[]
     allowGuest?: boolean
+    /** Deny the share path entirely on a photo-only project. Set on every video-scoped route. */
+    requireVideoAccess?: boolean
   }
 ): Promise<{
   authorized: boolean
@@ -52,6 +89,17 @@ export async function verifyProjectAccess(
       isAuthenticated: true,
       permissions: ['view', 'comment', 'download', 'approve'],
       shareTokenSessionId: `admin:${currentUser.id}`,
+    }
+  }
+
+  // Before any non-admin path below grants access: a photo-only link carries no
+  // videos, so nothing video-scoped is reachable through it.
+  if (options?.requireVideoAccess && await isPhotoOnlyShare(projectId)) {
+    return {
+      authorized: false,
+      isAdmin: false,
+      isAuthenticated: false,
+      errorResponse: NextResponse.json({ error: 'Not found' }, { status: 404 }),
     }
   }
 

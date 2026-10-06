@@ -13,6 +13,7 @@ import { ArrowLeft } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ThemeToggle from '@/components/ThemeToggle'
 import SharePhotoSection from '@/components/SharePhotoSection'
+import PhotoDeliveryGallery from '@/components/PhotoDeliveryGallery'
 import ShareViewToggle, { loadShareViewMode, type ShareViewMode } from '@/components/ShareViewToggle'
 import { useTranslations } from 'next-intl'
 
@@ -25,6 +26,7 @@ type TokenFetchTelemetryEvent = 'first-attempt-failure' | 'retry-success' | 'ret
 export default function AdminSharePage() {
   const t = useTranslations('projects')
   const tc = useTranslations('common')
+  const ts = useTranslations('share')
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -56,7 +58,7 @@ export default function AdminSharePage() {
   const [initialVideoIndex, setInitialVideoIndex] = useState<number>(0)
   const [adminUser, setAdminUser] = useState<any>(null)
   const [hideComments, setHideComments] = useState(false)
-  const [viewState, setViewState] = useState<'grid' | 'player'>('grid')
+  const [viewState, setViewState] = useState<'grid' | 'player' | 'gallery'>('grid')
   const [thumbnailsByName, setThumbnailsByName] = useState<Map<string, string>>(new Map())
   const [thumbnailsLoading, setThumbnailsLoading] = useState(true)
   const tokenCacheRef = useRef<Map<string, any>>(new Map())
@@ -550,6 +552,22 @@ export default function AdminSharePage() {
 
   const showCommentPanel = !project.hideFeedback && !hideComments
 
+  // Mirrors the public share page, from the same two facts the share API derives
+  if (viewState === 'gallery' || (project.hasPhotos && !project.hasVideos)) {
+    return (
+      <PhotoDeliveryGallery
+        projectId={id}
+        title={project.title}
+        description={project.description}
+        allowPhotoDownload={project.allowPhotoDownload ?? true}
+        showLanguageToggle={false}
+        onBack={() => (viewState === 'gallery' ? setViewState('grid') : router.push(projectUrl))}
+        backLabel={viewState === 'gallery' ? ts('backToOverview') : t('backToProject')}
+        standalone={viewState !== 'gallery'}
+      />
+    )
+  }
+
   // Show thumbnail grid when in grid view (same as public share layout)
   if (viewState === 'grid') {
     return (
@@ -592,6 +610,7 @@ export default function AdminSharePage() {
               allowPhotoDownload={project.allowPhotoDownload ?? true}
               viewMode={viewMode}
               onAlbumCount={setAlbumCount}
+              onOpenAlbum={(albumId) => { const url = new URL(window.location.href); url.searchParams.set('album', albumId); window.history.replaceState(null, '', url); setViewState('gallery') }}
             />
           </div>
         </div>

@@ -313,7 +313,7 @@ export default function ReverseShareUploadPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm flex items-center gap-1.5"
+        className="p-2 rounded-lg border border-border bg-background hover:bg-accent hover:text-accent-foreground transition-colors shadow-sm flex items-center gap-1.5"
       >
         <FolderUp className="h-5 w-5 text-foreground" />
         <span className="hidden sm:inline text-sm font-medium text-foreground">{t('submitFiles')}</span>
@@ -392,12 +392,12 @@ export default function ReverseShareUploadPanel({
                     )}
 
                     {item.status === 'error' && (
-                      <button type="button" onClick={() => retryFile(item.id)} className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title={tc('retry')}>
+                      <button type="button" onClick={() => retryFile(item.id)} className="shrink-0 p-0.5 rounded hover:bg-accent hover:text-accent-foreground text-muted-foreground" title={tc('retry')}>
                         <RotateCcw className="w-3.5 h-3.5" />
                       </button>
                     )}
                     {(item.status === 'pending' || item.status === 'error') && (
-                      <button type="button" onClick={() => removeFile(item.id)} className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
+                      <button type="button" onClick={() => removeFile(item.id)} className="shrink-0 p-0.5 rounded hover:bg-accent hover:text-accent-foreground text-muted-foreground">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     )}

@@ -1,0 +1,1 @@
+ALTER TABLE "Project" ADD COLUMN "photoOnlyShare" BOOLEAN NOT NULL DEFAULT false;

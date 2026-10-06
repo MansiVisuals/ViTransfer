@@ -31,13 +31,20 @@ WORKDIR /app
 COPY --link package.json package-lock.json* ./
 COPY --link prisma ./prisma
 
+# The tree the runner ships. `npm prune --omit=dev` is not equivalent — it
+# leaves tailwindcss, typescript, micromatch and braces behind.
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps --omit=dev \
+    && mv node_modules /tmp/prod_node_modules
+
+# The full tree, for the builder stage.
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --legacy-peer-deps
 
-RUN cp -R node_modules /tmp/prod_node_modules
-
-RUN npm audit --audit-level=high || \
-    (echo "SECURITY: High/critical vulnerabilities found!" && exit 1)
+# Scoped to what ships. Build-only advisories are reported by the release run
+# instead; keep in sync with weekly-security-release.yml.
+RUN npm audit --audit-level=high --omit=dev || \
+    (echo "SECURITY: High/critical vulnerabilities found in production dependencies!" && exit 1)
 
 # === Builder ===
 FROM base AS builder
@@ -90,8 +97,6 @@ RUN addgroup -g 911 app && adduser -D -u 911 -G app -h /app app
 COPY --from=deps --link /tmp/prod_node_modules ./node_modules
 COPY --from=builder --link /app/public ./public
 COPY --from=builder --link /app/.next ./.next
-COPY --from=builder --link /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --link /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --link /app/prisma ./prisma
 COPY --from=builder --link /app/src ./src
 COPY --from=builder --link /app/package.json ./package.json

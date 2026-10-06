@@ -60,6 +60,7 @@ export async function POST(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         requiredPermission: 'comment',
         allowGuest: false,
       }
@@ -68,6 +69,7 @@ export async function POST(
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
+
 
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {
@@ -199,11 +201,13 @@ export async function GET(
       project.id,
       project.sharePassword,
       project.authMode,
+      { requireVideoAccess: true },
     )
 
     if (!accessCheck.authorized) {
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
+
 
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {
@@ -284,6 +288,7 @@ export async function DELETE(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         requiredPermission: 'comment',
         allowGuest: false,
       }
@@ -292,6 +297,7 @@ export async function DELETE(
     if (!accessCheck.authorized) {
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
+
 
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {

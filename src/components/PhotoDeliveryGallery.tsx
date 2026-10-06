@@ -380,7 +380,7 @@ export default function PhotoDeliveryGallery({
               onClick={clearSelection}
               aria-label={tc('deselectAll')}
               title={tc('deselectAll')}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="h-8 w-8 text-muted-foreground"
             >
               <X className="h-4 w-4" />
             </Button>

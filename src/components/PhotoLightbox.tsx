@@ -129,8 +129,8 @@ export default function PhotoLightbox({
   }
 
   const iconButtonClass = isGallery
-    ? 'p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors'
-    : 'p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors'
+    ? 'p-2 rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors'
+    : 'p-2 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors'
   const arrowClass = isGallery
     ? 'absolute top-1/2 -translate-y-1/2 p-3 text-muted-foreground hover:text-foreground transition-colors'
     : 'absolute top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/70 backdrop-blur-sm border border-border text-muted-foreground hover:text-foreground transition-colors'

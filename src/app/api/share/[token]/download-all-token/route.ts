@@ -39,6 +39,7 @@ export async function POST(
         sharePassword: true,
         authMode: true,
         allowAssetDownload: true,
+        photoOnlyShare: true,
         title: true,
       },
     })
@@ -68,6 +69,14 @@ export async function POST(
       return NextResponse.json(
         { error: shareMessages.downloadsDisabled || 'Downloads are disabled for this project' },
         { status: 403 }
+      )
+    }
+
+    // Photo-only delivery: videos are not downloadable through the share link
+    if (!accessCheck.isAdmin && project.photoOnlyShare) {
+      return NextResponse.json(
+        { error: shareMessages.noApprovedVideos || 'No approved videos available for download' },
+        { status: 404 }
       )
     }
 

@@ -90,6 +90,11 @@ export async function GET(
       return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
     }
 
+    // Photo-only delivery: zip links minted before the switch was turned on stop working too
+    if (tokenData.isAdmin !== true && video.project.photoOnlyShare) {
+      return NextResponse.json({ error: shareMessages.accessDenied || 'Access denied' }, { status: 403 })
+    }
+
     const assets = await prisma.videoAsset.findMany({
       where: {
         id: { in: assetIds },

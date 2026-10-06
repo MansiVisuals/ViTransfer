@@ -300,6 +300,10 @@ export async function PATCH(
       updateData.allowReverseShare = validatedBody.allowReverseShare
     }
 
+    if (validatedBody.photoOnlyShare !== undefined) {
+      updateData.photoOnlyShare = validatedBody.photoOnlyShare
+    }
+
     if (validatedBody.clientCanApprove !== undefined) {
       updateData.clientCanApprove = validatedBody.clientCanApprove
     }

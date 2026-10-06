@@ -31,11 +31,16 @@ export async function GET(
 
   const project = await prisma.project.findUnique({
     where: { id: shareContext.projectId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, photoOnlyShare: true },
   })
 
   if (!project || project.slug !== token) {
     return NextResponse.json({ error: shareMessages?.accessDenied || 'Access denied' }, { status: 403 })
+  }
+
+  // Photo-only delivery: no stream, thumbnail or download tokens for videos
+  if (project.photoOnlyShare) {
+    return NextResponse.json({ error: shareMessages?.videoNotFound || 'Video not found' }, { status: 404 })
   }
 
   const video = await prisma.video.findUnique({

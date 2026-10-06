@@ -40,6 +40,7 @@ export async function processClientNotifications() {
         clientNotificationTime: true,
         clientNotificationDay: true,
         lastClientNotificationSent: true,
+        photoOnlyShare: true,
         notificationQueue: {
           where: {
             sentToClients: false,
@@ -61,6 +62,16 @@ export async function processClientNotifications() {
     for (const project of projects) {
       const pending = project.notificationQueue.length
       logMessage(`[CLIENT] "${project.title}": ${project.clientNotificationSchedule} at ${project.clientNotificationTime || 'N/A'} (${pending} pending)`)
+
+      // Photo-only links never show videos: drop video feedback queued before the switch
+      if (project.photoOnlyShare) {
+        await prisma.notificationQueue.updateMany({
+          where: { id: { in: project.notificationQueue.map(n => n.id) } },
+          data: { sentToClients: true, clientSentAt: now },
+        })
+        logMessage('[CLIENT]   Skip - photo-only delivery, pending video notifications dropped')
+        continue
+      }
 
       if (project.clientNotificationSchedule === 'IMMEDIATE') {
         logMessage('[CLIENT]   Skip - IMMEDIATE notifications sent instantly')

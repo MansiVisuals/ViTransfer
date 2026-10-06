@@ -83,6 +83,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }, { status: 403 })
     }
 
+    // Photo-only delivery: share recipients never see the videos, so they cannot approve them
+    if (!accessCheck.isAdmin && project.photoOnlyShare) {
+      return NextResponse.json({ error: projectMessages.selectedVideoNotFound || 'Selected video not found' }, { status: 404 })
+    }
+
     if (project.status === 'APPROVED') {
       return NextResponse.json({ error: projectMessages.projectAlreadyApproved || 'Project already approved' }, { status: 400 })
     }
@@ -205,7 +210,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             id: project.id,
             title: project.title,
             slug: project.slug,
-            clientNotificationSchedule: project.clientNotificationSchedule
+            clientNotificationSchedule: project.clientNotificationSchedule,
+            photoOnlyShare: project.photoOnlyShare,
           },
           approvedVideos: approvedVideosList,
           approved: true,

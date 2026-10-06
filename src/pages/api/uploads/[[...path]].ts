@@ -137,10 +137,10 @@ const tusServer: Server = new Server({
 
           const project = await prisma.project.findUnique({
             where: { id: sharePayload.projectId },
-            select: { allowClientAssetUpload: true },
+            select: { allowClientAssetUpload: true, photoOnlyShare: true },
           })
 
-          if (!project?.allowClientAssetUpload) {
+          if (!project?.allowClientAssetUpload || project.photoOnlyShare) {
             throw { status_code: 403, body: 'File attachments are not enabled for this project' }
           }
         }

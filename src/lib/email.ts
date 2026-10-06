@@ -1217,6 +1217,7 @@ export async function sendProjectGeneralNotificationEmail({
   projectDescription,
   shareUrl,
   readyVideos = [],
+  photoAlbums = [],
   isPasswordProtected = false,
   unsubscribeUrl,
   locale: localeOverride,
@@ -1227,6 +1228,8 @@ export async function sendProjectGeneralNotificationEmail({
   projectDescription: string
   shareUrl: string
   readyVideos?: Array<{ name: string; versionLabel: string }>
+  /** Album names listed as deliverables when the link delivers photos only */
+  photoAlbums?: string[]
   isPasswordProtected?: boolean
   unsubscribeUrl?: string
   locale?: string
@@ -1242,12 +1245,17 @@ export async function sendProjectGeneralNotificationEmail({
   const template = await getEmailTemplate('PROJECT_GENERAL', locale)
 
   const readyToViewLabel = emailMessages.common?.readyToView || 'Ready to view'
-  const videoListHtml = readyVideos.length > 0 ? `
+  const videoListHtml = readyVideos.length > 0 || photoAlbums.length > 0 ? `
     <div style="background:${brand.surfaceAlt}; border:1px solid ${brand.border}; border-radius:10px; padding:16px; margin-bottom:24px;">
       <div style="font-size:12px; font-weight:700; color:${brand.muted}; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.12em;">${readyToViewLabel}</div>
       ${readyVideos.map(v => `
         <div style="font-size:15px; color:${brand.textSubtle}; padding:6px 0;">
           • ${escapeHtml(v.name)} <span style="color:${brand.accent}; font-weight:600;">${escapeHtml(v.versionLabel)}</span>
+        </div>
+      `).join('')}
+      ${photoAlbums.map(name => `
+        <div style="font-size:15px; color:${brand.textSubtle}; padding:6px 0;">
+          • ${escapeHtml(name)}
         </div>
       `).join('')}
     </div>

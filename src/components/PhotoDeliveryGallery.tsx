@@ -132,7 +132,10 @@ export default function PhotoDeliveryGallery({
   }, [downloadMenuOpen])
 
 
-  const coverAlbum = visibleAlbums.find(album => album.coverPhotoId && album.contentToken) ?? null
+  // The open album's own cover; any album's cover is better than none
+  const coverAlbum = selectedAlbum?.coverPhotoId && selectedAlbum.contentToken
+    ? selectedAlbum
+    : visibleAlbums.find(album => album.coverPhotoId && album.contentToken) ?? null
   const coverUrl = coverAlbum
     ? `/api/content/photo/${coverAlbum.contentToken}?photoId=${coverAlbum.coverPhotoId}&variant=full`
     : null
@@ -168,9 +171,9 @@ export default function PhotoDeliveryGallery({
   const canDownload = allowPhotoDownload && photoTotal > 0
 
   return (
-    <div ref={scrollRef} className="fixed inset-0 overflow-y-auto overflow-x-hidden bg-white text-foreground dark:bg-background">
+    <div ref={scrollRef} className="fixed inset-0 overflow-y-auto overflow-x-hidden bg-background text-foreground">
       {/* Cover */}
-      <section className="relative isolate flex h-svh min-h-[420px] w-full items-center justify-center overflow-hidden bg-neutral-900 text-white">
+      <section className="relative isolate flex h-svh min-h-[420px] w-full items-center justify-center overflow-hidden bg-neutral-950 text-white">
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -208,14 +211,14 @@ export default function PhotoDeliveryGallery({
       <div ref={galleryStartRef} />
 
       {/* Gallery bar */}
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-white/90 backdrop-blur-md dark:bg-background/90">
-        <div className="flex h-16 items-center gap-3 px-3 sm:px-6 lg:px-10">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="flex items-center gap-2 px-3 py-2 sm:px-6 lg:px-10">
           {leadingActions}
           <BrandLogo height={24} className="hidden sm:block" />
           <div className="min-w-0 sm:border-l sm:border-border sm:pl-3">
-            <p className="truncate text-xs font-medium uppercase tracking-[0.2em] sm:text-sm">{title}</p>
+            <p className="truncate text-sm font-semibold">{title}</p>
             {photoTotal > 0 && (
-              <p className="truncate text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground">
                 {t('photoCount', { count: photoTotal })}
               </p>
             )}
@@ -268,8 +271,8 @@ export default function PhotoDeliveryGallery({
                 )}
               </div>
             )}
-            {showLanguageToggle && <LanguageToggle variant="ghost" />}
-            <ThemeToggle variant="ghost" />
+            {showLanguageToggle && <LanguageToggle />}
+            <ThemeToggle />
           </div>
         </div>
 

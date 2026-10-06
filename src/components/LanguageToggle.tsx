@@ -10,11 +10,10 @@ interface LocaleOption {
 
 interface LanguageToggleProps {
   onChange?: (locale: string) => void
-  /** 'ghost' drops the border and fill, for minimal bars like the photo gallery */
-  variant?: 'button' | 'ghost'
+
 }
 
-export default function LanguageToggle({ onChange, variant = 'button' }: LanguageToggleProps) {
+export default function LanguageToggle({ onChange }: LanguageToggleProps) {
   const [locale, setLocale] = useState<string>('en')
   const [availableLocales, setAvailableLocales] = useState<LocaleOption[]>([])
   const [mounted, setMounted] = useState(false)
@@ -90,15 +89,12 @@ export default function LanguageToggle({ onChange, variant = 'button' }: Languag
   return (
     <button
       onClick={cycleLanguage}
-      className={variant === 'ghost'
-        ? 'p-2 rounded-md flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors'
-        : 'p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm flex items-center gap-1.5'
-      }
+      className="p-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors shadow-sm flex items-center gap-1.5"
       aria-label={`Language: ${currentLocale?.name || 'English'}`}
       title={currentLocale?.name || 'English'}
     >
-      <Globe className={variant === 'ghost' ? 'h-4 w-4' : 'h-5 w-5 text-foreground'} />
-      <span className={variant === 'ghost' ? 'text-[11px] font-medium tracking-[0.2em]' : 'text-xs font-medium text-foreground'}>{label}</span>
+      <Globe className="h-5 w-5 text-foreground" />
+      <span className="text-xs font-medium text-foreground">{label}</span>
     </button>
   )
 }

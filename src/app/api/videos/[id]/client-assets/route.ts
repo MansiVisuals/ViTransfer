@@ -60,6 +60,7 @@ export async function POST(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         requiredPermission: 'comment',
         allowGuest: false,
       }
@@ -69,10 +70,6 @@ export async function POST(
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
-    // Photo-only delivery: share recipients have no access to project videos
-    if (!accessCheck.isAdmin && project.photoOnlyShare) {
-      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
-    }
 
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {
@@ -204,16 +201,13 @@ export async function GET(
       project.id,
       project.sharePassword,
       project.authMode,
+      { requireVideoAccess: true },
     )
 
     if (!accessCheck.authorized) {
       return NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
-    // Photo-only delivery: share recipients have no access to project videos
-    if (!accessCheck.isAdmin && project.photoOnlyShare) {
-      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
-    }
 
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {
@@ -294,6 +288,7 @@ export async function DELETE(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         requiredPermission: 'comment',
         allowGuest: false,
       }
@@ -303,10 +298,6 @@ export async function DELETE(
       return accessCheck.errorResponse || NextResponse.json({ error: videosMessages.unauthorized || 'Unauthorized' }, { status: 403 })
     }
 
-    // Photo-only delivery: share recipients have no access to project videos
-    if (!accessCheck.isAdmin && project.photoOnlyShare) {
-      return NextResponse.json({ error: videosMessages.videoNotFound || 'Video not found' }, { status: 404 })
-    }
 
     const uploaderSessionId = accessCheck.shareTokenSessionId
     if (!uploaderSessionId) {

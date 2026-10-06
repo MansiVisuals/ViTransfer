@@ -940,10 +940,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
     return !comment.videoId || activeVideoIds.has(comment.videoId)
   })
 
-  // Photo deliveries (photo-only links, or photos without any video) open as a
-  // gallery; the first album shows right away instead of an overview to click through
-  const hasVideos = Object.keys(project.videosByName || {}).length > 0
-  if (project.photoOnlyShare || (project.hasPhotos && !hasVideos)) {
+  // A photo-only link opens straight into the gallery instead of an overview
+  if (project.photoOnlyShare) {
     // Album requests need the share token; never fall back to the admin fetch
     if (project.id && !shareToken) {
       return (

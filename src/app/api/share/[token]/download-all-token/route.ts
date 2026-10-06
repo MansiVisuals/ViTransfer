@@ -55,6 +55,7 @@ export async function POST(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         allowGuest: false,
         requiredPermission: 'download',
       }
@@ -72,13 +73,6 @@ export async function POST(
       )
     }
 
-    // Photo-only delivery: videos are not downloadable through the share link
-    if (!accessCheck.isAdmin && project.photoOnlyShare) {
-      return NextResponse.json(
-        { error: shareMessages.noApprovedVideos || 'No approved videos available for download' },
-        { status: 404 }
-      )
-    }
 
     // Find all approved videos with latest version per name
     const approvedVideos = await prisma.video.findMany({

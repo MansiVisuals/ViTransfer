@@ -49,6 +49,7 @@ export async function POST(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         allowGuest: false,
         requiredPermission: isClientAsset ? 'comment' : 'download',
       }
@@ -58,10 +59,6 @@ export async function POST(
   return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
-    // Photo-only delivery: share recipients have no access to project videos
-    if (!accessCheck.isAdmin && project.photoOnlyShare) {
-      return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
-    }
 
     // Check download permissions for non-admins (non-client assets only)
     // Client-uploaded comment attachments bypass approval/download checks

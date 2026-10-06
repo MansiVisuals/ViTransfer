@@ -3,6 +3,15 @@ import { getCurrentUserFromRequest, getShareContext } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getClientIpAddress } from '@/lib/utils'
 
+/** Photo-only delivery: the share link serves photo albums only. */
+async function isPhotoOnlyShare(projectId: string): Promise<boolean> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { photoOnlyShare: true },
+  })
+  return !!project?.photoOnlyShare
+}
+
 /**
  * Verify project access using dual authentication pattern
  *
@@ -24,6 +33,8 @@ export async function verifyProjectAccess(
     requiredPermission?: string
     requiredAnyPermission?: string[]
     allowGuest?: boolean
+    /** Deny the share path entirely on a photo-only project. Set on every video-scoped route. */
+    requireVideoAccess?: boolean
   }
 ): Promise<{
   authorized: boolean
@@ -50,6 +61,17 @@ export async function verifyProjectAccess(
       isAuthenticated: true,
       permissions: ['view', 'comment', 'download', 'approve'],
       shareTokenSessionId: `admin:${currentUser.id}`,
+    }
+  }
+
+  // Before any non-admin path below grants access: a photo-only link carries no
+  // videos, so nothing video-scoped is reachable through it.
+  if (options?.requireVideoAccess && await isPhotoOnlyShare(projectId)) {
+    return {
+      authorized: false,
+      isAdmin: false,
+      isAuthenticated: false,
+      errorResponse: NextResponse.json({ error: 'Not found' }, { status: 404 }),
     }
   }
 

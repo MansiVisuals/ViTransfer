@@ -56,6 +56,8 @@ export function useAlbumGallery({ projectId, shareToken, onAlbumCount, scrollRoo
   const [photosLoading, setPhotosLoading] = useState(false)
   const [totalPhotos, setTotalPhotos] = useState(0)
   const [downloading, setDownloading] = useState(false)
+  // A selection belongs to the open album, so it clears when the album changes
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const loadingPageRef = useRef(false)
   // Bumped on every album change: requests from an earlier album neither land
   // nor release the loading lock the new album's first page now holds
@@ -156,6 +158,21 @@ export function useAlbumGallery({ projectId, shareToken, onAlbumCount, scrollRoo
   }, [selectedAlbum, photos.length, totalPhotos, fetchPhotoPage, scrollRootRef])
 
   /** Fetch the next page ahead of time (the lightbox pages past the loaded grid) */
+  const toggleSelect = useCallback((photoId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(photoId)) next.delete(photoId)
+      else next.add(photoId)
+      return next
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
+
+  useEffect(() => {
+    clearSelection()
+  }, [selectedAlbum, clearSelection])
+
   const loadMore = useCallback(() => {
     if (selectedAlbum && photos.length < totalPhotos) fetchPhotoPage(selectedAlbum.id, photos.length)
   }, [selectedAlbum, photos.length, totalPhotos, fetchPhotoPage])
@@ -168,12 +185,12 @@ export function useAlbumGallery({ projectId, shareToken, onAlbumCount, scrollRoo
     triggerDownload(`${buildPhotoUrl(photoId, 'full')}&download=true`)
   }, [buildPhotoUrl])
 
-  const downloadZip = useCallback(async (scope: PhotoZipScope, photoIds: string[] = []) => {
+  const downloadZip = useCallback(async (scope: PhotoZipScope) => {
     setDownloading(true)
     try {
       const body =
         scope === 'selection' && selectedAlbum
-          ? { scope, albumId: selectedAlbum.id, photoIds }
+          ? { scope, albumId: selectedAlbum.id, photoIds: Array.from(selectedIds) }
           : scope === 'album' && selectedAlbum
             ? { scope, albumId: selectedAlbum.id }
             : { scope: 'project' as const }
@@ -191,7 +208,7 @@ export function useAlbumGallery({ projectId, shareToken, onAlbumCount, scrollRoo
     } finally {
       setDownloading(false)
     }
-  }, [projectId, doFetch, selectedAlbum])
+  }, [projectId, doFetch, selectedAlbum, selectedIds])
 
   return {
     albums,
@@ -207,5 +224,8 @@ export function useAlbumGallery({ projectId, shareToken, onAlbumCount, scrollRoo
     downloadPhoto,
     downloadZip,
     downloading,
+    selectedIds,
+    toggleSelect,
+    clearSelection,
   }
 }

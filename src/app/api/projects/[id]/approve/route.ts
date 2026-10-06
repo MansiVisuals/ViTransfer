@@ -65,6 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Verify project access using dual auth pattern (clients can approve via share link)
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode, {
+        requireVideoAccess: true,
       allowGuest: false,
       requiredAnyPermission: ['approve', 'comment'],
     })
@@ -83,10 +84,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }, { status: 403 })
     }
 
-    // Photo-only delivery: share recipients never see the videos, so they cannot approve them
-    if (!accessCheck.isAdmin && project.photoOnlyShare) {
-      return NextResponse.json({ error: projectMessages.selectedVideoNotFound || 'Selected video not found' }, { status: 404 })
-    }
 
     if (project.status === 'APPROVED') {
       return NextResponse.json({ error: projectMessages.projectAlreadyApproved || 'Project already approved' }, { status: 400 })

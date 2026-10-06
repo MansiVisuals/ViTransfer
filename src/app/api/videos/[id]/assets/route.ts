@@ -66,6 +66,7 @@ export async function GET(
 
     // SECURITY: Verify user has access to this project (admin OR valid share session)
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode, {
+        requireVideoAccess: true,
       allowGuest: false,
       requiredPermission: 'download',
     })
@@ -73,10 +74,6 @@ export async function GET(
   return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
 
-    // Photo-only delivery: share recipients have no access to project videos
-    if (!accessCheck.isAdmin && project.photoOnlyShare) {
-      return NextResponse.json({ error: videoMessages.videoNotFoundApi || 'Video not found' }, { status: 404 })
-    }
 
     // For non-admins, check if asset downloads are allowed
     if (!accessCheck.isAdmin && !project.allowAssetDownload) {

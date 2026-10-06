@@ -86,9 +86,11 @@ export default function PhotoDeliveryGallery({
     downloadPhoto,
     downloadZip,
     downloading,
+    selectedIds,
+    toggleSelect,
+    clearSelection,
   } = useAlbumGallery({ projectId, shareToken, scrollRootRef: scrollRef })
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false)
   const [coverLoaded, setCoverLoaded] = useState(false)
@@ -108,10 +110,6 @@ export default function PhotoDeliveryGallery({
     }
     setSelectedAlbum(linked ?? visibleAlbums[0])
   }, [visibleAlbums, selectedAlbum, setSelectedAlbum])
-
-  useEffect(() => {
-    setSelectedIds(new Set())
-  }, [selectedAlbum])
 
   // Keep the active tab in view on the swipeable (touch) tab strip; scroll the strip only, never the page
   useEffect(() => {
@@ -193,18 +191,10 @@ export default function PhotoDeliveryGallery({
     window.history.replaceState(null, '', url)
   }
 
-  const toggleSelect = (photoId: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(photoId)) next.delete(photoId)
-      else next.add(photoId)
-      return next
-    })
-  }
 
   const runDownload = (scope: PhotoZipScope) => {
     setDownloadMenuOpen(false)
-    downloadZip(scope, Array.from(selectedIds))
+    downloadZip(scope)
   }
 
   const selecting = selectedIds.size > 0
@@ -487,7 +477,7 @@ export default function PhotoDeliveryGallery({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedIds(new Set())}
+              onClick={clearSelection}
               aria-label={tc('deselectAll')}
               title={tc('deselectAll')}
               className="rounded-full p-2 text-background/70 transition-colors hover:text-background"

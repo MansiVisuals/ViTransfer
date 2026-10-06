@@ -241,6 +241,7 @@ export async function POST(request: NextRequest) {
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode, {
       allowGuest: false,
       requiredPermission: 'comment',
+      requireVideoAccess: true,
     })
 
     if (!accessCheck.authorized) {
@@ -259,14 +260,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { isAdmin, isAuthenticated } = accessCheck
-
-    // Photo-only delivery: share recipients cannot comment on videos they cannot see
-    if (!isAdmin && project.photoOnlyShare) {
-      return NextResponse.json(
-        { error: shareMessages.accessDenied || 'Access denied' },
-        { status: 403 }
-      )
-    }
 
     const { authorEmail: finalAuthorEmail, fallbackName } = await resolveCommentAuthor({
       projectId,

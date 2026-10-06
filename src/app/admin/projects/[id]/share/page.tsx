@@ -46,7 +46,6 @@ export default function AdminSharePage() {
   const [_companyName, setCompanyName] = useState('Studio')
   const [viewMode, setViewMode] = useState<ShareViewMode>('grid')
   const [albumCount, setAlbumCount] = useState(0)
-  const [hasPhotos, setHasPhotos] = useState(false)
 
   useEffect(() => { setViewMode(loadShareViewMode()) }, [])
   const [defaultQuality, setDefaultQuality] = useState<'720p' | '1080p' | '2160p'>('720p')
@@ -268,20 +267,13 @@ export default function AdminSharePage() {
       }
       try {
         // Fetch project, settings, and current user in parallel
-        const [projectResponse, userResponse, settingsResponse, albumsResponse] = await Promise.all([
+        const [projectResponse, userResponse, settingsResponse] = await Promise.all([
           apiFetch(`/api/projects/${id}`, { cache: 'no-store' }),
           apiFetch('/api/auth/session', { cache: 'no-store' }),
           apiFetch('/api/settings', { cache: 'no-store' }),
-          apiFetch(`/api/projects/${id}/photo-albums`, { cache: 'no-store' }),
         ])
 
         if (!isMounted) return
-
-        // Same rule as the share API's hasPhotos: an album with at least one finished photo
-        if (albumsResponse.ok) {
-          const albumsData = await albumsResponse.json()
-          setHasPhotos((albumsData.albums || []).some((album: any) => album.photoCount > 0))
-        }
 
         if (projectResponse.ok) {
           const projectData = await projectResponse.json()
@@ -559,9 +551,8 @@ export default function AdminSharePage() {
 
   const showCommentPanel = !project.hideFeedback && !hideComments
 
-  // Photo deliveries open as a gallery, exactly like the public share page
-  const hasReadyVideos = project.videos.some((video: any) => video.status === 'READY')
-  if (project.photoOnlyShare || (hasPhotos && !hasReadyVideos)) {
+  // Mirrors the public share page
+  if (project.photoOnlyShare) {
     return (
       <PhotoDeliveryGallery
         projectId={id}

@@ -483,6 +483,20 @@ export async function flushPendingAdminNotifications(): Promise<void> {
  * Flush all pending client notifications for a project immediately as a summary email.
  * Called when a project's client notification schedule changes so queued items are not lost.
  */
+/**
+ * Mark queued client notifications as handled without sending them. A photo-only
+ * link shows no videos, so video feedback queued before the switch is dropped
+ * rather than flushed.
+ */
+export async function dropQueuedClientNotifications(queued: Array<{ id: string }>): Promise<number> {
+  if (queued.length === 0) return 0
+  await prisma.notificationQueue.updateMany({
+    where: { id: { in: queued.map(n => n.id) } },
+    data: { sentToClients: true, clientSentAt: new Date() },
+  })
+  return queued.length
+}
+
 export async function flushPendingClientNotifications(projectId: string): Promise<void> {
   try {
     const project = await prisma.project.findUnique({
@@ -507,13 +521,9 @@ export async function flushPendingClientNotifications(projectId: string): Promis
       return
     }
 
-    // Photo-only links never show videos: drop queued video feedback instead of flushing it
     if (project.photoOnlyShare) {
-      await prisma.notificationQueue.updateMany({
-        where: { id: { in: project.notificationQueue.map(n => n.id) } },
-        data: { sentToClients: true, clientSentAt: new Date() },
-      })
-      logMessage(`[FLUSH-CLIENT] Photo-only delivery, dropped ${project.notificationQueue.length} pending notification(s) for project ${projectId}`)
+      const dropped = await dropQueuedClientNotifications(project.notificationQueue)
+      logMessage(`[FLUSH-CLIENT] Photo-only delivery, dropped ${dropped} pending notification(s) for project ${projectId}`)
       return
     }
 

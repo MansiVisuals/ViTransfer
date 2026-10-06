@@ -46,29 +46,17 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
     buildPhotoUrl,
     downloadZip,
     downloading,
+    selectedIds,
+    toggleSelect,
   } = useAlbumGallery({ projectId, shareToken, onAlbumCount, scrollRootRef: albumScrollRef })
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [reelExpanded, setReelExpanded] = useState(false)
 
   useEffect(() => {
-    setSelectedIds(new Set())
     setReelExpanded(false)
   }, [selectedAlbum])
 
-  const handleZipDownload = (scope: PhotoZipScope) => {
-    downloadZip(scope, Array.from(selectedIds))
-  }
-
-  const toggleSelect = (photoId: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(photoId)) next.delete(photoId)
-      else next.add(photoId)
-      return next
-    })
-  }
 
   if (loading || albums.length === 0) return null
 
@@ -88,7 +76,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
           </h2>
           <div className="flex-1" />
           {allowPhotoDownload && albums.length > 1 && (
-            <Button variant="outline" size="sm" onClick={() => handleZipDownload('project')} disabled={downloading}>
+            <Button variant="outline" size="sm" onClick={() => downloadZip('project')} disabled={downloading}>
               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               <span className="hidden sm:inline">{t('downloadAllAlbums', { count: albums.length })}</span>
             </Button>
@@ -240,7 +228,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleZipDownload('selection')}
+                      onClick={() => downloadZip('selection')}
                       disabled={downloading}
                       className="gap-1.5 px-2 h-8"
                       title={t('downloadSelected', { count: selectedIds.size })}
@@ -253,7 +241,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleZipDownload('album')}
+                      onClick={() => downloadZip('album')}
                       disabled={downloading}
                       className="h-8 w-8"
                       title={t('downloadAlbum')}

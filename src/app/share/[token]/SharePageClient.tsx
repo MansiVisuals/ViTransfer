@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Button } from '@/components/ui/button'
-import { Lock, Check, Mail, KeyRound, Download, Loader2, Grid3X3 } from 'lucide-react'
+import { Lock, Check, Mail, KeyRound, Download, Loader2 } from 'lucide-react'
 import BrandLogo from '@/components/BrandLogo'
 import { loadShareToken, saveShareToken } from '@/lib/share-token-store'
 import { loadPortalSession } from '@/app/portal/portalSession'
@@ -977,12 +977,8 @@ export default function SharePageClient({ token }: SharePageClientProps) {
           title={project.title}
           description={isGuest ? null : project.description}
           allowPhotoDownload={project.allowPhotoDownload && !isGuest}
-          leadingActions={project.hasVideos ? (
-            <Button variant="ghost" size="sm" onClick={backToOverview} title={t('backToOverview')} className="gap-1.5">
-              <Grid3X3 className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('backToOverview')}</span>
-            </Button>
-          ) : undefined}
+          onBack={project.hasVideos ? backToOverview : undefined}
+          standalone={!project.hasVideos}
           actions={!isGuest && project.allowReverseShare && shareToken ? (
             <ReverseShareUploadPanel
               shareToken={shareToken}

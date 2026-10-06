@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import { Download, Loader2, X } from 'lucide-react'
+import { Download, Grid3X3, Loader2, X } from 'lucide-react'
 import PhotoLightbox from './PhotoLightbox'
 import BrandLogo from './BrandLogo'
 import ThemeToggle from './ThemeToggle'
@@ -23,11 +23,17 @@ interface PhotoDeliveryGalleryProps {
   title: string
   description?: string | null
   allowPhotoDownload: boolean
-  /** Shown before the title in the gallery bar and over the cover (e.g. back to project) */
-  leadingActions?: ReactNode
-  /** Shown next to the download button in the gallery bar (e.g. reverse share upload) */
-  /** Page-level actions, beside the back control */
+  /** Page-level actions, beside the back control (e.g. reverse share upload) */
   actions?: ReactNode
+  /** Renders one back control in the bar. Omit when there is nowhere to return to. */
+  onBack?: () => void
+  backLabel?: string
+  /**
+   * True when this gallery is the whole delivery: it opens on a cover and the
+   * albums are tabs, because no overview exists to pick them from. False when
+   * one album was opened from an overview, which is already the album switcher.
+   */
+  standalone?: boolean
   showLanguageToggle?: boolean
 }
 
@@ -36,10 +42,10 @@ function scrollBehavior(): ScrollBehavior {
 }
 
 /**
- * Share page for links that deliver photos only: a full-bleed cover, a sticky
- * bar with the albums as tabs, and a masonry grid of the open album. The first
- * album opens straight away, so a single-album delivery never shows an overview.
- * Also used on the admin share preview (without a share token).
+ * The album view for every client: a floating bar and a masonry grid of the open
+ * album. As a whole delivery it also opens on a cover and carries the albums as
+ * tabs; opened from a project overview it does neither, because the overview is
+ * the switcher. Also used on the admin share preview (without a share token).
  */
 export default function PhotoDeliveryGallery({
   projectId,
@@ -47,12 +53,15 @@ export default function PhotoDeliveryGallery({
   title,
   description,
   allowPhotoDownload,
-  leadingActions,
   actions,
+  onBack,
+  backLabel,
+  standalone = true,
   showLanguageToggle = true,
 }: PhotoDeliveryGalleryProps) {
   const t = useTranslations('photos')
   const tc = useTranslations('common')
+  const ts = useTranslations('share')
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const galleryStartRef = useRef<HTMLDivElement | null>(null)
@@ -174,6 +183,7 @@ export default function PhotoDeliveryGallery({
   return (
     <div ref={scrollRef} className="fixed inset-0 overflow-y-auto overflow-x-hidden bg-background text-foreground">
       {/* Cover */}
+      {standalone && (
       <section className="relative isolate flex h-svh min-h-[420px] w-full items-center justify-center overflow-hidden bg-neutral-950 text-white">
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -188,7 +198,6 @@ export default function PhotoDeliveryGallery({
           />
         )}
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/35 via-black/15 to-black/55" />
-        {leadingActions && <div className="absolute left-3 top-3 sm:left-6 sm:top-5">{leadingActions}</div>}
         <div className="w-full max-w-4xl px-6 text-center">
           {/* Trailing letter-spacing pushes centered caps left; pad it back */}
           <h1 className="break-words pl-[0.15em] text-3xl font-light uppercase leading-tight tracking-[0.15em] text-balance sm:pl-[0.25em] sm:text-5xl sm:tracking-[0.25em] lg:text-6xl">
@@ -208,6 +217,7 @@ export default function PhotoDeliveryGallery({
           </Button>
         </div>
       </section>
+      )}
 
       <div ref={galleryStartRef} />
 
@@ -216,7 +226,12 @@ export default function PhotoDeliveryGallery({
         <div className="rounded-xl bg-card/95 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="flex items-center gap-1.5">
-              {leadingActions}
+              {onBack && (
+                <Button variant="ghost" size="sm" onClick={onBack} title={backLabel ?? ts('backToOverview')} className="gap-1.5">
+                  <Grid3X3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">{backLabel ?? ts('backToOverview')}</span>
+                </Button>
+              )}
               {actions}
             </div>
 
@@ -271,7 +286,7 @@ export default function PhotoDeliveryGallery({
             </div>
           </div>
 
-          {visibleAlbums.length > 1 && (
+          {standalone && visibleAlbums.length > 1 && (
             <nav
               ref={albumNavRef}
               aria-label={t('photoAlbums')}
@@ -291,7 +306,7 @@ export default function PhotoDeliveryGallery({
                     className={cn(
                       'max-w-[16rem] shrink-0 truncate border-b-2 pb-1.5 pt-0.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors sm:text-xs',
                       isActive
-                        ? 'border-primary text-foreground'
+                        ? 'border-primary text-primary'
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     )}
                   >

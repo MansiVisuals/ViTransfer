@@ -561,17 +561,9 @@ export default function AdminSharePage() {
         description={project.description}
         allowPhotoDownload={project.allowPhotoDownload ?? true}
         showLanguageToggle={false}
-        leadingActions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => (viewState === 'gallery' ? setViewState('grid') : router.push(projectUrl))}
-            title={viewState === 'gallery' ? ts('backToOverview') : t('backToProject')}
-          >
-            <ArrowLeft className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{viewState === 'gallery' ? ts('backToOverview') : t('backToProject')}</span>
-          </Button>
-        }
+        onBack={() => (viewState === 'gallery' ? setViewState('grid') : router.push(projectUrl))}
+        backLabel={viewState === 'gallery' ? ts('backToOverview') : t('backToProject')}
+        standalone={viewState !== 'gallery'}
       />
     )
   }

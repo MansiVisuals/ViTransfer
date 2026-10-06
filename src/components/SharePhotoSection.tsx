@@ -44,6 +44,7 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
     sentinelRef,
     loadMore,
     buildPhotoUrl,
+    downloadPhoto,
     downloadZip,
     downloading,
     selectedIds,
@@ -337,6 +338,8 @@ export default function SharePhotoSection({ projectId, shareToken, allowPhotoDow
                     selectedIds={selectedIds}
                     onToggleSelect={toggleSelect}
                     onPhotoClick={setLightboxIndex}
+                    allowDownload={allowPhotoDownload}
+                    onDownloadPhoto={downloadPhoto}
                     dense
                   />
                   {photos.length < totalPhotos && (

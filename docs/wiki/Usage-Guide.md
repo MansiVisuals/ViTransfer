@@ -124,6 +124,8 @@ Projects can hold photo albums alongside videos — useful for stills, BTS shots
 
 **Client side:** albums appear on the share page below the videos, with a full-page album view, lightbox, and multi-select. To let clients download photos (selection, album, or all project photos as a ZIP), enable **Allow photo downloads** in the project settings.
 
+**Photo deliveries:** a share link that carries photos but no videos opens as a gallery: a full-screen cover, the albums as tabs, and a masonry grid with the first album already open. To deliver only photos from a project that also holds videos, enable **Photo-only delivery** in the project settings (Client Share Page). The link then exposes no video at all (page, streams, downloads, comments or approval), while you keep working on the videos in the admin area. Notifications sent for a photo-only project always announce the whole gallery.
+
 ## Recipient portal
 
 Recipients added to projects can use the portal at `/portal` to see all their active projects in one place:

@@ -182,6 +182,15 @@ If the project contains photos, albums appear below the videos (for guests only 
 - Select multiple photos (checkbox on each thumbnail) to download just those.
 - If the admin has enabled photo downloads, you can download your selection, the whole album, or all project photos as a ZIP. Photo downloads are never available in guest mode.
 
+### Photo galleries
+
+When a share link delivers photos only (the project has no videos, or the admin turned on photo-only delivery), it opens straight into a gallery instead of the overview:
+
+- A full-screen cover with the project title; **View Gallery** scrolls down to the photos.
+- The first album is already open. With several albums, they appear as tabs under the title; click one to switch. The address bar keeps the open album, so a copied link opens the same one.
+- Photos sit in a masonry grid that keeps their original proportions. Click one to open the lightbox; use the arrow keys, or swipe on touch screens.
+- With photo downloads enabled, the **Download** button in the top bar saves the open album or every album as a ZIP. With a mouse, hovering a photo shows a single-photo download and a circle that adds it to a selection you can download from the bar at the bottom. On touch screens, download single photos from the lightbox.
+
 ## Downloading
 
 Download options appear after a video has been approved (not available in guest mode):

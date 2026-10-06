@@ -39,6 +39,7 @@ export async function POST(
         sharePassword: true,
         authMode: true,
         allowAssetDownload: true,
+        photoOnlyShare: true,
         title: true,
       },
     })
@@ -54,6 +55,7 @@ export async function POST(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         allowGuest: false,
         requiredPermission: 'download',
       }
@@ -70,6 +72,7 @@ export async function POST(
         { status: 403 }
       )
     }
+
 
     // Find all approved videos with latest version per name
     const approvedVideos = await prisma.video.findMany({

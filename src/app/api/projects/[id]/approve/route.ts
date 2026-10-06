@@ -65,6 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Verify project access using dual auth pattern (clients can approve via share link)
     const accessCheck = await verifyProjectAccess(request, project.id, project.sharePassword, project.authMode, {
+        requireVideoAccess: true,
       allowGuest: false,
       requiredAnyPermission: ['approve', 'comment'],
     })
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         error: projectMessages.onlyAdminsCanApproveProject || 'Only administrators can approve videos for this project'
       }, { status: 403 })
     }
+
 
     if (project.status === 'APPROVED') {
       return NextResponse.json({ error: projectMessages.projectAlreadyApproved || 'Project already approved' }, { status: 400 })
@@ -205,7 +207,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             id: project.id,
             title: project.title,
             slug: project.slug,
-            clientNotificationSchedule: project.clientNotificationSchedule
+            clientNotificationSchedule: project.clientNotificationSchedule,
+            photoOnlyShare: project.photoOnlyShare,
           },
           approvedVideos: approvedVideosList,
           approved: true,

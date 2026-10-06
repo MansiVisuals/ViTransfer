@@ -142,9 +142,9 @@ export async function verifyS3UploadAccess(
       if (requireUploadPermission) {
         const project = await prisma.project.findUnique({
           where: { id: sharePayload.projectId },
-          select: { allowClientAssetUpload: true },
+          select: { allowClientAssetUpload: true, photoOnlyShare: true },
         })
-        if (!project?.allowClientAssetUpload) {
+        if (!project?.allowClientAssetUpload || project.photoOnlyShare) {
           return { errorResponse: NextResponse.json({ error: 'File attachments are not enabled for this project' }, { status: 403 }) }
         }
       }

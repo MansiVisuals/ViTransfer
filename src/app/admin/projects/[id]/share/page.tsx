@@ -13,6 +13,7 @@ import { ArrowLeft } from 'lucide-react'
 import { apiFetch } from '@/lib/api-client'
 import ThemeToggle from '@/components/ThemeToggle'
 import SharePhotoSection from '@/components/SharePhotoSection'
+import PhotoDeliveryGallery from '@/components/PhotoDeliveryGallery'
 import ShareViewToggle, { loadShareViewMode, type ShareViewMode } from '@/components/ShareViewToggle'
 import { useTranslations } from 'next-intl'
 
@@ -549,6 +550,30 @@ export default function AdminSharePage() {
   })()
 
   const showCommentPanel = !project.hideFeedback && !hideComments
+
+  // Mirrors the public share page, from the same two facts the share API derives
+  if (project.hasPhotos && !project.hasVideos) {
+    return (
+      <PhotoDeliveryGallery
+        projectId={id}
+        title={project.title}
+        description={project.description}
+        allowPhotoDownload={project.allowPhotoDownload ?? true}
+        showLanguageToggle={false}
+        leadingActions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(projectUrl)}
+            title={t('backToProject')}
+          >
+            <ArrowLeft className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t('backToProject')}</span>
+          </Button>
+        }
+      />
+    )
+  }
 
   // Show thumbnail grid when in grid view (same as public share layout)
   if (viewState === 'grid') {

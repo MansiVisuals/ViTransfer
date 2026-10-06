@@ -49,12 +49,14 @@ export async function GET(
 
     // SECURITY: Verify user has access to this project (admin OR valid share session)
     const accessCheck = await verifyProjectAccess(request, video.project.id, video.project.sharePassword, video.project.authMode, {
+        requireVideoAccess: true,
       allowGuest: false,
       requiredPermission: 'download',
     })
     if (!accessCheck.authorized) {
       return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
+
 
     if (!accessCheck.isAdmin) {
       if (!video.project.allowAssetDownload) {

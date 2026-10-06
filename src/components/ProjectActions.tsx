@@ -32,7 +32,8 @@ interface Video {
 }
 
 interface ProjectActionsProps {
-  project: Project
+  /** `hasPhotos` / `hasVideos` come from /api/projects/[id] — what the share link carries */
+  project: Project & { hasPhotos?: boolean; hasVideos?: boolean }
   videos: Video[]
   onRefresh?: () => void
   shareUrl?: string
@@ -415,8 +416,8 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             <h3 className="text-sm font-semibold mb-3">{t('projectActions')}</h3>
           </div>
 
-          {/* Send Notification Button - only show if there are ready videos */}
-          {readyVideos.length > 0 && (
+          {/* Send Notification Button - shown when the link has something to announce */}
+          {(readyVideos.length > 0 || project.hasPhotos) && (
             <div>
               <Button
                 variant="outline"
@@ -547,25 +548,27 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Notification Type Selection */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                {t('notificationType')}
-              </label>
-              <Select value={notificationType} onValueChange={handleNotificationTypeChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entire-project">
-                    {t('entireProject')}
-                  </SelectItem>
-                  <SelectItem value="specific-video">
-                    {t('specificVideo')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Notification Type Selection - only when the link carries videos */}
+            {project.hasVideos && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {t('notificationType')}
+                </label>
+                <Select value={notificationType} onValueChange={handleNotificationTypeChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entire-project">
+                      {t('entireProject')}
+                    </SelectItem>
+                    <SelectItem value="specific-video">
+                      {t('specificVideo')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Show video/version selectors only for specific video notification */}
             {notificationType === 'specific-video' && (
@@ -666,9 +669,11 @@ export default function ProjectActions({ project, videos, onRefresh, shareUrl = 
             )}
 
             <p className="text-xs text-muted-foreground">
-              {notificationType === 'entire-project'
-                ? t('notifyAllVideos')
-                : t('notifySpecificVideo')}
+              {!project.hasVideos
+                ? t('notifyPhotoGallery')
+                : notificationType === 'entire-project'
+                  ? t('notifyAllVideos')
+                  : t('notifySpecificVideo')}
             </p>
           </div>
         </DialogContent>

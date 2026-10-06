@@ -19,7 +19,7 @@ interface NotificationContext {
 }
 
 interface ApprovalNotificationContext {
-  project: { id: string; title: string; slug: string; clientNotificationSchedule: string; watermarkEnabled?: boolean }
+  project: { id: string; title: string; slug: string; clientNotificationSchedule: string; watermarkEnabled?: boolean; photoOnlyShare?: boolean }
   video?: { id: string; name: string; versionLabel?: string | null }
   approvedVideos?: Array<{ id: string; name: string }>
   approved: boolean // true = approved, false = unapproved
@@ -260,8 +260,9 @@ async function sendApprovalImmediately(context: ApprovalNotificationContext) {
   })
 
   // Send to clients ONLY if complete project approval (all videos approved)
-  // Don't send for partial approvals - client knows they just clicked approve
-  if (recipients.length > 0 && isComplete && approved) {
+  // Don't send for partial approvals - client knows they just clicked approve.
+  // Photo-only links keep videos off the client side, approval emails included.
+  if (recipients.length > 0 && isComplete && approved && !project.photoOnlyShare) {
     logMessage(`[IMMEDIATE→CLIENT] Sending complete project approval to ${recipients.length} recipient(s)`)
 
     const emailPromises = recipients.map(async (recipient) => {
@@ -482,6 +483,20 @@ export async function flushPendingAdminNotifications(): Promise<void> {
  * Flush all pending client notifications for a project immediately as a summary email.
  * Called when a project's client notification schedule changes so queued items are not lost.
  */
+/**
+ * Mark queued client notifications as handled without sending them. A photo-only
+ * link shows no videos, so video feedback queued before the switch is dropped
+ * rather than flushed.
+ */
+export async function dropQueuedClientNotifications(queued: Array<{ id: string }>): Promise<number> {
+  if (queued.length === 0) return 0
+  await prisma.notificationQueue.updateMany({
+    where: { id: { in: queued.map(n => n.id) } },
+    data: { sentToClients: true, clientSentAt: new Date() },
+  })
+  return queued.length
+}
+
 export async function flushPendingClientNotifications(projectId: string): Promise<void> {
   try {
     const project = await prisma.project.findUnique({
@@ -490,6 +505,7 @@ export async function flushPendingClientNotifications(projectId: string): Promis
         id: true,
         title: true,
         slug: true,
+        photoOnlyShare: true,
         notificationQueue: {
           where: {
             sentToClients: false,
@@ -502,6 +518,12 @@ export async function flushPendingClientNotifications(projectId: string): Promis
 
     if (!project || project.notificationQueue.length === 0) {
       logMessage(`[FLUSH-CLIENT] No pending notifications for project ${projectId}`)
+      return
+    }
+
+    if (project.photoOnlyShare) {
+      const dropped = await dropQueuedClientNotifications(project.notificationQueue)
+      logMessage(`[FLUSH-CLIENT] Photo-only delivery, dropped ${dropped} pending notification(s) for project ${projectId}`)
       return
     }
 

@@ -68,6 +68,7 @@ export async function POST(
       project.sharePassword,
       project.authMode,
       {
+        requireVideoAccess: true,
         allowGuest: false,
         requiredPermission: 'download',
       }
@@ -76,6 +77,7 @@ export async function POST(
     if (!accessCheck.authorized) {
   return NextResponse.json({ error: videoMessages.unauthorizedApi || 'Unauthorized' }, { status: 403 })
     }
+
 
     // For non-admins, verify asset download settings and video approval
     if (!accessCheck.isAdmin) {

@@ -365,28 +365,24 @@ export default function PhotoDeliveryGallery({
       {/* Selection bar */}
       {allowPhotoDownload && selecting && (
         <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-foreground py-1.5 pl-5 pr-1.5 text-background shadow-elevation-xl">
-            <span className="mr-2 text-[11px] font-medium uppercase tracking-[0.2em] tabular-nums">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-xl bg-card/95 px-3 py-2 shadow-elevation-xl backdrop-blur-sm">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {t('selectedCount', { count: selectedIds.size })}
             </span>
-            <button
-              type="button"
-              onClick={() => runDownload('selection')}
-              disabled={downloading}
-              className="inline-flex items-center gap-2 rounded-full bg-background px-4 py-2 text-[11px] font-medium uppercase tracking-[0.2em] text-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
+            <Button size="sm" onClick={() => runDownload('selection')} disabled={downloading}>
               {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
               {tc('download')}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={clearSelection}
               aria-label={tc('deselectAll')}
               title={tc('deselectAll')}
-              className="rounded-full p-2 text-background/70 transition-colors hover:text-background"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
       )}

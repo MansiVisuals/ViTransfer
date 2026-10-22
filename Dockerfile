@@ -77,11 +77,14 @@ ENV NODE_ENV=production
 
 # Python for Apprise notifications. Versions live in requirements.txt so
 # Dependabot can update them; a version inline here would be invisible to it.
+# The venv's own pip goes too: nothing runs it, and its vendored libraries
+# trail their upstream fixes.
 COPY requirements.txt ./
 RUN apk add --no-cache python3 py3-pip \
     && python3 -m venv /opt/apprise-venv \
     && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 --upgrade pip \
     && /opt/apprise-venv/bin/pip install --no-cache-dir --timeout=120 -r requirements.txt \
+    && /opt/apprise-venv/bin/python3 -m pip uninstall -y pip \
     && apk del --no-cache py3-pip
 
 ENV APPRISE_PYTHON=/opt/apprise-venv/bin/python3

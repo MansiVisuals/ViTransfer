@@ -16,7 +16,8 @@ Security release: dependency updates and a leaner Apprise venv.
 - `certifi` 2026.10.18 → 2026.10.19 in the Apprise venv ([GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2)).
 - `postcss-selector-parser` override 6.1.4 → 7.1.7 ([GHSA-rj75-hqrm-r3gf](https://github.com/advisories/GHSA-rj75-hqrm-r3gf)).
 - `npm` 12.2.0 → 12.2.1 in the image.
-- The Apprise venv no longer ships pip.
+- The Apprise venv no longer ships pip, msgpack or setuptools.
+- Removed stale overrides: `glob`, `brace-expansion`, `minimatch`, Next's `sharp`.
 
 ## [1.4.2] - 2026-10-19
 

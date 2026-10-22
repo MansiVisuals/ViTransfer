@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.4.3] - 2026-10-22
+
+Security release: dependency updates and a leaner Apprise venv.
+
+### Security
+- `dompurify` 3.4.16 → 3.4.17 ([GHSA-cg2g-xh64-v4q7](https://github.com/advisories/GHSA-cg2g-xh64-v4q7), [GHSA-mrv2-3pqr-j5jr](https://github.com/advisories/GHSA-mrv2-3pqr-j5jr), [GHSA-c6gr-qvv4-5v3f](https://github.com/advisories/GHSA-c6gr-qvv4-5v3f)).
+- `certifi` 2026.10.18 → 2026.10.19 in the Apprise venv ([GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2)).
+- `postcss-selector-parser` override 6.1.4 → 7.1.7 ([GHSA-rj75-hqrm-r3gf](https://github.com/advisories/GHSA-rj75-hqrm-r3gf)).
+- `npm` 12.2.0 → 12.2.1 in the image.
+- The Apprise venv no longer ships pip, msgpack or setuptools.
+- Removed stale overrides: `glob`, `brace-expansion`, `minimatch`, Next's `sharp`.
+
 ## [1.4.2] - 2026-10-19
 
 Security release: dependency updates.

@@ -105,11 +105,13 @@ jobs:
           echo "next=$next" >> "$GITHUB_OUTPUT"
 
       - name: Audit for anything Dependabot missed
-        if: steps.diff.outputs.should_release == 'true'
         run: |
           npm ci --legacy-peer-deps --ignore-scripts
           # Majors and unfixable advisories never reach auto-merge, so this is
           # the backstop that catches them.
+          #
+          # Runs on weeks with nothing to release too: an advisory that fails
+          # the Dockerfile gate blocks every PR, which leaves dev with no commits.
           #
           # It fails rather than warns: the Dockerfile applies the same gate
           # during `build`, which runs after `publish` has merged dev and pushed

@@ -66,6 +66,9 @@
   "overrides": {
     "deepmerge-ts": "^8.0.0",
     "postcss-selector-parser": "^7.1.6",
+    "readdir-glob": {
+      "minimatch": "^11.0.3"
+    },
     "next": {
       "postcss": "$postcss"
     }

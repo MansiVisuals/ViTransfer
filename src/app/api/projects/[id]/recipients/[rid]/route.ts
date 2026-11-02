@@ -60,7 +60,7 @@ export async function PATCH(
     // Validate input
     const validation = updateRecipientSchema.safeParse(body)
     if (!validation.success) {
-      const message = validation.error.errors[0].message
+      const message = validation.error.issues[0].message
       const localizedError = message === 'INVALID_EMAIL_FORMAT'
         ? (recipientMessages.invalidEmail || 'Please enter a valid email address')
         : message

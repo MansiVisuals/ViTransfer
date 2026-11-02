@@ -13,7 +13,8 @@ runs itself end to end. There is no recurring human action.
 | Mon 08:00 UTC | clean install re-run against `dev`, then version bump, changelog, `dev` → `main`, multi-arch build, tag, release | `weekly-security-release.yml` |
 | after publish | clean install runs against the **published** Docker Hub image | `test-clean-install.yml` |
 
-A week with no commits on `dev` is skipped silently — no bump, no tag, no release.
+A week with no commits on `dev` publishes nothing — no bump, no tag, no release.
+The audit still runs, so a high advisory in a shipped dependency opens an issue.
 
 ## What auto-merges
 

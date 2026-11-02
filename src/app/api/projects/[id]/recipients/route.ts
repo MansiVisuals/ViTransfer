@@ -78,7 +78,7 @@ export async function POST(
     // Validate input
     const validation = addRecipientSchema.safeParse(body)
     if (!validation.success) {
-      const message = validation.error.errors[0].message
+      const message = validation.error.issues[0].message
       const localizedError = message === 'INVALID_EMAIL_FORMAT'
         ? (recipientMessages.invalidEmail || 'Please enter a valid email address')
         : message === 'RECIPIENT_NAME_OR_EMAIL_REQUIRED'

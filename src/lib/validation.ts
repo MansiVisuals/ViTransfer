@@ -123,7 +123,7 @@ const gotifyDestinationSchema = z.object({
   secrets: z.object({
     appToken: notificationSecretSchema,
   }),
-  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+  subscriptions: z.partialRecord(notificationEventTypeSchema, z.boolean()).optional(),
 })
 
 const ntfyDestinationSchema = z.object({
@@ -137,7 +137,7 @@ const ntfyDestinationSchema = z.object({
   secrets: z.object({
     accessToken: notificationSecretSchema.optional(),
   }),
-  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+  subscriptions: z.partialRecord(notificationEventTypeSchema, z.boolean()).optional(),
 })
 
 const pushoverDestinationSchema = z.object({
@@ -149,7 +149,7 @@ const pushoverDestinationSchema = z.object({
     userKey: notificationSecretSchema,
     apiToken: notificationSecretSchema,
   }),
-  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+  subscriptions: z.partialRecord(notificationEventTypeSchema, z.boolean()).optional(),
 })
 
 const telegramDestinationSchema = z.object({
@@ -162,7 +162,7 @@ const telegramDestinationSchema = z.object({
   secrets: z.object({
     botToken: notificationSecretSchema,
   }),
-  subscriptions: z.record(notificationEventTypeSchema, z.boolean()).optional(),
+  subscriptions: z.partialRecord(notificationEventTypeSchema, z.boolean()).optional(),
 })
 
 export const createNotificationDestinationSchema = z.discriminatedUnion('provider', [

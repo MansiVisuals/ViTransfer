@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > IMPORTANT FOR DOCKER USERS: Starting with v1.0.0, the ViTransfer Docker image moved from `crypt010/vitransfer` to `mansivisuals/vitransfer`. If you are upgrading an existing install, update your Docker Compose, Quadlet, and manual `docker pull` or `podman pull` commands to use the new repository.
 
+## [1.4.4] - 2026-11-02
+
+Security release: dependency updates.
+
+### Security
+- Override readdir-glob's minimatch to 11.0.3
+- deps: bump the npm group across 1 directory with 9 updates (#139)
+- Run the release audit on weeks with nothing to release
+- Bump zod to 4.6.7, undici to 8.12.3, nodemailer to 10.3.1
+
 ## [1.4.3] - 2026-10-22
 
 Security release: dependency updates and a leaner Apprise venv.

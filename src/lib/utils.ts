@@ -118,7 +118,7 @@ function generateSlug(title: string): string {
     .replace(/[^\w\s-]/g, '') // Remove special characters
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    .replace(/^-|-$/g, '') // Trim the single leading/trailing hyphen left after the collapse above
 }
 
 export async function generateUniqueSlug(

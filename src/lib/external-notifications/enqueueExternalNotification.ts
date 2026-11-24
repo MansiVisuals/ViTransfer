@@ -31,23 +31,23 @@ export async function enqueueExternalNotification(job: ExtendedNotificationJob):
 
       // Try to extract info from body for common patterns
       if (!pushData.projectTitle && job.body) {
-        const projectMatch = job.body.match(/Project:\s*(.+?)(?:\n|$)/)
+        const projectMatch = job.body.match(/Project:([^\n]*)/)
         if (projectMatch) pushData.projectTitle = projectMatch[1].trim()
       }
       if (!pushData.videoName && job.body) {
-        const videoMatch = job.body.match(/Video:\s*(.+?)(?:\n|$)/)
+        const videoMatch = job.body.match(/Video:([^\n]*)/)
         if (videoMatch) pushData.videoName = videoMatch[1].trim()
       }
       if (!pushData.email && job.body) {
-        const emailMatch = job.body.match(/(?:Email|Client):\s*(.+?)(?:\n|$)/)
+        const emailMatch = job.body.match(/(?:Email|Client):([^\n]*)/)
         if (emailMatch) pushData.email = emailMatch[1].trim()
       }
       if (!pushData.authorName && job.body) {
-        const authorMatch = job.body.match(/Client:\s*([^(]+?)(?:\s*\(|$|\n)/)
+        const authorMatch = job.body.match(/Client:([^\n(]*)/)
         if (authorMatch) pushData.authorName = authorMatch[1].trim()
       }
       if (!pushData.content && job.body) {
-        const commentMatch = job.body.match(/Comment:\s*(.+?)(?:\n|$)/)
+        const commentMatch = job.body.match(/Comment:([^\n]*)/)
         if (commentMatch) pushData.content = commentMatch[1].trim()
       }
 
